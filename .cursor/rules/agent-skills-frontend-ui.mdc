@@ -1,0 +1,23 @@
+---
+description: Frontend UI engineering guardrails (agent-skills aligned)
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Frontend UI Rules
+
+- Keep components resilient with fallback UI for missing/failed data.
+- Preserve accessibility basics: semantic controls, keyboard, labels, focus states.
+- Do not break existing routes/navigation while redesigning UI.
+- Prefer explicit loading/empty/error states over silent failures.
+
+# Image/Media Handling
+
+- For remote or mixed storage URLs, include graceful fallback when image render fails.
+- If using optimized images, ensure host/domain rules are compatible.
+- If fallback is used, explain trade-offs (performance vs reliability).
+
+# Verification
+
+- Confirm changed pages render without runtime errors.
+- Confirm key user flows still work after UI changes.

@@ -1,0 +1,29 @@
+---
+description: Core agent workflow adapted from addyosmani/agent-skills
+alwaysApply: true
+---
+
+# Core Workflow (Spec -> Plan -> Build -> Verify -> Review -> Ship)
+
+Use this flow for every non-trivial task:
+
+1. Define scope and constraints before coding.
+2. Plan small, testable slices.
+3. Implement incrementally, keep behavior stable.
+4. Verify with build/tests/runtime checks.
+5. Review risks (security, performance, regressions).
+6. Document what changed and known caveats.
+
+# Non-negotiables
+
+- No "looks correct" claims without evidence from commands or runtime output.
+- Keep route/API contracts backward compatible unless explicitly requested.
+- Prefer reversible changes; avoid broad refactors without a migration path.
+- When upgrading dependencies, separate framework/runtime and DB/ORM concerns.
+
+# Evidence Checklist
+
+- Build passes.
+- Lint/type check status is reported.
+- Affected user flows are smoke-tested.
+- Any residual warnings/risks are listed explicitly.

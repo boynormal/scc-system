@@ -1,0 +1,24 @@
+---
+description: API and data change discipline (agent-skills aligned)
+globs: "app/api/**/*.ts"
+alwaysApply: false
+---
+
+# API and Data Rules
+
+- Keep API response shape/status stable unless change is explicitly requested.
+- Validate inputs at boundaries and return actionable errors.
+- Prefer parameterized queries; justify any unsafe query usage.
+- For schema changes, include migration and rollback notes.
+
+# Upgrade Discipline
+
+- Split framework/runtime upgrades from ORM/schema upgrades when possible.
+- Record compatibility issues and temporary exceptions in docs.
+- Treat schema drift as explicit technical debt with an owner and next action.
+
+# Verification
+
+- Build passes after API/data changes.
+- Critical CRUD routes are smoke-tested.
+- Known caveats are documented in architecture/README notes.

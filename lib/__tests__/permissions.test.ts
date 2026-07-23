@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  canAccessModule,
   getBranchIds,
   hasPermission,
   isAdminInAnyBranch,
@@ -85,6 +86,46 @@ describe("isAdminInBranch / isAdminInAnyBranch", () => {
 
     expect(isAdminInAnyBranch(roles)).toBe(true)
     expect(isAdminInAnyBranch([role({ branchId: "branch-1", roleName: "Viewer" })])).toBe(false)
+  })
+})
+
+describe("canAccessModule", () => {
+  it("allows Admin to access any module regardless of moduleAccess restrictions", () => {
+    const roles: UserRole[] = [role({ roleName: "Admin", permissions: { moduleAccess: ["hr"] } as never })]
+
+    expect(canAccessModule(roles, "transport")).toBe(true)
+  })
+
+  it("allows access when moduleAccess is not set on the role (backward compat)", () => {
+    const roles: UserRole[] = [role({ roleName: "Viewer", permissions: null })]
+
+    expect(canAccessModule(roles, "hr")).toBe(true)
+  })
+
+  it("allows access when moduleAccess is the literal string \"all\"", () => {
+    const roles: UserRole[] = [
+      role({ roleName: "Viewer", permissions: { moduleAccess: "all" } as never }),
+    ]
+
+    expect(canAccessModule(roles, "transport")).toBe(true)
+  })
+
+  it("denies access when moduleAccess is a list that does not include the moduleId", () => {
+    const roles: UserRole[] = [
+      role({ roleName: "Viewer", permissions: { moduleAccess: ["hr"] } as never }),
+    ]
+
+    expect(canAccessModule(roles, "transport")).toBe(false)
+    expect(canAccessModule(roles, "hr")).toBe(true)
+  })
+
+  it("allows access if any of the user's multiple roles grants the module", () => {
+    const roles: UserRole[] = [
+      role({ branchId: "branch-1", roleName: "Viewer", permissions: { moduleAccess: ["hr"] } as never }),
+      role({ branchId: "branch-2", roleName: "Viewer", permissions: { moduleAccess: ["transport"] } as never }),
+    ]
+
+    expect(canAccessModule(roles, "transport")).toBe(true)
   })
 })
 

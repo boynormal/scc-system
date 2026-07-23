@@ -182,6 +182,8 @@ app/                        # ชั้น adapter เท่านั้น — 
 1. เฟส 1 ตาม blueprint เดิมปิดครบสำหรับ `iam`, `machines`, `maintenance`, `work_orders`, `inventory`, `settings`, `notifications`, `transport`, `hr`
 2. `app/api/transport/calendar/**`, `app/api/transport/gps/**`, `app/api/transport/jobs/[id]/stops/**` และ `app/api/transport/jobs/[id]/attachments/**` ย้ายเข้า `modules/transport/application` ครบแล้ว (`calendar-service.ts`, `gps-service.ts`, `job-service.ts` — `listStops`/`listAttachments`/`createAttachment`) — route เหลือแค่ thin adapter ไม่มี query Prisma ตรงแล้ว
 3. Role เก่าใน DB ที่ยังไม่มี `notifications` ใน JSON — เมนูแจ้งเตือนยังใช้ fallback `dashboard:read` ใน `filterNavByPermission`; รัน `npm run db:seed` อีกครั้งจะ sync สิทธิ์ role ระบบ (ดู `prisma/seed.ts`)
+4. **Phase 3 (governance) ปิดแล้วสำหรับกฎ import prisma** (2026-07-23): ตรวจสอบแล้วไม่มีไฟล์ใน `app/api/**` ที่ import `@/lib/prisma` ตรงเหลืออยู่เลย — เปลี่ยน ESLint `no-restricted-imports` จาก `"warn"` เป็น `"error"` ใน `eslint.config.mjs` แล้ว (บังคับจริงจากนี้ไป ไม่ใช่แค่เตือน) ส่วน cross-module query boundary (ห้าม `modules/A` query ตาราง `modules/B` ตรง) ยังไม่มี lint rule อัตโนมัติ ต้อง code review ด้วยตาต่อไป
+5. **CI เปิดแล้ว** (2026-07-23): `.github/workflows/ci.yml` รัน lint, `tsc --noEmit`, unit test, และ `next build` บนทุก push/PR เข้า `main`
 
 เอกสารเพิ่มเติม:
 

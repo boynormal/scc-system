@@ -23,7 +23,7 @@ const eslintConfig = [
     files: ["app/api/**/*.ts"],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           paths: [
             {

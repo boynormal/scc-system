@@ -109,10 +109,10 @@
 - [ ] ไม่มี error ใน app logs (สังเกตหลัง deploy จริง)
 - [ ] Smoke paths
 
-### Business decisions ที่ต้องปิดก่อน Phase B / production
+### Business decisions — ปิดแล้ว (2026-07-23)
 
-- **`machines.code` scope**: Phase A ใช้ `@@unique([branch_id, code])` ชั่วคราวเพราะตาราง `Machine` ไม่มีคอลัมน์ `company_id` ตรง ๆ — ต้องตัดสินใจว่าธุรกิจต้องการ code ไม่ซ้ำระดับ company หรือ branch ก่อนเข้า Phase B (ถ้าเลือก company ต้องเพิ่มคอลัมน์ใหม่ + backfill)
-- **Migration baselining**: ก่อน deploy composite unique เหล่านี้ไป production ต้องตัดสินใจเรื่อง Prisma migration history baselining ก่อน (repo ปัจจุบันใช้ `db push` มาตลอด ไม่มี migration ที่ commit ไว้)
+- **`machines.code` scope**: ตัดสินใจใช้ **branch scope** ถาวร (`@@unique([branch_id, code])`) — รหัสเครื่องจักรไม่ซ้ำภายในสาขาเดียวกัน แต่ต่างสาขาซ้ำกันได้
+- **Migration baselining**: เสร็จแล้ว — รวม migration history เป็น 1 baseline migration, commit เข้า git แล้ว, ใช้ `npx prisma migrate dev` (หรือ `npm run db:migrate`) แทน `db push` สำหรับเปลี่ยน schema จากนี้ไป ดูรายละเอียดที่ [db-blueprint.md](./db-blueprint.md#3-แผน-db-migration-3-เฟส-strict--ปลอดภัย)
 
 ### Rollback
 

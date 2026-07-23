@@ -88,7 +88,7 @@
 |-------|--------|--------|--------|--------|
 | `suppliers` | `code` | `@unique` ทั้งระบบ | `@@unique([company_id, code])` | ✅ เพิ่มแล้ว (coexist กับ global unique) |
 | `spare_parts` | `code` | `@unique` ทั้งระบบ | `@@unique([company_id, code])` | ✅ เพิ่มแล้ว (coexist กับ global unique) |
-| `machines` | `code` | `@unique` ทั้งระบบ | `@@unique([company_id, code])` หรือ `@@unique([branch_id, code])` ตามนิยามธุรกิจ | ✅ เพิ่มแล้วเป็น `@@unique([branch_id, code])` — เลือก branch scope เพราะ `Machine` **ไม่มีคอลัมน์ `company_id`** ตรง ๆ ในตาราง (ต้อง join ผ่าน `branches`) การเพิ่ม company scope ต้องเพิ่มคอลัมน์ `company_id` ใหม่ + backfill ซึ่งอยู่นอกขอบเขต Phase A (additive only) — **ต้องตัดสินใจ business scope (company vs. branch) ก่อน Phase B** |
+| `machines` | `code` | `@unique` ทั้งระบบ | `@@unique([branch_id, code])` | ✅ เพิ่มแล้ว — **ตัดสินใจแล้ว (2026-07-23): ใช้ branch scope ถาวร** คือรหัสเครื่องจักรห้ามซ้ำกันภายในสาขาเดียวกัน แต่ต่างสาขาซ้ำกันได้ ไม่ต้องเพิ่มคอลัมน์ `company_id` ใหม่ |
 | `work_orders` | `wo_number` | `@unique` ทั้งระบบ | `@@unique([branch_id, wo_number])` หรือ `@@unique([company_id, wo_number])` ถ้าเลข WO ไม่ซ้ำข้ามสาขา | ✅ เพิ่มแล้วเป็น `@@unique([branch_id, wo_number])` — ตรงกับ logic จริงใน [generate-wo-number.ts](../../modules/work_orders/application/generate-wo-number.ts) ที่นับเลขแบบ scope ต่อสาขา |
 | `users` | `email` | `@unique` ทั้งระบบ | ถ้าต้องการ multi-tenant จริง: `@@unique([company_id, email])` + กฎ login | ✅ เพิ่มแล้ว (coexist กับ global unique) — กฎ login (ค้นหา user ด้วย email ข้าม company) ยังไม่เปลี่ยน รอ Phase B |
 | `users` | `employee_code` | `@unique` ทั้งระบบ | `@@unique([company_id, employee_code])` (nullable ต้องจัดการ partial unique) | ✅ เพิ่มแล้ว (coexist กับ global unique, `employee_code` nullable — Postgres composite unique อนุญาตหลาย NULL ได้ตามปกติ) |
@@ -137,7 +137,16 @@
 - รัน **precheck queries**: นับ duplicate ตาม `(company_id, code)` ที่จะ enforce — ดู [scripts/precheck-tenant-uniques.sql](../../scripts/precheck-tenant-uniques.sql)
 - เพิ่ม **index ช่วยค้นหา** ที่ไม่เปลี่ยน constraint ( btree ธรรมดา )
 
-**สรุปที่ทำแล้วรอบนี้**: เพิ่ม composite `@@unique` 6 จุด (ดูหัวข้อ 2.1) ใน `schema.prisma` แบบ additive (ไม่ลบ global `@unique` เดิม) และ apply ด้วย `npx prisma db push` ที่ dev DB เท่านั้น — **ยังไม่รันกับ production**. Business decision ที่ค้างก่อนเข้า Phase B: (1) `machines.code` — company scope vs. branch scope (ปัจจุบันใช้ branch scope ชั่วคราวเพราะไม่มีคอลัมน์ `company_id`), (2) migration baselining — repo นี้ยังไม่มี migration history แบบ commit-tracked จริง (ใช้ `db push` มาตลอด) ถ้าจะ deploy composite unique ไป production ต้องตัดสินใจเรื่อง baselining ก่อน
+**สรุปที่ทำแล้วรอบนี้**: เพิ่ม composite `@@unique` 6 จุด (ดูหัวข้อ 2.1) ใน `schema.prisma` แบบ additive (ไม่ลบ global `@unique` เดิม) และ apply ด้วย `npx prisma db push` ที่ dev DB เท่านั้น — **ยังไม่รันกับ production**.
+
+**อัปเดต (2026-07-23) — ทั้ง 2 business decision ปิดแล้ว:**
+
+1. **`machines.code` scope = branch** (ถาวร) — ดูหัวข้อ 2.1 ด้านบน
+2. **Migration baselining เสร็จแล้ว** — เดิม repo มี `prisma/migrations` local อยู่ 11 folder แต่ไม่เคยถูก commit เข้า git (`.gitignore` กันไว้) และไม่ครบ (ขาด migration แรกสุดที่สร้างตารางหลัก ทำให้ shadow-DB replay ของ `prisma migrate dev` ล้มเหลวเสมอ) แก้โดย:
+   - รวม migration history ทั้งหมดเป็น **1 baseline migration** (`prisma/migrations/20260723000000_baseline`) ที่สร้างจาก `prisma migrate diff --from-empty --to-schema-datamodel` ครอบคลุม schema ปัจจุบันทั้งหมด (รวม composite unique 6 จุด)
+   - `prisma migrate resolve --applied` เพื่อ mark ว่า apply แล้วโดยไม่กระทบ DB/ข้อมูลจริงที่มีอยู่
+   - ลบ `/prisma/migrations` ออกจาก `.gitignore` แล้ว commit เข้า git — จากนี้ไปใช้ `npx prisma migrate dev` สำหรับเปลี่ยน schema แทน `db push` (ยกเว้น hotfix เร่งด่วนที่ยอมรับความเสี่ยง drift ชั่วคราว)
+   - **หมายเหตุ**: `prisma migrate dev` ต้องใช้ shadow database (Postgres role ต้องมีสิทธิ์ `CREATEDB`) — ในเครื่อง dev ปัจจุบันทดสอบแล้วยังต่อ shadow DB ไม่ได้ (P1001) ต้องแก้สิทธิ์ผู้ใช้ Postgres หรือกำหนด `shadowDatabaseUrl` แยกก่อนใช้งานจริง ดู [Prisma shadow database docs](https://www.prisma.io/docs/orm/prisma-migrate/understanding-prisma-migrate/shadow-database)
 
 ### DB-Phase B — backfill + dedupe + enforce
 

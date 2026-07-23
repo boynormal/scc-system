@@ -173,21 +173,22 @@ function setFavoriteIds(ids: string[]) {
   localStorage.setItem("apps.launcher.favorites", JSON.stringify(ids))
 }
 
-function getCollapsedLineIds(): string[] {
-  if (typeof window === "undefined") return []
+function getOpenLineId(): string | null {
+  if (typeof window === "undefined") return null
   try {
-    const raw = localStorage.getItem("apps.launcher.collapsedLines")
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []
+    return localStorage.getItem("apps.launcher.openLine") || null
   } catch {
-    return []
+    return null
   }
 }
 
-function setCollapsedLineIds(ids: string[]) {
+function setOpenLineIdStorage(id: string | null) {
   if (typeof window === "undefined") return
-  localStorage.setItem("apps.launcher.collapsedLines", JSON.stringify(ids))
+  if (id) {
+    localStorage.setItem("apps.launcher.openLine", id)
+  } else {
+    localStorage.removeItem("apps.launcher.openLine")
+  }
 }
 
 function buildLineSections(
@@ -270,30 +271,20 @@ export function AppsLauncher({
   const deferredSearch = useDeferredValue(search)
   const [favorites, setFavorites] = useState<string[]>([])
   const [recentIds, setRecentIds] = useState<string[]>([])
-  // เริ่มต้นหุบทุกสายงาน — hydrate จาก localStorage ใน effect
-  const [collapsedLines, setCollapsedLines] = useState<Set<string>>(
-    () => new Set(PRODUCT_LINE_REGISTRY.map((l) => l.id))
-  )
+  // เริ่มต้นไม่เปิดสายงานใด — hydrate จาก localStorage ใน effect
+  const [openLineId, setOpenLineId] = useState<string | null>(null)
 
   useEffect(() => {
     setFavorites(getFavoriteIds())
     setRecentIds(getRecentIds())
-    const stored = getCollapsedLineIds()
-    if (stored.length > 0) {
-      setCollapsedLines(new Set(stored))
-    }
-    // ถ้า stored ว่าง = first visit → คงค่าเริ่มต้น "หุบทั้งหมด" จาก useState
+    setOpenLineId(getOpenLineId())
   }, [])
 
+  // เปิดได้ทีละสายงานเท่านั้น (accordion) — เปิดตัวใหม่จะปิดตัวเดิมอัตโนมัติ
   const toggleLine = (lineId: string) => {
-    setCollapsedLines((prev) => {
-      const next = new Set(prev)
-      if (next.has(lineId)) {
-        next.delete(lineId)
-      } else {
-        next.add(lineId)
-      }
-      setCollapsedLineIds([...next])
+    setOpenLineId((prev) => {
+      const next = prev === lineId ? null : lineId
+      setOpenLineIdStorage(next)
       return next
     })
   }
@@ -358,7 +349,7 @@ export function AppsLauncher({
   const hasSearch = deferredSearch.trim().length > 0
   const searchEmpty = hasSearch && filtered.length === 0
 
-  const isLineOpen = (lineId: string) => hasSearch || !collapsedLines.has(lineId)
+  const isLineOpen = (lineId: string) => hasSearch || openLineId === lineId
   const gridColumns = useGridColumns()
   const lineRows = useMemo(
     () => chunkArray(linesWithContent, gridColumns),

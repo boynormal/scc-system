@@ -173,7 +173,7 @@ async function main() {
 
   // ── Sample Machine ─────────────────────────────────────────────────────────
   const machine = await prisma.machine.upsert({
-    where: { code: "MCH-001" },
+    where: { branchId_code: { branchId: branch.id, code: "MCH-001" } },
     update: {},
     create: {
       branchId: branch.id,

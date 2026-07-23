@@ -144,7 +144,7 @@ export async function createMachine(
     return { error: "Forbidden" as const, status: 403 as const }
   }
 
-  const { attributes, machineType, description, pmGeneral, pmMajor, ...rest } = params.input
+  const { attributes, ...rest } = params.input
   const machine = await db.machine.create({
     data: {
       ...rest,
@@ -155,24 +155,7 @@ export async function createMachine(
     },
   })
 
-  await db.$executeRawUnsafe(
-    `UPDATE machines SET machine_type = $1, description = $2, pm_general = $3, pm_major = $4 WHERE id = $5::uuid`,
-    machineType ?? null,
-    description ?? null,
-    pmGeneral ?? null,
-    pmMajor ?? null,
-    machine.id
-  )
-
-  return {
-    data: {
-      ...machine,
-      machineType: machineType ?? null,
-      description: description ?? null,
-      pmGeneral: pmGeneral ?? null,
-      pmMajor: pmMajor ?? null,
-    },
-  }
+  return { data: machine }
 }
 
 export async function getMachineBase(db: PrismaClient, params: { id: string; companyId: string }) {
@@ -182,22 +165,7 @@ export async function getMachineBase(db: PrismaClient, params: { id: string; com
 }
 
 export async function getMachineById(db: PrismaClient, params: { id: string; companyId: string }) {
-  const machine = await getMachineBase(db, params)
-  if (!machine) return null
-
-  const extra = await db.$queryRaw<
-    { machine_type: string | null; description: string | null; pm_general: string | null; pm_major: string | null }[]
-  >`
-    SELECT machine_type, description, pm_general, pm_major FROM machines WHERE id = ${params.id}::uuid LIMIT 1
-  `
-
-  return {
-    ...machine,
-    machineType: extra[0]?.machine_type ?? null,
-    description: extra[0]?.description ?? null,
-    pmGeneral: extra[0]?.pm_general ?? null,
-    pmMajor: extra[0]?.pm_major ?? null,
-  }
+  return getMachineBase(db, params)
 }
 
 export async function updateMachine(
@@ -207,7 +175,7 @@ export async function updateMachine(
   const machine = await getMachineBase(db, { id: params.id, companyId: params.companyId })
   if (!machine) return null
 
-  const { installDate, warrantyExpireDate, departmentId, machineType, description, pmGeneral, pmMajor, ...rest } = params.input
+  const { installDate, warrantyExpireDate, departmentId, ...rest } = params.input
 
   const updated = await db.machine.update({
     where: { id: params.id },
@@ -219,22 +187,7 @@ export async function updateMachine(
     },
   })
 
-  await db.$executeRawUnsafe(
-    `UPDATE machines SET machine_type=$1, description=$2, pm_general=$3, pm_major=$4 WHERE id=$5::uuid`,
-    machineType ?? null,
-    description ?? null,
-    pmGeneral ?? null,
-    pmMajor ?? null,
-    params.id
-  )
-
-  return {
-    ...updated,
-    machineType: machineType ?? null,
-    description: description ?? null,
-    pmGeneral: pmGeneral ?? null,
-    pmMajor: pmMajor ?? null,
-  }
+  return updated
 }
 
 export async function deleteMachine(db: PrismaClient, params: { id: string; companyId: string }) {
@@ -301,35 +254,12 @@ export async function getMachineDetailForPage(db: PrismaClient, params: { id: st
           assignee: { select: { firstName: true, lastName: true } },
         },
       },
+      products: { orderBy: { order: "asc" } },
     },
   })
   if (!machine) return null
 
-  const [rawProducts, extra] = await Promise.all([
-    db.$queryRaw<any[]>`
-      SELECT * FROM machine_products WHERE machine_id = ${params.id}::uuid ORDER BY "order" ASC
-    `,
-    db.$queryRaw<{ machine_type: string | null; description: string | null; pm_general: string | null; pm_major: string | null }[]>`
-      SELECT machine_type, description, pm_general, pm_major FROM machines WHERE id = ${params.id}::uuid LIMIT 1
-    `,
-  ])
-
-  const products = rawProducts.map((r) => ({
-    id: r.id,
-    name: r.name,
-    description: r.description,
-    imageUrl: r.image_url,
-    order: r.order,
-  }))
-
-  return {
-    ...machine,
-    machineType: extra[0]?.machine_type ?? null,
-    description: extra[0]?.description ?? null,
-    pmGeneral: extra[0]?.pm_general ?? null,
-    pmMajor: extra[0]?.pm_major ?? null,
-    products,
-  } as any
+  return machine
 }
 
 export async function getMachinePageFilters(db: PrismaClient, params: { companyId: string }) {

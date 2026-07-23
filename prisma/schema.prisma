@@ -91,60 +91,60 @@ enum AuditAction {
 // ─── GROUP 1: ORGANIZATION ────────────────────────────────────────────────────
 
 model Company {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code      String   @unique @db.VarChar(20)
-  name      String   @db.VarChar(255)
-  logoUrl   String?  @map("logo_url")
-  settings  Json?    @db.JsonB
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String    @unique @db.VarChar(20)
+  name      String    @db.VarChar(255)
+  logoUrl   String?   @map("logo_url")
+  settings  Json?     @db.JsonB
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  branches           Branch[]
-  users              User[]
-  roles              Role[]
-  machineCategories  MachineCategory[]
-  maintenanceTypes   MaintenanceType[]
-  checklistTemplates ChecklistTemplate[]
-  suppliers          Supplier[]
-  spareParts         SparePart[]
-  personnel          Personnel[]
+  branches                Branch[]
+  users                   User[]
+  roles                   Role[]
+  machineCategories       MachineCategory[]
+  maintenanceTypes        MaintenanceType[]
+  checklistTemplates      ChecklistTemplate[]
+  suppliers               Supplier[]
+  spareParts              SparePart[]
+  personnel               Personnel[]
   attendanceImportBatches AttendanceImportBatch[]
-  attendanceEntries  AttendanceEntry[]
-  tmsCustomers          TmsCustomer[]
-  transportJobTypes     TransportJobType[]
-  transportCargoTypes   TransportCargoType[]
-  transportVehicleTypes TransportVehicleType[]
-  transportVehicles     TransportVehicle[]
-  drivers               Driver[]
-  transportJobs         TransportJob[]
+  attendanceEntries       AttendanceEntry[]
+  tmsCustomers            TmsCustomer[]
+  transportJobTypes       TransportJobType[]
+  transportCargoTypes     TransportCargoType[]
+  transportVehicleTypes   TransportVehicleType[]
+  transportVehicles       TransportVehicle[]
+  drivers                 Driver[]
+  transportJobs           TransportJob[]
 
   @@map("companies")
 }
 
 model Branch {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String   @map("company_id") @db.Uuid
-  code      String   @db.VarChar(20)
-  name      String   @db.VarChar(255)
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String    @db.VarChar(20)
+  name      String    @db.VarChar(255)
   address   String?
-  latitude  Decimal? @db.Decimal(10, 8)
-  longitude Decimal? @db.Decimal(11, 8)
-  timezone  String   @default("Asia/Bangkok") @db.VarChar(50)
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  latitude  Decimal?  @db.Decimal(10, 8)
+  longitude Decimal?  @db.Decimal(11, 8)
+  timezone  String    @default("Asia/Bangkok") @db.VarChar(50)
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  company          Company           @relation(fields: [companyId], references: [id])
-  departments      Department[]
-  machines         Machine[]
-  userBranchRoles  UserBranchRole[]
-  workOrders       WorkOrder[]
-  inventory        SparePartInventory[]
-  transactions     SparePartTransaction[]
-  personnel         Personnel[]
+  company                 Company                 @relation(fields: [companyId], references: [id])
+  departments             Department[]
+  machines                Machine[]
+  userBranchRoles         UserBranchRole[]
+  workOrders              WorkOrder[]
+  inventory               SparePartInventory[]
+  transactions            SparePartTransaction[]
+  personnel               Personnel[]
   attendanceImportBatches AttendanceImportBatch[]
   attendanceEntries       AttendanceEntry[]
   personnelBranchLinks    PersonnelBranch[]
@@ -180,50 +180,56 @@ model Department {
 // ─── GROUP 2: USERS & RBAC ────────────────────────────────────────────────────
 
 model User {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId      String   @map("company_id") @db.Uuid
-  employeeCode   String?  @unique @map("employee_code") @db.VarChar(50)
-  email          String   @unique @db.VarChar(255)
-  passwordHash   String?  @map("password_hash")
-  firstName      String   @map("first_name") @db.VarChar(100)
-  lastName       String   @map("last_name") @db.VarChar(100)
-  phone          String?  @db.VarChar(20)
-  avatarUrl      String?  @map("avatar_url")
-  isActive       Boolean  @default(true) @map("is_active")
-  lastLoginAt    DateTime? @map("last_login_at") @db.Timestamptz
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  employeeCode String?   @map("employee_code") @db.VarChar(50)
+  // email stays globally unique on purpose — see Phase B decision below.
+  email        String    @unique @db.VarChar(255)
+  passwordHash String?   @map("password_hash")
+  firstName    String    @map("first_name") @db.VarChar(100)
+  lastName     String    @map("last_name") @db.VarChar(100)
+  phone        String?   @db.VarChar(20)
+  avatarUrl    String?   @map("avatar_url")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
-  company              Company              @relation(fields: [companyId], references: [id])
-  userBranchRoles      UserBranchRole[]     @relation("UserRoles")
-  assignedByRoles      UserBranchRole[]     @relation("AssignedByUser")
-  machinesCreated      Machine[]
-  workOrdersAssigned   WorkOrder[]          @relation("WOAssignedTo")
-  workOrdersCreated    WorkOrder[]          @relation("WOCreatedBy")
-  workOrdersApproved   WorkOrder[]          @relation("WOApprovedBy")
-  workOrderTechnicians WorkOrderTechnician[]
-  checklistResults     ChecklistResult[]
-  machineImages        MachineImage[]
-  machineDocuments     MachineDocument[]
-  maintenancePlans     MaintenancePlan[]
-  checklistTemplates   ChecklistTemplate[]
-  transactions         SparePartTransaction[]
-  notifications        Notification[]
-  auditLogs            AuditLog[]
-  personnel            Personnel?
+  company                 Company                 @relation(fields: [companyId], references: [id])
+  userBranchRoles         UserBranchRole[]        @relation("UserRoles")
+  assignedByRoles         UserBranchRole[]        @relation("AssignedByUser")
+  machinesCreated         Machine[]
+  workOrdersAssigned      WorkOrder[]             @relation("WOAssignedTo")
+  workOrdersCreated       WorkOrder[]             @relation("WOCreatedBy")
+  workOrdersApproved      WorkOrder[]             @relation("WOApprovedBy")
+  workOrderTechnicians    WorkOrderTechnician[]
+  checklistResults        ChecklistResult[]
+  machineImages           MachineImage[]
+  machineDocuments        MachineDocument[]
+  maintenancePlans        MaintenancePlan[]
+  checklistTemplates      ChecklistTemplate[]
+  transactions            SparePartTransaction[]
+  notifications           Notification[]
+  auditLogs               AuditLog[]
+  personnel               Personnel?
   attendanceImportBatches AttendanceImportBatch[] @relation("AttendanceImportAuthor")
-  transportJobsCreated TransportJob[]            @relation("TransportJobCreator")
-  jobAssignmentsBy     JobAssignment[]            @relation("JobAssignedBy")
-  jobAttachmentsUploaded JobAttachment[]          @relation("JobAttachmentUploader")
+  transportJobsCreated    TransportJob[]          @relation("TransportJobCreator")
+  jobAssignmentsBy        JobAssignment[]         @relation("JobAssignedBy")
+  jobAttachmentsUploaded  JobAttachment[]         @relation("JobAttachmentUploader")
 
+  // Phase B decision (2026-07-23): email stays globally @unique permanently — login
+  // (lib/auth.ts authorize()) looks up users by email alone with no company selector,
+  // so multi-company duplicate emails are not supported. The composite that used to
+  // coexist here was dropped as misleading (it can never add a constraint the global
+  // unique doesn't already enforce). Revisit only if a login redesign adds a company
+  // picker before password entry.
+  // employeeCode is no longer globally unique — company scope is now the sole
+  // enforced constraint (it's nullable; Postgres composite unique permits many NULLs).
+  @@unique([companyId, employeeCode])
   @@index([companyId])
   @@index([email])
   @@index([employeeCode])
-  // Phase A (tenant isolation, additive): coexists with the global @unique above.
-  // Not yet enforced/relied upon by app code — see docs/architecture/db-blueprint.md 2.1.
-  @@unique([companyId, email])
-  @@unique([companyId, employeeCode])
   @@map("users")
 }
 
@@ -235,8 +241,8 @@ model Role {
   isSystem    Boolean  @default(false) @map("is_system")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  company         Company          @relation(fields: [companyId], references: [id])
-  userBranchRoles UserBranchRole[]
+  company          Company           @relation(fields: [companyId], references: [id])
+  userBranchRoles  UserBranchRole[]
   maintenancePlans MaintenancePlan[]
 
   @@map("roles")
@@ -250,10 +256,10 @@ model UserBranchRole {
   assignedBy String?  @map("assigned_by") @db.Uuid
   assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz
 
-  user       User    @relation("UserRoles", fields: [userId], references: [id])
-  branch     Branch  @relation(fields: [branchId], references: [id])
-  role       Role    @relation(fields: [roleId], references: [id])
-  assignedByUser User? @relation("AssignedByUser", fields: [assignedBy], references: [id])
+  user           User   @relation("UserRoles", fields: [userId], references: [id])
+  branch         Branch @relation(fields: [branchId], references: [id])
+  role           Role   @relation(fields: [roleId], references: [id])
+  assignedByUser User?  @relation("AssignedByUser", fields: [assignedBy], references: [id])
 
   @@unique([userId, branchId, roleId])
   @@index([userId])
@@ -281,33 +287,38 @@ model MachineCategory {
 }
 
 model Machine {
-  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  branchId            String        @map("branch_id") @db.Uuid
-  departmentId        String?       @map("department_id") @db.Uuid
-  categoryId          String        @map("category_id") @db.Uuid
-  code                String        @unique @db.VarChar(50)
-  name                String        @db.VarChar(255)
-  model               String?       @db.VarChar(100)
-  manufacturer        String?       @db.VarChar(100)
-  serialNumber        String?       @map("serial_number") @db.VarChar(100)
-  installDate         DateTime?     @map("install_date") @db.Date
-  warrantyExpireDate  DateTime?     @map("warranty_expire_date") @db.Date
-  status              MachineStatus @default(active)
-  criticalLevel       Int           @default(1) @map("critical_level") @db.SmallInt
-  locationDetail      String?       @map("location_detail") @db.VarChar(255)
-  machineType         String?       @map("machine_type") @db.VarChar(100)
-  description         String?
-  attributes          Json?         @db.JsonB
-  qrCode              String?       @map("qr_code")
-  createdBy           String?       @map("created_by") @db.Uuid
-  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt           DateTime?     @map("deleted_at") @db.Timestamptz
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId           String        @map("branch_id") @db.Uuid
+  departmentId       String?       @map("department_id") @db.Uuid
+  categoryId         String        @map("category_id") @db.Uuid
+  code               String        @db.VarChar(50)
+  name               String        @db.VarChar(255)
+  model              String?       @db.VarChar(100)
+  manufacturer       String?       @db.VarChar(100)
+  serialNumber       String?       @map("serial_number") @db.VarChar(100)
+  installDate        DateTime?     @map("install_date") @db.Date
+  warrantyExpireDate DateTime?     @map("warranty_expire_date") @db.Date
+  status             MachineStatus @default(active)
+  criticalLevel      Int           @default(1) @map("critical_level") @db.SmallInt
+  locationDetail     String?       @map("location_detail") @db.VarChar(255)
+  machineType        String?       @map("machine_type") @db.VarChar(100)
+  description        String?
+  // Phase B schema-drift fixup (2026-07-23): these columns existed in the DB via
+  // scripts/add-pm-columns.sql but were never modeled in Prisma, so app code had to
+  // read/write them with raw SQL. Now tracked properly — see db-blueprint.md 2.6.
+  pmGeneral          String?       @map("pm_general")
+  pmMajor            String?       @map("pm_major")
+  attributes         Json?         @db.JsonB
+  qrCode             String?       @map("qr_code")
+  createdBy          String?       @map("created_by") @db.Uuid
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz
 
-  branch            Branch              @relation(fields: [branchId], references: [id])
-  department        Department?         @relation(fields: [departmentId], references: [id])
-  category          MachineCategory     @relation(fields: [categoryId], references: [id])
-  creator           User?               @relation(fields: [createdBy], references: [id])
+  branch            Branch                @relation(fields: [branchId], references: [id])
+  department        Department?           @relation(fields: [departmentId], references: [id])
+  category          MachineCategory       @relation(fields: [categoryId], references: [id])
+  creator           User?                 @relation(fields: [createdBy], references: [id])
   images            MachineImage[]
   documents         MachineDocument[]
   products          MachineProduct[]
@@ -316,14 +327,13 @@ model Machine {
   schedules         MaintenanceSchedule[]
   workOrders        WorkOrder[]
 
+  // Phase B: branch scope decided permanently (2026-07-23) — code no longer globally
+  // unique, this composite is now the sole enforced constraint.
+  @@unique([branchId, code])
   @@index([branchId])
   @@index([categoryId])
   @@index([status])
   @@index([code])
-  // Phase A (tenant isolation, additive): Machine has no companyId scalar column,
-  // so branch scope is used instead of the company scope db-blueprint.md suggests as
-  // the first option. Business decision on company vs. branch scope needed before Phase B.
-  @@unique([branchId, code])
   @@map("machines")
 }
 
@@ -337,8 +347,8 @@ model MachineImage {
   uploadedBy String?  @map("uploaded_by") @db.Uuid
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  machine    Machine @relation(fields: [machineId], references: [id])
-  uploader   User?   @relation(fields: [uploadedBy], references: [id])
+  machine  Machine @relation(fields: [machineId], references: [id])
+  uploader User?   @relation(fields: [uploadedBy], references: [id])
 
   @@index([machineId])
   @@map("machine_images")
@@ -370,7 +380,7 @@ model MachineProduct {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  machine     Machine  @relation(fields: [machineId], references: [id])
+  machine Machine @relation(fields: [machineId], references: [id])
 
   @@index([machineId])
   @@map("machine_products")
@@ -435,11 +445,11 @@ model MaintenancePlan {
   createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  machine              Machine                   @relation(fields: [machineId], references: [id])
-  type                 MaintenanceType           @relation(fields: [typeId], references: [id])
-  assignedRole         Role?                     @relation(fields: [assignedRoleId], references: [id])
-  creator              User?                     @relation(fields: [createdBy], references: [id])
-  schedules            MaintenanceSchedule[]
+  machine                Machine                 @relation(fields: [machineId], references: [id])
+  type                   MaintenanceType         @relation(fields: [typeId], references: [id])
+  assignedRole           Role?                   @relation(fields: [assignedRoleId], references: [id])
+  creator                User?                   @relation(fields: [createdBy], references: [id])
+  schedules              MaintenanceSchedule[]
   planChecklistTemplates PlanChecklistTemplate[]
 
   @@index([machineId])
@@ -474,7 +484,7 @@ model MaintenanceSchedule {
 
 model WorkOrder {
   id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  woNumber         String            @unique @map("wo_number") @db.VarChar(30)
+  woNumber         String            @map("wo_number") @db.VarChar(30)
   scheduleId       String?           @map("schedule_id") @db.Uuid
   machineId        String            @map("machine_id") @db.Uuid
   typeId           String            @map("type_id") @db.Uuid
@@ -503,26 +513,27 @@ model WorkOrder {
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz
 
-  schedule     MaintenanceSchedule?  @relation(fields: [scheduleId], references: [id])
-  machine      Machine               @relation(fields: [machineId], references: [id])
-  type         MaintenanceType       @relation(fields: [typeId], references: [id])
-  branch       Branch                @relation(fields: [branchId], references: [id])
-  assignee     User?                 @relation("WOAssignedTo", fields: [assignedTo], references: [id])
-  creator      User?                 @relation("WOCreatedBy", fields: [createdBy], references: [id])
-  approver     User?                 @relation("WOApprovedBy", fields: [approvedBy], references: [id])
-  technicians  WorkOrderTechnician[]
-  parts        WorkOrderPart[]
+  schedule         MaintenanceSchedule?   @relation(fields: [scheduleId], references: [id])
+  machine          Machine                @relation(fields: [machineId], references: [id])
+  type             MaintenanceType        @relation(fields: [typeId], references: [id])
+  branch           Branch                 @relation(fields: [branchId], references: [id])
+  assignee         User?                  @relation("WOAssignedTo", fields: [assignedTo], references: [id])
+  creator          User?                  @relation("WOCreatedBy", fields: [createdBy], references: [id])
+  approver         User?                  @relation("WOApprovedBy", fields: [approvedBy], references: [id])
+  technicians      WorkOrderTechnician[]
+  parts            WorkOrderPart[]
   checklistResults ChecklistResult[]
-  transactions SparePartTransaction[]
+  transactions     SparePartTransaction[]
 
+  // Phase B: wo_number no longer globally unique — matches the per-branch numbering
+  // scheme already implemented in generate-wo-number.ts; this composite is now the
+  // sole enforced constraint.
+  @@unique([branchId, woNumber])
   @@index([machineId])
   @@index([branchId, status])
   @@index([assignedTo, status])
   @@index([plannedStart])
   @@index([woNumber])
-  // Phase A (tenant isolation, additive): matches the per-branch numbering scheme
-  // already implemented in generate-wo-number.ts.
-  @@unique([branchId, woNumber])
   @@map("work_orders")
 }
 
@@ -553,30 +564,30 @@ model ChecklistTemplate {
   createdBy  String?  @map("created_by") @db.Uuid
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  company              Company                 @relation(fields: [companyId], references: [id])
-  category             MachineCategory?        @relation(fields: [categoryId], references: [id])
-  type                 MaintenanceType?        @relation(fields: [typeId], references: [id])
-  creator              User?                   @relation(fields: [createdBy], references: [id])
-  items                ChecklistItem[]
+  company                Company                 @relation(fields: [companyId], references: [id])
+  category               MachineCategory?        @relation(fields: [categoryId], references: [id])
+  type                   MaintenanceType?        @relation(fields: [typeId], references: [id])
+  creator                User?                   @relation(fields: [createdBy], references: [id])
+  items                  ChecklistItem[]
   planChecklistTemplates PlanChecklistTemplate[]
 
   @@map("checklist_templates")
 }
 
 model ChecklistItem {
-  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  templateId     String            @map("template_id") @db.Uuid
-  sequence       Int               @db.SmallInt
-  section        String?           @db.VarChar(100)
-  itemName       String            @map("item_name") @db.VarChar(255)
-  itemType       ChecklistItemType @default(checkbox) @map("item_type")
-  standardValue  String?           @map("standard_value") @db.VarChar(100)
-  minValue       Decimal?          @map("min_value") @db.Decimal(10, 4)
-  maxValue       Decimal?          @map("max_value") @db.Decimal(10, 4)
-  unit           String?           @db.VarChar(30)
-  isRequired     Boolean           @default(true) @map("is_required")
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId    String            @map("template_id") @db.Uuid
+  sequence      Int               @db.SmallInt
+  section       String?           @db.VarChar(100)
+  itemName      String            @map("item_name") @db.VarChar(255)
+  itemType      ChecklistItemType @default(checkbox) @map("item_type")
+  standardValue String?           @map("standard_value") @db.VarChar(100)
+  minValue      Decimal?          @map("min_value") @db.Decimal(10, 4)
+  maxValue      Decimal?          @map("max_value") @db.Decimal(10, 4)
+  unit          String?           @db.VarChar(30)
+  isRequired    Boolean           @default(true) @map("is_required")
 
-  template ChecklistTemplate  @relation(fields: [templateId], references: [id])
+  template ChecklistTemplate @relation(fields: [templateId], references: [id])
   results  ChecklistResult[]
 
   @@index([templateId])
@@ -618,7 +629,7 @@ model ChecklistResult {
 model Supplier {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId    String   @map("company_id") @db.Uuid
-  code         String   @unique @db.VarChar(20)
+  code         String   @db.VarChar(20)
   name         String   @db.VarChar(255)
   contactName  String?  @map("contact_name") @db.VarChar(100)
   phone        String?  @db.VarChar(20)
@@ -631,8 +642,11 @@ model Supplier {
   company    Company     @relation(fields: [companyId], references: [id])
   spareParts SparePart[]
 
-  // Phase A (tenant isolation, additive): coexists with the global @unique above.
+  // Phase B: code no longer globally unique — this composite is now the sole
+  // enforced constraint (allocateUniqueSupplierCode in master-data-service.ts
+  // scopes the random-code lookup by companyId to match).
   @@unique([companyId, code])
+  @@index([code])
   @@map("suppliers")
 }
 
@@ -640,7 +654,7 @@ model SparePart {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId    String   @map("company_id") @db.Uuid
   supplierId   String?  @map("supplier_id") @db.Uuid
-  code         String   @unique @db.VarChar(50)
+  code         String   @db.VarChar(50)
   name         String   @db.VarChar(255)
   description  String?
   imageUrl     String?  @map("image_url")
@@ -653,15 +667,17 @@ model SparePart {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company      Company                @relation(fields: [companyId], references: [id])
-  supplier     Supplier?              @relation(fields: [supplierId], references: [id])
-  inventory          SparePartInventory[]
-  transactions       SparePartTransaction[]
-  workOrderParts     WorkOrderPart[]
-  machineSpareParts  MachineSparePart[]
+  company           Company                @relation(fields: [companyId], references: [id])
+  supplier          Supplier?              @relation(fields: [supplierId], references: [id])
+  inventory         SparePartInventory[]
+  transactions      SparePartTransaction[]
+  workOrderParts    WorkOrderPart[]
+  machineSpareParts MachineSparePart[]
 
-  // Phase A (tenant isolation, additive): coexists with the global @unique above.
+  // Phase B: code no longer globally unique — this composite is now the sole
+  // enforced constraint.
   @@unique([companyId, code])
+  @@index([code])
   @@map("spare_parts")
 }
 
@@ -742,16 +758,16 @@ model Notification {
 }
 
 model AuditLog {
-  id         BigInt      @id @default(autoincrement())
-  userId     String?     @map("user_id") @db.Uuid
-  tableName  String      @map("table_name") @db.VarChar(100)
-  recordId   String      @map("record_id") @db.Uuid
-  action     AuditAction
-  oldValues  Json?       @map("old_values") @db.JsonB
-  newValues  Json?       @map("new_values") @db.JsonB
-  ipAddress  String?     @map("ip_address")
-  userAgent  String?     @map("user_agent")
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  id        BigInt      @id @default(autoincrement())
+  userId    String?     @map("user_id") @db.Uuid
+  tableName String      @map("table_name") @db.VarChar(100)
+  recordId  String      @map("record_id") @db.Uuid
+  action    AuditAction
+  oldValues Json?       @map("old_values") @db.JsonB
+  newValues Json?       @map("new_values") @db.JsonB
+  ipAddress String?     @map("ip_address")
+  userAgent String?     @map("user_agent")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz
 
   user User? @relation(fields: [userId], references: [id])
 
@@ -764,29 +780,31 @@ model AuditLog {
 // ─── GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (import จาก Excel รูปแบบบันทึกเวลา) ─
 
 model Personnel {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
-  branchId    String?  @map("branch_id") @db.Uuid
-  rosterNo    String   @map("roster_no") @db.VarChar(30)
-  displayName String   @map("display_name") @db.VarChar(255)
-  jobGroup    String?  @map("job_group") @db.VarChar(100)
-  firstName   String?  @map("first_name") @db.VarChar(100)
-  lastName    String?  @map("last_name") @db.VarChar(100)
-  idCardNo    String?  @map("id_card_no") @db.VarChar(30)
-  phone       String?  @db.VarChar(30)
-  address     String?  @db.Text
-  notes       String?  @db.Text
-  userId      String?  @unique @map("user_id") @db.Uuid
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  branchId    String?   @map("branch_id") @db.Uuid
+  rosterNo    String    @map("roster_no") @db.VarChar(30)
+  displayName String    @map("display_name") @db.VarChar(255)
+  jobGroup    String?   @map("job_group") @db.VarChar(100)
+  firstName   String?   @map("first_name") @db.VarChar(100)
+  lastName    String?   @map("last_name") @db.VarChar(100)
+  idCardNo    String?   @map("id_card_no") @db.VarChar(30)
+  phone       String?   @db.VarChar(30)
+  address     String?   @db.Text
+  notes       String?   @db.Text
+  userId      String?   @unique @map("user_id") @db.Uuid
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
-  company            Company            @relation(fields: [companyId], references: [id])
-  branch             Branch?            @relation(fields: [branchId], references: [id])
-  user               User?              @relation(fields: [userId], references: [id])
-  attendance         AttendanceEntry[]
-  /** สาขาที่พนักงานสามารถลงเวลา/ทำงานได้ (หนึ่งคน — หลายสาขา) */
+  company           Company           @relation(fields: [companyId], references: [id])
+  branch            Branch?           @relation(fields: [branchId], references: [id])
+  user              User?             @relation(fields: [userId], references: [id])
+  attendance        AttendanceEntry[]
+  /**
+   * สาขาที่พนักงานสามารถลงเวลา/ทำงานได้ (หนึ่งคน — หลายสาขา)
+   */
   branchAssignments PersonnelBranch[]
 
   @@unique([companyId, rosterNo], map: "personnel_company_roster_unique")
@@ -821,9 +839,9 @@ model AttendanceImportBatch {
   createdById String?   @map("created_by_id") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  company   Company  @relation(fields: [companyId], references: [id])
-  branch    Branch   @relation(fields: [branchId], references: [id])
-  createdBy User?    @relation("AttendanceImportAuthor", fields: [createdById], references: [id])
+  company   Company           @relation(fields: [companyId], references: [id])
+  branch    Branch            @relation(fields: [branchId], references: [id])
+  createdBy User?             @relation("AttendanceImportAuthor", fields: [createdById], references: [id])
   entries   AttendanceEntry[]
 
   @@index([companyId, createdAt])
@@ -841,9 +859,9 @@ model AttendanceEntry {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company     Company  @relation(fields: [companyId], references: [id])
-  branch      Branch   @relation(fields: [branchId], references: [id])
-  personnel   Personnel @relation(fields: [personnelId], references: [id])
+  company     Company                @relation(fields: [companyId], references: [id])
+  branch      Branch                 @relation(fields: [branchId], references: [id])
+  personnel   Personnel              @relation(fields: [personnelId], references: [id])
   importBatch AttendanceImportBatch? @relation(fields: [importBatchId], references: [id])
 
   @@unique([personnelId, workDate], map: "attendance_entry_person_date_unique")
@@ -973,22 +991,22 @@ model TransportVehicleType {
 }
 
 model TransportVehicle {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId     String        @map("company_id") @db.Uuid
-  branchId      String        @map("branch_id") @db.Uuid
-  plateNumber   String        @map("plate_number") @db.VarChar(20)
-  name          String        @db.VarChar(100)
-  vehicleType   String        @map("vehicle_type") @db.VarChar(50)
-  maxWeightKg   Decimal?      @map("max_weight_kg") @db.Decimal(10, 2)
-  loadCapacityKg Decimal?     @map("load_capacity_kg") @db.Decimal(10, 2)
-  volumeM3      Decimal?      @map("volume_m3") @db.Decimal(8, 2)
-  gpsDeviceId   String?       @map("gps_device_id") @db.VarChar(100)
-  currentStatus VehicleStatus @default(available) @map("current_status")
-  mileage       Decimal       @default(0) @db.Decimal(12, 2)
-  notes         String?
-  isActive      Boolean       @default(true) @map("is_active")
-  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String        @map("company_id") @db.Uuid
+  branchId       String        @map("branch_id") @db.Uuid
+  plateNumber    String        @map("plate_number") @db.VarChar(20)
+  name           String        @db.VarChar(100)
+  vehicleType    String        @map("vehicle_type") @db.VarChar(50)
+  maxWeightKg    Decimal?      @map("max_weight_kg") @db.Decimal(10, 2)
+  loadCapacityKg Decimal?      @map("load_capacity_kg") @db.Decimal(10, 2)
+  volumeM3       Decimal?      @map("volume_m3") @db.Decimal(8, 2)
+  gpsDeviceId    String?       @map("gps_device_id") @db.VarChar(100)
+  currentStatus  VehicleStatus @default(available) @map("current_status")
+  mileage        Decimal       @default(0) @db.Decimal(12, 2)
+  notes          String?
+  isActive       Boolean       @default(true) @map("is_active")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   company     Company         @relation(fields: [companyId], references: [id])
   branch      Branch          @relation(fields: [branchId], references: [id])
@@ -1002,26 +1020,26 @@ model TransportVehicle {
 }
 
 model Driver {
-  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId        String        @map("company_id") @db.Uuid
-  branchId         String        @map("branch_id") @db.Uuid
-  code             String        @db.VarChar(50)
-  firstName        String        @map("first_name") @db.VarChar(100)
-  lastName         String        @map("last_name") @db.VarChar(100)
-  phone            String?       @db.VarChar(30)
-  licenseNumber    String?       @map("license_number") @db.VarChar(50)
-  licenseExpiry    DateTime?     @map("license_expiry") @db.Date
-  licenseTypes          Json     @default("[]") @map("license_types")
-  drivableVehicleTypes  Json     @default("[]") @map("drivable_vehicle_types")
-  currentStatus    VehicleStatus @default(available) @map("current_status")
-  assignedVehicleId String?      @map("assigned_vehicle_id") @db.Uuid
-  notes            String?
-  isActive         Boolean       @default(true) @map("is_active")
-  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId            String        @map("company_id") @db.Uuid
+  branchId             String        @map("branch_id") @db.Uuid
+  code                 String        @db.VarChar(50)
+  firstName            String        @map("first_name") @db.VarChar(100)
+  lastName             String        @map("last_name") @db.VarChar(100)
+  phone                String?       @db.VarChar(30)
+  licenseNumber        String?       @map("license_number") @db.VarChar(50)
+  licenseExpiry        DateTime?     @map("license_expiry") @db.Date
+  licenseTypes         Json          @default("[]") @map("license_types")
+  drivableVehicleTypes Json          @default("[]") @map("drivable_vehicle_types")
+  currentStatus        VehicleStatus @default(available) @map("current_status")
+  assignedVehicleId    String?       @map("assigned_vehicle_id") @db.Uuid
+  notes                String?
+  isActive             Boolean       @default(true) @map("is_active")
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  company         Company         @relation(fields: [companyId], references: [id])
-  branch          Branch          @relation(fields: [branchId], references: [id])
+  company         Company           @relation(fields: [companyId], references: [id])
+  branch          Branch            @relation(fields: [branchId], references: [id])
   assignedVehicle TransportVehicle? @relation(fields: [assignedVehicleId], references: [id])
   assignments     JobAssignment[]
   attachments     JobAttachment[]
@@ -1036,7 +1054,7 @@ model TransportJob {
   id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId         String               @map("company_id") @db.Uuid
   branchId          String               @map("branch_id") @db.Uuid
-  jobNumber         String               @unique @map("job_number") @db.VarChar(30)
+  jobNumber         String               @map("job_number") @db.VarChar(30)
   customerId        String?              @map("customer_id") @db.Uuid
   customerName      String?              @map("customer_name") @db.VarChar(255)
   jobType           String               @map("job_type") @db.VarChar(100)
@@ -1050,38 +1068,43 @@ model TransportJob {
   createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz
 
-  company    Company          @relation(fields: [companyId], references: [id])
-  branch     Branch           @relation(fields: [branchId], references: [id])
-  customer   TmsCustomer?     @relation(fields: [customerId], references: [id])
-  creator    User             @relation("TransportJobCreator", fields: [createdBy], references: [id])
-  stops      JobStop[]
-  assignment JobAssignment?
+  company     Company         @relation(fields: [companyId], references: [id])
+  branch      Branch          @relation(fields: [branchId], references: [id])
+  customer    TmsCustomer?    @relation(fields: [customerId], references: [id])
+  creator     User            @relation("TransportJobCreator", fields: [createdBy], references: [id])
+  stops       JobStop[]
+  assignment  JobAssignment?
   attachments JobAttachment[]
 
+  // Phase B: this table never got a Phase A composite unique — jobNumber generation
+  // in generate-entity-code.ts / job-service.ts already counts per companyId, so the
+  // scope is added directly as the sole (non-global) unique constraint.
+  @@unique([companyId, jobNumber])
   @@index([companyId])
   @@index([branchId, status])
   @@index([createdAt])
   @@index([scheduledDate])
+  @@index([jobNumber])
   @@map("transport_jobs")
 }
 
 model JobStop {
-  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  jobId           String     @map("job_id") @db.Uuid
-  sequence        Int
-  customerName    String     @map("customer_name") @db.VarChar(255)
-  address         String
-  latitude        Decimal?   @db.Decimal(10, 7)
-  longitude       Decimal?   @db.Decimal(10, 7)
-  contactName     String?    @map("contact_name") @db.VarChar(255)
-  contactPhone    String?    @map("contact_phone") @db.VarChar(30)
-  estimatedArrival DateTime? @map("estimated_arrival") @db.Timestamptz
-  actualArrival   DateTime?  @map("actual_arrival") @db.Timestamptz
-  weightKg        Decimal?   @map("weight_kg") @db.Decimal(10, 2)
-  status          StopStatus @default(pending)
-  notes           String?
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId            String     @map("job_id") @db.Uuid
+  sequence         Int
+  customerName     String     @map("customer_name") @db.VarChar(255)
+  address          String
+  latitude         Decimal?   @db.Decimal(10, 7)
+  longitude        Decimal?   @db.Decimal(10, 7)
+  contactName      String?    @map("contact_name") @db.VarChar(255)
+  contactPhone     String?    @map("contact_phone") @db.VarChar(30)
+  estimatedArrival DateTime?  @map("estimated_arrival") @db.Timestamptz
+  actualArrival    DateTime?  @map("actual_arrival") @db.Timestamptz
+  weightKg         Decimal?   @map("weight_kg") @db.Decimal(10, 2)
+  status           StopStatus @default(pending)
+  notes            String?
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
   job         TransportJob    @relation(fields: [jobId], references: [id], onDelete: Cascade)
   attachments JobAttachment[]
@@ -1091,16 +1114,16 @@ model JobStop {
 }
 
 model JobAssignment {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  jobId       String    @unique @map("job_id") @db.Uuid
-  vehicleId   String    @map("vehicle_id") @db.Uuid
-  driverId    String    @map("driver_id") @db.Uuid
-  assignedAt  DateTime  @default(now()) @map("assigned_at") @db.Timestamptz
-  assignedBy  String    @map("assigned_by") @db.Uuid
-  startTime   DateTime? @map("start_time") @db.Timestamptz
-  endTime     DateTime? @map("end_time") @db.Timestamptz
-  distanceKm  Decimal?  @map("distance_km") @db.Decimal(10, 2)
-  notes       String?
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId      String    @unique @map("job_id") @db.Uuid
+  vehicleId  String    @map("vehicle_id") @db.Uuid
+  driverId   String    @map("driver_id") @db.Uuid
+  assignedAt DateTime  @default(now()) @map("assigned_at") @db.Timestamptz
+  assignedBy String    @map("assigned_by") @db.Uuid
+  startTime  DateTime? @map("start_time") @db.Timestamptz
+  endTime    DateTime? @map("end_time") @db.Timestamptz
+  distanceKm Decimal?  @map("distance_km") @db.Decimal(10, 2)
+  notes      String?
 
   job            TransportJob     @relation(fields: [jobId], references: [id])
   vehicle        TransportVehicle @relation(fields: [vehicleId], references: [id])
@@ -1130,11 +1153,11 @@ model JobAttachment {
   uploadedBy       String          @map("uploaded_by") @db.Uuid
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
 
-  job      TransportJob     @relation(fields: [jobId], references: [id])
-  stop     JobStop?         @relation(fields: [stopId], references: [id])
+  job      TransportJob      @relation(fields: [jobId], references: [id])
+  stop     JobStop?          @relation(fields: [stopId], references: [id])
   vehicle  TransportVehicle? @relation(fields: [vehicleId], references: [id])
-  driver   Driver?          @relation(fields: [driverId], references: [id])
-  uploader User             @relation("JobAttachmentUploader", fields: [uploadedBy], references: [id])
+  driver   Driver?           @relation(fields: [driverId], references: [id])
+  uploader User              @relation("JobAttachmentUploader", fields: [uploadedBy], references: [id])
 
   @@index([jobId])
   @@index([stopId])

@@ -123,22 +123,32 @@
 
 ## 5) DB-Phase B — dedupe + enforce constraints
 
-### Deploy steps
+**สถานะ: ทำแล้วที่ dev DB เท่านั้น (2026-07-23)** — ลบ global `@unique` เก่าออกจาก `suppliers.code`, `spare_parts.code`, `machines.code`, `work_orders.wo_number`, `users.employee_code`, `transport_jobs.job_number` (ปิด gap ที่ไม่เคยมี composite มาก่อนด้วย) โดยเก็บ `users.email` เป็น global unique ถาวรตามเหตุผล login flow — ดู [db-blueprint.md](./db-blueprint.md#3-แผน-db-migration-3-เฟส-strict--ปลอดภัย)
 
-1. Maintenance window
-2. รัน data fix script (แยก repo/script หรือ `prisma db execute`) ตาม dedupe plan
-3. Deploy migration ที่เพิ่ม unique composite / ลบ unique เก่า
+### Deploy steps ที่ใช้จริง (dev)
+
+1. รัน precheck SQL อีกครั้งก่อนลบ — ยืนยัน 0 duplicate ทุกจุด (รวม `transport_jobs.job_number` ที่ query เพิ่มเอง เพราะไม่ได้อยู่ใน script เดิม)
+2. แก้ `allocateUniqueSupplierCode` ให้ scope ด้วย `companyId` ก่อนแก้ schema (ป้องกัน type error / behavior เพี้ยนหลังลบ global unique)
+3. แก้ `schema.prisma`: ลบ global `@unique` 6 จุด + เพิ่ม `@@unique([company_id, job_number])` ให้ `transport_jobs` + ลบ composite `@@unique([company_id, email])` ที่ซ้ำซ้อนกับ global unique ของ `users.email`
+4. Shadow DB ยังพังอยู่ (P1001) ใช้ workaround: `prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script` เพื่อสร้าง SQL, ตรวจสอบ SQL, ใส่ในโฟลเดอร์ migration ใหม่ (`20260723130000_phase_b_drop_global_uniques`)
+5. `npx prisma db execute --file <migration.sql>` เพื่อ apply กับ dev DB จริง แล้ว `npx prisma migrate resolve --applied <ชื่อโฟลเดอร์>` เพื่อบันทึกประวัติ (ไม่ใช่แค่ mark โดยไม่รัน — รอบนี้รัน SQL จริงก่อน แล้ว resolve เพื่อ sync ประวัติ)
+6. `npx prisma generate` sync Prisma client (มี native binary rename EPERM เป็นระยะบน Windows — ไม่กระทบผลลัพธ์ ถ้า type ที่ generate ออกมาถูกต้องให้ถือว่าผ่าน)
 
 ### Verify
 
-- [ ] precheck duplicate = 0
-- [ ] สร้างข้อมูลใหม่ที่ขอบเขตเดียวกันไม่ชน
-- [ ] Smoke paths + สร้าง WO / supplier / spare part ใหม่
+- [x] precheck duplicate = 0 (ทุกจุดรวม transport_jobs)
+- [x] `npx prisma migrate status` → up to date
+- [x] `npm test` → 73/73 ผ่าน
+- [x] `npx tsc --noEmit` → ผ่าน (แก้ `prisma/seed.ts` machine upsert ให้ใช้ `branchId_code` compound key)
+- [x] `npm run build` → ผ่าน
+- [x] สร้างข้อมูลใหม่ที่ขอบเขตเดียวกันไม่ชน — smoke test ผ่าน HTTP จริง: login (`users.email` global ทำงานปกติ), สร้าง supplier ใหม่ (ได้ code แบบ random scope ตาม company), สร้าง work order ใหม่ (ได้ `wo_number` แบบ sequential scope ตาม branch)
+- [ ] Smoke paths อื่นที่เหลือ (transport job create ด้วย vehicle/driver จริง, spare part create) — แนะนำตรวจเพิ่มก่อน deploy production
 
 ### Rollback
 
 - **ต้องมี DB snapshot ก่อน Phase B** — เป็นหลัก
-- ถ้า enforce แล้วพบปัญหา: restore snapshot แล้วแก้ dedupe script แล้วค่อยรันใหม่
+- ที่ dev: ย้อนได้ด้วยการเพิ่ม global `@unique` กลับใน `schema.prisma` แล้วสร้าง migration ใหม่ตามขั้นตอนเดียวกัน (ไม่มี dropped data เพราะ Phase B ไม่ backfill/ลบข้อมูล มีแค่ index/constraint)
+- สำหรับ production: Restore DB snapshot **หรือ** migrate down ตามนโยบายทีม
 
 ---
 

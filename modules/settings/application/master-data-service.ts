@@ -489,7 +489,7 @@ export async function createSupplier(
 
   let code: string
   try {
-    code = await allocateUniqueSupplierCode(db)
+    code = await allocateUniqueSupplierCode(db, params.companyId)
   } catch {
     return { error: { message: "Cannot allocate supplier code. Please try again." }, status: 503 as const }
   }
@@ -588,11 +588,13 @@ export async function getSupplierSpareParts(db: PrismaClient, params: { id: stri
   return { supplier, parts }
 }
 
-async function allocateUniqueSupplierCode(db: PrismaClient): Promise<string> {
+async function allocateUniqueSupplierCode(db: PrismaClient, companyId: string): Promise<string> {
   for (let attempt = 0; attempt < 16; attempt++) {
     const candidate = `S-${randomBytes(6).toString("hex").toUpperCase()}`
-    const dup = await db.supplier.findUnique({
-      where: { code: candidate },
+    // Scoped by companyId to match the @@unique([companyId, code]) constraint
+    // (code is no longer globally unique — see db-blueprint.md Phase B).
+    const dup = await db.supplier.findFirst({
+      where: { code: candidate, companyId },
       select: { id: true },
     })
     if (!dup) return candidate

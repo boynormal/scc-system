@@ -40,32 +40,12 @@ async function getMachine(id: string, companyId: string) {
           assignee: { select: { firstName: true, lastName: true } },
         },
       },
+      products: { orderBy: { order: "asc" } },
     },
   })
   if (!machine) return null
 
-  const [rawProducts, extra] = await Promise.all([
-    prisma.$queryRaw<any[]>`
-      SELECT * FROM machine_products WHERE machine_id = ${id}::uuid ORDER BY "order" ASC
-    `,
-    prisma.$queryRaw<{ machine_type: string | null; description: string | null; pm_general: string | null; pm_major: string | null }[]>`
-      SELECT machine_type, description, pm_general, pm_major FROM machines WHERE id = ${id}::uuid LIMIT 1
-    `,
-  ])
-
-  const products = rawProducts.map((r) => ({
-    id: r.id, name: r.name, description: r.description,
-    imageUrl: r.image_url, order: r.order,
-  }))
-
-  return {
-    ...machine,
-    machineType: extra[0]?.machine_type ?? null,
-    description: extra[0]?.description ?? null,
-    pmGeneral: extra[0]?.pm_general ?? null,
-    pmMajor: extra[0]?.pm_major ?? null,
-    products,
-  } as any
+  return machine
 }
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
@@ -126,11 +106,11 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
         {/* Left: Details */}
         <div className="lg:col-span-2 space-y-5">
           {/* Images */}
-          {(machine as any).images?.length > 0 && (
+          {machine.images.length > 0 && (
             <Card>
               <CardHeader><CardTitle>รูปภาพเครื่องจักร</CardTitle></CardHeader>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {(machine as any).images.map((img: any) => (
+                {machine.images.map((img) => (
                   <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border-2 hover:border-blue-400 transition-colors ${img.isPrimary ? "border-blue-400" : "border-slate-200"}`}>
                     <ClickableImage src={img.fileUrl} alt={img.fileName || "Machine image"} fill sizes="(max-width: 768px) 33vw, 20vw" className="object-cover hover:scale-105 transition-transform" />
                     {img.isPrimary && (
@@ -146,7 +126,7 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
             <CardHeader><CardTitle>ข้อมูลทั่วไป</CardTitle></CardHeader>
             <InfoRow label="รหัสเครื่องจักร" value={machine.code} />
             <InfoRow label="ชื่อเครื่องจักร" value={machine.name} />
-            <InfoRow label="ประเภท" value={(machine as any).machineType} />
+            <InfoRow label="ประเภท" value={machine.machineType} />
             <InfoRow label="รุ่น (Model)" value={machine.model} />
             <InfoRow label="ผู้ผลิต" value={machine.manufacturer} />
             <InfoRow label="หมายเลขซีเรียล" value={machine.serialNumber} />
@@ -154,36 +134,36 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
             <InfoRow label="แผนก" value={machine.department?.name} />
             <InfoRow label="หมวดหมู่" value={machine.category.name} />
             <InfoRow label="ตำแหน่ง" value={machine.locationDetail} />
-            {(machine as any).description && (
+            {machine.description && (
               <div className="py-2.5 border-b border-slate-100">
                 <span className="text-slate-400 text-sm block mb-1">รายละเอียด</span>
-                <p className="text-slate-800 text-sm whitespace-pre-wrap">{(machine as any).description}</p>
+                <p className="text-slate-800 text-sm whitespace-pre-wrap">{machine.description}</p>
               </div>
             )}
           </Card>
 
           <MachineSparePartsCard machineId={machine.id} canEdit={canEditMachineBom} />
 
-          {((machine as any).pmGeneral || (machine as any).pmMajor) && (
+          {(machine.pmGeneral || machine.pmMajor) && (
             <Card>
               <CardHeader><CardTitle>ขอบเขตการซ่อมบำรุง (Scope of Work)</CardTitle></CardHeader>
               <div className="space-y-5">
-                {(machine as any).pmGeneral && (
+                {machine.pmGeneral && (
                   <div>
                     <p className="text-slate-600 font-medium text-sm mb-2 pb-1 border-b flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">PM ทั่วไป</span>
                       General PM
                     </p>
-                    <pre className="text-slate-700 text-sm whitespace-pre-wrap font-sans leading-relaxed bg-slate-50 p-4 rounded-lg border">{(machine as any).pmGeneral}</pre>
+                    <pre className="text-slate-700 text-sm whitespace-pre-wrap font-sans leading-relaxed bg-slate-50 p-4 rounded-lg border">{machine.pmGeneral}</pre>
                   </div>
                 )}
-                {(machine as any).pmMajor && (
+                {machine.pmMajor && (
                   <div>
                     <p className="text-slate-600 font-medium text-sm mb-2 pb-1 border-b flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">PM ใหญ่</span>
                       Major PM
                     </p>
-                    <pre className="text-slate-700 text-sm whitespace-pre-wrap font-sans leading-relaxed bg-slate-50 p-4 rounded-lg border">{(machine as any).pmMajor}</pre>
+                    <pre className="text-slate-700 text-sm whitespace-pre-wrap font-sans leading-relaxed bg-slate-50 p-4 rounded-lg border">{machine.pmMajor}</pre>
                   </div>
                 )}
               </div>
@@ -199,11 +179,11 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
           </Card>
 
           {/* Products */}
-          {(machine as any).products?.length > 0 && (
+          {machine.products.length > 0 && (
             <Card>
               <CardHeader><CardTitle>รายการสินค้า / ผลิตภัณฑ์</CardTitle></CardHeader>
               <div className="space-y-3">
-                {(machine as any).products.map((product: any) => (
+                {machine.products.map((product) => (
                   <div key={product.id} className="flex gap-3 p-3 bg-slate-50 rounded-lg">
                     {product.imageUrl && (
                       <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 shrink-0 hover:border-blue-400 transition-colors">

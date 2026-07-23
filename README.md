@@ -76,7 +76,7 @@
 
 - **ESLint migration:** เปลี่ยนไปใช้ `eslint` CLI + `eslint.config.mjs` (แทน `next lint`) ตามแนวทาง Next 15; ปัจจุบันยังมี warning เดิมในบางไฟล์
 - **Auth middleware boundary:** แยก config เป็น `lib/auth.config.ts` เพื่อให้ middleware เป็น edge-safe และไม่ลาก Prisma/bcrypt เข้า middleware graph
-- **DB schema drift note:** มีสคริปต์ [scripts/add-pm-columns.sql](scripts/add-pm-columns.sql) (`pm_general`, `pm_major`) ที่ไม่ได้อยู่ใน Prisma model โดยตรง — ควรพิจารณาจัดทำ migration/contract ให้ชัดในรอบถัดไป
+- **DB schema drift note (ปิดแล้ว 2026-07-23):** `machines.pm_general`/`pm_major` เคยถูกเพิ่มนอก Prisma schema ผ่านสคริปต์ manual ตอนนี้ track เป็น field จริงใน `schema.prisma` + migration แล้ว ดู [docs/architecture/db-blueprint.md](docs/architecture/db-blueprint.md#26-schema-drift-ที่ต้องปิดงาน--ปิดแล้ว-2026-07-23-ตัวเลือก-a)
 
 ---
 

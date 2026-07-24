@@ -13,6 +13,14 @@ export const createBranchSchema = z.object({
   timezone: z.string().default("Asia/Bangkok"),
 })
 
+export const updateBranchSchema = z.object({
+  code: z.string().min(1).max(20).optional(),
+  name: z.string().min(1).max(255).optional(),
+  address: z.string().nullable().optional(),
+  timezone: z.string().optional(),
+  isActive: z.boolean().optional(),
+})
+
 export const createRoleSchema = z.object({
   name: z.string().min(1).max(100),
   permissions: z.record(z.boolean()).optional(),
@@ -136,6 +144,27 @@ export async function createBranch(
 ) {
   return db.branch.create({
     data: { ...params.input, companyId: params.companyId },
+  })
+}
+
+export async function getBranchById(db: PrismaClient, params: { id: string; companyId: string }) {
+  return db.branch.findFirst({
+    where: { id: params.id, companyId: params.companyId, deletedAt: null },
+  })
+}
+
+export async function updateBranch(
+  db: PrismaClient,
+  params: { id: string; companyId: string; input: z.infer<typeof updateBranchSchema> }
+) {
+  const branch = await db.branch.findFirst({
+    where: { id: params.id, companyId: params.companyId, deletedAt: null },
+  })
+  if (!branch) throw new NotFoundError("Branch not found")
+
+  return db.branch.update({
+    where: { id: params.id },
+    data: params.input,
   })
 }
 

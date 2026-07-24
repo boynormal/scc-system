@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { ModuleAccessPicker, type ModuleAccessValue } from "@/components/settings/module-access-picker"
 
 const schema = z.object({
+  email: z.string().email("อีเมลไม่ถูกต้อง"),
   firstName: z.string().min(1, "กรุณากรอกชื่อ"),
   lastName: z.string().min(1, "กรุณากรอกนามสกุล"),
   phone: z.string().optional(),
@@ -66,6 +67,7 @@ export default function EditUserPage() {
         const ma = data.moduleAccess
         setModuleAccess(ma === "all" || Array.isArray(ma) ? (ma as ModuleAccessValue) : null)
         reset({
+          email: data.email,
           firstName: data.firstName,
           lastName: data.lastName,
           phone: data.phone ?? "",
@@ -124,9 +126,17 @@ export default function EditUserPage() {
         <Card>
           <CardHeader><CardTitle>ข้อมูลส่วนตัว</CardTitle></CardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="อีเมล"
+              required
+              type="email"
+              hint="ใช้สำหรับเข้าสู่ระบบ — เปลี่ยนแล้วต้องใช้อีเมลใหม่ล็อกอินครั้งถัดไป"
+              error={errors.email?.message}
+              {...register("email")}
+            />
+            <Input label="เบอร์โทรศัพท์" type="tel" autoComplete="off" {...register("phone")} />
             <Input label="ชื่อ" required error={errors.firstName?.message} {...register("firstName")} />
             <Input label="นามสกุล" required error={errors.lastName?.message} {...register("lastName")} />
-            <Input label="เบอร์โทรศัพท์" type="tel" {...register("phone")} />
           </div>
         </Card>
 

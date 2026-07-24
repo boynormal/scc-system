@@ -28,6 +28,7 @@ export const createUserSchema = z.object({
 
 export const updateUserSchema = z
   .object({
+    email: z.string().email().optional(),
     firstName: z.string().min(1).optional(),
     lastName: z.string().min(1).optional(),
     phone: z.string().nullable().optional(),
@@ -194,7 +195,17 @@ export async function updateUser(
   })
   if (!user) return { error: "Not found" as const, status: 404 as const }
 
-  const { password, branchId, roleId, userBranchRoleId, moduleAccess, ...rest } = params.input
+  const { password, branchId, roleId, userBranchRoleId, moduleAccess, email, ...rest } = params.input
+
+  if (email && email !== user.email) {
+    const dupEmail = await db.user.findFirst({
+      where: { email, id: { not: params.id } },
+      select: { id: true },
+    })
+    if (dupEmail) {
+      return { error: { message: "อีเมลนี้ถูกใช้งานแล้ว" }, status: 409 as const }
+    }
+  }
 
   if (branchId && roleId) {
     const [branch, role] = await Promise.all([
@@ -248,12 +259,13 @@ export async function updateUser(
     where: { id: params.id },
     data: {
       ...rest,
+      ...(email && { email }),
       ...(moduleAccess !== undefined && { moduleAccess: toModuleAccessJson(moduleAccess) }),
       ...(password && { passwordHash: await bcrypt.hash(password, 12) }),
     },
   })
 
-  return { data: { id: updated.id } }
+  return { data: { id: updated.id, email: updated.email } }
 }
 
 export async function deactivateUser(

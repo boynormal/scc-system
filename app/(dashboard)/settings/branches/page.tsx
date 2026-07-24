@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { Building2, Plus, MapPin, Users, Wrench, CheckCircle2, XCircle } from "lucide-react"
+import { Building2, Plus, MapPin, Users, Wrench, CheckCircle2, XCircle, Pencil } from "lucide-react"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
@@ -53,10 +53,19 @@ export default async function BranchesSettingsPage() {
                 <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-blue-600" />
                 </div>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${branch.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
-                  {branch.isActive ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                  {branch.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${branch.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                    {branch.isActive ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {branch.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                  </span>
+                  <Link
+                    href={`/settings/branches/${branch.id}/edit`}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    title="แก้ไขสาขา"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
               <p className="font-semibold text-slate-800">{branch.name}</p>
               <p className="text-xs text-slate-400 font-mono mt-0.5">{branch.code}</p>

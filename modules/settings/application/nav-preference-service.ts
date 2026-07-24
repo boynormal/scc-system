@@ -9,6 +9,9 @@ export const updateNavPreferencesSchema = z.object({
   pinnedModuleIds: z.array(z.string()).optional(),
   hiddenDepartmentIds: z.array(z.string()).optional(),
   departmentOrderOverrides: z.record(z.number()).optional(),
+  productLineIconOverrides: z.record(z.string()).optional(),
+  productLineImageOverrides: z.record(z.string().max(500)).optional(),
+  appearance: z.enum(["light", "dark"]).optional(),
 })
 
 export async function getNavPreferences(db: PrismaClient, companyId: string) {
@@ -75,7 +78,33 @@ export async function updateNavPreferences(
       ...params.input.departmentOrderOverrides,
     }
   }
-
+  if (params.input.productLineIconOverrides !== undefined) {
+    const prevIconOverrides =
+      prevNav.productLineIconOverrides &&
+      typeof prevNav.productLineIconOverrides === "object" &&
+      !Array.isArray(prevNav.productLineIconOverrides)
+        ? (prevNav.productLineIconOverrides as Record<string, string>)
+        : {}
+    nextNav.productLineIconOverrides = {
+      ...prevIconOverrides,
+      ...params.input.productLineIconOverrides,
+    }
+  }
+  if (params.input.productLineImageOverrides !== undefined) {
+    const prevImageOverrides =
+      prevNav.productLineImageOverrides &&
+      typeof prevNav.productLineImageOverrides === "object" &&
+      !Array.isArray(prevNav.productLineImageOverrides)
+        ? (prevNav.productLineImageOverrides as Record<string, string>)
+        : {}
+    nextNav.productLineImageOverrides = {
+      ...prevImageOverrides,
+      ...params.input.productLineImageOverrides,
+    }
+  }
+  if (params.input.appearance !== undefined) {
+    nextNav.appearance = params.input.appearance
+  }
   const newSettings = { ...existing, nav: nextNav }
 
   await db.company.update({

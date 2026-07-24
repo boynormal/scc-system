@@ -1,22 +1,29 @@
 import type { Action, Resource } from "@/lib/permissions"
 
 /** Lucide icon name → resolved in Sidebar via map (client-only icons). */
-export type NavIconKey =
-  | "LayoutDashboard"
-  | "Wrench"
-  | "Factory"
-  | "ClipboardList"
-  | "Package"
-  | "BarChart3"
-  | "Bell"
-  | "Settings"
-  | "Users"
-  | "Clock"
-  | "Truck"
-  | "MapPin"
-  | "Monitor"
-  | "CalendarDays"
-  | "Database"
+export const NAV_ICON_KEYS = [
+  "LayoutDashboard",
+  "Wrench",
+  "Factory",
+  "ClipboardList",
+  "Package",
+  "BarChart3",
+  "Bell",
+  "Settings",
+  "Users",
+  "Clock",
+  "Truck",
+  "MapPin",
+  "Monitor",
+  "CalendarDays",
+  "Database",
+  "Cpu",
+  "Ticket",
+  "Fence",
+  "ScanLine",
+] as const
+
+export type NavIconKey = (typeof NAV_ICON_KEYS)[number]
 
 export type NavPermissionGate = { resource: Resource; action: Action }
 
@@ -338,6 +345,52 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
         order: 5,
         keywords: ["master data", "ข้อมูลพื้นฐาน", "ลูกค้า", "ประเภทงาน", "รถ", "คนขับ", "fleet"],
         launcher: { departmentId: "transport" },
+      },
+    ],
+  },
+  {
+    type: "group",
+    key: "iot_control",
+    label: "ควบคุม IoT",
+    icon: "Cpu",
+    permission: { resource: "iot_devices", action: "read" },
+    moduleId: "iot_control",
+    order: 90,
+    keywords: ["iot", "ควบคุม", "อุปกรณ์", "device", "control", "hardware", "esp32"],
+    launcher: { departmentId: "iot_control", isPrimary: true },
+    children: [
+      {
+        type: "link",
+        key: "iot_queue_ticket",
+        href: "http://192.168.1.10:3999/counter",
+        label: "ระบบบัตรคิว",
+        icon: "Ticket",
+        permission: { resource: "iot_devices", action: "read" },
+        moduleId: "iot_queue_ticket",
+        order: 0,
+        keywords: ["บัตรคิว", "queue", "ticket", "counter", "คิว"],
+      },
+      {
+        type: "link",
+        key: "iot_barrier_gate",
+        href: "http://maikan.local/",
+        label: "ระบบไม้กั้น",
+        icon: "Fence",
+        permission: { resource: "iot_devices", action: "read" },
+        moduleId: "iot_barrier_gate",
+        order: 1,
+        keywords: ["ไม้กั้น", "barrier", "gate", "maikan"],
+      },
+      {
+        type: "link",
+        key: "iot_metal_detector",
+        href: "http://esp32-gate.local",
+        label: "ประตูสแกนโลหะ",
+        icon: "ScanLine",
+        permission: { resource: "iot_devices", action: "read" },
+        moduleId: "iot_metal_detector",
+        order: 2,
+        keywords: ["สแกนโลหะ", "metal detector", "gate", "esp32", "ประตู"],
       },
     ],
   },

@@ -14,11 +14,19 @@ import {
   Monitor,
   CalendarDays,
   Database,
+  Cpu,
+  Ticket,
+  Fence,
+  ScanLine,
   type LucideIcon,
 } from "lucide-react"
 import type { NavIconKey } from "@/shared/navigation/moduleRegistry"
-import type { ProductLineDef } from "@/shared/navigation/productLineRegistry"
 
+/**
+ * แหล่งความจริงเดียวสำหรับ resolve NavIconKey -> component ไอคอน
+ * ใช้ทั้งกับไอคอนโมดูล (sidebar/apps launcher) และไอคอนหมวดหมู่ (product line) —
+ * รวมถึง productLineIconOverrides ที่ตั้งค่าได้ใน /settings/home-screen
+ */
 export const NAV_ICON_MAP: Record<NavIconKey, LucideIcon> = {
   LayoutDashboard,
   Wrench,
@@ -35,13 +43,8 @@ export const NAV_ICON_MAP: Record<NavIconKey, LucideIcon> = {
   Monitor,
   CalendarDays,
   Database,
-}
-
-export const PRODUCT_LINE_ICON_MAP: Record<ProductLineDef["iconKey"], LucideIcon> = {
-  Wrench,
-  Package,
-  BarChart3,
-  Settings,
-  Users,
-  Truck,
+  Cpu,
+  Ticket,
+  Fence,
+  ScanLine,
 }

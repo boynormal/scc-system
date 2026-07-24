@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { useMemo, useState } from "react"
 import type { ModuleNavNode } from "@/shared/navigation/moduleRegistry"
 import { resolveActiveNavHref, subtreeContainsActiveHref } from "@/shared/navigation/groupNavByProductLine"
+import { isExternalHref } from "@/shared/navigation/isExternalHref"
 import { NAV_ICON_MAP } from "./nav-icon-map"
 
 function NavGroup({
@@ -89,19 +90,32 @@ export function SidebarNavTree({ nodes, depth = 0, activeHref: activeHrefProp, o
 
         const Icon = NAV_ICON_MAP[node.icon]
         const isActive = node.href === activeHref
+        const linkClassName = cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+          depth > 0 && "ml-1 pl-2 border-l border-transparent hover:border-slate-100",
+          isActive
+            ? "bg-blue-600 text-white shadow-sm"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        )
+
+        if (isExternalHref(node.href)) {
+          return (
+            <a
+              key={node.key}
+              href={node.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onNavigate}
+              className={linkClassName}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              {node.label}
+            </a>
+          )
+        }
+
         return (
-          <Link
-            key={node.key}
-            href={node.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
-              depth > 0 && "ml-1 pl-2 border-l border-transparent hover:border-slate-100",
-              isActive
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-            )}
-          >
+          <Link key={node.key} href={node.href} onClick={onNavigate} className={linkClassName}>
             <Icon className="w-4 h-4 shrink-0" />
             {node.label}
           </Link>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { usePathname } from "next/navigation"
-import type { ModuleNavNode } from "@/shared/navigation/moduleRegistry"
+import type { ModuleNavNode, NavIconKey } from "@/shared/navigation/moduleRegistry"
 import { PRODUCT_LINE_BY_ID } from "@/shared/navigation/productLineRegistry"
 import {
   filterNavByProductLine,
@@ -12,7 +12,15 @@ import {
 import { SidebarIconRail } from "./sidebar-icon-rail"
 import { SidebarOffCanvasPanel } from "./sidebar-offcanvas-panel"
 
-export default function Sidebar({ navItems }: { navItems: ModuleNavNode[] }) {
+export default function Sidebar({
+  navItems,
+  productLineIconOverrides = {},
+  productLineImageOverrides = {},
+}: {
+  navItems: ModuleNavNode[]
+  productLineIconOverrides?: Record<string, NavIconKey>
+  productLineImageOverrides?: Record<string, string>
+}) {
   const pathname = usePathname()
   const [openProductLineId, setOpenProductLineId] = useState<string | null>(null)
 
@@ -41,6 +49,8 @@ export default function Sidebar({ navItems }: { navItems: ModuleNavNode[] }) {
         activeProductLineId={activeProductLineId}
         openProductLineId={openProductLineId}
         onProductLineClick={handleProductLineClick}
+        productLineIconOverrides={productLineIconOverrides}
+        productLineImageOverrides={productLineImageOverrides}
       />
       <SidebarOffCanvasPanel
         open={openProductLineId !== null}

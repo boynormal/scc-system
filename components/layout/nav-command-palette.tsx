@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Search } from "lucide-react"
 import type { ModuleNavNode } from "@/shared/navigation/moduleRegistry"
 import { flattenNavForPalette } from "@/shared/navigation/flattenNav"
+import { isExternalHref } from "@/shared/navigation/isExternalHref"
 import { cn } from "@/lib/utils"
 
 export default function NavCommandPalette({ navItems }: { navItems: ModuleNavNode[] }) {
@@ -46,6 +47,10 @@ export default function NavCommandPalette({ navItems }: { navItems: ModuleNavNod
   const go = useCallback(
     (href: string) => {
       setOpen(false)
+      if (isExternalHref(href)) {
+        window.open(href, "_blank", "noopener,noreferrer")
+        return
+      }
       router.push(href)
     },
     [router]

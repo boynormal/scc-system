@@ -20,6 +20,7 @@ interface HeaderProps {
 export default function Header({ user, navItems }: HeaderProps) {
   const pathname = usePathname()
   const isAppsPage = pathname === "/apps" || pathname.startsWith("/apps/")
+  const isApp2Page = pathname === "/app2" || pathname.startsWith("/app2/")
   return (
     <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
       <div className="flex items-center gap-2">
@@ -32,7 +33,7 @@ export default function Header({ user, navItems }: HeaderProps) {
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
           >
             <Grid3X3 className="w-4 h-4" />
-            Apps
+            {isApp2Page ? "หน้าหลัก" : "Apps"}
           </Link>
         )}
         <NotificationBell />

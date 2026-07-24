@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 
-/** แดชบอร์ดภาพรวมอยู่ที่หน้ารายงาน — รักษา / เป็นเข้าทางเดิมหลังล็อกอิน */
+/** หลังล็อกอิน / ชี้ไปหน้า launcher หลัก */
 export default function DashboardRootRedirect() {
-  redirect("/reports")
+  redirect("/apps")
 }

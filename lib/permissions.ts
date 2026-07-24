@@ -17,6 +17,7 @@ export type Resource =
   | "transport_jobs"
   | "transport_vehicles"
   | "transport_drivers"
+  | "iot_devices"
 
 export type Action = "create" | "read" | "update" | "delete" | "approve"
 
@@ -117,6 +118,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     transport_jobs: ["create", "read", "update", "delete"],
     transport_vehicles: ["create", "read", "update", "delete"],
     transport_drivers: ["create", "read", "update", "delete"],
+    iot_devices: ["read"],
   },
   Manager: {
     dashboard: ["read"],
@@ -137,6 +139,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     transport_jobs: ["create", "read", "update"],
     transport_vehicles: ["read", "update"],
     transport_drivers: ["read", "update"],
+    iot_devices: ["read"],
   },
   Technician: {
     dashboard: ["read"],
@@ -153,6 +156,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     transport_jobs: ["read"],
     transport_vehicles: ["read"],
     transport_drivers: ["read"],
+    iot_devices: ["read"],
   },
   Viewer: {
     dashboard: ["read"],

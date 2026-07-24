@@ -41,3 +41,10 @@ export function canReadSettingsMasterData(roles: UserRole[]) {
     getBranchIds(roles).some((bid) => hasPermission(roles, bid, "settings", "read"))
   )
 }
+
+export function canReadSettingsHomeScreen(roles: UserRole[]) {
+  return (
+    isAdminInAnyBranch(roles) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "settings", "read"))
+  )
+}

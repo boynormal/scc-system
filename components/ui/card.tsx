@@ -13,6 +13,7 @@ export function Card({ children, className, padding = "md" }: CardProps) {
     <div
       className={cn(
         "bg-white rounded-xl border border-slate-200 shadow-sm",
+        "dark:bg-slate-800 dark:border-slate-700",
         paddingMap[padding],
         className
       )}
@@ -29,5 +30,5 @@ export function CardHeader({ children, className }: { children: React.ReactNode;
 }
 
 export function CardTitle({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={cn("text-base font-semibold text-slate-800", className)}>{children}</h3>
+  return <h3 className={cn("text-base font-semibold text-slate-800 dark:text-slate-100", className)}>{children}</h3>
 }

@@ -78,11 +78,11 @@ export function ImageUpload({
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-sm font-medium text-slate-700">{label}</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
       )}
       <div className="space-y-2">
         {preview ? (
-          <div className={`relative w-full rounded-lg border border-slate-200 overflow-hidden bg-slate-50 ${previewHeightClass}`}>
+          <div className={`relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900 ${previewHeightClass}`}>
             {previewFailed ? (
               <img src={preview} alt="Preview" className="w-full h-full object-contain" />
             ) : (
@@ -108,12 +108,12 @@ export function ImageUpload({
         ) : (
           <div
             onClick={() => !disabled && !uploading && inputRef.current?.click()}
-            className={`w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors ${previewHeightClass} ${
+            className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors ${previewHeightClass} ${
               disabled
-                ? "border-slate-200 bg-slate-50 cursor-not-allowed"
+                ? "border-slate-200 bg-slate-50 cursor-not-allowed dark:border-slate-700 dark:bg-slate-900"
                 : uploading
-                ? "border-blue-300 bg-blue-50"
-                : "border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
+                ? "border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30"
+                : "cursor-pointer border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-blue-500 dark:hover:bg-blue-950/30"
             }`}
           >
             {uploading ? (
@@ -123,11 +123,11 @@ export function ImageUpload({
               </>
             ) : (
               <>
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-800">
                   <ImageIcon className="w-6 h-6 text-slate-400" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-slate-700">คลิกเพื่ออัปโหลดรูปภาพ</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">คลิกเพื่ออัปโหลดรูปภาพ</p>
                   <p className="text-xs text-slate-400 mt-0.5">PNG, JPG, WEBP (สูงสุด 5MB)</p>
                 </div>
               </>

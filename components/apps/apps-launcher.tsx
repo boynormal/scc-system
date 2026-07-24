@@ -2,60 +2,21 @@
 
 import Link from "next/link"
 import { useDeferredValue, useEffect, useMemo, useState } from "react"
-import {
-  BarChart3,
-  Bell,
-  CalendarDays,
-  ChevronDown,
-  ClipboardList,
-  Clock,
-  Database,
-  Factory,
-  LayoutDashboard,
-  MapPin,
-  Monitor,
-  Package,
-  Search,
-  Settings,
-  Sparkles,
-  Star,
-  Truck,
-  Users,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react"
+import { ChevronDown, LayoutDashboard, Search, Sparkles, Star } from "lucide-react"
 import type { LauncherAppItem } from "@/shared/navigation/flattenNav"
 import type { NavIconKey } from "@/shared/navigation/moduleRegistry"
 import { DEPARTMENT_BY_ID } from "@/shared/navigation/departmentRegistry"
 import { PRODUCT_LINE_REGISTRY, type ProductLineDef } from "@/shared/navigation/productLineRegistry"
+import { isExternalHref } from "@/shared/navigation/isExternalHref"
+import { getFavoriteIds, getRecentIds, recordAppOpen, setFavoriteIds, skinFor } from "@/shared/navigation/launcherClientState"
+import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
 import { APP_BRAND } from "@/shared/branding"
+import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
 
-const APP_ICON_MAP: Record<NavIconKey, LucideIcon> = {
-  LayoutDashboard,
-  Wrench,
-  Factory,
-  ClipboardList,
-  Package,
-  BarChart3,
-  Bell,
-  Settings,
-  Users,
-  Clock,
-  Truck,
-  MapPin,
-  Monitor,
-  CalendarDays,
-  Database,
-}
-
-const LINE_HERO_ICONS: Record<ProductLineDef["iconKey"], LucideIcon> = {
-  Wrench,
-  Package,
-  BarChart3,
-  Settings,
-  Users,
-  Truck,
+function resolveLineIcon(line: ProductLineDef, overrides: Record<string, NavIconKey>) {
+  const key = overrides[line.id] ?? line.iconKey
+  return NAV_ICON_MAP[key] ?? NAV_ICON_MAP[line.iconKey]
 }
 
 const LINE_CARD_THEMES: Record<
@@ -97,81 +58,20 @@ const LINE_CARD_THEMES: Record<
     ring: "ring-slate-300/70",
     glow: "shadow-slate-500/15",
   },
+  iot_control: {
+    tile: "from-fuchsia-50 via-purple-50 to-violet-100 ring-fuchsia-200/60",
+    icon: "from-fuchsia-500 to-purple-600",
+    blob: "bg-fuchsia-400/30",
+    ring: "ring-fuchsia-200/70",
+    glow: "shadow-fuchsia-500/20",
+  },
 }
-
-const TILE_SKINS = [
-  {
-    tile: "from-orange-50 to-amber-100 ring-orange-200/70",
-    icon: "from-orange-500 to-amber-400 text-white",
-    blob: "bg-orange-300/45",
-  },
-  {
-    tile: "from-teal-50 to-cyan-100 ring-teal-200/70",
-    icon: "from-teal-500 to-cyan-500 text-white",
-    blob: "bg-teal-300/45",
-  },
-  {
-    tile: "from-rose-50 to-pink-100 ring-rose-200/70",
-    icon: "from-rose-500 to-pink-500 text-white",
-    blob: "bg-rose-300/45",
-  },
-  {
-    tile: "from-sky-50 to-blue-100 ring-sky-200/70",
-    icon: "from-sky-500 to-blue-600 text-white",
-    blob: "bg-sky-300/45",
-  },
-  {
-    tile: "from-emerald-50 to-green-100 ring-emerald-200/70",
-    icon: "from-emerald-500 to-green-500 text-white",
-    blob: "bg-emerald-300/45",
-  },
-  {
-    tile: "from-violet-50 to-fuchsia-100 ring-violet-200/70",
-    icon: "from-violet-500 to-fuchsia-500 text-white",
-    blob: "bg-violet-300/45",
-  },
-]
 
 function lineTheme(lineId: string) {
   return LINE_CARD_THEMES[lineId] ?? LINE_CARD_THEMES.maintenance_mgmt
 }
 
 const MAX_CHIPS = 6
-
-function getFavoriteIds(): string[] {
-  if (typeof window === "undefined") return []
-  try {
-    const raw = localStorage.getItem("apps.launcher.favorites")
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []
-  } catch {
-    return []
-  }
-}
-
-function getRecentIds(): string[] {
-  if (typeof window === "undefined") return []
-  try {
-    const raw = localStorage.getItem("apps.launcher.recent")
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []
-  } catch {
-    return []
-  }
-}
-
-function pushRecent(moduleId: string) {
-  if (typeof window === "undefined") return
-  const next = [moduleId, ...getRecentIds().filter((x) => x !== moduleId)].slice(0, 8)
-  localStorage.setItem("apps.launcher.recent", JSON.stringify(next))
-}
-
-function setFavoriteIds(ids: string[]) {
-  if (typeof window === "undefined") return
-  localStorage.setItem("apps.launcher.favorites", JSON.stringify(ids))
-}
 
 function getOpenLineId(): string | null {
   if (typeof window === "undefined") return null
@@ -251,22 +151,24 @@ function useGridColumns() {
   return cols
 }
 
-function skinFor(moduleId: string) {
-  const seed = moduleId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  return TILE_SKINS[seed % TILE_SKINS.length]
-}
-
 export function AppsLauncher({
   apps,
   pinnedModuleIds,
   hiddenDepartmentIds,
   departmentOrderOverrides,
+  productLineIconOverrides = {},
+  productLineImageOverrides = {},
+  appearance = "light",
 }: {
   apps: LauncherAppItem[]
   pinnedModuleIds: string[]
   hiddenDepartmentIds: string[]
   departmentOrderOverrides: Record<string, number>
+  productLineIconOverrides?: Record<string, NavIconKey>
+  productLineImageOverrides?: Record<string, string>
+  appearance?: AppAppearance
 }) {
+  const isDark = appearance === "dark"
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
   const [favorites, setFavorites] = useState<string[]>([])
@@ -357,26 +259,37 @@ export function AppsLauncher({
   )
 
   return (
-    <div className="relative mx-auto max-w-7xl space-y-8 [font-family:'Noto_Sans_Thai','IBM_Plex_Sans_Thai',sans-serif]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 overflow-hidden rounded-[2.5rem] bg-[#e8e5f2]">
+    <div
+      className={cn(
+        "relative mx-auto max-w-7xl space-y-8 [font-family:'Noto_Sans_Thai','IBM_Plex_Sans_Thai',sans-serif]",
+        isDark && "dark"
+      )}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 overflow-hidden rounded-[2.5rem] bg-[#e8e5f2] dark:bg-slate-800">
         <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-cyan-300/25 blur-3xl" />
         <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-orange-200/35 blur-3xl" />
-        <div className="absolute left-1/3 top-0 h-full w-72 -skew-x-12 bg-white/25" />
+        <div className="absolute left-1/3 top-0 h-full w-72 -skew-x-12 bg-white/25 dark:bg-white/5" />
       </div>
 
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/35 px-5 py-6 shadow-xl shadow-slate-200/60 backdrop-blur md:px-8 md:py-8">
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/35 px-5 py-6 shadow-xl shadow-slate-200/60 backdrop-blur md:px-8 md:py-8 dark:border-slate-700/60 dark:bg-slate-900/40 dark:shadow-none">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
               <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               {APP_BRAND.launcherBadge}
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-5xl">
+            <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-5xl dark:text-white">
               {APP_BRAND.name}
             </h1>
-            <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">
+            <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base dark:text-slate-400">
               {APP_BRAND.tagline}
             </p>
+            <Link
+              href="/apps"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              กลับหน้าหลัก →
+            </Link>
           </div>
 
           <div className="w-full lg:max-w-md">
@@ -386,7 +299,7 @@ export function AppsLauncher({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="ค้นหาโมดูล เช่น งานซ่อม, อะไหล่, ผู้ใช้..."
-                className="h-14 w-full rounded-2xl border border-white/80 bg-white/85 pl-12 pr-4 text-sm text-slate-800 shadow-lg shadow-slate-200/50 outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-200/35"
+                className="h-14 w-full rounded-2xl border border-white/80 bg-white/85 pl-12 pr-4 text-sm text-slate-800 shadow-lg shadow-slate-200/50 outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-200/35 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:shadow-none"
                 aria-label="ค้นหาโมดูล"
               />
             </label>
@@ -402,9 +315,9 @@ export function AppsLauncher({
       </section>
 
       {searchEmpty && (
-        <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white/70 px-6 py-14 text-center shadow-sm">
-          <p className="font-semibold text-slate-700">ไม่พบโมดูลที่ตรงกับ “{deferredSearch.trim()}”</p>
-          <p className="mt-1 text-sm text-slate-500">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหาเพื่อดูทุกโมดูล</p>
+        <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white/70 px-6 py-14 text-center shadow-sm dark:border-slate-600 dark:bg-slate-800/60">
+          <p className="font-semibold text-slate-700 dark:text-slate-200">ไม่พบโมดูลที่ตรงกับ “{deferredSearch.trim()}”</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหาเพื่อดูทุกโมดูล</p>
         </div>
       )}
 
@@ -423,6 +336,8 @@ export function AppsLauncher({
                       totalApps={sections.reduce((n, s) => n + s.apps.length, 0)}
                       isOpen={isLineOpen(line.id)}
                       onToggle={() => toggleLine(line.id)}
+                      iconOverrides={productLineIconOverrides}
+                      imageOverrides={productLineImageOverrides}
                     />
                   ))}
                 </div>
@@ -437,6 +352,8 @@ export function AppsLauncher({
                         onClose={() => toggleLine(line.id)}
                         combinedPinned={combinedPinned}
                         onToggleFavorite={toggleFavorite}
+                        iconOverrides={productLineIconOverrides}
+                        imageOverrides={productLineImageOverrides}
                       />
                     ))}
                   </div>
@@ -448,7 +365,7 @@ export function AppsLauncher({
       )}
 
       {!searchEmpty && linesWithContent.length === 0 && (
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white/70 px-6 py-12 text-center text-sm text-slate-600">
+        <div className="rounded-[1.75rem] border border-slate-200 bg-white/70 px-6 py-12 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
           ไม่มีโมดูลที่แสดงได้ตามสิทธิ์หรือการตั้งค่าปัจจุบัน
         </div>
       )}
@@ -461,19 +378,25 @@ function ProductLineCard({
   totalApps,
   isOpen,
   onToggle,
+  iconOverrides,
+  imageOverrides,
 }: {
   line: ProductLineDef
   totalApps: number
   isOpen: boolean
   onToggle: () => void
+  iconOverrides: Record<string, NavIconKey>
+  imageOverrides: Record<string, string>
 }) {
-  const HeroIcon = LINE_HERO_ICONS[line.iconKey]
+  const HeroIcon = resolveLineIcon(line, iconOverrides)
+  const imageUrl = imageOverrides[line.id]
   const theme = lineTheme(line.id)
 
   return (
     <section
       className={cn(
         "relative flex flex-col overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/75 shadow-lg shadow-slate-200/50 backdrop-blur transition-all duration-300",
+        "dark:border-slate-700/80 dark:bg-slate-800/75 dark:shadow-none",
         theme.glow,
         isOpen && "ring-2",
         isOpen && theme.ring
@@ -483,7 +406,7 @@ function ProductLineCard({
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className="group relative flex w-full flex-col items-center px-5 py-6 text-center transition hover:bg-white/50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/50"
+        className="group relative flex w-full flex-col items-center px-5 py-6 text-center transition hover:bg-white/50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/50 dark:hover:bg-slate-700/40"
       >
         <span className={cn("pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl", theme.blob)} />
 
@@ -494,17 +417,21 @@ function ProductLineCard({
               theme.icon
             )}
           >
-            <HeroIcon className="h-8 w-8" strokeWidth={1.75} />
+            {imageUrl ? (
+              <img src={imageUrl} alt="" className="h-full w-full rounded-2xl object-cover" />
+            ) : (
+              <HeroIcon className="h-8 w-8" strokeWidth={1.75} />
+            )}
           </div>
-          <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-white bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 shadow-sm">
+          <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-white bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300">
             {totalApps}
           </span>
         </div>
 
         <div className="w-full min-w-0">
-          <h2 className="text-lg font-black leading-tight text-slate-950">{line.labelTh}</h2>
-          <p className="mt-1.5 line-clamp-2 px-1 text-sm leading-relaxed text-slate-500">{line.description}</p>
-          <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-slate-100/90 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+          <h2 className="text-lg font-black leading-tight text-slate-950 dark:text-white">{line.labelTh}</h2>
+          <p className="mt-1.5 line-clamp-2 px-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{line.description}</p>
+          <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-slate-100/90 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
             {totalApps} โมดูล
           </span>
         </div>
@@ -524,37 +451,47 @@ function ProductLineExpandedPanel({
   onClose,
   combinedPinned,
   onToggleFavorite,
+  iconOverrides,
+  imageOverrides,
 }: {
   line: ProductLineDef
   sections: { departmentId: string; label: string; apps: LauncherAppItem[] }[]
   onClose: () => void
   combinedPinned: Set<string>
   onToggleFavorite: (moduleId: string) => void
+  iconOverrides: Record<string, NavIconKey>
+  imageOverrides: Record<string, string>
 }) {
-  const HeroIcon = LINE_HERO_ICONS[line.iconKey]
+  const HeroIcon = resolveLineIcon(line, iconOverrides)
+  const imageUrl = imageOverrides[line.id]
   const theme = lineTheme(line.id)
 
   return (
     <section
       className={cn(
         "overflow-hidden rounded-[1.75rem] border bg-white/85 shadow-lg shadow-slate-200/50 backdrop-blur ring-2",
+        "dark:bg-slate-800/85 dark:shadow-none",
         theme.ring
       )}
     >
       <button
         type="button"
         onClick={onClose}
-        className="flex w-full items-center gap-4 border-b border-slate-100/80 bg-white/50 px-5 py-4 text-left transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/50 sm:px-6"
+        className="flex w-full items-center gap-4 border-b border-slate-100/80 bg-white/50 px-5 py-4 text-left transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/50 sm:px-6 dark:border-slate-700/80 dark:bg-slate-800/50 dark:hover:bg-slate-700/60"
       >
         <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md", theme.icon)}>
-          <HeroIcon className="h-6 w-6" strokeWidth={1.75} />
+          {imageUrl ? (
+            <img src={imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
+          ) : (
+            <HeroIcon className="h-6 w-6" strokeWidth={1.75} />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <h3 className="text-base font-black text-slate-950">{line.labelTh}</h3>
+            <h3 className="text-base font-black text-slate-950 dark:text-white">{line.labelTh}</h3>
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{line.labelEn}</span>
           </div>
-          <p className="mt-0.5 line-clamp-1 text-sm text-slate-500">{line.description}</p>
+          <p className="mt-0.5 line-clamp-1 text-sm text-slate-500 dark:text-slate-400">{line.description}</p>
         </div>
         <ChevronDown className="h-5 w-5 shrink-0 rotate-180 text-slate-400" />
       </button>
@@ -564,9 +501,9 @@ function ProductLineExpandedPanel({
           <div key={departmentId}>
             {sections.length > 1 && (
               <div className="mb-4 flex items-center gap-3">
-                <div className="h-px flex-1 bg-slate-200/80" />
+                <div className="h-px flex-1 bg-slate-200/80 dark:bg-slate-700" />
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-                <div className="h-px flex-1 bg-slate-200/80" />
+                <div className="h-px flex-1 bg-slate-200/80 dark:bg-slate-700" />
               </div>
             )}
             <div className="grid grid-cols-3 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
@@ -597,24 +534,40 @@ function QuickAccess({
 }) {
   if (apps.length === 0) return null
   return (
-    <div className="rounded-2xl border border-white/70 bg-white/55 p-3 shadow-sm">
+    <div className="rounded-2xl border border-white/70 bg-white/55 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/60">
       <p className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">{title}</p>
       <div className="flex flex-wrap gap-2">
-        {apps.map((app) => (
-          <Link
-            key={`${title}-${app.moduleId}`}
-            href={app.href}
-            onClick={() => pushRecent(app.moduleId)}
-            className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-semibold transition",
-              tone === "amber"
-                ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            )}
-          >
-            {app.label}
-          </Link>
-        ))}
+        {apps.map((app) => {
+          const external = isExternalHref(app.href)
+          const className = cn(
+            "rounded-full px-3 py-1.5 text-xs font-semibold transition",
+            tone === "amber"
+              ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/60"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+          )
+          const onClick = () => recordAppOpen(app.moduleId)
+
+          if (external) {
+            return (
+              <a
+                key={`${title}-${app.moduleId}`}
+                href={app.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onClick}
+                className={className}
+              >
+                {app.label}
+              </a>
+            )
+          }
+
+          return (
+            <Link key={`${title}-${app.moduleId}`} href={app.href} onClick={onClick} className={className}>
+              {app.label}
+            </Link>
+          )
+        })}
       </div>
     </div>
   )
@@ -629,8 +582,31 @@ function AppTile({
   isPinned: boolean
   onToggleFavorite: (moduleId: string) => void
 }) {
-  const Icon = APP_ICON_MAP[app.icon] ?? LayoutDashboard
+  const Icon = NAV_ICON_MAP[app.icon] ?? LayoutDashboard
   const skin = skinFor(app.moduleId)
+  const external = isExternalHref(app.href)
+
+  const tileInner = (
+    <>
+      <span
+        className={cn(
+          "relative mb-2.5 flex h-[4.25rem] w-[4.25rem] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-md ring-1 transition group-hover:shadow-lg",
+          skin.tile
+        )}
+      >
+        <span className={cn("absolute -right-3 -top-3 h-10 w-10 rounded-full blur-sm", skin.blob)} />
+        <span className={cn("absolute -bottom-4 left-1 h-12 w-12 rotate-12 rounded-2xl blur-[1px]", skin.blob)} />
+        <span className={cn("relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
+          <Icon className="h-5 w-5" strokeWidth={2.1} />
+        </span>
+      </span>
+      <span className="min-h-[2.5rem] w-full px-0.5 text-[12px] font-semibold leading-snug text-slate-800 sm:text-[13px] dark:text-slate-100">
+        {app.label}
+      </span>
+    </>
+  )
+  const tileClassName =
+    "flex w-full flex-col items-center rounded-2xl border border-transparent p-2 outline-none transition hover:-translate-y-0.5 hover:border-slate-200/60 hover:bg-white/60 hover:shadow-md focus-visible:ring-4 focus-visible:ring-cyan-200/60 dark:hover:border-slate-600 dark:hover:bg-slate-700/50"
 
   return (
     <div className="group relative flex flex-col items-center text-center">
@@ -638,7 +614,7 @@ function AppTile({
         type="button"
         onClick={() => onToggleFavorite(app.moduleId)}
         className={cn(
-          "absolute right-0 top-0 z-10 rounded-full bg-white/95 p-1 shadow-sm ring-1 ring-slate-200/80 transition sm:opacity-0 sm:group-hover:opacity-100",
+          "absolute right-0 top-0 z-10 rounded-full bg-white/95 p-1 shadow-sm ring-1 ring-slate-200/80 transition sm:opacity-0 sm:group-hover:opacity-100 dark:bg-slate-800/95 dark:ring-slate-600",
           isPinned ? "text-amber-500 sm:opacity-100" : "text-slate-300 hover:text-amber-500"
         )}
         title={isPinned ? "เอาออกจากปักหมุด" : "ปักหมุด"}
@@ -647,27 +623,21 @@ function AppTile({
         <Star className={cn("h-3.5 w-3.5", isPinned && "fill-amber-400")} />
       </button>
 
-      <Link
-        href={app.href}
-        onClick={() => pushRecent(app.moduleId)}
-        className="flex w-full flex-col items-center rounded-2xl border border-transparent p-2 outline-none transition hover:-translate-y-0.5 hover:border-slate-200/60 hover:bg-white/60 hover:shadow-md focus-visible:ring-4 focus-visible:ring-cyan-200/60"
-      >
-        <span
-          className={cn(
-            "relative mb-2.5 flex h-[4.25rem] w-[4.25rem] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-md ring-1 transition group-hover:shadow-lg",
-            skin.tile
-          )}
+      {external ? (
+        <a
+          href={app.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => recordAppOpen(app.moduleId)}
+          className={tileClassName}
         >
-          <span className={cn("absolute -right-3 -top-3 h-10 w-10 rounded-full blur-sm", skin.blob)} />
-          <span className={cn("absolute -bottom-4 left-1 h-12 w-12 rotate-12 rounded-2xl blur-[1px]", skin.blob)} />
-          <span className={cn("relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
-            <Icon className="h-5 w-5" strokeWidth={2.1} />
-          </span>
-        </span>
-        <span className="min-h-[2.5rem] w-full px-0.5 text-[12px] font-semibold leading-snug text-slate-800 sm:text-[13px]">
-          {app.label}
-        </span>
-      </Link>
+          {tileInner}
+        </a>
+      ) : (
+        <Link href={app.href} onClick={() => recordAppOpen(app.moduleId)} className={tileClassName}>
+          {tileInner}
+        </Link>
+      )}
     </div>
   )
 }

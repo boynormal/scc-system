@@ -52,6 +52,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Reports, KPI dashboard, analytics",
   },
   {
+    id: "iot_control",
+    label: "IoT Control",
+    order: 45,
+    icon: "Cpu",
+    description: "บัตรคิว, ไม้กั้น, ประตูสแกนโลหะ — ควบคุมอุปกรณ์ IoT หน้าไซต์งาน",
+  },
+  {
     id: "configuration",
     label: "Configuration",
     order: 50,

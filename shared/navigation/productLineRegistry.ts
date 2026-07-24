@@ -1,3 +1,5 @@
+import type { NavIconKey } from "./moduleRegistry"
+
 /**
  * กลุ่มสินค้าหลักสำหรับหน้า /apps (Odoo-style)
  * แมปจาก departmentId ใน moduleRegistry ไปยัง “4 กลุ่ม” ที่ผู้ใช้เข้าใจง่าย
@@ -12,7 +14,8 @@ export type ProductLineDef = {
   order: number
   /** คลาสสำหรับไอคอน/เน้นโทน (Tailwind) */
   accent: string
-  iconKey: "Wrench" | "Package" | "BarChart3" | "Settings" | "Users" | "Truck"
+  /** ไอคอนเริ่มต้น — บริษัทสามารถ override ได้ต่อ line.id ผ่าน companies.settings.nav.productLineIconOverrides */
+  iconKey: NavIconKey
 }
 
 export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
@@ -55,6 +58,16 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     order: 5,
     accent: "from-cyan-500 to-blue-600 shadow-cyan-500/20",
     iconKey: "Truck",
+  },
+  {
+    id: "iot_control",
+    labelTh: "ควบคุม IoT",
+    labelEn: "IoT Control",
+    description: "บัตรคิว · ไม้กั้น · ประตูสแกนโลหะ — ลิงก์ไปหน้าควบคุมอุปกรณ์ IoT บนเครือข่ายไซต์งาน",
+    departmentIds: ["iot_control"],
+    order: 6,
+    accent: "from-fuchsia-500 to-purple-600 shadow-fuchsia-500/20",
+    iconKey: "Cpu",
   },
   {
     id: "settings_admin",

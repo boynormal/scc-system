@@ -1,4 +1,9 @@
-import type { ModuleNavNode } from "./moduleRegistry"
+import { NAV_ICON_KEYS, type ModuleNavNode, type NavIconKey } from "./moduleRegistry"
+import { PRODUCT_LINE_BY_ID } from "./productLineRegistry"
+
+const NAV_ICON_KEY_SET = new Set<string>(NAV_ICON_KEYS)
+
+export type AppAppearance = "light" | "dark"
 
 export type CompanyNavPreferences = {
   /** moduleId ที่ซ่อนทั้งโหนด (รวมกลุ่ม) */
@@ -11,6 +16,12 @@ export type CompanyNavPreferences = {
   hiddenDepartmentIds: string[]
   /** แทนที่ลำดับแผนกในหน้า /apps */
   departmentOrderOverrides: Record<string, number>
+  /** override ไอคอนต่อ product line (id) — ใช้ร่วมกันทั้ง sidebar rail / /apps / /app2 */
+  productLineIconOverrides: Record<string, NavIconKey>
+  /** รูปหมวดหมู่ที่อัปโหลดเอง — หากไม่มีจะใช้ไอคอนเริ่มต้นของ product line */
+  productLineImageOverrides: Record<string, string>
+  /** ธีมสว่าง/มืด — ใช้กับหน้า Settings, /apps, /app2 (ทั้งบริษัท) */
+  appearance: AppAppearance
 }
 
 const empty: CompanyNavPreferences = {
@@ -19,6 +30,9 @@ const empty: CompanyNavPreferences = {
   pinnedModuleIds: [],
   hiddenDepartmentIds: [],
   departmentOrderOverrides: {},
+  productLineIconOverrides: {},
+  productLineImageOverrides: {},
+  appearance: "light",
 }
 
 /**
@@ -56,12 +70,38 @@ export function parseCompanyNavPreferences(settings: unknown): CompanyNavPrefere
       if (typeof v === "number" && Number.isFinite(v)) departmentOrderOverrides[k] = v
     }
   }
+  const iconOverridesRaw = n.productLineIconOverrides
+  const productLineIconOverrides: Record<string, NavIconKey> = {}
+  if (iconOverridesRaw && typeof iconOverridesRaw === "object" && !Array.isArray(iconOverridesRaw)) {
+    for (const [k, v] of Object.entries(iconOverridesRaw as Record<string, unknown>)) {
+      if (PRODUCT_LINE_BY_ID[k] && typeof v === "string" && NAV_ICON_KEY_SET.has(v)) {
+        productLineIconOverrides[k] = v as NavIconKey
+      }
+    }
+  }
+
+  const imageOverridesRaw = n.productLineImageOverrides
+  const productLineImageOverrides: Record<string, string> = {}
+  if (imageOverridesRaw && typeof imageOverridesRaw === "object" && !Array.isArray(imageOverridesRaw)) {
+    for (const [k, v] of Object.entries(imageOverridesRaw as Record<string, unknown>)) {
+      if (PRODUCT_LINE_BY_ID[k] && typeof v === "string" && /^\/uploads\/[\w.-]+$/.test(v)) {
+        productLineImageOverrides[k] = v
+      }
+    }
+  }
+
+  const appearanceRaw = n.appearance
+  const appearance: AppAppearance = appearanceRaw === "dark" ? "dark" : "light"
+
   return {
     hiddenModuleIds,
     orderOverrides,
     pinnedModuleIds,
     hiddenDepartmentIds,
     departmentOrderOverrides,
+    productLineIconOverrides,
+    productLineImageOverrides,
+    appearance,
   }
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
@@ -34,6 +35,10 @@ export async function PATCH(req: NextRequest) {
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: result.status })
   }
+
+  revalidatePath("/app2")
+  revalidatePath("/apps")
+  revalidatePath("/settings")
 
   return NextResponse.json(result)
 }

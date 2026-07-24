@@ -1,0 +1,2 @@
+# Keep migration SQL UTF-8 with LF so `psql` / `prisma migrate deploy` work on Linux.
+*.sql text eol=lf

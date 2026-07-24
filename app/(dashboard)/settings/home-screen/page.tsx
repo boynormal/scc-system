@@ -155,7 +155,8 @@ export default function HomeScreenSettingsPage() {
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">ไอคอนหมวดหมู่</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              เลือกไอคอนที่จดจำง่ายสำหรับแต่ละกลุ่มงาน
+              เลือกไอคอนที่จดจำง่ายสำหรับแต่ละกลุ่มงาน — อัปโหลดรูปสี่เหลี่ยมจัตุรัส ระบบจะครอปและปรับให้พอดี
+              โดยอัตโนมัติ หากไม่อัปโหลดจะใช้ไอคอนเริ่มต้น
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -188,7 +189,7 @@ export default function HomeScreenSettingsPage() {
                   <ImageUpload
                     value={imageUrl}
                     onChange={(url) => chooseImage(line.id, url)}
-                    previewHeightClass="h-28"
+                    uploadProfile="productLineIcon"
                   />
                 </Card>
               )

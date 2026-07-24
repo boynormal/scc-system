@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { writeFile, mkdir } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
+import { isUploadProfile, processUploadBuffer } from "@/lib/upload/image-profiles"
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -13,8 +14,23 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
 
+    const rawProfile = formData.get("profile")
+    const profile = isUploadProfile(rawProfile) ? rawProfile : "default"
+
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    const rawBuffer = Buffer.from(bytes)
+    const originalExt = file.name.split(".").pop() ?? "bin"
+
+    let processed
+    try {
+      processed = await processUploadBuffer(rawBuffer, originalExt, profile)
+    } catch (err) {
+      console.error("Image processing error:", err)
+      return NextResponse.json(
+        { error: { message: "ไม่สามารถประมวลผลรูปภาพนี้ได้ กรุณาลองใช้ไฟล์รูปอื่น" } },
+        { status: 400 }
+      )
+    }
 
     // Create uploads directory if not exists
     const uploadDir = join(process.cwd(), "public", "uploads")
@@ -24,11 +40,10 @@ export async function POST(req: NextRequest) {
 
     // Generate unique filename
     const timestamp = Date.now()
-    const ext = file.name.split(".").pop()
-    const filename = `${timestamp}-${Math.random().toString(36).substring(7)}.${ext}`
+    const filename = `${timestamp}-${Math.random().toString(36).substring(7)}.${processed.ext}`
     const filepath = join(uploadDir, filename)
 
-    await writeFile(filepath, buffer)
+    await writeFile(filepath, processed.buffer)
 
     const fileUrl = `/uploads/${filename}`
     return NextResponse.json({
@@ -36,7 +51,7 @@ export async function POST(req: NextRequest) {
       data: {
         fileUrl,
         fileName: file.name,
-        fileSize: file.size,
+        fileSize: processed.buffer.length,
       },
     })
   } catch (error) {

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react"
 import Image from "next/image"
+import { cn } from "@/lib/utils"
 
 interface ImageUploadProps {
   value?: string
@@ -10,8 +11,14 @@ interface ImageUploadProps {
   label?: string
   error?: string
   disabled?: boolean
-  /** ความสูงพื้นที่แสดงตัวอย่าง เช่น h-32, h-48 */
+  /** ความสูงพื้นที่แสดงตัวอย่าง เช่น h-32, h-48 — ไม่ใช้เมื่อ uploadProfile="productLineIcon" (ใช้กรอบสี่เหลี่ยมจัตุรัสแทน) */
   previewHeightClass?: string
+  /**
+   * โปรไฟล์การประมวลผลรูปฝั่งเซิร์ฟเวอร์ (ดู lib/upload/image-profiles.ts)
+   * "productLineIcon" — เซิร์ฟเวอร์จะครอปเป็นสี่เหลี่ยมจัตุรัส 512px แล้วบีบอัดเป็น WebP
+   * ให้ preview เป็นสี่เหลี่ยมจัตุรัสแบบ object-cover ตรงกับที่แสดงจริงบน sidebar/launcher
+   */
+  uploadProfile?: "default" | "productLineIcon"
 }
 
 export function ImageUpload({
@@ -21,11 +28,13 @@ export function ImageUpload({
   error,
   disabled,
   previewHeightClass = "h-48",
+  uploadProfile = "default",
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(value)
   const [previewFailed, setPreviewFailed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isIconProfile = uploadProfile === "productLineIcon"
 
   useEffect(() => {
     setPreview(value)
@@ -51,6 +60,7 @@ export function ImageUpload({
     setUploading(true)
     const formData = new FormData()
     formData.append("file", file)
+    formData.append("profile", uploadProfile)
 
     try {
       const res = await fetch("/api/upload", {
@@ -80,17 +90,31 @@ export function ImageUpload({
       {label && (
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
       )}
+      {isIconProfile && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          แนะนำรูปสี่เหลี่ยมจัตุรัส เนื้อหาอยู่กลางภาพ — ระบบจะครอปและบีบอัดเป็น WebP ขนาด 512×512px โดยอัตโนมัติ
+        </p>
+      )}
       <div className="space-y-2">
         {preview ? (
-          <div className={`relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900 ${previewHeightClass}`}>
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900",
+              isIconProfile ? "aspect-square w-28 sm:w-32" : `w-full ${previewHeightClass}`
+            )}
+          >
             {previewFailed ? (
-              <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+              <img
+                src={preview}
+                alt="Preview"
+                className={cn("w-full h-full", isIconProfile ? "object-cover" : "object-contain")}
+              />
             ) : (
               <Image
                 src={preview}
                 alt="Preview"
                 fill
-                className="object-contain"
+                className={isIconProfile ? "object-cover" : "object-contain"}
                 unoptimized
                 onError={() => setPreviewFailed(true)}
               />
@@ -108,27 +132,36 @@ export function ImageUpload({
         ) : (
           <div
             onClick={() => !disabled && !uploading && inputRef.current?.click()}
-            className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors ${previewHeightClass} ${
+            className={cn(
+              "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors",
+              isIconProfile ? "aspect-square w-28 sm:w-32" : `w-full ${previewHeightClass}`,
               disabled
                 ? "border-slate-200 bg-slate-50 cursor-not-allowed dark:border-slate-700 dark:bg-slate-900"
                 : uploading
                 ? "border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30"
                 : "cursor-pointer border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-blue-500 dark:hover:bg-blue-950/30"
-            }`}
+            )}
           >
             {uploading ? (
               <>
-                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                <p className="text-sm text-blue-600">กำลังอัปโหลด...</p>
+                <Loader2 className={cn("text-blue-500 animate-spin", isIconProfile ? "w-6 h-6" : "w-8 h-8")} />
+                {!isIconProfile && <p className="text-sm text-blue-600">กำลังอัปโหลด...</p>}
               </>
             ) : (
               <>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-800">
-                  <ImageIcon className="w-6 h-6 text-slate-400" />
+                <div
+                  className={cn(
+                    "flex items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-800",
+                    isIconProfile ? "h-8 w-8" : "h-10 w-10"
+                  )}
+                >
+                  <ImageIcon className={cn("text-slate-400", isIconProfile ? "w-4 h-4" : "w-6 h-6")} />
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">คลิกเพื่ออัปโหลดรูปภาพ</p>
-                  <p className="text-xs text-slate-400 mt-0.5">PNG, JPG, WEBP (สูงสุด 5MB)</p>
+                <div className="text-center px-1">
+                  <p className={cn("font-medium text-slate-700 dark:text-slate-200", isIconProfile ? "text-xs" : "text-sm")}>
+                    {isIconProfile ? "อัปโหลดไอคอน" : "คลิกเพื่ออัปโหลดรูปภาพ"}
+                  </p>
+                  {!isIconProfile && <p className="text-xs text-slate-400 mt-0.5">PNG, JPG, WEBP (สูงสุด 5MB)</p>}
                 </div>
               </>
             )}

@@ -191,6 +191,9 @@ model User {
   phone        String?   @db.VarChar(20)
   avatarUrl    String?   @map("avatar_url")
   isActive     Boolean   @default(true) @map("is_active")
+  // Override การมองเห็นโมดูล ต่อรายบุคคล — null = ใช้ตาม moduleAccess ของ Role ที่ผูกไว้ (ค่าเริ่มต้น)
+  // เก็บเป็น "all" (string) หรือ array ของ module id เช่น ["machines","reports"] เหมือน Role.permissions.moduleAccess
+  moduleAccess Json?     @map("module_access")
   lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz

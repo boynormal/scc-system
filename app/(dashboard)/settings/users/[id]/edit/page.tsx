@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { ModuleAccessPicker, type ModuleAccessValue } from "@/components/settings/module-access-picker"
 
 const schema = z.object({
   firstName: z.string().min(1, "กรุณากรอกชื่อ"),
@@ -33,6 +34,7 @@ export default function EditUserPage() {
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([])
   const [userBranchRoleId, setUserBranchRoleId] = useState<string | undefined>(undefined)
+  const [moduleAccess, setModuleAccess] = useState<ModuleAccessValue>(null)
 
   const {
     register,
@@ -61,6 +63,8 @@ export default function EditUserPage() {
         const defaultBranchId = firstUbr?.branch.id ?? branchList[0]?.id ?? ""
         const defaultRoleId = firstUbr?.role.id ?? roleList[0]?.id ?? ""
         setUserBranchRoleId(firstUbr?.id)
+        const ma = data.moduleAccess
+        setModuleAccess(ma === "all" || Array.isArray(ma) ? (ma as ModuleAccessValue) : null)
         reset({
           firstName: data.firstName,
           lastName: data.lastName,
@@ -77,7 +81,7 @@ export default function EditUserPage() {
 
   const onSubmit = async (data: FormData) => {
     setError(null)
-    const payload = { ...data, password: data.password || undefined, userBranchRoleId }
+    const payload = { ...data, password: data.password || undefined, userBranchRoleId, moduleAccess }
     try {
       const res = await fetch(`/api/users/${id}`, {
         method: "PATCH",
@@ -169,6 +173,14 @@ export default function EditUserPage() {
               {...register("password")}
             />
           </div>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>การมองเห็นโมดูล</CardTitle></CardHeader>
+          <p className="text-xs text-slate-500 mb-4 -mt-2">
+            ค่าเริ่มต้นใช้ตาม Role ที่เลือกด้านบน — เลือก override ที่นี่เฉพาะเมื่อต้องการให้ผู้ใช้คนนี้เห็นโมดูลต่างจากคนอื่นที่ Role เดียวกัน
+          </p>
+          <ModuleAccessPicker value={moduleAccess} onChange={setModuleAccess} allowInherit />
         </Card>
 
         {error && (

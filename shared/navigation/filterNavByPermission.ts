@@ -23,15 +23,19 @@ function canSeeMaintenanceGroup(roles: UserRole[]): boolean {
   )
 }
 
-function filterOne(n: ModuleNavNode, roles: UserRole[]): ModuleNavNode | null {
+function filterOne(
+  n: ModuleNavNode,
+  roles: UserRole[],
+  userModuleAccess?: string[] | "all" | null
+): ModuleNavNode | null {
   if (n.type === "link") {
     if (!canAccessResource(roles, n.permission.resource, n.permission.action)) return null
-    if (n.moduleId && !canAccessModule(roles, n.moduleId)) return null
+    if (n.moduleId && !canAccessModule(roles, n.moduleId, userModuleAccess)) return null
     return n
   }
   if (n.type === "group") {
     const children = n.children
-      .map((c) => filterOne(c, roles))
+      .map((c) => filterOne(c, roles, userModuleAccess))
       .filter((c): c is ModuleNavNode => c !== null)
     if (!children.length) return null
     const groupOk =
@@ -43,7 +47,7 @@ function filterOne(n: ModuleNavNode, roles: UserRole[]): ModuleNavNode | null {
   }
   if (n.type === "section") {
     const children = n.children
-      .map((c) => filterOne(c, roles))
+      .map((c) => filterOne(c, roles, userModuleAccess))
       .filter((c): c is ModuleNavNode => c !== null)
     if (!children.length) return null
     return { ...n, children }
@@ -53,7 +57,12 @@ function filterOne(n: ModuleNavNode, roles: UserRole[]): ModuleNavNode | null {
 
 /**
  * กรองเมนูตาม RBAC แบบ recursive (section / group / link ซ้อน)
+ * @param userModuleAccess override การมองเห็นโมดูลรายบุคคล (User.moduleAccess) — ไม่ระบุ = ใช้ตาม Role
  */
-export function filterNavByPermission(nodes: ModuleNavNode[], roles: UserRole[]): ModuleNavNode[] {
-  return nodes.map((n) => filterOne(n, roles)).filter((n): n is ModuleNavNode => n !== null)
+export function filterNavByPermission(
+  nodes: ModuleNavNode[],
+  roles: UserRole[],
+  userModuleAccess?: string[] | "all" | null
+): ModuleNavNode[] {
+  return nodes.map((n) => filterOne(n, roles, userModuleAccess)).filter((n): n is ModuleNavNode => n !== null)
 }

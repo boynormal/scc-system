@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     select: { settings: true },
   })
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
-  const navItems = buildDashboardNav(session.user.roles, navPreferences)
+  const navItems = buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess)
 
   return (
     <div className="flex h-screen bg-slate-50">

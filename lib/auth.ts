@@ -47,6 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           companyId: user.companyId,
+          moduleAccess: user.moduleAccess,
           roles: user.userBranchRoles.map((r) => ({
             branchId: r.branchId,
             branchName: r.branch.name,

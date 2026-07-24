@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 
-export type ModuleAccessValue = string[] | "all" | undefined
+export type ModuleAccessValue = string[] | "all" | null | undefined
 
 /** โมดูลทั้งหมดที่กำหนดสิทธิ์ได้ จัดกลุ่มตามสายงาน */
 const MODULE_GROUPS: { group: string; modules: { id: string; label: string }[] }[] = [
@@ -37,14 +37,18 @@ const MODULE_GROUPS: { group: string; modules: { id: string; label: string }[] }
 interface ModuleAccessPickerProps {
   value: ModuleAccessValue
   onChange: (v: ModuleAccessValue) => void
+  /** แสดงตัวเลือก "ใช้ตาม Role ที่กำหนด" (null) — ใช้สำหรับ override รายบุคคลที่หน้า User เท่านั้น */
+  allowInherit?: boolean
 }
 
-export function ModuleAccessPicker({ value, onChange }: ModuleAccessPickerProps) {
-  const isAll = value === "all" || value === undefined
+export function ModuleAccessPicker({ value, onChange, allowInherit = false }: ModuleAccessPickerProps) {
+  const isInherit = allowInherit && (value === null || value === undefined)
+  const isAll = value === "all" || (!allowInherit && value === undefined)
   const selected: string[] = Array.isArray(value) ? value : []
 
-  const handleRadio = (mode: "all" | "specific") => {
-    if (mode === "all") onChange("all")
+  const handleRadio = (mode: "inherit" | "all" | "specific") => {
+    if (mode === "inherit") onChange(null)
+    else if (mode === "all") onChange("all")
     else onChange([])
   }
 
@@ -61,6 +65,22 @@ export function ModuleAccessPicker({ value, onChange }: ModuleAccessPickerProps)
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2">
+        {allowInherit && (
+          <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+            <input
+              type="radio"
+              name="moduleAccess"
+              checked={isInherit}
+              onChange={() => handleRadio("inherit")}
+              className="w-4 h-4 text-blue-600 border-slate-300"
+            />
+            <div>
+              <span className="text-sm font-semibold text-slate-800">ใช้ตาม Role ที่กำหนด</span>
+              <p className="text-xs text-slate-500 mt-0.5">ค่าเริ่มต้น — มองเห็นโมดูลตามที่ตั้งไว้ที่ Role ของผู้ใช้คนนี้</p>
+            </div>
+          </label>
+        )}
+
         <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
           <input
             type="radio"
@@ -79,18 +99,18 @@ export function ModuleAccessPicker({ value, onChange }: ModuleAccessPickerProps)
           <input
             type="radio"
             name="moduleAccess"
-            checked={!isAll}
+            checked={!isAll && !isInherit}
             onChange={() => handleRadio("specific")}
             className="w-4 h-4 text-blue-600 border-slate-300"
           />
           <div>
             <span className="text-sm font-semibold text-slate-800">เลือกเฉพาะโมดูล</span>
-            <p className="text-xs text-slate-500 mt-0.5">จำกัดการมองเห็นเฉพาะโมดูลที่เลือก</p>
+            <p className="text-xs text-slate-500 mt-0.5">จำกัดการมองเห็นเฉพาะโมดูลที่เลือก{allowInherit ? " (override เฉพาะผู้ใช้คนนี้)" : ""}</p>
           </div>
         </label>
       </div>
 
-      {!isAll && (
+      {!isAll && !isInherit && (
         <div className="border border-slate-200 rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
             <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">

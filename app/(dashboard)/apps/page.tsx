@@ -16,7 +16,7 @@ export default async function AppsPage() {
   })
 
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
-  const navItems = buildDashboardNav(session.user.roles, navPreferences)
+  const navItems = buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess)
   const apps = flattenNavForLauncher(navItems)
 
   return (

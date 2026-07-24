@@ -1,6 +1,18 @@
-import type { PrismaClient } from "@prisma/client"
+import { Prisma, type PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
+
+/** Prisma ต้องใช้ Prisma.DbNull แทน `null` ธรรมดา เพื่อเซ็ตคอลัมน์ Json ให้เป็น SQL NULL จริง ๆ */
+function toModuleAccessJson(
+  value: string[] | "all" | null | undefined
+): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return Prisma.DbNull
+  return value
+}
+
+/** null/undefined = ใช้ moduleAccess ตาม Role, "all" = ทุกโมดูล, array = เฉพาะโมดูลที่ระบุ */
+const moduleAccessSchema = z.union([z.literal("all"), z.array(z.string())]).nullable().optional()
 
 export const createUserSchema = z.object({
   email: z.string().email(),
@@ -11,6 +23,7 @@ export const createUserSchema = z.object({
   phone: z.string().optional(),
   branchId: z.string().uuid(),
   roleId: z.string().uuid(),
+  moduleAccess: moduleAccessSchema,
 })
 
 export const updateUserSchema = z
@@ -24,6 +37,7 @@ export const updateUserSchema = z
     roleId: z.string().uuid().optional(),
     /** ระบุแถว user_branch_roles ที่ต้องการแก้ไข เมื่อผู้ใช้มีมากกว่า 1 สาขา/role — ป้องกันการลบสิทธิ์สาขาอื่นโดยไม่ตั้งใจ */
     userBranchRoleId: z.string().uuid().optional(),
+    moduleAccess: moduleAccessSchema,
   })
   .superRefine((data, ctx) => {
     const hasBranch = data.branchId !== undefined
@@ -67,6 +81,7 @@ export async function listUsers(
         isActive: true,
         lastLoginAt: true,
         createdAt: true,
+        moduleAccess: true,
         userBranchRoles: {
           include: {
             branch: { select: { id: true, name: true } },
@@ -121,12 +136,13 @@ export async function createUser(
   }
 
   const passwordHash = await bcrypt.hash(params.input.password, 12)
-  const { branchId, roleId, password, ...userData } = params.input
+  const { branchId, roleId, password, moduleAccess, ...userData } = params.input
   void password
 
   const user = await db.user.create({
     data: {
       ...userData,
+      moduleAccess: toModuleAccessJson(moduleAccess),
       passwordHash,
       companyId: params.companyId,
       isActive: true,
@@ -152,6 +168,7 @@ export async function getUserById(db: PrismaClient, params: { id: string; compan
       isActive: true,
       lastLoginAt: true,
       avatarUrl: true,
+      moduleAccess: true,
       userBranchRoles: {
         include: {
           branch: { select: { id: true, name: true } },
@@ -177,7 +194,7 @@ export async function updateUser(
   })
   if (!user) return { error: "Not found" as const, status: 404 as const }
 
-  const { password, branchId, roleId, userBranchRoleId, ...rest } = params.input
+  const { password, branchId, roleId, userBranchRoleId, moduleAccess, ...rest } = params.input
 
   if (branchId && roleId) {
     const [branch, role] = await Promise.all([
@@ -231,6 +248,7 @@ export async function updateUser(
     where: { id: params.id },
     data: {
       ...rest,
+      ...(moduleAccess !== undefined && { moduleAccess: toModuleAccessJson(moduleAccess) }),
       ...(password && { passwordHash: await bcrypt.hash(password, 12) }),
     },
   })

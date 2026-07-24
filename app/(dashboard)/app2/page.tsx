@@ -17,7 +17,7 @@ export default async function App2Page() {
   })
 
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
-  const navItems = buildDashboardNav(session.user.roles, navPreferences)
+  const navItems = buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess)
   const apps = flattenNavForLauncher(navItems)
   const isDark = navPreferences.appearance === "dark"
 

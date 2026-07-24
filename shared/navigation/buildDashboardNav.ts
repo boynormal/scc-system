@@ -57,7 +57,8 @@ function assertLauncherDepartments(nodes: ModuleNavNode[]) {
  */
 export function buildDashboardNav(
   roles: UserRole[],
-  prefs: CompanyNavPreferences
+  prefs: CompanyNavPreferences,
+  userModuleAccess?: string[] | "all" | null
 ): ModuleNavNode[] {
   assertUniqueModuleIds(MODULE_NAV_REGISTRY)
   assertLauncherDepartments(MODULE_NAV_REGISTRY)
@@ -65,7 +66,7 @@ export function buildDashboardNav(
   nodes = applyCompanyNavOverrides(nodes, prefs)
   nodes = sortNavTree(nodes, prefs.orderOverrides)
   if (roles.length > 0) {
-    nodes = filterNavByPermission(nodes, roles)
+    nodes = filterNavByPermission(nodes, roles, userModuleAccess)
   }
   return nodes
 }

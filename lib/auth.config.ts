@@ -12,6 +12,7 @@ const authConfig: NextAuthConfig = {
         token.id = user.id
         token.companyId = (user as never as { companyId: string }).companyId
         token.roles = (user as never as { roles: unknown[] }).roles
+        token.moduleAccess = (user as never as { moduleAccess?: unknown }).moduleAccess as never
       }
       return token
     },
@@ -20,6 +21,7 @@ const authConfig: NextAuthConfig = {
         session.user.id = token.id as string
         session.user.companyId = token.companyId as string
         session.user.roles = token.roles as never[]
+        session.user.moduleAccess = token.moduleAccess as never
       }
       return session
     },

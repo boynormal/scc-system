@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { ModuleAccessPicker, type ModuleAccessValue } from "@/components/settings/module-access-picker"
 
 const schema = z.object({
   employeeCode: z.string().optional(),
@@ -29,6 +30,7 @@ export default function NewUserPage() {
   const router = useRouter()
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([])
+  const [moduleAccess, setModuleAccess] = useState<ModuleAccessValue>(null)
   const [error, setError] = useState<string | null>(null)
 
   const {
@@ -48,7 +50,7 @@ export default function NewUserPage() {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, moduleAccess }),
       })
       if (res.ok) {
         router.push("/settings/users")
@@ -127,6 +129,14 @@ export default function NewUserPage() {
               {...register("roleId")}
             />
           </div>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>การมองเห็นโมดูล</CardTitle></CardHeader>
+          <p className="text-xs text-slate-500 mb-4 -mt-2">
+            ค่าเริ่มต้นใช้ตาม Role ที่เลือกด้านบน — เลือก override ที่นี่เฉพาะเมื่อต้องการให้ผู้ใช้คนนี้เห็นโมดูลต่างจากคนอื่นที่ Role เดียวกัน
+          </p>
+          <ModuleAccessPicker value={moduleAccess} onChange={setModuleAccess} allowInherit />
         </Card>
 
         {error && (

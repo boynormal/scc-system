@@ -88,8 +88,22 @@ export function getBranchIds(roles: UserRole[]): string[] {
  * moduleAccess เก็บเป็น extra JSON field ใน Role.permissions — ไม่รบกวน Permission type
  * ถ้า role ไม่มี moduleAccess (undefined) = ไม่จำกัด (backward compat)
  */
-export function canAccessModule(roles: UserRole[], moduleId: string): boolean {
+/**
+ * @param userModuleAccess override รายบุคคล (User.moduleAccess) — ถ้ากำหนด (ไม่ใช่ null/undefined)
+ * จะใช้แทนค่าจาก Role ทั้งหมด (ไม่ intersect); ถ้าไม่กำหนด fallback ไปตรวจ moduleAccess ของแต่ละ Role ตามเดิม
+ */
+export function canAccessModule(
+  roles: UserRole[],
+  moduleId: string,
+  userModuleAccess?: string[] | "all" | null
+): boolean {
   if (isAdminInAnyBranch(roles)) return true
+
+  if (userModuleAccess !== undefined && userModuleAccess !== null) {
+    if (userModuleAccess === "all") return true
+    return Array.isArray(userModuleAccess) && userModuleAccess.includes(moduleId)
+  }
+
   return roles.some((role) => {
     const raw = role.permissions as (Permission & { moduleAccess?: string[] | "all" }) | null
     const ma = raw?.moduleAccess

@@ -97,10 +97,17 @@ export async function updateNavPreferences(
       !Array.isArray(prevNav.productLineImageOverrides)
         ? (prevNav.productLineImageOverrides as Record<string, string>)
         : {}
-    nextNav.productLineImageOverrides = {
+    const merged: Record<string, string> = {
       ...prevImageOverrides,
       ...params.input.productLineImageOverrides,
     }
+    const UPLOAD_URL = /^\/uploads\/[\w.-]+$/
+    for (const [k, v] of Object.entries(merged)) {
+      if (typeof v !== "string" || !v || !UPLOAD_URL.test(v)) {
+        delete merged[k]
+      }
+    }
+    nextNav.productLineImageOverrides = merged
   }
   if (params.input.appearance !== undefined) {
     nextNav.appearance = params.input.appearance

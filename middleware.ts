@@ -23,5 +23,8 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)"],
+  // ไม่รัน auth บนไฟล์ static / อัปโหลด — มิฉะนั้น <img src="/uploads/...webp"> อาจได้ redirect/HTML แทนรูป
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|uploads/|.*\\.(?:png|jpg|jpeg|webp|gif|svg|ico)$).*)",
+  ],
 }

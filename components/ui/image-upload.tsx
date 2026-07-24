@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react"
-import Image from "next/image"
+import { X, Loader2, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ImageUploadProps {
@@ -32,13 +31,11 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(value)
-  const [previewFailed, setPreviewFailed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const isIconProfile = uploadProfile === "productLineIcon"
 
   useEffect(() => {
     setPreview(value)
-    setPreviewFailed(false)
   }, [value])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,13 +64,16 @@ export function ImageUpload({
         method: "POST",
         body: formData,
       })
-      if (!res.ok) throw new Error("Upload failed")
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null)
+        throw new Error(errBody?.error?.message ?? "Upload failed")
+      }
       const data = await res.json()
       setPreview(data.data.fileUrl)
-      setPreviewFailed(false)
       onChange(data.data.fileUrl)
     } catch (err) {
-      alert("อัปโหลดไฟล์ไม่สำเร็จ")
+      const msg = err instanceof Error ? err.message : "อัปโหลดไฟล์ไม่สำเร็จ"
+      alert(msg)
     } finally {
       setUploading(false)
     }
@@ -103,22 +103,11 @@ export function ImageUpload({
               isIconProfile ? "aspect-square w-28 sm:w-32" : `w-full ${previewHeightClass}`
             )}
           >
-            {previewFailed ? (
-              <img
-                src={preview}
-                alt="Preview"
-                className={cn("w-full h-full", isIconProfile ? "object-cover" : "object-contain")}
-              />
-            ) : (
-              <Image
-                src={preview}
-                alt="Preview"
-                fill
-                className={isIconProfile ? "object-cover" : "object-contain"}
-                unoptimized
-                onError={() => setPreviewFailed(true)}
-              />
-            )}
+            <img
+              src={preview}
+              alt="Preview"
+              className={cn("h-full w-full", isIconProfile ? "object-cover" : "object-contain")}
+            />
             {!disabled && (
               <button
                 type="button"

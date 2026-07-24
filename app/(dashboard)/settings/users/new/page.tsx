@@ -44,17 +44,21 @@ export default function NewUserPage() {
 
   const onSubmit = async (data: FormData) => {
     setError(null)
-    const res = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    })
-    if (res.ok) {
-      router.push("/settings/users")
-      router.refresh()
-    } else {
-      const body = await res.json()
-      setError(body.error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่")
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      if (res.ok) {
+        router.push("/settings/users")
+        router.refresh()
+      } else {
+        const body = await res.json().catch(() => null)
+        setError(body?.error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่")
+      }
+    } catch {
+      setError("เกิดข้อผิดพลาด กรุณาลองใหม่")
     }
   }
 

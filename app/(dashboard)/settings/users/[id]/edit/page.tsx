@@ -32,6 +32,7 @@ export default function EditUserPage() {
   const [displayName, setDisplayName] = useState("")
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([])
+  const [userBranchRoleId, setUserBranchRoleId] = useState<string | undefined>(undefined)
 
   const {
     register,
@@ -55,10 +56,11 @@ export default function EditUserPage() {
       if (data) {
         setDisplayName(`${data.firstName} ${data.lastName}`)
         const firstUbr = data.userBranchRoles?.[0] as
-          | { branch: { id: string }; role: { id: string } }
+          | { id: string; branch: { id: string }; role: { id: string } }
           | undefined
         const defaultBranchId = firstUbr?.branch.id ?? branchList[0]?.id ?? ""
         const defaultRoleId = firstUbr?.role.id ?? roleList[0]?.id ?? ""
+        setUserBranchRoleId(firstUbr?.id)
         reset({
           firstName: data.firstName,
           lastName: data.lastName,
@@ -75,18 +77,22 @@ export default function EditUserPage() {
 
   const onSubmit = async (data: FormData) => {
     setError(null)
-    const payload = { ...data, password: data.password || undefined }
-    const res = await fetch(`/api/users/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    if (res.ok) {
-      router.push("/settings/users")
-      router.refresh()
-    } else {
-      const body = await res.json()
-      setError(body.error?.message ?? "เกิดข้อผิดพลาด")
+    const payload = { ...data, password: data.password || undefined, userBranchRoleId }
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        router.push("/settings/users")
+        router.refresh()
+      } else {
+        const body = await res.json().catch(() => null)
+        setError(body?.error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่")
+      }
+    } catch {
+      setError("เกิดข้อผิดพลาด กรุณาลองใหม่")
     }
   }
 

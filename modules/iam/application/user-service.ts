@@ -22,6 +22,8 @@ export const updateUserSchema = z
     password: z.string().min(8).optional(),
     branchId: z.string().uuid().optional(),
     roleId: z.string().uuid().optional(),
+    /** ระบุแถว user_branch_roles ที่ต้องการแก้ไข เมื่อผู้ใช้มีมากกว่า 1 สาขา/role — ป้องกันการลบสิทธิ์สาขาอื่นโดยไม่ตั้งใจ */
+    userBranchRoleId: z.string().uuid().optional(),
   })
   .superRefine((data, ctx) => {
     const hasBranch = data.branchId !== undefined
@@ -108,6 +110,16 @@ export async function createUser(
   if (!branch) return { error: { message: "Branch not found" }, status: 400 as const }
   if (!role) return { error: { message: "Role not found" }, status: 400 as const }
 
+  if (params.input.employeeCode) {
+    const dupCode = await db.user.findFirst({
+      where: { companyId: params.companyId, employeeCode: params.input.employeeCode, deletedAt: null },
+      select: { id: true },
+    })
+    if (dupCode) {
+      return { error: { message: "รหัสพนักงานนี้ถูกใช้แล้วในบริษัทนี้" }, status: 409 as const }
+    }
+  }
+
   const passwordHash = await bcrypt.hash(params.input.password, 12)
   const { branchId, roleId, password, ...userData } = params.input
   void password
@@ -161,10 +173,11 @@ export async function updateUser(
 ) {
   const user = await db.user.findFirst({
     where: { id: params.id, companyId: params.companyId, deletedAt: null },
+    include: { userBranchRoles: { select: { id: true } } },
   })
   if (!user) return { error: "Not found" as const, status: 404 as const }
 
-  const { password, branchId, roleId, ...rest } = params.input
+  const { password, branchId, roleId, userBranchRoleId, ...rest } = params.input
 
   if (branchId && roleId) {
     const [branch, role] = await Promise.all([
@@ -180,12 +193,38 @@ export async function updateUser(
     if (!branch) return { error: { message: "Branch not found" }, status: 400 as const }
     if (!role) return { error: { message: "Role not found" }, status: 400 as const }
 
-    await db.$transaction([
-      db.userBranchRole.deleteMany({ where: { userId: params.id } }),
-      db.userBranchRole.create({
+    const existingRoles = user.userBranchRoles
+
+    if (userBranchRoleId) {
+      // แก้ไขเฉพาะแถวที่ระบุ — ไม่กระทบ (branch, role) อื่นของ user คนนี้
+      const target = existingRoles.find((r) => r.id === userBranchRoleId)
+      if (!target) {
+        return { error: { message: "Branch/role assignment not found" }, status: 400 as const }
+      }
+      await db.userBranchRole.update({
+        where: { id: userBranchRoleId },
+        data: { branchId, roleId, assignedBy: params.assignedBy, assignedAt: new Date() },
+      })
+    } else if (existingRoles.length === 0) {
+      await db.userBranchRole.create({
         data: { userId: params.id, branchId, roleId, assignedBy: params.assignedBy },
-      }),
-    ])
+      })
+    } else if (existingRoles.length === 1) {
+      // กรณีปกติ (user มีสาขา/role เดียว) — อัปเดตแถวเดิมในที่ ไม่ลบ+สร้างใหม่
+      await db.userBranchRole.update({
+        where: { id: existingRoles[0].id },
+        data: { branchId, roleId, assignedBy: params.assignedBy, assignedAt: new Date() },
+      })
+    } else {
+      // user มีหลายสาขา/role — ต้องระบุ userBranchRoleId ให้ชัดเจน ป้องกันการลบสิทธิ์สาขาอื่นโดยไม่ตั้งใจ
+      return {
+        error: {
+          message:
+            "ผู้ใช้นี้มีสิทธิ์มากกว่า 1 สาขา กรุณาระบุ userBranchRoleId ที่ต้องการแก้ไข เพื่อป้องกันการลบสิทธิ์สาขาอื่นโดยไม่ตั้งใจ",
+        },
+        status: 409 as const,
+      }
+    }
   }
 
   const updated = await db.user.update({

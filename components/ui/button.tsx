@@ -46,7 +46,11 @@ export function Button({
         className
       )}
     >
-      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : icon}
+      {(loading || icon) && (
+        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : icon}
+        </span>
+      )}
       {children}
     </button>
   )

@@ -3,11 +3,11 @@ import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { Card } from "@/components/ui/card"
 import { AttendanceImportForm } from "./attendance-import-form"
 import { AttendanceEntriesPanel } from "./attendance-entries-panel"
 import { Clock } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
+import { GlassCard } from "@/components/glass"
 
 export const metadata: Metadata = { title: "บันทึกเวลา" }
 
@@ -85,18 +85,18 @@ export default async function HrAttendancePage(props: { searchParams: Promise<{ 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">บันทึกเวลา</h1>
-        <p className="text-slate-500 text-sm mt-1">แยกการทำงานตามสาขาอย่างชัดเจน เพื่อลดการสลับข้อมูลผิดสาขา</p>
+        <h1 className="text-2xl font-bold text-foreground">บันทึกเวลา</h1>
+        <p className="text-muted-foreground text-sm mt-1">แยกการทำงานตามสาขาอย่างชัดเจน เพื่อลดการสลับข้อมูลผิดสาขา</p>
       </div>
 
-      <Card padding="md">
+      <GlassCard padding="md">
         <form className="flex flex-wrap items-end gap-3">
           <div className="min-w-[240px]">
-            <label className="block text-sm font-medium text-slate-700">บริบทสาขาที่กำลังใช้งาน</label>
+            <label className="block text-sm font-medium text-foreground">บริบทสาขาที่กำลังใช้งาน</label>
             <select
               name="branchId"
               defaultValue={selectedBranchId ?? ""}
-              className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm"
             >
               {branches
                 .filter((b) => allowedBranchIds.includes(b.id))
@@ -112,15 +112,15 @@ export default async function HrAttendancePage(props: { searchParams: Promise<{ 
           </button>
         </form>
         {selectedBranch && (
-          <p className="mt-2 text-xs text-slate-500">
-            ตอนนี้กำลังทำงานที่สาขา: <span className="font-medium text-slate-700">{selectedBranch.code} {selectedBranch.name}</span>
+          <p className="mt-2 text-xs text-muted-foreground">
+            ตอนนี้กำลังทำงานที่สาขา: <span className="font-medium text-foreground">{selectedBranch.code} {selectedBranch.name}</span>
           </p>
         )}
-      </Card>
+      </GlassCard>
 
       {canCreate(roles) && (
-        <Card padding="md">
-          <h2 className="text-lg font-semibold text-slate-800 mb-3">นำเข้า Excel</h2>
+        <GlassCard padding="md">
+          <h2 className="text-lg font-semibold text-foreground mb-3">นำเข้า Excel</h2>
           {!selectedBranchId ? (
             <p className="text-sm text-amber-700">กรุณาเลือกสาขาก่อนนำเข้า</p>
           ) : branches.length === 0 ? (
@@ -128,10 +128,10 @@ export default async function HrAttendancePage(props: { searchParams: Promise<{ 
           ) : (
             <AttendanceImportForm branch={selectedBranch!} />
           )}
-        </Card>
+        </GlassCard>
       )}
 
-      <Card padding="none">
+      <GlassCard padding="none">
         {recent.length === 0 ? (
           <EmptyState
             icon={Clock}
@@ -141,7 +141,7 @@ export default async function HrAttendancePage(props: { searchParams: Promise<{ 
         ) : (
           <AttendanceEntriesPanel rows={tableRows} branch={selectedBranch!} canDelete={showDelete} />
         )}
-      </Card>
+      </GlassCard>
     </div>
   )
 }

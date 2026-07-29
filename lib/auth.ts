@@ -6,9 +6,13 @@ import { z } from "zod"
 import authConfig from "@/lib/auth.config"
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().trim().min(1).max(255),
   password: z.string().min(6),
 })
+
+function looksLikeEmail(value: string): boolean {
+  return value.includes("@")
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -16,21 +20,50 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Username or Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials)
+        const creds = credentials as Record<string, unknown> | undefined
+        // Accept legacy `email` field from older clients as identifier
+        const raw = {
+          identifier:
+            typeof creds?.identifier === "string"
+              ? creds.identifier
+              : typeof creds?.email === "string"
+                ? creds.email
+                : "",
+          password: creds?.password,
+        }
+        const parsed = loginSchema.safeParse(raw)
         if (!parsed.success) return null
 
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email, deletedAt: null, isActive: true },
-          include: {
-            userBranchRoles: {
-              include: { role: true, branch: true },
-            },
-          },
-        })
+        const identifier = parsed.data.identifier.trim()
+        const user = looksLikeEmail(identifier)
+          ? await prisma.user.findFirst({
+              where: {
+                email: identifier.toLowerCase(),
+                deletedAt: null,
+                isActive: true,
+              },
+              include: {
+                userBranchRoles: {
+                  include: { role: true, branch: true },
+                },
+              },
+            })
+          : await prisma.user.findFirst({
+              where: {
+                username: identifier.toLowerCase(),
+                deletedAt: null,
+                isActive: true,
+              },
+              include: {
+                userBranchRoles: {
+                  include: { role: true, branch: true },
+                },
+              },
+            })
 
         if (!user || !user.passwordHash) return null
 

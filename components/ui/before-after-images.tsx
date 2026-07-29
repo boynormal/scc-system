@@ -93,9 +93,9 @@ export function BeforeAfterImages({
   ) => (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-foreground">
           {title}
-          <span className="text-slate-400 text-xs ml-2">
+          <span className="text-muted-foreground text-xs ml-2">
             ({images.length}/{maxImages})
           </span>
         </label>
@@ -127,16 +127,16 @@ export function BeforeAfterImages({
       </div>
 
       {images.length === 0 ? (
-        <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center">
-          <ImageIcon className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-          <p className="text-xs text-slate-400">ยังไม่มีรูปภาพ</p>
+        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+          <ImageIcon className="w-8 h-8 text-muted-foreground mx-auto mb-1" />
+          <p className="text-xs text-muted-foreground">ยังไม่มีรูปภาพ</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {images.map((img, idx) => (
             <div
               key={idx}
-              className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200"
+              className="relative group aspect-square rounded-lg overflow-hidden border border-border"
             >
               <Image src={img} alt={`${title} ${idx + 1}`} fill sizes="(max-width: 768px) 100vw, 300px" className="object-cover" />
               {!disabled && (

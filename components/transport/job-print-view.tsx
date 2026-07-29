@@ -78,12 +78,12 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
       <header className="border-b border-slate-300 pb-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">ใบงานขนส่ง</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">{job.jobNumber}</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">ใบงานขนส่ง</p>
+            <h1 className="mt-1 text-2xl font-bold text-foreground">{job.jobNumber}</h1>
           </div>
           <JobStatusBadge status={job.status} />
         </div>
-        <p className="mt-2 text-sm text-slate-500">พิมพ์เมื่อ {formatDateTime(new Date().toISOString())}</p>
+        <p className="mt-2 text-sm text-muted-foreground">พิมพ์เมื่อ {formatDateTime(new Date().toISOString())}</p>
       </header>
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -97,8 +97,8 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
         <InfoBlock label="วันที่สร้าง" value={formatDate(job.createdAt)} />
       </section>
 
-      <section className="mt-6 rounded-lg border border-slate-200 p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800">การมอบหมาย</h2>
+      <section className="mt-6 rounded-lg border border-border p-4">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">การมอบหมาย</h2>
         <div className="grid gap-3 sm:grid-cols-2 text-sm">
           <InfoBlock label="รถ" value={job.vehiclePlate ? `${job.vehiclePlate} — ${job.vehicleName}` : "—"} />
           <InfoBlock label="คนขับ" value={job.driverName ?? "—"} sub={job.driverPhone ?? undefined} />
@@ -106,10 +106,10 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800">จุดแวะ ({job.stops.length} จุด)</h2>
+        <h2 className="mb-3 text-sm font-semibold text-foreground">จุดแวะ ({job.stops.length} จุด)</h2>
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-slate-300 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-slate-300 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="py-2 pr-3">#</th>
               <th className="py-2 pr-3">ปลายทาง</th>
               <th className="py-2 pr-3">ที่อยู่</th>
@@ -125,7 +125,7 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
                 <td className="py-3 pr-3">{stop.address}</td>
                 <td className="py-3 pr-3">
                   {stop.contactName ?? "—"}
-                  {stop.contactPhone ? <div className="text-xs text-slate-500">{stop.contactPhone}</div> : null}
+                  {stop.contactPhone ? <div className="text-xs text-muted-foreground">{stop.contactPhone}</div> : null}
                 </td>
                 <td className="py-3">{stop.weightKg ? Number(stop.weightKg).toLocaleString() : "—"}</td>
               </tr>
@@ -136,12 +136,12 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
 
       {job.notes && (
         <section className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold text-slate-800">หมายเหตุ</h2>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{job.notes}</p>
+          <h2 className="mb-2 text-sm font-semibold text-foreground">หมายเหตุ</h2>
+          <p className="text-sm text-foreground whitespace-pre-wrap">{job.notes}</p>
         </section>
       )}
 
-      <footer className="mt-10 grid grid-cols-3 gap-8 border-t border-slate-200 pt-6 text-sm text-slate-600">
+      <footer className="mt-10 grid grid-cols-3 gap-8 border-t border-slate-200 pt-6 text-sm text-muted-foreground">
         <SignatureLine label="ผู้สร้างใบงาน" />
         <SignatureLine label="คนขับรับทราบ" />
         <SignatureLine label="ผู้รับสินค้า" />
@@ -153,9 +153,9 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
 function InfoBlock({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-0.5 text-sm text-slate-800">{value}</p>
-      {sub && <p className="text-xs text-slate-500">{sub}</p>}
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm text-foreground">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   )
 }
@@ -165,7 +165,7 @@ function SignatureLine({ label }: { label: string }) {
     <div className="text-center">
       <div className="mb-10 border-b border-slate-300" />
       <p>{label}</p>
-      <p className="mt-1 text-xs text-slate-400">วันที่ _______/_______/_______</p>
+      <p className="mt-1 text-xs text-muted-foreground">วันที่ _______/_______/_______</p>
     </div>
   )
 }

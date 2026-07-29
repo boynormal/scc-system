@@ -50,18 +50,18 @@ export function MachineFilters({ branches, categories }: MachineFiltersProps) {
   return (
     <div className={`flex flex-wrap gap-3 ${isPending ? "opacity-70 pointer-events-none" : ""}`}>
       <div className="relative flex-1 min-w-48">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="ค้นหาชื่อ, รหัส..."
-          className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
       <select
         defaultValue={searchParams.get("branchId") || ""}
         onChange={(e) => handleFilter("branchId", e.target.value)}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">ทุกสาขา</option>
         {branches.map((b) => (
@@ -71,7 +71,7 @@ export function MachineFilters({ branches, categories }: MachineFiltersProps) {
       <select
         defaultValue={searchParams.get("categoryId") || ""}
         onChange={(e) => handleFilter("categoryId", e.target.value)}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">ทุกหมวดหมู่</option>
         {categories.map((c) => (
@@ -81,7 +81,7 @@ export function MachineFilters({ branches, categories }: MachineFiltersProps) {
       <select
         defaultValue={searchParams.get("status") || ""}
         onChange={(e) => handleFilter("status", e.target.value)}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">ทุกสถานะ</option>
         <option value="active">ใช้งาน</option>
@@ -93,7 +93,7 @@ export function MachineFilters({ branches, categories }: MachineFiltersProps) {
         <Link
           href="/machines"
           onClick={() => setSearch("")}
-          className="px-4 py-2 border border-slate-300 text-slate-600 text-sm rounded-lg hover:bg-slate-50 transition-colors"
+          className="px-4 py-2 border border-border text-muted-foreground text-sm rounded-lg hover:bg-muted/60 transition-colors"
         >
           ล้าง
         </Link>

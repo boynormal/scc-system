@@ -7,12 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save, Check, ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { MultiImageUpload } from "@/components/ui/multi-image-upload"
 import { ProductsListEditor } from "@/components/ui/products-list-editor"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 const schema = z.object({
   branchId: z.string().uuid("กรุณาเลือกสาขา"),
@@ -95,8 +93,8 @@ export default function NewMachinePage() {
             <Check className="w-4 h-4 text-green-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">สร้างเครื่องจักรสำเร็จ</h1>
-            <p className="text-slate-500 text-sm mt-0.5">
+            <h1 className="text-2xl font-bold text-foreground">สร้างเครื่องจักรสำเร็จ</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
               {createdMachineName} — เพิ่มรูปภาพและรายการสินค้าได้เลย (หรือข้ามได้)
             </p>
           </div>
@@ -108,37 +106,37 @@ export default function NewMachinePage() {
             <span className="w-5 h-5 bg-green-600 text-white rounded-full flex items-center justify-center text-xs">✓</span>
             ข้อมูลพื้นฐาน
           </span>
-          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
           <span className="flex items-center gap-1.5 text-blue-600 font-medium">
             <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">2</span>
             รูปภาพและสินค้า
           </span>
         </div>
 
-        <Card>
-          <CardHeader><CardTitle>รูปภาพเครื่องจักร</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รูปภาพเครื่องจักร</GlassCardTitle></GlassCardHeader>
           <MultiImageUpload machineId={createdMachineId} initialImages={[]} />
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>รายการสินค้า / ผลิตภัณฑ์</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รายการสินค้า / ผลิตภัณฑ์</GlassCardTitle></GlassCardHeader>
           <ProductsListEditor machineId={createdMachineId} initialProducts={[]} />
-        </Card>
+        </GlassCard>
 
         <div className="flex gap-3 justify-end">
           <Link
             href={`/machines/${createdMachineId}/edit`}
-            className="px-5 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+            className="px-5 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors"
           >
             แก้ไขข้อมูลพื้นฐาน
           </Link>
-          <Button
+          <GlassButton
             type="button"
             icon={<Check className="w-4 h-4" />}
             onClick={() => router.push(`/machines/${createdMachineId}`)}
           >
             เสร็จสิ้น
-          </Button>
+          </GlassButton>
         </div>
       </div>
     )
@@ -150,13 +148,13 @@ export default function NewMachinePage() {
       <div className="flex items-center gap-3">
         <Link
           href="/machines"
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500"
+          className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground"
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">เพิ่มเครื่องจักรใหม่</h1>
-          <p className="text-slate-500 text-sm mt-0.5">กรอกข้อมูลพื้นฐาน จากนั้นเพิ่มรูปภาพและสินค้าในขั้นตอนถัดไป</p>
+          <h1 className="text-2xl font-bold text-foreground">เพิ่มเครื่องจักรใหม่</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">กรอกข้อมูลพื้นฐาน จากนั้นเพิ่มรูปภาพและสินค้าในขั้นตอนถัดไป</p>
         </div>
       </div>
 
@@ -166,17 +164,17 @@ export default function NewMachinePage() {
           <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">1</span>
           ข้อมูลพื้นฐาน
         </span>
-        <ChevronRight className="w-4 h-4 text-slate-400" />
-        <span className="flex items-center gap-1.5 text-slate-400">
-          <span className="w-5 h-5 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center text-xs">2</span>
+        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          <span className="w-5 h-5 bg-slate-200 text-muted-foreground rounded-full flex items-center justify-center text-xs">2</span>
           รูปภาพและสินค้า
         </span>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Location */}
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลตำแหน่ง</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลตำแหน่ง</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="สาขา"
@@ -200,58 +198,58 @@ export default function NewMachinePage() {
               error={errors.categoryId?.message}
               {...register("categoryId")}
             />
-            <Input
+            <GlassInput
               label="ตำแหน่งในโรงงาน"
               placeholder="เช่น อาคาร A ชั้น 1"
               {...register("locationDetail")}
             />
-            <Input
+            <GlassInput
               label="ประเภทเครื่องจักร"
               placeholder="เช่น CNC, Conveyor, Compressor"
               {...register("machineType")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
         {/* Basic Info */}
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลพื้นฐาน</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลพื้นฐาน</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
+            <GlassInput
               label="รหัสเครื่องจักร"
               required
               placeholder="เช่น MCH-001"
               error={errors.code?.message}
               {...register("code")}
             />
-            <Input
+            <GlassInput
               label="ชื่อเครื่องจักร"
               required
               placeholder="เช่น Air Compressor Unit #1"
               error={errors.name?.message}
               {...register("name")}
             />
-            <Input
+            <GlassInput
               label="รุ่น (Model)"
               placeholder="เช่น AC-500"
               {...register("model")}
             />
-            <Input
+            <GlassInput
               label="ผู้ผลิต (Manufacturer)"
               placeholder="เช่น Atlas Copco"
               {...register("manufacturer")}
             />
-            <Input
+            <GlassInput
               label="หมายเลขซีเรียล"
               placeholder="Serial Number"
               {...register("serialNumber")}
             />
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">รายละเอียดเครื่องจักร</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">รายละเอียดเครื่องจักร</label>
               <textarea
                 rows={4}
                 placeholder="รายละเอียด ลักษณะการใช้งาน หรือข้อมูลเพิ่มเติม"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
                 {...register("description")}
               />
             </div>
@@ -266,55 +264,55 @@ export default function NewMachinePage() {
               {...register("criticalLevel")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
         {/* PM Scope */}
-        <Card>
-          <CardHeader><CardTitle>ขอบเขตการซ่อมบำรุง (Scope of Work)</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ขอบเขตการซ่อมบำรุง (Scope of Work)</GlassCardTitle></GlassCardHeader>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 รอบ PM ทั่วไป
-                <span className="ml-2 text-xs text-slate-400 font-normal">General PM</span>
+                <span className="ml-2 text-xs text-muted-foreground font-normal">General PM</span>
               </label>
               <textarea
                 rows={6}
                 placeholder={`รายการที่ต้องทำในรอบ PM ทั่วไป เช่น\n- ตรวจสอบสายไฟ ท่อไฟ ภายนอก\n- อัดจารบีลูกปืน\n- ตรวจสอบระดับน้ำมัน`}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[120px] font-mono"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[120px] font-mono"
                 {...register("pmGeneral")}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 รอบ PM ใหญ่
-                <span className="ml-2 text-xs text-slate-400 font-normal">Major PM</span>
+                <span className="ml-2 text-xs text-muted-foreground font-normal">Major PM</span>
               </label>
               <textarea
                 rows={6}
                 placeholder={`รายการที่ต้องทำในรอบ PM ใหญ่ เช่น\n- เปลี่ยนน้ำมันห้องเกียร์ (ปีละครั้ง)\n- ล้างทำความสะอาดถังน้ำมัน\n- สอบเทียบตามรอบกฎหมาย`}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[120px] font-mono"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[120px] font-mono"
                 {...register("pmMajor")}
               />
             </div>
           </div>
-        </Card>
+        </GlassCard>
 
         {/* Dates */}
-        <Card>
-          <CardHeader><CardTitle>วันที่</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>วันที่</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
+            <GlassInput
               label="วันที่ติดตั้ง"
               type="date"
               {...register("installDate")}
             />
-            <Input
+            <GlassInput
               label="วันหมดประกัน"
               type="date"
               {...register("warrantyExpireDate")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -325,13 +323,13 @@ export default function NewMachinePage() {
         <div className="flex gap-3 justify-end">
           <Link
             href="/machines"
-            className="px-5 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+            className="px-5 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors"
           >
             ยกเลิก
           </Link>
-          <Button type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
+          <GlassButton type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
             บันทึกและถัดไป
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

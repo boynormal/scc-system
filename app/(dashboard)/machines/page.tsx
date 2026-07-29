@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { MachineStatusBadge } from "@/components/machines/machine-status-badge"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Card } from "@/components/ui/card"
+import { GlassCard } from "@/components/glass"
 import { MachineFilters } from "@/components/machines/machine-filters"
 
 export const metadata: Metadata = { title: "เครื่องจักร" }
@@ -42,11 +42,19 @@ async function getMachines(companyId: string, search?: string, categoryId?: stri
 }
 
 async function getCategories(companyId: string) {
-  return prisma.machineCategory.findMany({ where: { companyId }, orderBy: { name: "asc" } })
+  return prisma.machineCategory.findMany({
+    where: { companyId },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  })
 }
 
 async function getBranches(companyId: string) {
-  return prisma.branch.findMany({ where: { companyId }, orderBy: { name: "asc" } })
+  return prisma.branch.findMany({
+    where: { companyId },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  })
 }
 
 export default async function MachinesPage(
@@ -74,8 +82,8 @@ export default async function MachinesPage(
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">เครื่องจักร</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">เครื่องจักร</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             ทั้งหมด {counts.total} เครื่อง · ใช้งาน {counts.active} · กำลังซ่อม {counts.maintenance}
           </p>
         </div>
@@ -89,14 +97,14 @@ export default async function MachinesPage(
       </div>
 
       {/* Filters */}
-      <Card padding="sm">
-        <Suspense fallback={<div className="h-10 animate-pulse bg-slate-100 rounded-lg w-full"></div>}>
+      <GlassCard padding="sm">
+        <Suspense fallback={<div className="h-10 animate-pulse bg-muted rounded-lg w-full"></div>}>
           <MachineFilters branches={branches} categories={categories} />
         </Suspense>
-      </Card>
+      </GlassCard>
 
       {/* Table */}
-      <Card padding="none">
+      <GlassCard padding="none">
         {machines.length === 0 ? (
           <EmptyState
             icon={Wrench}
@@ -115,23 +123,23 @@ export default async function MachinesPage(
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
+                <tr className="border-b border-border bg-muted">
                   <th className="px-5 py-3 w-16" />
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide min-w-[150px]">สาขา / แผนก</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide min-w-[180px]">รหัส / ชื่อ</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide bg-slate-50 sticky top-0">หมวดหมู่</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide bg-slate-50 sticky top-0">ความเสี่ยง</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">สถานะ</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">แผน/WO</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide min-w-[150px]">สาขา / แผนก</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide min-w-[180px]">รหัส / ชื่อ</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide bg-muted sticky top-0">หมวดหมู่</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide bg-muted sticky top-0">ความเสี่ยง</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">สถานะ</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">แผน/WO</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {machines.map((machine: any) => (
-                  <tr key={machine.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={machine.id} className="hover:bg-muted/60 transition-colors">
                     <td className="px-5 py-3.5">
                       {machine.images?.[0]?.fileUrl ? (
-                        <div className="relative w-10 h-10 rounded-md overflow-hidden border border-slate-200 flex-shrink-0">
+                        <div className="relative w-10 h-10 rounded-md overflow-hidden border border-border flex-shrink-0">
                           <img
                             src={machine.images[0].fileUrl}
                             alt={machine.name}
@@ -141,22 +149,22 @@ export default async function MachinesPage(
                           />
                         </div>
                       ) : (
-                        <div className="w-10 h-10 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0">
-                          <ImageIcon className="w-4 h-4 text-slate-300" />
+                        <div className="w-10 h-10 rounded-md bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                          <ImageIcon className="w-4 h-4 text-muted-foreground" />
                         </div>
                       )}
                     </td>
                     <td className="px-5 py-3.5">
-                      <p className="font-semibold text-slate-800">{machine.branch.name}</p>
+                      <p className="font-semibold text-foreground">{machine.branch.name}</p>
                       {machine.department && (
-                        <p className="text-slate-400 text-xs mt-0.5">{machine.department.name}</p>
+                        <p className="text-muted-foreground text-xs mt-0.5">{machine.department.name}</p>
                       )}
                     </td>
                     <td className="px-5 py-3.5">
-                      <p className="font-semibold text-slate-800">{machine.code}</p>
-                      <p className="text-slate-500 text-sm mt-0.5">{machine.name}</p>
+                      <p className="font-semibold text-foreground">{machine.code}</p>
+                      <p className="text-muted-foreground text-sm mt-0.5">{machine.name}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600">{machine.category.name}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{machine.category.name}</td>
                     <td className="px-5 py-3.5">
                       <span className={`text-xs font-medium ${criticalColors[machine.criticalLevel]}`}>
                         {criticalLabels[machine.criticalLevel]}
@@ -165,7 +173,7 @@ export default async function MachinesPage(
                     <td className="px-5 py-3.5">
                       <MachineStatusBadge status={machine.status} />
                     </td>
-                    <td className="px-5 py-3.5 text-slate-500 text-xs">
+                    <td className="px-5 py-3.5 text-muted-foreground text-xs">
                       {machine._count.maintenancePlans} แผน · {machine._count.workOrders} WO
                     </td>
                     <td className="px-5 py-3.5">
@@ -182,7 +190,7 @@ export default async function MachinesPage(
             </table>
           </div>
         )}
-      </Card>
+      </GlassCard>
     </div>
   )
 }

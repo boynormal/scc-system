@@ -1,7 +1,10 @@
 import type { PrismaClient } from "@prisma/client"
 import { z } from "zod"
 import { getBranchIds, hasPermission, type UserRole } from "@/lib/permissions"
-import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
+import {
+  isHomeScreenImageUrl,
+  parseCompanyNavPreferences,
+} from "@/shared/navigation/companyNavPreferences"
 
 export const updateNavPreferencesSchema = z.object({
   hiddenModuleIds: z.array(z.string()).optional(),
@@ -11,8 +14,22 @@ export const updateNavPreferencesSchema = z.object({
   departmentOrderOverrides: z.record(z.number()).optional(),
   productLineIconOverrides: z.record(z.string()).optional(),
   productLineImageOverrides: z.record(z.string().max(500)).optional(),
+  moduleImageOverrides: z.record(z.string().max(500)).optional(),
   appearance: z.enum(["light", "dark"]).optional(),
 })
+
+function mergeImageOverrides(
+  prev: Record<string, string>,
+  patch: Record<string, string>
+): Record<string, string> {
+  const merged: Record<string, string> = { ...prev, ...patch }
+  for (const [k, v] of Object.entries(merged)) {
+    if (typeof v !== "string" || !v || !isHomeScreenImageUrl(v)) {
+      delete merged[k]
+    }
+  }
+  return merged
+}
 
 export async function getNavPreferences(db: PrismaClient, companyId: string) {
   const company = await db.company.findUnique({
@@ -97,17 +114,22 @@ export async function updateNavPreferences(
       !Array.isArray(prevNav.productLineImageOverrides)
         ? (prevNav.productLineImageOverrides as Record<string, string>)
         : {}
-    const merged: Record<string, string> = {
-      ...prevImageOverrides,
-      ...params.input.productLineImageOverrides,
-    }
-    const UPLOAD_URL = /^\/uploads\/[\w.-]+$/
-    for (const [k, v] of Object.entries(merged)) {
-      if (typeof v !== "string" || !v || !UPLOAD_URL.test(v)) {
-        delete merged[k]
-      }
-    }
-    nextNav.productLineImageOverrides = merged
+    nextNav.productLineImageOverrides = mergeImageOverrides(
+      prevImageOverrides,
+      params.input.productLineImageOverrides
+    )
+  }
+  if (params.input.moduleImageOverrides !== undefined) {
+    const prevModuleImages =
+      prevNav.moduleImageOverrides &&
+      typeof prevNav.moduleImageOverrides === "object" &&
+      !Array.isArray(prevNav.moduleImageOverrides)
+        ? (prevNav.moduleImageOverrides as Record<string, string>)
+        : {}
+    nextNav.moduleImageOverrides = mergeImageOverrides(
+      prevModuleImages,
+      params.input.moduleImageOverrides
+    )
   }
   if (params.input.appearance !== undefined) {
     nextNav.appearance = params.input.appearance

@@ -1,4 +1,8 @@
-import { canAccessModule, getBranchIds, hasPermission, type Action, type Resource, type UserRole } from "@/lib/permissions"
+import { getBranchIds, hasPermission, type Action, type Resource, type UserRole } from "@/lib/permissions"
+import {
+  canAccessModuleId,
+  getModuleAccessCatalogEntry,
+} from "@/shared/permissions/module-access-catalog"
 import type { ModuleNavNode } from "./moduleRegistry"
 
 function canAccessResource(roles: UserRole[], resource: Resource, action: Action): boolean {
@@ -13,14 +17,11 @@ function canAccessResource(roles: UserRole[], resource: Resource, action: Action
   return false
 }
 
-/** กลุ่มซ่อมบำรุงมีลูกหลายสิทธิ์ (แดชบอร์ด / แผน / ตาราง / รายงาน) — แสดงกลุ่มเมื่อมีสิทธิ์อย่างใดอย่างหนึ่ง */
-function canSeeMaintenanceGroup(roles: UserRole[]): boolean {
-  return (
-    canAccessResource(roles, "dashboard", "read") ||
-    canAccessResource(roles, "maintenance_plans", "read") ||
-    canAccessResource(roles, "schedules", "read") ||
-    canAccessResource(roles, "reports", "read")
-  )
+/** Group visibility from MODULE_ACCESS_CATALOG.anyOfResources when key matches a catalog moduleId */
+function canSeeCatalogGroup(roles: UserRole[], catalogModuleId: string): boolean {
+  const entry = getModuleAccessCatalogEntry(catalogModuleId)
+  if (!entry) return false
+  return entry.anyOfResources.some((resource) => canAccessResource(roles, resource, "read"))
 }
 
 function filterOne(
@@ -30,7 +31,7 @@ function filterOne(
 ): ModuleNavNode | null {
   if (n.type === "link") {
     if (!canAccessResource(roles, n.permission.resource, n.permission.action)) return null
-    if (n.moduleId && !canAccessModule(roles, n.moduleId, userModuleAccess)) return null
+    if (n.moduleId && !canAccessModuleId(roles, n.moduleId, userModuleAccess)) return null
     return n
   }
   if (n.type === "group") {
@@ -40,7 +41,7 @@ function filterOne(
     if (!children.length) return null
     const groupOk =
       n.key === "maintenance"
-        ? canSeeMaintenanceGroup(roles)
+        ? canSeeCatalogGroup(roles, "maintenance")
         : canAccessResource(roles, n.permission.resource, n.permission.action)
     if (!groupOk) return null
     return { ...n, children }
@@ -57,7 +58,9 @@ function filterOne(
 
 /**
  * กรองเมนูตาม RBAC แบบ recursive (section / group / link ซ้อน)
- * @param userModuleAccess override การมองเห็นโมดูลรายบุคคล (User.moduleAccess) — ไม่ระบุ = ใช้ตาม Role
+ * @param userModuleAccess override การมองเห็นโมดูลรายบุคคล (User.moduleAccess) —
+ *   ไม่ระบุ/null = ไม่จำกัดชั้นโมดูล (โชว์ตามสิทธิ์ resource); ระบุแล้วค่อยจำกัดเพิ่ม
+ *   รองรับทั้ง catalog moduleId (เช่น transport) และ nav moduleId (เช่น transport_jobs)
  */
 export function filterNavByPermission(
   nodes: ModuleNavNode[],

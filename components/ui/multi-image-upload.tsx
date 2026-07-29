@@ -167,9 +167,9 @@ export function MultiImageUpload({
       onDrop={handleDrop}
     >
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-foreground">
           รูปภาพเครื่องจักร
-          <span className="text-slate-400 text-xs ml-2">
+          <span className="text-muted-foreground text-xs ml-2">
             ({images.length}/{maxImages})
           </span>
         </label>
@@ -201,10 +201,10 @@ export function MultiImageUpload({
       </div>
 
       {images.length === 0 ? (
-        <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? "border-blue-500 bg-blue-50" : "border-slate-200"}`}>
-          <ImageIcon className={`w-12 h-12 mx-auto mb-2 ${isDragging ? "text-blue-500" : "text-slate-300"}`} />
-          <p className="text-sm font-medium text-slate-600 mb-1">ลากและวางรูปภาพที่นี่</p>
-          <p className="text-xs text-slate-400">หรือคลิกปุ่ม "เพิ่มรูปภาพ" ด้านบน</p>
+        <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? "border-blue-500 bg-blue-50" : "border-border"}`}>
+          <ImageIcon className={`w-12 h-12 mx-auto mb-2 ${isDragging ? "text-blue-500" : "text-muted-foreground"}`} />
+          <p className="text-sm font-medium text-muted-foreground mb-1">ลากและวางรูปภาพที่นี่</p>
+          <p className="text-xs text-muted-foreground">หรือคลิกปุ่ม "เพิ่มรูปภาพ" ด้านบน</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -212,7 +212,7 @@ export function MultiImageUpload({
             <div
               key={idx}
               className={`relative group aspect-square rounded-lg overflow-hidden border-2 ${
-                img.isPrimary ? "border-blue-500" : "border-slate-200"
+                img.isPrimary ? "border-blue-500" : "border-border"
               }`}
             >
               <Image
@@ -228,7 +228,7 @@ export function MultiImageUpload({
                     <button
                       type="button"
                       onClick={() => handleSetPrimary(idx)}
-                      className="px-2 py-1 bg-white text-slate-700 text-xs rounded hover:bg-slate-100"
+                      className="px-2 py-1 bg-card text-foreground text-xs rounded hover:bg-muted"
                     >
                       ตั้งเป็นหลัก
                     </button>

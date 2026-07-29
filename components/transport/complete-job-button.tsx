@@ -82,7 +82,7 @@ export function CompleteJobButton({ jobId, jobStatus, compact = false }: Props) 
         </button>
       ) : (
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-600">ยืนยันจบงานนี้?</span>
+          <span className="text-sm text-muted-foreground">ยืนยันจบงานนี้?</span>
           <button
             onClick={() => void handleComplete()}
             disabled={loading}
@@ -93,7 +93,7 @@ export function CompleteJobButton({ jobId, jobStatus, compact = false }: Props) 
           <button
             onClick={() => setShowConfirm(false)}
             disabled={loading}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/60"
           >
             ยกเลิก
           </button>

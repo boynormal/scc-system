@@ -10,8 +10,8 @@ const statusColor: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800 border-amber-200",
   in_progress: "bg-blue-100 text-blue-800 border-blue-200",
   completed: "bg-green-100 text-green-800 border-green-200",
-  cancelled: "bg-slate-100 text-slate-500 border-slate-200",
-  skipped: "bg-slate-100 text-slate-400 border-slate-200",
+  cancelled: "bg-muted text-muted-foreground border-border",
+  skipped: "bg-muted text-muted-foreground border-border",
 }
 
 async function getCalendarSchedules(companyId: string, year: number, month: number) {
@@ -71,27 +71,27 @@ export default async function MaintenanceCalendarPage(
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">ปฏิทินซ่อมบำรุง</h1>
-          <p className="text-slate-500 text-sm mt-1">{schedules.length} กำหนดการในเดือนนี้</p>
+          <h1 className="text-2xl font-bold text-foreground">ปฏิทินซ่อมบำรุง</h1>
+          <p className="text-muted-foreground text-sm mt-1">{schedules.length} กำหนดการในเดือนนี้</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <Link href={`/maintenance/calendar${prevMonth}`} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <Link href={`/maintenance/calendar${prevMonth}`} className="p-2 hover:bg-muted rounded-lg transition-colors">
+            <ChevronLeft className="w-5 h-5 text-muted-foreground" />
           </Link>
-          <h2 className="text-lg font-bold text-slate-800">{monthName}</h2>
-          <Link href={`/maintenance/calendar${nextMonth}`} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <ChevronRight className="w-5 h-5 text-slate-600" />
+          <h2 className="text-lg font-bold text-foreground">{monthName}</h2>
+          <Link href={`/maintenance/calendar${nextMonth}`} className="p-2 hover:bg-muted rounded-lg transition-colors">
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </Link>
         </div>
 
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-slate-200">
+        <div className="grid grid-cols-7 border-b border-border">
           {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((d, i) => (
-            <div key={d} className={`py-2.5 text-center text-xs font-semibold ${i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-slate-500"}`}>
+            <div key={d} className={`py-2.5 text-center text-xs font-semibold ${i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"}`}>
               {d}
             </div>
           ))}
@@ -102,8 +102,8 @@ export default async function MaintenanceCalendarPage(
           {cells.map((day, idx) => (
             <div
               key={idx}
-              className={`min-h-[100px] border-b border-r border-slate-100 p-1.5 ${
-                !day ? "bg-slate-50" : ""
+              className={`min-h-[100px] border-b border-r border-border p-1.5 ${
+                !day ? "bg-muted" : ""
               } ${idx % 7 === 6 ? "border-r-0" : ""}`}
             >
               {day && (
@@ -111,7 +111,7 @@ export default async function MaintenanceCalendarPage(
                   <span className={`inline-flex items-center justify-center w-7 h-7 text-sm font-medium rounded-full mb-1 ${
                     isToday(day)
                       ? "bg-blue-600 text-white"
-                      : idx % 7 === 0 ? "text-red-500" : idx % 7 === 6 ? "text-blue-500" : "text-slate-700"
+                      : idx % 7 === 0 ? "text-red-500" : idx % 7 === 6 ? "text-blue-500" : "text-foreground"
                   }`}>
                     {day}
                   </span>
@@ -121,13 +121,13 @@ export default async function MaintenanceCalendarPage(
                         key={s.id}
                         href={`/maintenance/plans/${s.plan.id}`}
                         title={`${s.machine.name} — ${s.plan.name}`}
-                        className={`block px-1.5 py-0.5 rounded text-[10px] font-medium border truncate hover:opacity-80 transition-opacity ${statusColor[s.status] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}
+                        className={`block px-1.5 py-0.5 rounded text-[10px] font-medium border truncate hover:opacity-80 transition-opacity ${statusColor[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
                       >
                         {s.machine.code}: {s.plan.type.code}
                       </Link>
                     ))}
                     {(schedulesByDay[day]?.length ?? 0) > 3 && (
-                      <p className="text-[10px] text-slate-400 px-1">+{schedulesByDay[day].length - 3} อื่นๆ</p>
+                      <p className="text-[10px] text-muted-foreground px-1">+{schedulesByDay[day].length - 3} อื่นๆ</p>
                     )}
                   </div>
                 </>
@@ -137,16 +137,16 @@ export default async function MaintenanceCalendarPage(
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 px-5 py-3 border-t border-slate-100 flex-wrap">
+        <div className="flex items-center gap-4 px-5 py-3 border-t border-border flex-wrap">
           {[
             { label: "รอดำเนินการ", cls: "bg-amber-100 text-amber-800 border-amber-200" },
             { label: "กำลังดำเนินการ", cls: "bg-blue-100 text-blue-800 border-blue-200" },
             { label: "เสร็จสิ้น", cls: "bg-green-100 text-green-800 border-green-200" },
-            { label: "ยกเลิก", cls: "bg-slate-100 text-slate-500 border-slate-200" },
+            { label: "ยกเลิก", cls: "bg-muted text-muted-foreground border-border" },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1.5">
               <span className={`inline-block w-3 h-3 rounded border ${l.cls}`} />
-              <span className="text-xs text-slate-500">{l.label}</span>
+              <span className="text-xs text-muted-foreground">{l.label}</span>
             </div>
           ))}
         </div>

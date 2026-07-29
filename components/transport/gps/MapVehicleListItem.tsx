@@ -18,10 +18,10 @@ export function MapVehicleListItem({ vehicle: v, selected, onClick }: Props) {
     <li
       onClick={onClick}
       className={cn(
-        "cursor-pointer border-b border-slate-100 px-4 py-3 transition-colors",
+        "cursor-pointer border-b border-border px-4 py-3 transition-colors",
         selected && "bg-cyan-50 border-l-4 border-l-cyan-500",
         hasAlert && !selected && "bg-red-50/40",
-        !selected && !hasAlert && "hover:bg-slate-50"
+        !selected && !hasAlert && "hover:bg-muted/60"
       )}
     >
       <VehicleGpsCard

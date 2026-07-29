@@ -149,9 +149,9 @@ export function ProductsListEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-foreground">
           รายการสินค้า/ผลิตภัณฑ์
-          <span className="text-slate-400 text-xs ml-2">({products.length} รายการ)</span>
+          <span className="text-muted-foreground text-xs ml-2">({products.length} รายการ)</span>
         </label>
         {!disabled && (
           <button
@@ -166,26 +166,26 @@ export function ProductsListEditor({
       </div>
 
       {products.length === 0 ? (
-        <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center">
-          <p className="text-sm text-slate-400">ยังไม่มีรายการสินค้า กดปุ่ม "เพิ่มรายการ" เพื่อเริ่มต้น</p>
+        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+          <p className="text-sm text-muted-foreground">ยังไม่มีรายการสินค้า กดปุ่ม "เพิ่มรายการ" เพื่อเริ่มต้น</p>
         </div>
       ) : (
         <div className="space-y-3">
           {products.map((product, idx) => (
             <div
               key={product.id ?? idx}
-              className="border border-slate-200 rounded-xl bg-white shadow-sm"
+              className="border border-border rounded-xl bg-card shadow-sm"
             >
               <div className="flex gap-3 p-4">
                 {/* Drag handle (visual only) */}
-                <div className="flex items-start pt-1 text-slate-300">
+                <div className="flex items-start pt-1 text-muted-foreground">
                   <GripVertical className="w-5 h-5" />
                 </div>
 
                 {/* Image section */}
                 <div className="shrink-0">
                   {product.imageUrl ? (
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200 group">
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-border group">
                       <Image src={product.imageUrl} alt={product.name || "Product"} fill sizes="(max-width: 768px) 100vw, 300px" className="object-cover" />
                       {!disabled && (
                         <button
@@ -198,7 +198,7 @@ export function ProductsListEditor({
                       )}
                     </div>
                   ) : (
-                    <label className="cursor-pointer block w-20 h-20 rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-1">
+                    <label className="cursor-pointer block w-20 h-20 rounded-lg border-2 border-dashed border-border hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-1">
                       <input
                         type="file"
                         accept="image/*"
@@ -210,8 +210,8 @@ export function ProductsListEditor({
                         <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
                       ) : (
                         <>
-                          <ImageIcon className="w-5 h-5 text-slate-400" />
-                          <span className="text-xs text-slate-400">รูปภาพ</span>
+                          <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">รูปภาพ</span>
                         </>
                       )}
                     </label>
@@ -228,9 +228,9 @@ export function ProductsListEditor({
                       disabled={disabled}
                       onChange={(e) => handleFieldChange(idx, "name", e.target.value)}
                       onBlur={() => handleFieldBlur(idx)}
-                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+                      className="flex-1 px-3 py-1.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-muted"
                     />
-                    {saving === idx && <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0" />}
+                    {saving === idx && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
                   </div>
                   <textarea
                     value={product.description ?? ""}
@@ -239,7 +239,7 @@ export function ProductsListEditor({
                     disabled={disabled}
                     onChange={(e) => handleFieldChange(idx, "description", e.target.value)}
                     onBlur={() => handleFieldBlur(idx)}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-slate-50"
+                    className="w-full px-3 py-1.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-muted"
                   />
                 </div>
 
@@ -248,7 +248,7 @@ export function ProductsListEditor({
                   <button
                     type="button"
                     onClick={() => handleDelete(idx)}
-                    className="shrink-0 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="shrink-0 p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

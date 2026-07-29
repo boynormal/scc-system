@@ -36,14 +36,14 @@ export default async function TransportJobDetailPage({
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <Link href="/transport/jobs" className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
+            <Link href="/transport/jobs" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" /> กลับ
             </Link>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold text-slate-900">{job.jobNumber}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{job.jobNumber}</h1>
               <JobStatusBadge status={job.status} />
             </div>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               ประเภท: {job.jobType}{job.cargoType ? ` · สินค้า: ${job.cargoType}` : ""} · ความสำคัญ: {PRIORITY_LABEL[job.priority] ?? job.priority}
             </p>
           </div>
@@ -52,14 +52,14 @@ export default async function TransportJobDetailPage({
             <Link
               href={`/transport/jobs/${id}/print`}
               target="_blank"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/60"
             >
               <Printer className="h-4 w-4" /> พิมพ์
             </Link>
             {job.status !== "cancelled" && (
               <Link
                 href={`/transport/jobs/${id}/edit`}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/60"
               >
                 <Pencil className="h-4 w-4" /> แก้ไข
               </Link>
@@ -70,14 +70,14 @@ export default async function TransportJobDetailPage({
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left: Job info + Assignment */}
           <div className="space-y-4 lg:col-span-1">
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">ข้อมูลลูกค้า</h3>
-              <div className="space-y-2 text-sm text-slate-600">
-                <div><span className="font-medium text-slate-700">ลูกค้า:</span> {job.customerName ?? job.customer?.name ?? "—"}</div>
-                {job.customer?.phone && <div><span className="font-medium text-slate-700">โทร:</span> {job.customer.phone}</div>}
-                <div><span className="font-medium text-slate-700">สาขา:</span> {job.branch.name}</div>
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">ข้อมูลลูกค้า</h3>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <div><span className="font-medium text-foreground">ลูกค้า:</span> {job.customerName ?? job.customer?.name ?? "—"}</div>
+                {job.customer?.phone && <div><span className="font-medium text-foreground">โทร:</span> {job.customer.phone}</div>}
+                <div><span className="font-medium text-foreground">สาขา:</span> {job.branch.name}</div>
                 {job.estimatedWeightKg && (
-                  <div><span className="font-medium text-slate-700">น้ำหนัก:</span> {Number(job.estimatedWeightKg).toLocaleString()} กก.</div>
+                  <div><span className="font-medium text-foreground">น้ำหนัก:</span> {Number(job.estimatedWeightKg).toLocaleString()} กก.</div>
                 )}
               </div>
             </div>
@@ -113,22 +113,22 @@ export default async function TransportJobDetailPage({
             />
 
             {job.notes && (
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">หมายเหตุ</h3>
-                <p className="text-sm text-slate-600">{job.notes}</p>
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <h3 className="mb-2 text-sm font-semibold text-foreground">หมายเหตุ</h3>
+                <p className="text-sm text-muted-foreground">{job.notes}</p>
               </div>
             )}
           </div>
 
           {/* Right: Stops + Gallery */}
           <div className="space-y-6 lg:col-span-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold text-slate-700">จุดแวะ ({job.stops.length} จุด)</h3>
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <h3 className="mb-4 text-sm font-semibold text-foreground">จุดแวะ ({job.stops.length} จุด)</h3>
               <StopTimeline stops={job.stops} />
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold text-slate-700">ไฟล์แนบ / รูปภาพ</h3>
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <h3 className="mb-4 text-sm font-semibold text-foreground">ไฟล์แนบ / รูปภาพ</h3>
               <JobAttachmentGallery attachments={job.attachments} />
             </div>
           </div>

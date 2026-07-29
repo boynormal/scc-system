@@ -183,23 +183,23 @@ function TransportCalendarContent() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(-1)}
-            className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={goToday}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/60"
           >
             วันนี้
           </button>
           <button
             onClick={() => navigate(1)}
-            className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
-          <h2 className="ml-2 text-lg font-semibold text-slate-900">{label}</h2>
+          <h2 className="ml-2 text-lg font-semibold text-foreground">{label}</h2>
         </div>
 
         <div className="flex items-center gap-2">
@@ -207,7 +207,7 @@ function TransportCalendarContent() {
           <select
             value={vehicleFilter}
             onChange={(e) => setVehicleFilter(e.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="rounded-lg border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
           >
             <option value="all">รถทุกคัน</option>
             {vehicles.map((v) => (
@@ -218,19 +218,19 @@ function TransportCalendarContent() {
           {/* Refresh */}
           <button
             onClick={fetchJobs}
-            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+            className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
             title="รีเฟรช"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
 
           {/* View toggle */}
-          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1 gap-1">
+          <div className="flex rounded-lg border border-border bg-muted p-1 gap-1">
             <button
               onClick={() => setView("month")}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                view === "month" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                view === "month" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <CalendarDays className="h-3.5 w-3.5" />
@@ -240,7 +240,7 @@ function TransportCalendarContent() {
               onClick={() => setView("gantt")}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                view === "gantt" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                view === "gantt" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <LayoutList className="h-3.5 w-3.5" />
@@ -251,12 +251,12 @@ function TransportCalendarContent() {
       </div>
 
       {/* Summary stats */}
-      <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-        <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
-          ใบงานทั้งหมด <strong className="text-slate-800">{jobs.length}</strong> ใบ
+      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        <span className="rounded-full border border-border bg-card px-3 py-1">
+          ใบงานทั้งหมด <strong className="text-foreground">{jobs.length}</strong> ใบ
         </span>
-        <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
-          มอบหมายแล้ว <strong className="text-slate-800">{jobs.filter((j) => j.vehicle).length}</strong> ใบ
+        <span className="rounded-full border border-border bg-card px-3 py-1">
+          มอบหมายแล้ว <strong className="text-foreground">{jobs.filter((j) => j.vehicle).length}</strong> ใบ
         </span>
         <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
           รอมอบหมายรถ <strong>{jobs.filter((j) => !j.vehicle).length}</strong> ใบ
@@ -283,7 +283,7 @@ function TransportCalendarContent() {
           {error}
         </div>
       ) : loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-400 shadow-sm">
+        <div className="rounded-xl border border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground shadow-sm">
           กำลังโหลดข้อมูลปฏิทิน...
         </div>
       ) : view === "month" ? (
@@ -306,7 +306,7 @@ function TransportCalendarContent() {
 
 export default function TransportCalendarPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-slate-500">กำลังโหลดปฏิทิน...</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">กำลังโหลดปฏิทิน...</div>}>
       <TransportCalendarContent />
     </Suspense>
   )

@@ -40,15 +40,15 @@ export function MonthCalendar({ year, month, jobs }: Props) {
     jobs.filter((j) => isSameDay(new Date(j.scheduledDate), day))
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
+      <div className="grid grid-cols-7 border-b border-border bg-muted">
         {DAY_LABELS.map((d, i) => (
           <div
             key={d}
             className={cn(
               "py-2 text-center text-xs font-semibold",
-              i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-slate-500"
+              i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"
             )}
           >
             {d}
@@ -57,10 +57,10 @@ export function MonthCalendar({ year, month, jobs }: Props) {
       </div>
 
       {/* Day cells */}
-      <div className="grid grid-cols-7 divide-x divide-y divide-slate-100">
+      <div className="grid grid-cols-7 divide-x divide-y divide-border">
         {cells.map((day, i) => {
           if (!day) {
-            return <div key={`empty-${i}`} className="min-h-[90px] bg-slate-50/50" />
+            return <div key={`empty-${i}`} className="min-h-[90px] bg-muted/50" />
           }
 
           const dayJobs = jobsOnDay(day)
@@ -69,13 +69,13 @@ export function MonthCalendar({ year, month, jobs }: Props) {
           const cellKey = day.toISOString()
 
           return (
-            <div key={cellKey} className={cn("relative min-h-[90px] p-1", isWeekend && "bg-slate-50/40")}>
+            <div key={cellKey} className={cn("relative min-h-[90px] p-1", isWeekend && "bg-muted/40")}>
               {/* Day number */}
               <div className="mb-1 flex justify-end">
                 <span
                   className={cn(
                     "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
-                    isToday ? "bg-cyan-600 text-white" : isWeekend ? "text-slate-400" : "text-slate-700"
+                    isToday ? "bg-cyan-600 text-white" : isWeekend ? "text-muted-foreground" : "text-foreground"
                   )}
                 >
                   {day.getDate()}
@@ -109,7 +109,7 @@ export function MonthCalendar({ year, month, jobs }: Props) {
                   )
                 })}
                 {dayJobs.length > 3 && (
-                  <p className="px-1 text-[10px] text-slate-400">+{dayJobs.length - 3} อีก</p>
+                  <p className="px-1 text-[10px] text-muted-foreground">+{dayJobs.length - 3} อีก</p>
                 )}
               </div>
             </div>

@@ -23,15 +23,15 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
       onClick={onClick}
       className={cn(
         "cursor-pointer transition-colors",
-        selected && "bg-cyan-50",
-        hasAlert && !selected && "bg-red-50/60",
-        !selected && !hasAlert && "hover:bg-slate-50"
+        selected && "bg-cyan-50 dark:bg-cyan-950/40",
+        hasAlert && !selected && "bg-red-50/60 dark:bg-red-950/30",
+        !selected && !hasAlert && "hover:bg-muted/60"
       )}
     >
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <GpsStatusDot online={v.online} engineOn={v.engineOn} speed={v.speed} status={v.status} />
-          <span className="font-medium text-slate-900">{v.plateNumber || "—"}</span>
+          <span className="font-medium text-foreground">{v.plateNumber || "—"}</span>
         </div>
       </td>
 
@@ -39,17 +39,17 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
         <span
           className={cn(
             "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
-            v.available ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+            v.available ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"
           )}
         >
           {v.available ? "ว่าง" : "ไม่ว่าง"}
         </span>
       </td>
 
-      <td className="px-4 py-3 text-sm text-slate-700">
+      <td className="px-4 py-3 text-sm text-foreground">
         {gsmPct !== null ? (
           <div className="flex items-center gap-2 min-w-[80px]">
-            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
               <div
                 className={cn(
                   "h-full rounded-full",
@@ -58,10 +58,10 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
                 style={{ width: `${gsmPct}%` }}
               />
             </div>
-            <span className="text-xs text-slate-500">{gsmPct}%</span>
+            <span className="text-xs text-muted-foreground">{gsmPct}%</span>
           </div>
         ) : (
-          <span className="text-xs text-slate-400">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
 
@@ -77,15 +77,15 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
         </span>
       </td>
 
-      <td className="px-4 py-3 text-sm text-slate-600">
+      <td className="px-4 py-3 text-sm text-muted-foreground">
         <span className={cn(v.speed > 90 ? "font-bold text-red-600" : "")}>{v.speed} km/h</span>
       </td>
 
-      <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
+      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
         {mileageLabel ?? "—"}
       </td>
 
-      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
         {batteryLabel ?? "—"}
       </td>
 
@@ -94,20 +94,20 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
           <Link
             href={calendarHref}
             onClick={(e) => e.stopPropagation()}
-            className="text-xs font-semibold text-cyan-700 hover:underline"
+            className="text-xs font-semibold text-cyan-700 hover:underline dark:text-cyan-300"
           >
             {v.todayJobCount > 0 ? `${v.todayJobCount} ใบงาน` : "ไม่มีใบงาน"}
           </Link>
         ) : (
-          <span className="text-xs text-slate-400">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
 
-      <td className="px-4 py-3 text-sm text-slate-500 max-w-[180px]">
+      <td className="px-4 py-3 text-sm text-muted-foreground max-w-[180px]">
         <span className="line-clamp-2">{v.address || "—"}</span>
       </td>
 
-      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{v.lastUpdate || "—"}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{v.lastUpdate || "—"}</td>
 
       <td className="px-4 py-3">
         <GpsAlertBadge alerts={v.alerts} compact />

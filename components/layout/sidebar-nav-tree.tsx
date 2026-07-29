@@ -2,31 +2,49 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useMemo, useState } from "react"
-import type { ModuleNavNode } from "@/shared/navigation/moduleRegistry"
+import type { ModuleNavNode, NavIconKey } from "@/shared/navigation/moduleRegistry"
 import { resolveActiveNavHref, subtreeContainsActiveHref } from "@/shared/navigation/groupNavByProductLine"
 import { isExternalHref } from "@/shared/navigation/isExternalHref"
 import { NAV_ICON_MAP } from "./nav-icon-map"
+
+function ModuleIcon({
+  iconKey,
+  imageUrl,
+  className,
+}: {
+  iconKey: NavIconKey
+  imageUrl?: string
+  className?: string
+}) {
+  if (imageUrl) {
+    return <img src={imageUrl} alt="" className={cn("h-4 w-4 shrink-0 rounded object-cover", className)} />
+  }
+  const Icon: LucideIcon = NAV_ICON_MAP[iconKey]
+  return <Icon className={cn("h-4 w-4 shrink-0", className)} />
+}
 
 function NavGroup({
   node,
   depth,
   activeHref,
   onNavigate,
+  moduleImageOverrides,
 }: {
   node: Extract<ModuleNavNode, { type: "group" }>
   depth: number
   activeHref: string | null
   onNavigate?: () => void
+  moduleImageOverrides: Record<string, string>
 }) {
   const [open, setOpen] = useState(false)
-  const Icon = NAV_ICON_MAP[node.icon]
   const isActive = subtreeContainsActiveHref(node, activeHref)
+  const imageUrl = moduleImageOverrides[node.moduleId]
 
   return (
-    <div className={cn(depth > 0 && "ml-1 border-l border-slate-100 pl-2")}>
+    <div className={cn(depth > 0 && "ml-1 border-l border-border pl-2")}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -35,16 +53,22 @@ function NavGroup({
           "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
           isActive
             ? "bg-blue-50 text-blue-700"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
-        <Icon className="w-4 h-4 shrink-0" />
+        <ModuleIcon iconKey={node.icon} imageUrl={imageUrl} />
         <span className="flex-1 text-left">{node.label}</span>
         <ChevronDown className={cn("w-3.5 h-3.5 shrink-0 transition-transform", (open || isActive) && "rotate-180")} />
       </button>
       {(open || isActive) && (
-        <div className="ml-2 mt-0.5 space-y-0.5 border-l border-slate-100 pl-2">
-          <SidebarNavTree nodes={node.children} depth={depth + 1} activeHref={activeHref} onNavigate={onNavigate} />
+        <div className="ml-2 mt-0.5 space-y-0.5 border-l border-border pl-2">
+          <SidebarNavTree
+            nodes={node.children}
+            depth={depth + 1}
+            activeHref={activeHref}
+            onNavigate={onNavigate}
+            moduleImageOverrides={moduleImageOverrides}
+          />
         </div>
       )}
     </div>
@@ -56,9 +80,16 @@ type SidebarNavTreeProps = {
   depth?: number
   activeHref?: string | null
   onNavigate?: () => void
+  moduleImageOverrides?: Record<string, string>
 }
 
-export function SidebarNavTree({ nodes, depth = 0, activeHref: activeHrefProp, onNavigate }: SidebarNavTreeProps) {
+export function SidebarNavTree({
+  nodes,
+  depth = 0,
+  activeHref: activeHrefProp,
+  onNavigate,
+  moduleImageOverrides = {},
+}: SidebarNavTreeProps) {
   const pathname = usePathname()
   const activeHref = useMemo(
     () => activeHrefProp ?? resolveActiveNavHref(pathname, nodes),
@@ -72,30 +103,45 @@ export function SidebarNavTree({ nodes, depth = 0, activeHref: activeHrefProp, o
           return (
             <div key={node.key} className={cn(depth > 0 && "mt-1")}>
               <p
-                className="px-3 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+                className="px-3 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
                 role="presentation"
               >
                 {node.label}
               </p>
               <div className="space-y-0.5">
-                <SidebarNavTree nodes={node.children} depth={depth + 1} activeHref={activeHref} onNavigate={onNavigate} />
+                <SidebarNavTree
+                  nodes={node.children}
+                  depth={depth + 1}
+                  activeHref={activeHref}
+                  onNavigate={onNavigate}
+                  moduleImageOverrides={moduleImageOverrides}
+                />
               </div>
             </div>
           )
         }
 
         if (node.type === "group") {
-          return <NavGroup key={node.key} node={node} depth={depth} activeHref={activeHref} onNavigate={onNavigate} />
+          return (
+            <NavGroup
+              key={node.key}
+              node={node}
+              depth={depth}
+              activeHref={activeHref}
+              onNavigate={onNavigate}
+              moduleImageOverrides={moduleImageOverrides}
+            />
+          )
         }
 
-        const Icon = NAV_ICON_MAP[node.icon]
+        const imageUrl = moduleImageOverrides[node.moduleId]
         const isActive = node.href === activeHref
         const linkClassName = cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
-          depth > 0 && "ml-1 pl-2 border-l border-transparent hover:border-slate-100",
+          depth > 0 && "ml-1 pl-2 border-l border-transparent hover:border-border",
           isActive
             ? "bg-blue-600 text-white shadow-sm"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )
 
         if (isExternalHref(node.href)) {
@@ -108,7 +154,7 @@ export function SidebarNavTree({ nodes, depth = 0, activeHref: activeHrefProp, o
               onClick={onNavigate}
               className={linkClassName}
             >
-              <Icon className="w-4 h-4 shrink-0" />
+              <ModuleIcon iconKey={node.icon} imageUrl={imageUrl} />
               {node.label}
             </a>
           )
@@ -116,7 +162,7 @@ export function SidebarNavTree({ nodes, depth = 0, activeHref: activeHrefProp, o
 
         return (
           <Link key={node.key} href={node.href} onClick={onNavigate} className={linkClassName}>
-            <Icon className="w-4 h-4 shrink-0" />
+            <ModuleIcon iconKey={node.icon} imageUrl={imageUrl} />
             {node.label}
           </Link>
         )

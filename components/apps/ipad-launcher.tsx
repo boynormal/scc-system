@@ -19,6 +19,7 @@ import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
 import { APP_BRAND } from "@/shared/branding"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
+import { LauncherClockWeather, type WeatherBranchOption } from "@/components/apps/launcher-clock-weather"
 
 type LineSection = { departmentId: string; label: string; apps: LauncherAppItem[] }
 type LineGroup = { line: ProductLineDef; sections: LineSection[] }
@@ -67,7 +68,9 @@ export function IpadLauncher({
   departmentOrderOverrides,
   productLineIconOverrides = {},
   productLineImageOverrides = {},
+  moduleImageOverrides = {},
   appearance = "light",
+  weatherBranches = [],
 }: {
   apps: LauncherAppItem[]
   pinnedModuleIds: string[]
@@ -75,7 +78,9 @@ export function IpadLauncher({
   departmentOrderOverrides: Record<string, number>
   productLineIconOverrides?: Record<string, NavIconKey>
   productLineImageOverrides?: Record<string, string>
+  moduleImageOverrides?: Record<string, string>
   appearance?: AppAppearance
+  weatherBranches?: WeatherBranchOption[]
 }) {
   const isDark = appearance === "dark"
   const [search, setSearch] = useState("")
@@ -178,24 +183,24 @@ export function IpadLauncher({
       <div className="relative z-10 mx-auto max-w-6xl px-4 pb-40 pt-6 sm:px-8 sm:pt-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-white/55">{APP_BRAND.launcherBadge}</p>
-            <h1 className="text-2xl font-black text-slate-900 drop-shadow-sm sm:text-3xl dark:text-white">{APP_BRAND.name}</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground dark:text-white/55">{APP_BRAND.launcherBadge}</p>
+            <h1 className="text-2xl font-black text-foreground drop-shadow-sm sm:text-3xl dark:text-white">{APP_BRAND.name}</h1>
           </div>
 
           <div className="flex items-center gap-3">
             <label className="relative block w-full sm:w-72">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-white/70" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground dark:text-white/70" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="ค้นหาโมดูล..."
-                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-10 pr-4 text-sm text-slate-800 shadow-sm outline-none backdrop-blur-md transition placeholder:text-slate-400 focus:border-white focus:bg-white focus:ring-4 focus:ring-white/20 dark:border-white/20 dark:bg-slate-950/30 dark:text-white dark:placeholder:text-white/55 dark:focus:border-white/40 dark:focus:bg-slate-950/45"
+                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-10 pr-4 text-sm text-foreground shadow-sm outline-none backdrop-blur-md transition placeholder:text-muted-foreground focus:border-white focus:bg-white focus:ring-4 focus:ring-white/20 dark:border-white/20 dark:bg-slate-950/30 dark:text-white dark:placeholder:text-white/55 dark:focus:border-white/40 dark:focus:bg-slate-950/45"
                 aria-label="ค้นหาโมดูล"
               />
             </label>
             <Link
               href="/app2"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/70 bg-white/80 px-3.5 py-2.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white dark:border-white/20 dark:bg-slate-950/30 dark:text-white dark:hover:bg-slate-950/45"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/70 bg-white/80 px-3.5 py-2.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:bg-white dark:border-white/20 dark:bg-slate-950/30 dark:text-white dark:hover:bg-slate-950/45"
               title="มุมมองการ์ด"
             >
               <LayoutGrid className="h-4 w-4" />
@@ -204,12 +209,14 @@ export function IpadLauncher({
           </div>
         </div>
 
+        <LauncherClockWeather className="mt-5" branches={weatherBranches} />
+
         {isSearching ? (
           <div className="mt-10">
             {searchResults.length === 0 ? (
-              <div className="rounded-[1.75rem] border border-white/60 bg-white/50 px-6 py-14 text-center text-slate-700 backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white/80">
+              <div className="rounded-[1.75rem] border border-white/60 bg-white/50 px-6 py-14 text-center text-foreground backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white/80">
                 <p className="font-semibold">ไม่พบโมดูลที่ตรงกับ “{deferredSearch.trim()}”</p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-white/60">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหา</p>
+                <p className="mt-1 text-sm text-muted-foreground dark:text-white/60">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหา</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-x-4 gap-y-8 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
@@ -221,6 +228,7 @@ export function IpadLauncher({
                     onToggleFavorite={toggleFavorite}
                     onOpen={() => recordAppOpen(app.moduleId)}
                     dark={!isDark}
+                    imageUrl={moduleImageOverrides[app.moduleId]}
                   />
                 ))}
               </div>
@@ -242,7 +250,7 @@ export function IpadLauncher({
         )}
 
         {!isSearching && lines.length === 0 && (
-          <div className="mt-10 rounded-[1.75rem] border border-white/60 bg-white/50 px-6 py-12 text-center text-sm text-slate-700 backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white/80">
+          <div className="mt-10 rounded-[1.75rem] border border-white/60 bg-white/50 px-6 py-12 text-center text-sm text-foreground backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white/80">
             ไม่มีโมดูลที่แสดงได้ตามสิทธิ์หรือการตั้งค่าปัจจุบัน
           </div>
         )}
@@ -252,7 +260,12 @@ export function IpadLauncher({
         <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
           <div className="flex max-w-[96vw] items-end gap-2 overflow-x-auto rounded-[2rem] border border-white/70 bg-white/75 px-3 py-2.5 shadow-2xl backdrop-blur-2xl sm:gap-3 sm:px-4 sm:py-3 dark:border-white/20 dark:bg-slate-950/40">
             {dockApps.map((app) => (
-              <DockIcon key={app.moduleId} app={app} onOpen={() => recordAppOpen(app.moduleId)} />
+              <DockIcon
+                key={app.moduleId}
+                app={app}
+                onOpen={() => recordAppOpen(app.moduleId)}
+                imageUrl={moduleImageOverrides[app.moduleId]}
+              />
             ))}
           </div>
         </div>
@@ -266,6 +279,7 @@ export function IpadLauncher({
           onToggleFavorite={toggleFavorite}
           iconOverrides={productLineIconOverrides}
           imageOverrides={productLineImageOverrides}
+          moduleImageOverrides={moduleImageOverrides}
           onClose={() => setOpenLineId(null)}
         />
       )}
@@ -306,11 +320,11 @@ function FolderIcon({
         ) : (
           <Icon className="h-8 w-8 text-white sm:h-9 sm:w-9" strokeWidth={1.9} />
         )}
-        <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-white/70 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-600 shadow-sm">
+        <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-white/70 bg-card px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground shadow-sm">
           {totalApps}
         </span>
       </span>
-      <span className="max-w-[5.5rem] text-[12px] font-semibold leading-snug text-slate-800 drop-shadow-[0_1px_2px_rgba(255,255,255,0.5)] sm:max-w-[6rem] sm:text-[13px] dark:text-white dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]">
+      <span className="max-w-[5.5rem] text-[12px] font-semibold leading-snug text-foreground drop-shadow-[0_1px_2px_rgba(255,255,255,0.5)] sm:max-w-[6rem] sm:text-[13px] dark:text-white dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]">
         {line.labelTh}
       </span>
     </button>
@@ -324,6 +338,7 @@ function FolderOverlay({
   onToggleFavorite,
   iconOverrides,
   imageOverrides,
+  moduleImageOverrides,
   onClose,
 }: {
   line: ProductLineDef
@@ -332,6 +347,7 @@ function FolderOverlay({
   onToggleFavorite: (moduleId: string) => void
   iconOverrides: Record<string, NavIconKey>
   imageOverrides: Record<string, string>
+  moduleImageOverrides: Record<string, string>
   onClose: () => void
 }) {
   const HeroIcon = resolveLineIcon(line, iconOverrides)
@@ -357,7 +373,7 @@ function FolderOverlay({
         className="max-h-[82vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white/95 shadow-2xl backdrop-blur-xl dark:bg-slate-900/95"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur sm:px-7 dark:border-slate-700 dark:bg-slate-900/95">
+        <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-white/95 px-5 py-4 backdrop-blur sm:px-7 dark:border-slate-700 dark:bg-slate-900/95">
           <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md", line.accent)}>
             {imageUrl ? (
               <img src={imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
@@ -366,13 +382,13 @@ function FolderOverlay({
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-black text-slate-950 dark:text-slate-100">{line.labelTh}</h2>
-            <p className="line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{line.description}</p>
+            <h2 className="text-base font-black text-slate-950">{line.labelTh}</h2>
+            <p className="line-clamp-1 text-xs text-muted-foreground dark:text-muted-foreground">{line.description}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="shrink-0 rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground dark:hover:bg-slate-800 dark:hover:text-slate-200"
             aria-label="ปิด"
           >
             <X className="h-5 w-5" />
@@ -385,7 +401,7 @@ function FolderOverlay({
               {sections.length > 1 && (
                 <div className="mb-4 flex items-center gap-3">
                   <div className="h-px flex-1 bg-slate-200/80 dark:bg-slate-700" />
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
                   <div className="h-px flex-1 bg-slate-200/80 dark:bg-slate-700" />
                 </div>
               )}
@@ -401,6 +417,7 @@ function FolderOverlay({
                       onClose()
                     }}
                     dark
+                    imageUrl={moduleImageOverrides[app.moduleId]}
                   />
                 ))}
               </div>
@@ -418,12 +435,14 @@ function IosIcon({
   onToggleFavorite,
   onOpen,
   dark = false,
+  imageUrl,
 }: {
   app: LauncherAppItem
   isPinned: boolean
   onToggleFavorite: (moduleId: string) => void
   onOpen: () => void
   dark?: boolean
+  imageUrl?: string
 }) {
   const Icon: LucideIcon = NAV_ICON_MAP[app.icon] ?? LayoutGrid
   const skin = skinFor(app.moduleId)
@@ -432,18 +451,22 @@ function IosIcon({
   const iconTile = (
     <span
       className={cn(
-        "relative flex aspect-square w-[4.25rem] items-center justify-center rounded-[1.25rem] bg-gradient-to-br shadow-md ring-1 transition group-hover:scale-[1.05] group-hover:shadow-lg sm:w-[4.5rem]",
+        "relative flex aspect-square w-[4.25rem] items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br shadow-md ring-1 transition group-hover:scale-[1.05] group-hover:shadow-lg sm:w-[4.5rem]",
         skin.tile
       )}
     >
-      <span className={cn("relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
-        <Icon className="h-5 w-5" strokeWidth={2.1} />
-      </span>
+      {imageUrl ? (
+        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className={cn("relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
+          <Icon className="h-5 w-5" strokeWidth={2.1} />
+        </span>
+      )}
     </span>
   )
 
   const labelClass = dark
-    ? "max-w-[5.5rem] text-[11.5px] font-semibold leading-snug text-slate-700 dark:text-slate-200"
+    ? "max-w-[5.5rem] text-[11.5px] font-semibold leading-snug text-foreground"
     : "max-w-[5.5rem] text-[12px] font-semibold leading-snug text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]"
 
   const wrapperClass = "group relative flex flex-col items-center gap-2 text-center outline-none"
@@ -455,7 +478,7 @@ function IosIcon({
         onClick={() => onToggleFavorite(app.moduleId)}
         className={cn(
           "absolute right-2 top-0 z-10 rounded-full bg-white/95 p-1 shadow-sm ring-1 ring-slate-200/80 transition sm:opacity-0 sm:group-hover:opacity-100",
-          isPinned ? "text-amber-500 sm:opacity-100" : "text-slate-300 hover:text-amber-500"
+          isPinned ? "text-amber-500 sm:opacity-100" : "text-muted-foreground hover:text-amber-500"
         )}
         title={isPinned ? "เอาออกจากปักหมุด" : "ปักหมุด"}
         aria-pressed={isPinned}
@@ -478,7 +501,15 @@ function IosIcon({
   )
 }
 
-function DockIcon({ app, onOpen }: { app: LauncherAppItem; onOpen: () => void }) {
+function DockIcon({
+  app,
+  onOpen,
+  imageUrl,
+}: {
+  app: LauncherAppItem
+  onOpen: () => void
+  imageUrl?: string
+}) {
   const Icon: LucideIcon = NAV_ICON_MAP[app.icon] ?? LayoutGrid
   const skin = skinFor(app.moduleId)
   const external = isExternalHref(app.href)
@@ -487,15 +518,19 @@ function DockIcon({ app, onOpen }: { app: LauncherAppItem; onOpen: () => void })
     <>
       <span
         className={cn(
-          "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br shadow-md ring-1 transition hover:scale-105 sm:h-12 sm:w-12",
+          "flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-md ring-1 transition hover:scale-105 sm:h-12 sm:w-12",
           skin.tile
         )}
       >
-        <span className={cn("flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
-          <Icon className="h-4 w-4" strokeWidth={2.1} />
-        </span>
+        {imageUrl ? (
+          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className={cn("flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
+            <Icon className="h-4 w-4" strokeWidth={2.1} />
+          </span>
+        )}
       </span>
-      <span className="line-clamp-2 max-w-[4.5rem] text-center text-[10px] font-semibold leading-snug text-slate-800 sm:max-w-[5rem] sm:text-[11px] dark:text-slate-100">
+      <span className="line-clamp-2 max-w-[4.5rem] text-center text-[10px] font-semibold leading-snug text-foreground sm:max-w-[5rem] sm:text-[11px]">
         {app.label}
       </span>
     </>

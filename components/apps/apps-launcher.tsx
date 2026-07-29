@@ -158,6 +158,7 @@ export function AppsLauncher({
   departmentOrderOverrides,
   productLineIconOverrides = {},
   productLineImageOverrides = {},
+  moduleImageOverrides = {},
   appearance = "light",
 }: {
   apps: LauncherAppItem[]
@@ -166,6 +167,7 @@ export function AppsLauncher({
   departmentOrderOverrides: Record<string, number>
   productLineIconOverrides?: Record<string, NavIconKey>
   productLineImageOverrides?: Record<string, string>
+  moduleImageOverrides?: Record<string, string>
   appearance?: AppAppearance
 }) {
   const isDark = appearance === "dark"
@@ -274,19 +276,19 @@ export function AppsLauncher({
       <section className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/35 px-5 py-6 shadow-xl shadow-slate-200/60 backdrop-blur md:px-8 md:py-8 dark:border-slate-700/60 dark:bg-slate-900/40 dark:shadow-none">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               {APP_BRAND.launcherBadge}
             </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-5xl dark:text-white">
               {APP_BRAND.name}
             </h1>
-            <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base dark:text-slate-400">
+            <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base dark:text-muted-foreground">
               {APP_BRAND.tagline}
             </p>
             <Link
               href="/apps"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm transition hover:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-muted-foreground dark:hover:bg-slate-700"
             >
               กลับหน้าหลัก →
             </Link>
@@ -294,12 +296,12 @@ export function AppsLauncher({
 
           <div className="w-full lg:max-w-md">
             <label className="relative block">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="ค้นหาโมดูล เช่น งานซ่อม, อะไหล่, ผู้ใช้..."
-                className="h-14 w-full rounded-2xl border border-white/80 bg-white/85 pl-12 pr-4 text-sm text-slate-800 shadow-lg shadow-slate-200/50 outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-200/35 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:shadow-none"
+                className="h-14 w-full rounded-2xl border border-white/80 bg-white/85 pl-12 pr-4 text-sm text-foreground shadow-lg shadow-slate-200/50 outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-200/35 dark:border-slate-600 dark:bg-slate-800 dark:shadow-none"
                 aria-label="ค้นหาโมดูล"
               />
             </label>
@@ -315,9 +317,9 @@ export function AppsLauncher({
       </section>
 
       {searchEmpty && (
-        <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white/70 px-6 py-14 text-center shadow-sm dark:border-slate-600 dark:bg-slate-800/60">
-          <p className="font-semibold text-slate-700 dark:text-slate-200">ไม่พบโมดูลที่ตรงกับ “{deferredSearch.trim()}”</p>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหาเพื่อดูทุกโมดูล</p>
+        <div className="rounded-[1.75rem] border border-dashed border-border bg-white/70 px-6 py-14 text-center shadow-sm dark:border-slate-600 dark:bg-slate-800/60">
+          <p className="font-semibold text-foreground">ไม่พบโมดูลที่ตรงกับ “{deferredSearch.trim()}”</p>
+          <p className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหาเพื่อดูทุกโมดูล</p>
         </div>
       )}
 
@@ -354,6 +356,7 @@ export function AppsLauncher({
                         onToggleFavorite={toggleFavorite}
                         iconOverrides={productLineIconOverrides}
                         imageOverrides={productLineImageOverrides}
+                        moduleImageOverrides={moduleImageOverrides}
                       />
                     ))}
                   </div>
@@ -365,7 +368,7 @@ export function AppsLauncher({
       )}
 
       {!searchEmpty && linesWithContent.length === 0 && (
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white/70 px-6 py-12 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+        <div className="rounded-[1.75rem] border border-border bg-white/70 px-6 py-12 text-center text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-800/60 dark:text-muted-foreground">
           ไม่มีโมดูลที่แสดงได้ตามสิทธิ์หรือการตั้งค่าปัจจุบัน
         </div>
       )}
@@ -423,20 +426,20 @@ function ProductLineCard({
               <HeroIcon className="h-8 w-8" strokeWidth={1.75} />
             )}
           </div>
-          <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-white bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300">
+          <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-white bg-card px-2 py-0.5 text-[10px] font-bold text-muted-foreground shadow-sm dark:border-slate-800 dark:bg-slate-800 dark:text-muted-foreground">
             {totalApps}
           </span>
         </div>
 
         <div className="w-full min-w-0">
           <h2 className="text-lg font-black leading-tight text-slate-950 dark:text-white">{line.labelTh}</h2>
-          <p className="mt-1.5 line-clamp-2 px-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{line.description}</p>
-          <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-slate-100/90 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <p className="mt-1.5 line-clamp-2 px-1 text-sm leading-relaxed text-muted-foreground dark:text-muted-foreground">{line.description}</p>
+          <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-muted/90 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground dark:bg-slate-700 dark:text-muted-foreground">
             {totalApps} โมดูล
           </span>
         </div>
 
-        <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-slate-400">
+        <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <span className="hidden sm:inline">{isOpen ? "ซ่อนโมดูล" : "ดูโมดูล"}</span>
           <ChevronDown className={cn("h-5 w-5 transition-transform duration-200", isOpen && "rotate-180")} />
         </div>
@@ -453,6 +456,7 @@ function ProductLineExpandedPanel({
   onToggleFavorite,
   iconOverrides,
   imageOverrides,
+  moduleImageOverrides,
 }: {
   line: ProductLineDef
   sections: { departmentId: string; label: string; apps: LauncherAppItem[] }[]
@@ -461,6 +465,7 @@ function ProductLineExpandedPanel({
   onToggleFavorite: (moduleId: string) => void
   iconOverrides: Record<string, NavIconKey>
   imageOverrides: Record<string, string>
+  moduleImageOverrides: Record<string, string>
 }) {
   const HeroIcon = resolveLineIcon(line, iconOverrides)
   const imageUrl = imageOverrides[line.id]
@@ -477,7 +482,7 @@ function ProductLineExpandedPanel({
       <button
         type="button"
         onClick={onClose}
-        className="flex w-full items-center gap-4 border-b border-slate-100/80 bg-white/50 px-5 py-4 text-left transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/50 sm:px-6 dark:border-slate-700/80 dark:bg-slate-800/50 dark:hover:bg-slate-700/60"
+        className="flex w-full items-center gap-4 border-b border-border/80 bg-white/50 px-5 py-4 text-left transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200/50 sm:px-6 dark:border-slate-700/80 dark:bg-slate-800/50 dark:hover:bg-slate-700/60"
       >
         <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md", theme.icon)}>
           {imageUrl ? (
@@ -489,11 +494,11 @@ function ProductLineExpandedPanel({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <h3 className="text-base font-black text-slate-950 dark:text-white">{line.labelTh}</h3>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{line.labelEn}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{line.labelEn}</span>
           </div>
-          <p className="mt-0.5 line-clamp-1 text-sm text-slate-500 dark:text-slate-400">{line.description}</p>
+          <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground dark:text-muted-foreground">{line.description}</p>
         </div>
-        <ChevronDown className="h-5 w-5 shrink-0 rotate-180 text-slate-400" />
+        <ChevronDown className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
       </button>
 
       <div className="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
@@ -502,7 +507,7 @@ function ProductLineExpandedPanel({
             {sections.length > 1 && (
               <div className="mb-4 flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200/80 dark:bg-slate-700" />
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
                 <div className="h-px flex-1 bg-slate-200/80 dark:bg-slate-700" />
               </div>
             )}
@@ -513,6 +518,7 @@ function ProductLineExpandedPanel({
                   app={app}
                   isPinned={combinedPinned.has(app.moduleId)}
                   onToggleFavorite={onToggleFavorite}
+                  imageUrl={moduleImageOverrides[app.moduleId]}
                 />
               ))}
             </div>
@@ -535,7 +541,7 @@ function QuickAccess({
   if (apps.length === 0) return null
   return (
     <div className="rounded-2xl border border-white/70 bg-white/55 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/60">
-      <p className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">{title}</p>
+      <p className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
       <div className="flex flex-wrap gap-2">
         {apps.map((app) => {
           const external = isExternalHref(app.href)
@@ -543,7 +549,7 @@ function QuickAccess({
             "rounded-full px-3 py-1.5 text-xs font-semibold transition",
             tone === "amber"
               ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/60"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+              : "bg-muted text-foreground hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
           )
           const onClick = () => recordAppOpen(app.moduleId)
 
@@ -577,10 +583,12 @@ function AppTile({
   app,
   isPinned,
   onToggleFavorite,
+  imageUrl,
 }: {
   app: LauncherAppItem
   isPinned: boolean
   onToggleFavorite: (moduleId: string) => void
+  imageUrl?: string
 }) {
   const Icon = NAV_ICON_MAP[app.icon] ?? LayoutDashboard
   const skin = skinFor(app.moduleId)
@@ -594,19 +602,25 @@ function AppTile({
           skin.tile
         )}
       >
-        <span className={cn("absolute -right-3 -top-3 h-10 w-10 rounded-full blur-sm", skin.blob)} />
-        <span className={cn("absolute -bottom-4 left-1 h-12 w-12 rotate-12 rounded-2xl blur-[1px]", skin.blob)} />
-        <span className={cn("relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
-          <Icon className="h-5 w-5" strokeWidth={2.1} />
-        </span>
+        {imageUrl ? (
+          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <>
+            <span className={cn("absolute -right-3 -top-3 h-10 w-10 rounded-full blur-sm", skin.blob)} />
+            <span className={cn("absolute -bottom-4 left-1 h-12 w-12 rotate-12 rounded-2xl blur-[1px]", skin.blob)} />
+            <span className={cn("relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
+              <Icon className="h-5 w-5" strokeWidth={2.1} />
+            </span>
+          </>
+        )}
       </span>
-      <span className="min-h-[2.5rem] w-full px-0.5 text-[12px] font-semibold leading-snug text-slate-800 sm:text-[13px] dark:text-slate-100">
+      <span className="min-h-[2.5rem] w-full px-0.5 text-[12px] font-semibold leading-snug text-foreground sm:text-[13px]">
         {app.label}
       </span>
     </>
   )
   const tileClassName =
-    "flex w-full flex-col items-center rounded-2xl border border-transparent p-2 outline-none transition hover:-translate-y-0.5 hover:border-slate-200/60 hover:bg-white/60 hover:shadow-md focus-visible:ring-4 focus-visible:ring-cyan-200/60 dark:hover:border-slate-600 dark:hover:bg-slate-700/50"
+    "flex w-full flex-col items-center rounded-2xl border border-transparent p-2 outline-none transition hover:-translate-y-0.5 hover:border-border/60 hover:bg-white/60 hover:shadow-md focus-visible:ring-4 focus-visible:ring-cyan-200/60 dark:hover:border-slate-600 dark:hover:bg-slate-700/50"
 
   return (
     <div className="group relative flex flex-col items-center text-center">
@@ -615,7 +629,7 @@ function AppTile({
         onClick={() => onToggleFavorite(app.moduleId)}
         className={cn(
           "absolute right-0 top-0 z-10 rounded-full bg-white/95 p-1 shadow-sm ring-1 ring-slate-200/80 transition sm:opacity-0 sm:group-hover:opacity-100 dark:bg-slate-800/95 dark:ring-slate-600",
-          isPinned ? "text-amber-500 sm:opacity-100" : "text-slate-300 hover:text-amber-500"
+          isPinned ? "text-amber-500 sm:opacity-100" : "text-muted-foreground hover:text-amber-500"
         )}
         title={isPinned ? "เอาออกจากปักหมุด" : "ปักหมุด"}
         aria-pressed={isPinned}

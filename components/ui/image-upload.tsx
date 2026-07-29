@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { X, Loader2, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { HomeScreenAssetKind, UploadProfile } from "@/lib/upload/image-profiles"
 
 interface ImageUploadProps {
   value?: string
@@ -10,14 +11,21 @@ interface ImageUploadProps {
   label?: string
   error?: string
   disabled?: boolean
-  /** ความสูงพื้นที่แสดงตัวอย่าง เช่น h-32, h-48 — ไม่ใช้เมื่อ uploadProfile="productLineIcon" (ใช้กรอบสี่เหลี่ยมจัตุรัสแทน) */
+  /** ความสูงพื้นที่แสดงตัวอย่าง เช่น h-32, h-48 — ไม่ใช้เมื่อเป็นไอคอนสี่เหลี่ยม */
   previewHeightClass?: string
   /**
    * โปรไฟล์การประมวลผลรูปฝั่งเซิร์ฟเวอร์ (ดู lib/upload/image-profiles.ts)
-   * "productLineIcon" — เซิร์ฟเวอร์จะครอปเป็นสี่เหลี่ยมจัตุรัส 512px แล้วบีบอัดเป็น WebP
-   * ให้ preview เป็นสี่เหลี่ยมจัตุรัสแบบ object-cover ตรงกับที่แสดงจริงบน sidebar/launcher
+   * "homeScreenIcon" / "productLineIcon" — ครอปเป็นสี่เหลี่ยมจัตุรัส 512px WebP
    */
-  uploadProfile?: "default" | "productLineIcon"
+  uploadProfile?: UploadProfile
+  /** จำเป็นเมื่อ uploadProfile เป็นไอคอนหน้าจอหลัก */
+  assetKind?: HomeScreenAssetKind
+  /** จำเป็นเมื่อ uploadProfile เป็นไอคอนหน้าจอหลัก — เช่น transport_ops, machines */
+  assetId?: string
+}
+
+function isIconUploadProfile(profile: UploadProfile): boolean {
+  return profile === "homeScreenIcon" || profile === "productLineIcon"
 }
 
 export function ImageUpload({
@@ -28,11 +36,13 @@ export function ImageUpload({
   disabled,
   previewHeightClass = "h-48",
   uploadProfile = "default",
+  assetKind,
+  assetId,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
-  const isIconProfile = uploadProfile === "productLineIcon"
+  const isIconProfile = isIconUploadProfile(uploadProfile)
 
   useEffect(() => {
     setPreview(value)
@@ -54,10 +64,19 @@ export function ImageUpload({
       return
     }
 
+    if (isIconProfile && (!assetKind || !assetId)) {
+      alert("ข้อมูลไอคอนไม่ครบ (assetKind / assetId)")
+      return
+    }
+
     setUploading(true)
     const formData = new FormData()
     formData.append("file", file)
     formData.append("profile", uploadProfile)
+    if (isIconProfile && assetKind && assetId) {
+      formData.append("assetKind", assetKind)
+      formData.append("assetId", assetId)
+    }
 
     try {
       const res = await fetch("/api/upload", {
@@ -66,7 +85,7 @@ export function ImageUpload({
       })
       if (!res.ok) {
         const errBody = await res.json().catch(() => null)
-        throw new Error(errBody?.error?.message ?? "Upload failed")
+        throw new Error(errBody?.error?.message ?? errBody?.error ?? "Upload failed")
       }
       const data = await res.json()
       setPreview(data.data.fileUrl)
@@ -88,10 +107,10 @@ export function ImageUpload({
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
+        <label className="block text-sm font-medium text-foreground dark:text-muted-foreground">{label}</label>
       )}
       {isIconProfile && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
           แนะนำรูปสี่เหลี่ยมจัตุรัส เนื้อหาอยู่กลางภาพ — ระบบจะครอปและบีบอัดเป็น WebP ขนาด 512×512px โดยอัตโนมัติ
         </p>
       )}
@@ -99,7 +118,7 @@ export function ImageUpload({
         {preview ? (
           <div
             className={cn(
-              "relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900",
+              "relative overflow-hidden rounded-xl border border-border bg-muted dark:border-slate-600 dark:bg-slate-900",
               isIconProfile ? "aspect-square w-28 sm:w-32" : `w-full ${previewHeightClass}`
             )}
           >
@@ -125,10 +144,10 @@ export function ImageUpload({
               "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors",
               isIconProfile ? "aspect-square w-28 sm:w-32" : `w-full ${previewHeightClass}`,
               disabled
-                ? "border-slate-200 bg-slate-50 cursor-not-allowed dark:border-slate-700 dark:bg-slate-900"
+                ? "border-border bg-muted cursor-not-allowed dark:border-slate-700 dark:bg-slate-900"
                 : uploading
                 ? "border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30"
-                : "cursor-pointer border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-blue-500 dark:hover:bg-blue-950/30"
+                : "cursor-pointer border-border bg-muted hover:border-blue-400 hover:bg-blue-50 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-blue-500 dark:hover:bg-blue-950/30"
             )}
           >
             {uploading ? (
@@ -140,17 +159,17 @@ export function ImageUpload({
               <>
                 <div
                   className={cn(
-                    "flex items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-800",
+                    "flex items-center justify-center rounded-full bg-card shadow-sm dark:bg-slate-800",
                     isIconProfile ? "h-8 w-8" : "h-10 w-10"
                   )}
                 >
-                  <ImageIcon className={cn("text-slate-400", isIconProfile ? "w-4 h-4" : "w-6 h-6")} />
+                  <ImageIcon className={cn("text-muted-foreground", isIconProfile ? "w-4 h-4" : "w-6 h-6")} />
                 </div>
                 <div className="text-center px-1">
-                  <p className={cn("font-medium text-slate-700 dark:text-slate-200", isIconProfile ? "text-xs" : "text-sm")}>
+                  <p className={cn("font-medium text-foreground", isIconProfile ? "text-xs" : "text-sm")}>
                     {isIconProfile ? "อัปโหลดไอคอน" : "คลิกเพื่ออัปโหลดรูปภาพ"}
                   </p>
-                  {!isIconProfile && <p className="text-xs text-slate-400 mt-0.5">PNG, JPG, WEBP (สูงสุด 5MB)</p>}
+                  {!isIconProfile && <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG, WEBP (สูงสุด 5MB)</p>}
                 </div>
               </>
             )}

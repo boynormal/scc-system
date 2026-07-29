@@ -10,7 +10,7 @@ const roleColors: Record<string, string> = {
   Admin: "bg-red-100 text-red-700",
   Manager: "bg-purple-100 text-purple-700",
   Technician: "bg-blue-100 text-blue-700",
-  Viewer: "bg-slate-100 text-slate-600",
+  Viewer: "bg-muted text-muted-foreground",
 }
 
 async function getRoles(companyId: string) {
@@ -29,8 +29,8 @@ export default async function RolesSettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">สิทธิ์การใช้งาน (Roles)</h1>
-          <p className="text-slate-500 text-sm mt-1">ทั้งหมด {roles.length} Roles</p>
+          <h1 className="text-2xl font-bold text-foreground">สิทธิ์การใช้งาน (Roles)</h1>
+          <p className="text-muted-foreground text-sm mt-1">ทั้งหมด {roles.length} Roles</p>
         </div>
         <Link
           href="/settings/roles/new"
@@ -41,33 +41,33 @@ export default async function RolesSettingsPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-border shadow-sm overflow-hidden">
         {roles.length === 0 ? (
           <div className="p-12 text-center">
-            <ShieldCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">ยังไม่มี Role</p>
+            <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">ยังไม่มี Role</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-muted border-b border-border dark:border-slate-700">
               <tr>
                 {["Role", "ผู้ใช้งาน", "ประเภท", ""].map(h => (
-                  <th key={h} className="px-5 py-3 text-left font-semibold text-slate-600 text-xs uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-5 py-3 text-left font-semibold text-muted-foreground text-xs uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {roles.map(role => (
-                <tr key={role.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={role.id} className="hover:bg-muted/60 transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center">
-                        <ShieldCheck className="w-4 h-4 text-slate-500" />
+                      <div className="w-9 h-9 bg-muted rounded-xl flex items-center justify-center">
+                        <ShieldCheck className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="font-semibold text-slate-800">{role.name}</p>
+                        <p className="font-semibold text-foreground">{role.name}</p>
                         {role.isSystem && (
-                          <span className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Lock className="w-3 h-3" /> System Role
                           </span>
                         )}
@@ -75,8 +75,8 @@ export default async function RolesSettingsPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-1.5 text-slate-600">
-                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Users className="w-3.5 h-3.5 text-muted-foreground" />
                       <span>{role._count.userBranchRoles} คน</span>
                     </div>
                   </td>
@@ -86,11 +86,12 @@ export default async function RolesSettingsPage() {
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">
-                    {!role.isSystem && (
-                      <Link href={`/settings/roles/${role.id}/edit`} className="text-xs text-blue-600 hover:text-blue-800 hover:underline">
-                        แก้ไข
-                      </Link>
-                    )}
+                    <Link
+                      href={`/settings/roles/${role.id}/edit`}
+                      className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      แก้ไข
+                    </Link>
                   </td>
                 </tr>
               ))}

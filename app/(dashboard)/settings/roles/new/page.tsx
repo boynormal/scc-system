@@ -3,58 +3,30 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Save } from "lucide-react"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { ModuleAccessPicker, type ModuleAccessValue } from "@/components/settings/module-access-picker"
-
-const PERMISSIONS = [
-  { key: "machines.view", label: "ดูเครื่องจักร" },
-  { key: "machines.create", label: "สร้างเครื่องจักร" },
-  { key: "machines.edit", label: "แก้ไขเครื่องจักร" },
-  { key: "machines.delete", label: "ลบเครื่องจักร" },
-  { key: "work_orders.view", label: "ดูใบสั่งงาน" },
-  { key: "work_orders.create", label: "สร้างใบสั่งงาน" },
-  { key: "work_orders.edit", label: "แก้ไขใบสั่งงาน" },
-  { key: "work_orders.close", label: "ปิดใบสั่งงาน" },
-  { key: "maintenance.view", label: "ดูแผนซ่อมบำรุง" },
-  { key: "maintenance.create", label: "สร้างแผนซ่อมบำรุง" },
-  { key: "maintenance.edit", label: "แก้ไขแผนซ่อมบำรุง" },
-  { key: "spare_parts.view", label: "ดูอะไหล่" },
-  { key: "spare_parts.create", label: "สร้าง/รับอะไหล่" },
-  { key: "spare_parts.edit", label: "แก้ไขอะไหล่" },
-  { key: "reports.view", label: "ดูรายงาน" },
-  { key: "settings.view", label: "ดูการตั้งค่า" },
-  { key: "settings.manage", label: "จัดการการตั้งค่า" },
-  { key: "users.manage", label: "จัดการผู้ใช้งาน" },
-]
+import { RolePermissionMatrix } from "@/components/settings/role-permission-matrix"
+import { allMatrixFormState, emptyMatrixFormState } from "@/shared/permissions/role-matrix"
 
 export default function NewRolePage() {
   const router = useRouter()
   const [name, setName] = useState("")
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({})
-  const [moduleAccess, setModuleAccess] = useState<ModuleAccessValue>("all")
+  const [permissions, setPermissions] = useState<Record<string, boolean>>(() => emptyMatrixFormState())
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const toggle = (key: string) =>
-    setPermissions(prev => ({ ...prev, [key]: !prev[key] }))
-
-  const selectAll = () =>
-    setPermissions(Object.fromEntries(PERMISSIONS.map(p => [p.key, true])))
-
-  const clearAll = () => setPermissions({})
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) { setError("กรุณากรอกชื่อ Role"); return }
+    if (!name.trim()) {
+      setError("กรุณากรอกชื่อ Role")
+      return
+    }
     setError(null)
     setLoading(true)
     const res = await fetch("/api/settings/roles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), permissions, moduleAccess }),
+      body: JSON.stringify({ name: name.trim(), permissions }),
     })
     setLoading(false)
     if (!res.ok) {
@@ -67,75 +39,76 @@ export default function NewRolePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/settings/roles" className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
-          <ArrowLeft className="w-4 h-4" />
+        <Link href="/settings/roles" className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+          <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">เพิ่ม Role ใหม่</h1>
-          <p className="text-slate-500 text-sm mt-0.5">กำหนดชื่อและสิทธิ์การเข้าถึง</p>
+          <h1 className="text-2xl font-bold text-foreground">เพิ่ม Role ใหม่</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            กำหนดสิทธิ์อ่าน/เขียนต่อทรัพยากร — เมนูจะแสดงตามสิทธิ์อ่าน
+          </p>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {error}
+        </div>
       )}
 
       <form onSubmit={onSubmit} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูล Role</CardTitle></CardHeader>
-          <Input
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>ข้อมูล Role</GlassCardTitle>
+          </GlassCardHeader>
+          <GlassInput
             label="ชื่อ Role"
             required
             placeholder="เช่น Supervisor, Engineer"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
           />
-        </Card>
+        </GlassCard>
 
-        <Card padding="none">
-          <CardHeader>
-            <CardTitle>สิทธิ์การเข้าถึง</CardTitle>
+        <GlassCard padding="none">
+          <GlassCardHeader className="px-5 pt-5">
+            <GlassCardTitle>สิทธิ์การเข้าถึงข้อมูล (CRUD)</GlassCardTitle>
             <div className="flex gap-2">
-              <button type="button" onClick={selectAll} className="text-xs text-blue-600 hover:text-blue-800">เลือกทั้งหมด</button>
-              <span className="text-slate-300">|</span>
-              <button type="button" onClick={clearAll} className="text-xs text-slate-500 hover:text-slate-700">ล้างทั้งหมด</button>
+              <button
+                type="button"
+                onClick={() => setPermissions(allMatrixFormState(true))}
+                className="text-xs text-blue-600 hover:text-blue-500 dark:text-blue-400"
+              >
+                เลือกทั้งหมด
+              </button>
+              <span className="text-muted-foreground">|</span>
+              <button
+                type="button"
+                onClick={() => setPermissions(emptyMatrixFormState())}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                ล้างทั้งหมด
+              </button>
             </div>
-          </CardHeader>
-          <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {PERMISSIONS.map(p => (
-              <label key={p.key} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!permissions[p.key]}
-                  onChange={() => toggle(p.key)}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-slate-700">{p.label}</span>
-              </label>
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>การเข้าถึงโมดูล</CardTitle>
-          </CardHeader>
-          <p className="text-xs text-slate-500 mb-4 -mt-2">
-            กำหนดว่า Role นี้มองเห็นโมดูลใดใน sidebar และหน้า /apps (ต้องมีสิทธิ์ resource ด้วย)
+          </GlassCardHeader>
+          <p className="mb-3 px-5 text-xs text-muted-foreground">
+            ควบคุมว่า Role นี้ทำอะไรกับข้อมูลได้บ้าง — มีสิทธิ์อ่านของทรัพยากรใด เมนูนั้นจะแสดง
           </p>
-          <ModuleAccessPicker value={moduleAccess} onChange={setModuleAccess} />
-        </Card>
+          <RolePermissionMatrix value={permissions} onChange={setPermissions} />
+        </GlassCard>
 
         <div className="flex justify-end gap-3">
-          <Link href="/settings/roles" className="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50">
+          <Link
+            href="/settings/roles"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
+          >
             ยกเลิก
           </Link>
-          <Button type="submit" loading={loading}>
-            <Save className="w-4 h-4" />
+          <GlassButton type="submit" loading={loading} icon={<Save className="h-4 w-4" />}>
             บันทึก Role
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

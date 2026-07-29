@@ -7,13 +7,17 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 import { ModuleAccessPicker, type ModuleAccessValue } from "@/components/settings/module-access-picker"
+import { UserEffectiveAccessSummary } from "@/components/settings/user-effective-access-summary"
 
 const schema = z.object({
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9._]{3,50}$/, "Username ต้องเป็น a-z, 0-9, . หรือ _ ความยาว 3–50 ตัว"),
   email: z.string().email("อีเมลไม่ถูกต้อง"),
   firstName: z.string().min(1, "กรุณากรอกชื่อ"),
   lastName: z.string().min(1, "กรุณากรอกนามสกุล"),
@@ -41,8 +45,11 @@ export default function EditUserPage() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
+
+  const roleId = watch("roleId")
 
   useEffect(() => {
     Promise.all([
@@ -67,6 +74,7 @@ export default function EditUserPage() {
         const ma = data.moduleAccess
         setModuleAccess(ma === "all" || Array.isArray(ma) ? (ma as ModuleAccessValue) : null)
         reset({
+          username: data.username,
           email: data.email,
           firstName: data.firstName,
           lastName: data.lastName,
@@ -113,36 +121,65 @@ export default function EditUserPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/settings/users" className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+        <Link href="/settings/users" className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">แก้ไขผู้ใช้งาน</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{displayName}</p>
+          <h1 className="text-2xl font-bold text-foreground">แก้ไขผู้ใช้งาน</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{displayName}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลส่วนตัว</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลส่วนตัว</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
+            <GlassInput
+              label="ชื่อผู้ใช้ (Username)"
+              required
+              hint="ใช้เข้าสู่ระบบได้ — a-z, 0-9, . หรือ _"
+              autoComplete="off"
+              error={errors.username?.message}
+              {...register("username")}
+            />
+            <GlassInput
               label="อีเมล"
               required
               type="email"
-              hint="ใช้สำหรับเข้าสู่ระบบ — เปลี่ยนแล้วต้องใช้อีเมลใหม่ล็อกอินครั้งถัดไป"
+              hint="ใช้เข้าสู่ระบบหรือติดต่อได้"
               error={errors.email?.message}
               {...register("email")}
             />
-            <Input label="เบอร์โทรศัพท์" type="tel" autoComplete="off" {...register("phone")} />
-            <Input label="ชื่อ" required error={errors.firstName?.message} {...register("firstName")} />
-            <Input label="นามสกุล" required error={errors.lastName?.message} {...register("lastName")} />
+            <GlassInput label="เบอร์โทรศัพท์" type="tel" autoComplete="off" {...register("phone")} />
+            <div className="hidden sm:block" />
+            <GlassInput label="ชื่อ" required error={errors.firstName?.message} {...register("firstName")} />
+            <GlassInput label="นามสกุล" required error={errors.lastName?.message} {...register("lastName")} />
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>สิทธิ์การเข้าถึง</CardTitle></CardHeader>
-          <p className="text-xs text-slate-500 -mt-2 mb-4">
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>สถานะและรหัสผ่าน</GlassCardTitle></GlassCardHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-foreground">สถานะ</label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" {...register("isActive")} className="w-4 h-4 rounded text-blue-600" />
+                <span className="text-sm text-foreground">เปิดการใช้งาน</span>
+              </label>
+            </div>
+            <GlassInput
+              label="รหัสผ่านใหม่"
+              type="password"
+              hint="เว้นว่างหากไม่ต้องการเปลี่ยน"
+              error={errors.password?.message}
+              {...register("password")}
+            />
+          </div>
+        </GlassCard>
+
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>สิทธิ์การเข้าถึง</GlassCardTitle></GlassCardHeader>
+          <p className="text-xs text-muted-foreground -mt-2 mb-4">
             สาขาและ Role ใช้ตรวจสิทธิ์ในระบบ (เช่น แก้ไขเครื่อง BOM) — บันทึกแล้วควรให้ผู้ใช้ออกจากระบบแล้วเข้าใหม่เพื่ออัปเดตสิทธิ์ทันที
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -163,35 +200,18 @@ export default function EditUserPage() {
               {...register("roleId")}
             />
           </div>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>สถานะและรหัสผ่าน</CardTitle></CardHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">สถานะ</label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" {...register("isActive")} className="w-4 h-4 rounded text-blue-600" />
-                <span className="text-sm text-slate-700">เปิดการใช้งาน</span>
-              </label>
-            </div>
-            <Input
-              label="รหัสผ่านใหม่"
-              type="password"
-              hint="เว้นว่างหากไม่ต้องการเปลี่ยน"
-              error={errors.password?.message}
-              {...register("password")}
-            />
+          <div className="mt-4">
+            <UserEffectiveAccessSummary roleId={roleId} moduleAccess={moduleAccess} />
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>การมองเห็นโมดูล</CardTitle></CardHeader>
-          <p className="text-xs text-slate-500 mb-4 -mt-2">
-            ค่าเริ่มต้นใช้ตาม Role ที่เลือกด้านบน — เลือก override ที่นี่เฉพาะเมื่อต้องการให้ผู้ใช้คนนี้เห็นโมดูลต่างจากคนอื่นที่ Role เดียวกัน
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>การมองเห็นโมดูล</GlassCardTitle></GlassCardHeader>
+          <p className="text-xs text-muted-foreground mb-4 -mt-2">
+            สิทธิ์อ่าน/เขียนมาจาก Role — ที่นี่ปรับแค่การมองเห็นโมดูล (override ได้เมื่อจำเป็น)
           </p>
           <ModuleAccessPicker value={moduleAccess} onChange={setModuleAccess} allowInherit />
-        </Card>
+        </GlassCard>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -200,12 +220,12 @@ export default function EditUserPage() {
         )}
 
         <div className="flex gap-3 justify-end">
-          <Link href="/settings/users" className="px-5 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
+          <Link href="/settings/users" className="px-5 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors">
             ยกเลิก
           </Link>
-          <Button type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
+          <GlassButton type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
             บันทึกการแก้ไข
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

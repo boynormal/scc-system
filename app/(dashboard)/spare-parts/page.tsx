@@ -44,8 +44,8 @@ export default async function SparePartsPage(
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">อะไหล่ (Spare Parts)</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">อะไหล่ (Spare Parts)</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             ทั้งหมด {parts.length} รายการ
             {totalLowStock > 0 && (
               <span className="ml-2 text-orange-600 font-medium">· ใกล้หมด {totalLowStock} รายการ</span>
@@ -68,7 +68,7 @@ export default async function SparePartsPage(
             name="search"
             defaultValue={searchParams.search}
             placeholder="ค้นหาชื่อ / รหัสอะไหล่..."
-            className="flex-1 min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-0 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button type="submit" className="px-4 py-2 bg-slate-800 text-white text-sm rounded-lg hover:bg-slate-700">ค้นหา</button>
         </form>
@@ -77,7 +77,7 @@ export default async function SparePartsPage(
           className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
             searchParams.lowStock === "1"
               ? "bg-orange-100 text-orange-700 border-orange-200"
-              : "border-slate-300 text-slate-600 hover:bg-slate-50"
+              : "border-border text-muted-foreground hover:bg-muted/60"
           }`}
         >
           <AlertTriangle className="w-4 h-4" />
@@ -85,9 +85,9 @@ export default async function SparePartsPage(
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {parts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Package className="w-12 h-12 mb-3 opacity-20" />
             <p className="font-medium">ไม่มีอะไหล่</p>
             <Link href="/spare-parts/new" className="mt-3 text-sm text-blue-600 hover:underline flex items-center gap-1">
@@ -97,19 +97,19 @@ export default async function SparePartsPage(
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-muted border-b border-border">
                 <tr>
                   {["รหัส / ชื่อ", "ซัพพลายเออร์", "หน่วย", "ราคาต่อหน่วย", "สต็อก", "Min Stock", "สถานะ", ""].map(h => (
-                    <th key={h} className="px-5 py-3 text-left font-semibold text-slate-600 text-xs uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-5 py-3 text-left font-semibold text-muted-foreground text-xs uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {parts.map(part => {
                   const totalStock = part.inventory.reduce((sum, inv) => sum + inv.currentStock, 0)
                   const isLow = totalStock <= part.minStock
                   return (
-                    <tr key={part.id} className={`hover:bg-slate-50 transition-colors ${isLow ? "bg-orange-50/30" : ""}`}>
+                    <tr key={part.id} className={`hover:bg-muted/60 transition-colors ${isLow ? "bg-orange-50/30" : ""}`}>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <div
@@ -124,22 +124,22 @@ export default async function SparePartsPage(
                             />
                           </div>
                           <div>
-                            <p className="font-medium text-slate-800">{part.name}</p>
-                            <p className="text-xs text-slate-400 font-mono">{part.code}</p>
+                            <p className="font-medium text-foreground">{part.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{part.code}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-slate-600">{part.supplier?.name ?? <span className="text-slate-400">—</span>}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{part.unit}</td>
-                      <td className="px-5 py-3.5 text-slate-600">
+                      <td className="px-5 py-3.5 text-muted-foreground">{part.supplier?.name ?? <span className="text-muted-foreground">—</span>}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{part.unit}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">
                         ฿{Number(part.unitCost).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`font-semibold ${isLow ? "text-orange-600" : "text-slate-800"}`}>
+                        <span className={`font-semibold ${isLow ? "text-orange-600" : "text-foreground"}`}>
                           {totalStock}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-slate-500">{part.minStock}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{part.minStock}</td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                           totalStock <= 0

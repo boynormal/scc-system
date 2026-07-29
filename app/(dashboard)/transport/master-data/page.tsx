@@ -44,13 +44,13 @@ function MasterDataContent() {
   return (
     <div className="-m-6 space-y-6 p-4 md:p-6 w-auto min-w-0">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">ข้อมูลพื้นฐาน (Master Data)</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-xl font-semibold text-foreground">ข้อมูลพื้นฐาน (Master Data)</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           จัดการประเภทงาน ประเภทสินค้า ลูกค้า/ปลายทาง รถ และคนขับ
         </p>
       </div>
 
-      <div className="flex flex-wrap border-b border-slate-200 gap-x-1 -mb-px overflow-x-auto">
+      <div className="flex flex-wrap border-b border-border gap-x-1 -mb-px overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -59,8 +59,8 @@ function MasterDataContent() {
             className={classNames(
               "whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors",
               activeTab === tab.id
-                ? "border-cyan-600 text-cyan-700"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-cyan-600 text-cyan-700 dark:text-cyan-300"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             {tab.label}
@@ -100,7 +100,7 @@ function MasterDataContent() {
 
 export default function TransportMasterDataPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-slate-500">กำลังโหลด...</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">กำลังโหลด...</div>}>
       <MasterDataContent />
     </Suspense>
   )

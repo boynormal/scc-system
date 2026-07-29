@@ -5,9 +5,9 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { Card } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Badge } from "@/components/ui/badge"
+import { GlassCard } from "@/components/glass"
 
 export const metadata: Metadata = { title: "บุคลากร" }
 
@@ -62,8 +62,8 @@ export default async function HrPersonnelPage(props: { searchParams: Promise<{ s
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">บุคลากร</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">บุคลากร</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             ข้อมูลคน · รหัสรายชื่อ (roster) ต่อบริษัท · สามารถผูกหลายสาขาเพื่อลงเวลา/นำเข้า Excel ได้หลายที่
           </p>
         </div>
@@ -78,15 +78,15 @@ export default async function HrPersonnelPage(props: { searchParams: Promise<{ s
         )}
       </div>
 
-      <Card padding="sm">
+      <GlassCard padding="sm">
         <form className="flex gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               name="search"
               defaultValue={search}
               placeholder="ค้นหา ชื่อ, รหัสรายชื่อ, กลุ่มงาน..."
-              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <button type="submit" className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-800 transition-colors">
@@ -95,15 +95,15 @@ export default async function HrPersonnelPage(props: { searchParams: Promise<{ s
           {search && (
             <Link
               href="/hr/personnel"
-              className="px-4 py-2 border border-slate-300 text-slate-600 text-sm rounded-lg hover:bg-slate-50"
+              className="px-4 py-2 border border-border text-muted-foreground text-sm rounded-lg hover:bg-muted/60"
             >
               ล้าง
             </Link>
           )}
         </form>
-      </Card>
+      </GlassCard>
 
-      <Card padding="none">
+      <GlassCard padding="none">
         {list.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -114,7 +114,7 @@ export default async function HrPersonnelPage(props: { searchParams: Promise<{ s
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                <tr className="border-b border-border bg-muted text-left text-muted-foreground">
                   <th className="p-3 font-medium">รหัสรายชื่อ</th>
                   <th className="p-3 font-medium">ชื่อแสดง</th>
                   <th className="p-3 font-medium">กลุ่มงาน</th>
@@ -124,11 +124,11 @@ export default async function HrPersonnelPage(props: { searchParams: Promise<{ s
               </thead>
               <tbody>
                 {list.map((p) => (
-                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/80">
-                    <td className="p-3 font-mono text-slate-800">{p.rosterNo}</td>
-                    <td className="p-3 text-slate-800">{p.displayName}</td>
-                    <td className="p-3 text-slate-600">{p.jobGroup ?? "—"}</td>
-                    <td className="p-3 text-slate-600">
+                  <tr key={p.id} className="border-b border-border hover:bg-muted/60/80">
+                    <td className="p-3 font-mono text-foreground">{p.rosterNo}</td>
+                    <td className="p-3 text-foreground">{p.displayName}</td>
+                    <td className="p-3 text-muted-foreground">{p.jobGroup ?? "—"}</td>
+                    <td className="p-3 text-muted-foreground">
                       {p.branchAssignments.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {p.branchAssignments.map((a) => (
@@ -137,7 +137,7 @@ export default async function HrPersonnelPage(props: { searchParams: Promise<{ s
                               className={
                                 a.isPrimary
                                   ? "bg-blue-100 text-blue-800 font-medium"
-                                  : "bg-slate-100 text-slate-700"
+                                  : "bg-muted text-foreground"
                               }
                             >
                               {a.branch.code}
@@ -166,7 +166,7 @@ export default async function HrPersonnelPage(props: { searchParams: Promise<{ s
             </table>
           </div>
         )}
-      </Card>
+      </GlassCard>
     </div>
   )
 }

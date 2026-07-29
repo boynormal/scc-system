@@ -169,13 +169,13 @@ export default function NewTransportJobPage() {
   }
 
   const selectClass =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
+    "w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-card"
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">สร้างใบงานขนส่งใหม่</h1>
-        <p className="text-sm text-slate-500">กรอกข้อมูลงานขนส่งและจุดแวะ</p>
+        <h1 className="text-xl font-semibold text-foreground">สร้างใบงานขนส่งใหม่</h1>
+        <p className="text-sm text-muted-foreground">กรอกข้อมูลงานขนส่งและจุดแวะ</p>
       </div>
 
       {error && (
@@ -183,12 +183,12 @@ export default function NewTransportJobPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-slate-700">ข้อมูลใบงาน</h2>
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+          <h2 className="text-sm font-semibold text-foreground">ข้อมูลใบงาน</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">สาขา *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">สาขา *</label>
               <select
                 required
                 value={form.branchId}
@@ -204,11 +204,11 @@ export default function NewTransportJobPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อลูกค้า</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">ชื่อลูกค้า</label>
               <CustomerPicker value={form.customerId} onChange={handleHeaderCustomer} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">ประเภทงาน *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">ประเภทงาน *</label>
               <select
                 required
                 value={form.jobType}
@@ -222,7 +222,7 @@ export default function NewTransportJobPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">ประเภทสินค้า</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">ประเภทสินค้า</label>
               <select
                 value={form.cargoType}
                 onChange={(e) => setForm((f) => ({ ...f, cargoType: e.target.value }))}
@@ -235,16 +235,16 @@ export default function NewTransportJobPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">วันที่นัดวิ่งงาน</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">วันที่นัดวิ่งงาน</label>
               <input
                 type="date"
                 value={form.scheduledDate}
                 onChange={(e) => setForm((f) => ({ ...f, scheduledDate: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">ความสำคัญ</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">ความสำคัญ</label>
               <select
                 value={form.priority}
                 onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as typeof form.priority }))}
@@ -257,20 +257,20 @@ export default function NewTransportJobPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-600 mb-1">หมายเหตุ</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">หมายเหตุ</label>
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 rows={2}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
               />
             </div>
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-slate-700">มอบหมายรถ (บังคับ)</h2>
-          <p className="text-xs text-slate-500">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+          <h2 className="text-sm font-semibold text-foreground">มอบหมายรถ (บังคับ)</h2>
+          <p className="text-xs text-muted-foreground">
             เลือกรถและคนขับจากทุกสาขาได้ — ใช้งานร่วมกันทั้งองค์กร
           </p>
           <JobAssignmentPickers
@@ -288,9 +288,9 @@ export default function NewTransportJobPage() {
           />
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-700">จุดแวะ (Stops)</h2>
+            <h2 className="text-sm font-semibold text-foreground">จุดแวะ (Stops)</h2>
             <button
               type="button"
               onClick={addStop}
@@ -301,9 +301,9 @@ export default function NewTransportJobPage() {
           </div>
 
           {stops.map((stop, idx) => (
-            <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50 p-4 space-y-3">
+            <div key={idx} className="rounded-lg border border-border bg-muted p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">Stop {stop.sequence}</span>
+                <span className="text-xs font-semibold text-muted-foreground">Stop {stop.sequence}</span>
                 {stops.length > 1 && (
                   <button type="button" onClick={() => removeStop(idx)} className="text-red-400 hover:text-red-600">
                     <Trash2 className="h-4 w-4" />
@@ -311,7 +311,7 @@ export default function NewTransportJobPage() {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">เลือกจาก Master</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">เลือกจาก Master</label>
                 <CustomerPicker
                   value={stop.customerId}
                   onChange={(customerId, customer) => handleStopCustomer(idx, customerId, customer)}
@@ -320,47 +320,47 @@ export default function NewTransportJobPage() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อลูกค้า / ปลายทาง *</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">ชื่อลูกค้า / ปลายทาง *</label>
                   <input
                     required
                     value={stop.customerName}
                     onChange={(e) => updateStop(idx, "customerName", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">ที่อยู่ *</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">ที่อยู่ *</label>
                   <input
                     required
                     value={stop.address}
                     onChange={(e) => updateStop(idx, "address", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อผู้ติดต่อ</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">ชื่อผู้ติดต่อ</label>
                   <input
                     value={stop.contactName}
                     onChange={(e) => updateStop(idx, "contactName", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">เบอร์โทร</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">เบอร์โทร</label>
                   <input
                     value={stop.contactPhone}
                     onChange={(e) => updateStop(idx, "contactPhone", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">น้ำหนัก (กก.)</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">น้ำหนัก (กก.)</label>
                   <input
                     type="number"
                     min="0"
                     value={stop.weightKg}
                     onChange={(e) => updateStop(idx, "weightKg", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
                 </div>
               </div>
@@ -372,7 +372,7 @@ export default function NewTransportJobPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
           >
             ยกเลิก
           </button>

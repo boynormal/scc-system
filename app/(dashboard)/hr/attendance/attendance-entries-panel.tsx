@@ -50,7 +50,7 @@ function ModalPanel({ children, labelledBy, className = "" }: { children: React.
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}
-      className={`relative w-full max-w-md rounded-2xl border border-slate-200/80 bg-white shadow-2xl ${className}`}
+      className={`relative w-full max-w-md rounded-2xl border border-border/80 bg-card shadow-2xl ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}
@@ -138,7 +138,7 @@ export function AttendanceEntriesPanel({
           <button
             type="button"
             onClick={() => setDayModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm hover:border-border hover:bg-muted/60"
           >
             <CalendarX2 className="h-3.5 w-3.5" aria-hidden />
             ลบตามวันที่...
@@ -146,10 +146,10 @@ export function AttendanceEntriesPanel({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+      <div className="overflow-x-auto rounded-xl border border-border/80">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+            <tr className="border-b border-border bg-muted text-left text-muted-foreground">
               {canDelete && <th className="p-3 w-12 font-medium" />}
               <th className="p-3 font-medium">วันที่</th>
               <th className="p-3 font-medium">สาขา</th>
@@ -160,7 +160,7 @@ export function AttendanceEntriesPanel({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80">
+              <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/60/80">
                 {canDelete && (
                   <td className="p-2 align-top">
                     <button
@@ -170,7 +170,7 @@ export function AttendanceEntriesPanel({
                         setRowConfirmInput("")
                       }}
                       disabled={loadingId === row.id}
-                      className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
                       title="ลบรายการนี้"
                       aria-label="ลบรายการนี้"
                     >
@@ -178,14 +178,14 @@ export function AttendanceEntriesPanel({
                     </button>
                   </td>
                 )}
-                <td className="p-3 whitespace-nowrap text-slate-800">{format(parseISO(row.workDate), "d MMM yyyy", { locale: th })}</td>
-                <td className="p-3 text-slate-600 text-xs">{row.branchCode} — {row.branchName}</td>
+                <td className="p-3 whitespace-nowrap text-foreground">{format(parseISO(row.workDate), "d MMM yyyy", { locale: th })}</td>
+                <td className="p-3 text-muted-foreground text-xs">{row.branchCode} — {row.branchName}</td>
                 <td className="p-3">
-                  <div className="font-mono text-slate-600 text-xs">{row.rosterNo}</div>
-                  <div className="text-slate-800">{row.displayName}</div>
+                  <div className="font-mono text-muted-foreground text-xs">{row.rosterNo}</div>
+                  <div className="text-foreground">{row.displayName}</div>
                 </td>
-                <td className="p-3 text-slate-600">{row.jobGroup ?? "—"}</td>
-                <td className="p-3 text-slate-800 font-mono text-xs max-w-md">{row.punchTimes.length ? row.punchTimes.join(" → ") : "—"}</td>
+                <td className="p-3 text-muted-foreground">{row.jobGroup ?? "—"}</td>
+                <td className="p-3 text-foreground font-mono text-xs max-w-md">{row.punchTimes.length ? row.punchTimes.join(" → ") : "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -195,24 +195,24 @@ export function AttendanceEntriesPanel({
       {pendingDeleteId && (
         <ModalScrim onClose={() => { setPendingDeleteId(null); setRowConfirmInput("") }}>
           <ModalPanel labelledBy="attendance-row-delete-title" className="p-0 overflow-hidden max-h-[min(90vh,520px)] flex flex-col">
-            <div className="flex items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
-              <h2 id="attendance-row-delete-title" className="text-base font-semibold text-slate-900 pr-2">แจ้งเตือน</h2>
-              <button type="button" onClick={() => { setPendingDeleteId(null); setRowConfirmInput("") }} className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="ปิด">
+            <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
+              <h2 id="attendance-row-delete-title" className="text-base font-semibold text-foreground pr-2">แจ้งเตือน</h2>
+              <button type="button" onClick={() => { setPendingDeleteId(null); setRowConfirmInput("") }} className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-muted-foreground" aria-label="ปิด">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="px-4 py-3 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <p className="flex gap-2 text-sm text-slate-600 leading-snug">
+              <p className="flex gap-2 text-sm text-muted-foreground leading-snug">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" aria-hidden />
-                <span>ลบรายนี้แล้ว <span className="font-medium text-slate-800">กู้คืนไม่ได้</span> — พิมพ์ <span className="font-mono">Yes</span> หรือ <span className="font-mono">ยืนยันการลบ</span></span>
+                <span>ลบรายนี้แล้ว <span className="font-medium text-foreground">กู้คืนไม่ได้</span> — พิมพ์ <span className="font-mono">Yes</span> หรือ <span className="font-mono">ยืนยันการลบ</span></span>
               </p>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">ยืนยันด้วยการพิมพ์</label>
-                <input type="text" value={rowConfirmInput} onChange={(e) => setRowConfirmInput(e.target.value)} autoComplete="off" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="Yes หรือ ยืนยันการลบ" autoFocus />
+                <label className="block text-xs text-muted-foreground mb-1">ยืนยันด้วยการพิมพ์</label>
+                <input type="text" value={rowConfirmInput} onChange={(e) => setRowConfirmInput(e.target.value)} autoComplete="off" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="Yes หรือ ยืนยันการลบ" autoFocus />
               </div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-slate-100 px-4 py-3 bg-slate-50/80">
-              <button type="button" onClick={() => { setPendingDeleteId(null); setRowConfirmInput("") }} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-white">ยกเลิก</button>
+            <div className="flex justify-end gap-2 border-t border-border px-4 py-3 bg-muted/80">
+              <button type="button" onClick={() => { setPendingDeleteId(null); setRowConfirmInput("") }} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-muted">ยกเลิก</button>
               <button type="button" onClick={() => pendingDeleteId && executeDeleteOne(pendingDeleteId)} disabled={!rowConfirmOk || loadingId === pendingDeleteId || !pendingDeleteId} className="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">{loadingId === pendingDeleteId ? "กำลังลบ…" : "ดำเนินการลบ"}</button>
             </div>
           </ModalPanel>
@@ -222,30 +222,30 @@ export function AttendanceEntriesPanel({
       {dayModalOpen && (
         <ModalScrim onClose={closeDayModal}>
           <ModalPanel labelledBy="attendance-day-delete-title" className="p-0 overflow-hidden max-h-[min(90vh,560px)] flex flex-col">
-            <div className="flex items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
-              <h2 id="attendance-day-delete-title" className="text-base font-semibold text-slate-900 pr-2">ลบบันทึกเวลาตามวัน</h2>
-              <button type="button" onClick={closeDayModal} className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="ปิด"><X className="h-4 w-4" /></button>
+            <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
+              <h2 id="attendance-day-delete-title" className="text-base font-semibold text-foreground pr-2">ลบบันทึกเวลาตามวัน</h2>
+              <button type="button" onClick={closeDayModal} className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-muted-foreground" aria-label="ปิด"><X className="h-4 w-4" /></button>
             </div>
             <div className="px-4 py-3 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <p className="flex gap-2 text-sm text-slate-600 leading-snug">
+              <p className="flex gap-2 text-sm text-muted-foreground leading-snug">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" aria-hidden />
-                <span>ลบ <span className="font-medium text-slate-800">ทุกรายการ</span> ในวันของสาขานี้: <span className="font-medium text-slate-800">{branch.code} {branch.name}</span></span>
+                <span>ลบ <span className="font-medium text-foreground">ทุกรายการ</span> ในวันของสาขานี้: <span className="font-medium text-foreground">{branch.code} {branch.name}</span></span>
               </p>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">สาขา (ล็อกจากบริบทหน้า)</label>
-                <div className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-800">{branch.code} {branch.name}</div>
+                <label className="block text-xs text-muted-foreground mb-1">สาขา (ล็อกจากบริบทหน้า)</label>
+                <div className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted text-foreground">{branch.code} {branch.name}</div>
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">วันที่</label>
-                <input type="date" value={dayValue} onChange={(e) => setDayValue(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                <label className="block text-xs text-muted-foreground mb-1">วันที่</label>
+                <input type="date" value={dayValue} onChange={(e) => setDayValue(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">พิมพ์ <span className="font-mono text-slate-800">Yes</span> หรือ <span className="font-mono text-slate-800">ยืนยันการลบ</span></label>
-                <input type="text" value={dayConfirmInput} onChange={(e) => setDayConfirmInput(e.target.value)} autoComplete="off" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="Yes หรือ ยืนยันการลบ" />
+                <label className="block text-xs text-muted-foreground mb-1">พิมพ์ <span className="font-mono text-foreground">Yes</span> หรือ <span className="font-mono text-foreground">ยืนยันการลบ</span></label>
+                <input type="text" value={dayConfirmInput} onChange={(e) => setDayConfirmInput(e.target.value)} autoComplete="off" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="Yes หรือ ยืนยันการลบ" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-slate-100 px-4 py-3 bg-slate-50/80">
-              <button type="button" onClick={closeDayModal} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-white">ยกเลิก</button>
+            <div className="flex justify-end gap-2 border-t border-border px-4 py-3 bg-muted/80">
+              <button type="button" onClick={closeDayModal} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-muted">ยกเลิก</button>
               <button type="button" onClick={deleteByDay} disabled={loadingDay || !dayValue || !dayConfirmOk} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-red-200 bg-red-50 text-red-800 hover:bg-red-100 disabled:opacity-50">{loadingDay ? "กำลังลบ…" : "ลบทั้งหมดในวันนี้"}</button>
             </div>
           </ModalPanel>

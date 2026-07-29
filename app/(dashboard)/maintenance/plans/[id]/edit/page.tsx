@@ -7,10 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 const schema = z.object({
   machineId: z.string().uuid(),
@@ -105,7 +103,7 @@ export default function EditMaintenancePlanPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -113,12 +111,12 @@ export default function EditMaintenancePlanPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href={`/maintenance/plans/${planId}`} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+        <Link href={`/maintenance/plans/${planId}`} className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">แก้ไขแผนซ่อมบำรุง</h1>
-          <p className="text-slate-500 text-sm mt-0.5">อัปเดตข้อมูลแผน PM/CM</p>
+          <h1 className="text-2xl font-bold text-foreground">แก้ไขแผนซ่อมบำรุง</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">อัปเดตข้อมูลแผน PM/CM</p>
         </div>
       </div>
 
@@ -127,8 +125,8 @@ export default function EditMaintenancePlanPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลพื้นฐาน</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลพื้นฐาน</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="เครื่องจักร"
@@ -157,7 +155,7 @@ export default function EditMaintenancePlanPage() {
               ))}
             </Select>
             <div className="sm:col-span-2">
-              <Input
+              <GlassInput
                 label="ชื่อแผน"
                 required
                 placeholder="เช่น PM รายเดือน - เครื่องกลึง A01"
@@ -166,19 +164,19 @@ export default function EditMaintenancePlanPage() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">ขอบเขตการทำงาน (Scope of Work) / รายละเอียด</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">ขอบเขตการทำงาน (Scope of Work) / รายละเอียด</label>
               <textarea
                 rows={5}
                 placeholder="ระบุรายการที่ต้องทำ เช่น&#10;- ตรวจสอบสายไฟ ท่อไฟ&#10;- อัดจารบีลูกปืน&#10;- เช็คความร้อนด้วย Temp Gun"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
                 {...register("description")}
               />
             </div>
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>ความถี่และระยะเวลา</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ความถี่และระยะเวลา</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Select
               label="หน่วยความถี่"
@@ -192,7 +190,7 @@ export default function EditMaintenancePlanPage() {
                 </option>
               ))}
             </Select>
-            <Input
+            <GlassInput
               label="ค่าความถี่"
               type="number"
               min={1}
@@ -201,7 +199,7 @@ export default function EditMaintenancePlanPage() {
               error={errors.frequencyValue?.message}
               {...register("frequencyValue")}
             />
-            <Input
+            <GlassInput
               label="ระยะเวลาโดยประมาณ (นาที)"
               type="number"
               min={1}
@@ -209,20 +207,20 @@ export default function EditMaintenancePlanPage() {
               error={errors.estimatedDurationMin?.message}
               {...register("estimatedDurationMin")}
             />
-            <Input
+            <GlassInput
               label="วันเริ่มต้น"
               type="date"
               required
               error={errors.startDate?.message}
               {...register("startDate")}
             />
-            <Input
+            <GlassInput
               label="วันสิ้นสุด"
               type="date"
               error={errors.endDate?.message}
               {...register("endDate")}
             />
-            <Input
+            <GlassInput
               label="Lead Time (วัน)"
               type="number"
               min={0}
@@ -230,31 +228,31 @@ export default function EditMaintenancePlanPage() {
               {...register("leadTimeDays")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>สถานะ</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>สถานะ</GlassCardTitle></GlassCardHeader>
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500"
               {...register("isActive")}
             />
-            <span className="text-sm text-slate-700">เปิดใช้งานแผนนี้</span>
+            <span className="text-sm text-foreground">เปิดใช้งานแผนนี้</span>
           </label>
-        </Card>
+        </GlassCard>
 
         <div className="flex justify-end gap-3">
           <Link
             href={`/maintenance/plans/${planId}`}
-            className="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50"
+            className="px-4 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60"
           >
             ยกเลิก
           </Link>
-          <Button type="submit" loading={isSubmitting}>
+          <GlassButton type="submit" loading={isSubmitting}>
             <Save className="w-4 h-4" />
             บันทึกการแก้ไข
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

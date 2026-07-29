@@ -11,31 +11,23 @@ import {
   canReadSettingsRoles,
   canReadSettingsUsers,
 } from "@/lib/hr-settings-nav-access"
-import { SettingsModuleTabs, type SettingsTabDef } from "./settings-module-tabs"
+import { SettingsHub } from "./settings-hub"
+import packageJson from "@/package.json"
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect("/login")
 
   const roles = session.user.roles as UserRole[]
-  const tabs: SettingsTabDef[] = [{ href: "/settings", label: "ภาพรวม", icon: "overview", exact: true }]
-  if (canReadSettingsUsers(roles)) {
-    tabs.push({ href: "/settings/users", label: "ผู้ใช้งาน", icon: "users" })
-  }
-  if (canReadSettingsBranches(roles)) {
-    tabs.push({ href: "/settings/branches", label: "สาขา", icon: "branches" })
-  }
-  if (canReadSettingsRoles(roles)) {
-    tabs.push({ href: "/settings/roles", label: "สิทธิ์การใช้งาน", icon: "roles" })
-  }
-  if (canReadSettingsMasterData(roles)) {
-    tabs.push({ href: "/settings/master-data", label: "ข้อมูลพื้นฐาน", icon: "master-data" })
-  }
-  if (canReadSettingsHomeScreen(roles)) {
-    tabs.push({ href: "/settings/home-screen", label: "หน้าจอหลัก", icon: "home-screen" })
+  const access = {
+    users: canReadSettingsUsers(roles),
+    branches: canReadSettingsBranches(roles),
+    roles: canReadSettingsRoles(roles),
+    masterData: canReadSettingsMasterData(roles),
+    homeScreen: canReadSettingsHomeScreen(roles),
   }
 
-  if (tabs.length <= 1) {
+  if (!Object.values(access).some(Boolean)) {
     redirect("/")
   }
 
@@ -45,12 +37,29 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   })
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
   const isDark = navPreferences.appearance === "dark"
+  const customIconCount =
+    Object.keys(navPreferences.productLineImageOverrides).length +
+    Object.keys(navPreferences.moduleImageOverrides).length
 
   return (
     <div className={cn(isDark && "dark")}>
       <div className="-m-6 min-h-[calc(100vh-4rem)] p-6 dark:bg-slate-900">
-        <SettingsModuleTabs tabs={tabs} />
-        {children}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          {/* ภาพรวมตั้งค่า — คอลัมน์ซ้ายเพียงอย่างเดียว */}
+          <div className="w-full shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100vh-5rem)] lg:w-[22rem] lg:overflow-y-auto xl:w-[24rem]">
+            <SettingsHub
+              access={access}
+              appearance={navPreferences.appearance}
+              customIconCount={customIconCount}
+              appVersion={packageJson.version}
+            />
+          </div>
+
+          {/* รายการที่ขยายออก — คอลัมน์ขวา */}
+          <div className="min-w-0 flex-1 rounded-2xl border border-border bg-white/70 p-4 text-foreground shadow-sm backdrop-blur-md dark:bg-slate-800/70 sm:p-6">
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   )

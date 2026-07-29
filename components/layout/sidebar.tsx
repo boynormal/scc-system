@@ -16,10 +16,12 @@ export default function Sidebar({
   navItems,
   productLineIconOverrides = {},
   productLineImageOverrides = {},
+  moduleImageOverrides = {},
 }: {
   navItems: ModuleNavNode[]
   productLineIconOverrides?: Record<string, NavIconKey>
   productLineImageOverrides?: Record<string, string>
+  moduleImageOverrides?: Record<string, string>
 }) {
   const pathname = usePathname()
   const [openProductLineId, setOpenProductLineId] = useState<string | null>(null)
@@ -58,6 +60,7 @@ export default function Sidebar({
         navNodes={panelNavNodes}
         onClose={handleClosePanel}
         triggerButtonId={openProductLineId ? `sidebar-pl-${openProductLineId}` : undefined}
+        moduleImageOverrides={moduleImageOverrides}
       />
     </div>
   )

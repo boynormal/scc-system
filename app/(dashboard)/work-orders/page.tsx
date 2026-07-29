@@ -2,9 +2,9 @@ import { Metadata } from "next"
 import { ClipboardList, Plus, Search } from "lucide-react"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
-import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
+import { GlassCard } from "@/components/glass"
 import { formatDate } from "@/lib/utils"
 import { prisma } from "@/shared/db"
 import { getWorkOrdersForPage } from "@/modules/work_orders"
@@ -46,8 +46,8 @@ export default async function WorkOrdersPage(
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">ใบสั่งงาน</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">ใบสั่งงาน</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             ทั้งหมด {workOrders.length} ใบ · กำลังดำเนินการ {active} ใบ
           </p>
         </div>
@@ -60,29 +60,29 @@ export default async function WorkOrdersPage(
         </Link>
       </div>
 
-      <Card padding="sm">
+      <GlassCard padding="sm">
         <form className="flex gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               name="search"
               defaultValue={searchParams.search}
               placeholder="ค้นหาหัวข้อ, WO#, ผู้รับผิดชอบ..."
-              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <button type="submit" className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-800 transition-colors">
             ค้นหา
           </button>
           {searchParams.search && (
-            <Link href="/work-orders" className="px-4 py-2 border border-slate-300 text-slate-600 text-sm rounded-lg hover:bg-slate-50">
+            <Link href="/work-orders" className="px-4 py-2 border border-border text-muted-foreground text-sm rounded-lg hover:bg-muted/60">
               ล้าง
             </Link>
           )}
         </form>
-      </Card>
+      </GlassCard>
 
-      <Card padding="none">
+      <GlassCard padding="none">
         {workOrders.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
@@ -98,43 +98,43 @@ export default async function WorkOrdersPage(
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">WO#</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">หัวข้อ</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">เครื่องจักร</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">ผู้รับผิดชอบ</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">วันที่</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">ความสำคัญ</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">สถานะ</th>
+                <tr className="border-b border-border bg-muted">
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">WO#</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">หัวข้อ</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">เครื่องจักร</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ผู้รับผิดชอบ</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">วันที่</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ความสำคัญ</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">สถานะ</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {workOrders.map((wo: WorkOrder) => (
-                  <tr key={wo.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3.5 font-mono text-xs text-slate-600">{wo.woNumber}</td>
+                  <tr key={wo.id} className="hover:bg-muted/60 transition-colors">
+                    <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{wo.woNumber}</td>
                     <td className="px-5 py-3.5">
-                      <p className="font-semibold text-slate-800">{wo.title}</p>
+                      <p className="font-semibold text-foreground">{wo.title}</p>
                       {wo.description && (
-                        <p className="text-slate-400 text-xs mt-0.5 line-clamp-1">{wo.description}</p>
+                        <p className="text-muted-foreground text-xs mt-0.5 line-clamp-1">{wo.description}</p>
                       )}
                     </td>
                     <td className="px-5 py-3.5">
-                      <p className="text-slate-700 font-medium">{wo.machine.name}</p>
-                      <p className="text-slate-400 text-xs mt-0.5">{wo.machine.code}</p>
+                      <p className="text-foreground font-medium">{wo.machine.name}</p>
+                      <p className="text-muted-foreground text-xs mt-0.5">{wo.machine.code}</p>
                     </td>
                     <td className="px-5 py-3.5">
                       {wo.assignee ? (
-                        <p className="text-slate-700 text-sm">
+                        <p className="text-foreground text-sm">
                           {wo.assignee.firstName} {wo.assignee.lastName}
                         </p>
                       ) : (
-                        <span className="text-slate-400 text-xs">ยังไม่มอบหมาย</span>
+                        <span className="text-muted-foreground text-xs">ยังไม่มอบหมาย</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="space-y-1">
-                        <p className="text-slate-500 text-xs">{formatDate(wo.createdAt)}</p>
+                        <p className="text-muted-foreground text-xs">{formatDate(wo.createdAt)}</p>
                         {wo.closedAt && (
                           <p className="text-green-600 text-xs">เสร็จ {formatDate(wo.closedAt)}</p>
                         )}
@@ -161,7 +161,7 @@ export default async function WorkOrdersPage(
             </table>
           </div>
         )}
-      </Card>
+      </GlassCard>
     </div>
   )
 }

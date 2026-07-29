@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import type { UserRole } from "@/lib/permissions"
+import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
 import { canReadHrAttendance, canReadHrPersonnel } from "@/lib/hr-settings-nav-access"
 import { HrModuleTabs, type HrTabDef } from "./hr-module-tabs"
 
@@ -9,6 +10,8 @@ export default async function HrLayout({ children }: { children: React.ReactNode
   if (!session) redirect("/login")
 
   const roles = session.user.roles as UserRole[]
+  if (!canEnterModuleArea(roles, "hr", session.user.moduleAccess)) redirect("/")
+
   const tabs: HrTabDef[] = []
   if (canReadHrPersonnel(roles)) {
     tabs.push({ href: "/hr/personnel", label: "ข้อมูลบุคลากร" })

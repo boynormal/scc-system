@@ -183,6 +183,8 @@ model User {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId    String    @map("company_id") @db.Uuid
   employeeCode String?   @map("employee_code") @db.VarChar(50)
+  // Login id (username OR email). Globally unique — no company picker on login (same model as email).
+  username     String    @unique @db.VarChar(50)
   // email stays globally unique on purpose — see Phase B decision below.
   email        String    @unique @db.VarChar(255)
   passwordHash String?   @map("password_hash")
@@ -222,16 +224,13 @@ model User {
   jobAttachmentsUploaded  JobAttachment[]         @relation("JobAttachmentUploader")
 
   // Phase B decision (2026-07-23): email stays globally @unique permanently — login
-  // (lib/auth.ts authorize()) looks up users by email alone with no company selector,
-  // so multi-company duplicate emails are not supported. The composite that used to
-  // coexist here was dropped as misleading (it can never add a constraint the global
-  // unique doesn't already enforce). Revisit only if a login redesign adds a company
-  // picker before password entry.
+  // may use email or username; both are globally unique (no company picker).
   // employeeCode is no longer globally unique — company scope is now the sole
   // enforced constraint (it's nullable; Postgres composite unique permits many NULLs).
   @@unique([companyId, employeeCode])
   @@index([companyId])
   @@index([email])
+  @@index([username])
   @@index([employeeCode])
   @@map("users")
 }

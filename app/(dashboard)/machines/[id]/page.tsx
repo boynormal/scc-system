@@ -4,10 +4,10 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, Edit, Calendar, Wrench, ClipboardList, Package } from "lucide-react"
 import { ClickableImage } from "@/components/ui/clickable-image"
+import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { MachineStatusBadge } from "@/components/machines/machine-status-badge"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDate } from "@/lib/utils"
 import { hasPermission, type UserRole } from "@/lib/permissions"
@@ -50,9 +50,9 @@ async function getMachine(id: string, companyId: string) {
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex items-start gap-3 py-2.5 border-b border-slate-100 last:border-0">
-      <span className="text-slate-400 text-sm w-40 shrink-0">{label}</span>
-      <span className="text-slate-800 text-sm font-medium">{value ?? "—"}</span>
+    <div className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+      <span className="text-muted-foreground text-sm w-40 shrink-0">{label}</span>
+      <span className="text-foreground text-sm font-medium">{value ?? "—"}</span>
     </div>
   )
 }
@@ -75,12 +75,12 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/machines" className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+          <Link href="/machines" className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-800">{machine.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{machine.name}</h1>
               <MachineStatusBadge status={machine.status} />
               {machine.criticalLevel >= 3 && (
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${criticalColors[machine.criticalLevel]}`}>
@@ -88,14 +88,14 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
                 </span>
               )}
             </div>
-            <p className="text-slate-500 text-sm mt-0.5">
+            <p className="text-muted-foreground text-sm mt-0.5">
               รหัส: {machine.code} · {machine.category.name} · {machine.branch.name}
             </p>
           </div>
         </div>
         <Link
           href={`/machines/${machine.id}/edit`}
-          className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 border border-border text-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors"
         >
           <Edit className="w-4 h-4" />
           แก้ไขข้อมูล
@@ -107,11 +107,11 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
         <div className="lg:col-span-2 space-y-5">
           {/* Images */}
           {machine.images.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle>รูปภาพเครื่องจักร</CardTitle></CardHeader>
+            <GlassCard>
+              <GlassCardHeader><GlassCardTitle>รูปภาพเครื่องจักร</GlassCardTitle></GlassCardHeader>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {machine.images.map((img) => (
-                  <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border-2 hover:border-blue-400 transition-colors ${img.isPrimary ? "border-blue-400" : "border-slate-200"}`}>
+                  <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border-2 hover:border-blue-400 transition-colors ${img.isPrimary ? "border-blue-400" : "border-border"}`}>
                     <ClickableImage src={img.fileUrl} alt={img.fileName || "Machine image"} fill sizes="(max-width: 768px) 33vw, 20vw" className="object-cover hover:scale-105 transition-transform" />
                     {img.isPrimary && (
                       <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full pointer-events-none z-10">หลัก</div>
@@ -119,11 +119,11 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
                   </div>
                 ))}
               </div>
-            </Card>
+            </GlassCard>
           )}
 
-          <Card>
-            <CardHeader><CardTitle>ข้อมูลทั่วไป</CardTitle></CardHeader>
+          <GlassCard>
+            <GlassCardHeader><GlassCardTitle>ข้อมูลทั่วไป</GlassCardTitle></GlassCardHeader>
             <InfoRow label="รหัสเครื่องจักร" value={machine.code} />
             <InfoRow label="ชื่อเครื่องจักร" value={machine.name} />
             <InfoRow label="ประเภท" value={machine.machineType} />
@@ -135,71 +135,71 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
             <InfoRow label="หมวดหมู่" value={machine.category.name} />
             <InfoRow label="ตำแหน่ง" value={machine.locationDetail} />
             {machine.description && (
-              <div className="py-2.5 border-b border-slate-100">
-                <span className="text-slate-400 text-sm block mb-1">รายละเอียด</span>
-                <p className="text-slate-800 text-sm whitespace-pre-wrap">{machine.description}</p>
+              <div className="py-2.5 border-b border-border">
+                <span className="text-muted-foreground text-sm block mb-1">รายละเอียด</span>
+                <p className="text-foreground text-sm whitespace-pre-wrap">{machine.description}</p>
               </div>
             )}
-          </Card>
+          </GlassCard>
 
           <MachineSparePartsCard machineId={machine.id} canEdit={canEditMachineBom} />
 
           {(machine.pmGeneral || machine.pmMajor) && (
-            <Card>
-              <CardHeader><CardTitle>ขอบเขตการซ่อมบำรุง (Scope of Work)</CardTitle></CardHeader>
+            <GlassCard>
+              <GlassCardHeader><GlassCardTitle>ขอบเขตการซ่อมบำรุง (Scope of Work)</GlassCardTitle></GlassCardHeader>
               <div className="space-y-5">
                 {machine.pmGeneral && (
                   <div>
-                    <p className="text-slate-600 font-medium text-sm mb-2 pb-1 border-b flex items-center gap-2">
+                    <p className="text-muted-foreground font-medium text-sm mb-2 pb-1 border-b flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">PM ทั่วไป</span>
                       General PM
                     </p>
-                    <pre className="text-slate-700 text-sm whitespace-pre-wrap font-sans leading-relaxed bg-slate-50 p-4 rounded-lg border">{machine.pmGeneral}</pre>
+                    <pre className="text-foreground text-sm whitespace-pre-wrap font-sans leading-relaxed bg-muted p-4 rounded-lg border">{machine.pmGeneral}</pre>
                   </div>
                 )}
                 {machine.pmMajor && (
                   <div>
-                    <p className="text-slate-600 font-medium text-sm mb-2 pb-1 border-b flex items-center gap-2">
+                    <p className="text-muted-foreground font-medium text-sm mb-2 pb-1 border-b flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">PM ใหญ่</span>
                       Major PM
                     </p>
-                    <pre className="text-slate-700 text-sm whitespace-pre-wrap font-sans leading-relaxed bg-slate-50 p-4 rounded-lg border">{machine.pmMajor}</pre>
+                    <pre className="text-foreground text-sm whitespace-pre-wrap font-sans leading-relaxed bg-muted p-4 rounded-lg border">{machine.pmMajor}</pre>
                   </div>
                 )}
               </div>
-            </Card>
+            </GlassCard>
           )}
 
-          <Card>
-            <CardHeader><CardTitle>วันที่สำคัญ</CardTitle></CardHeader>
+          <GlassCard>
+            <GlassCardHeader><GlassCardTitle>วันที่สำคัญ</GlassCardTitle></GlassCardHeader>
             <InfoRow label="วันที่ติดตั้ง" value={machine.installDate ? formatDate(machine.installDate) : undefined} />
             <InfoRow label="วันหมดประกัน" value={machine.warrantyExpireDate ? formatDate(machine.warrantyExpireDate) : undefined} />
             <InfoRow label="วันที่เพิ่มข้อมูล" value={formatDate(machine.createdAt)} />
             <InfoRow label="แก้ไขล่าสุด" value={formatDate(machine.updatedAt)} />
-          </Card>
+          </GlassCard>
 
           {/* Products */}
           {machine.products.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle>รายการสินค้า / ผลิตภัณฑ์</CardTitle></CardHeader>
+            <GlassCard>
+              <GlassCardHeader><GlassCardTitle>รายการสินค้า / ผลิตภัณฑ์</GlassCardTitle></GlassCardHeader>
               <div className="space-y-3">
                 {machine.products.map((product) => (
-                  <div key={product.id} className="flex gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div key={product.id} className="flex gap-3 p-3 bg-muted rounded-lg">
                     {product.imageUrl && (
-                      <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 shrink-0 hover:border-blue-400 transition-colors">
+                      <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border shrink-0 hover:border-blue-400 transition-colors">
                         <ClickableImage src={product.imageUrl} alt={product.name} fill sizes="64px" className="object-cover hover:scale-105 transition-transform" />
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{product.name}</p>
+                      <p className="text-sm font-semibold text-foreground">{product.name}</p>
                       {product.description && (
-                        <p className="text-xs text-slate-500 mt-0.5">{product.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{product.description}</p>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            </Card>
+            </GlassCard>
           )}
 
         </div>
@@ -212,28 +212,28 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
               { label: "แผนซ่อมบำรุง", value: machine.maintenancePlans.length, icon: Calendar, color: "bg-blue-500" },
               { label: "ใบสั่งงาน", value: machine.workOrders.length, icon: ClipboardList, color: "bg-amber-500" },
             ].map((stat) => (
-              <Card key={stat.label} padding="sm">
+              <GlassCard key={stat.label} padding="sm">
                 <div className={`w-9 h-9 ${stat.color} rounded-lg flex items-center justify-center mb-2`}>
                   <stat.icon className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{stat.label}</p>
-              </Card>
+                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+              </GlassCard>
             ))}
           </div>
 
           {/* Active Maintenance Plans */}
-          <Card>
-            <CardHeader>
-              <CardTitle>แผนซ่อมบำรุงที่ใช้งาน</CardTitle>
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>แผนซ่อมบำรุงที่ใช้งาน</GlassCardTitle>
               <Link href={`/maintenance/plans?machineId=${machine.id}`} className="text-blue-600 hover:text-blue-800 text-xs font-medium">
                 จัดการ →
               </Link>
-            </CardHeader>
+            </GlassCardHeader>
             {machine.maintenancePlans.length === 0 ? (
               <div className="text-center py-6">
-                <Wrench className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm">ยังไม่มีแผนซ่อมบำรุง</p>
+                <Wrench className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">ยังไม่มีแผนซ่อมบำรุง</p>
                 <Link
                   href={`/maintenance/plans/new?machineId=${machine.id}`}
                   className="mt-3 inline-flex items-center gap-1.5 text-blue-600 text-sm hover:text-blue-800"
@@ -244,8 +244,8 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
             ) : (
               <div className="space-y-2">
                 {machine.maintenancePlans.map((plan: NonNullable<typeof machine>["maintenancePlans"][number]) => (
-                  <div key={plan.id} className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-sm font-medium text-slate-800">{plan.name}</p>
+                  <div key={plan.id} className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium text-foreground">{plan.name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span
                         className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
@@ -253,7 +253,7 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
                       >
                         {plan.type.code}
                       </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-muted-foreground">
                         ทุก {plan.frequencyValue} {plan.frequencyUnit}
                       </span>
                     </div>
@@ -261,26 +261,26 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
                 ))}
               </div>
             )}
-          </Card>
+          </GlassCard>
 
           {/* Recent Work Orders */}
-          <Card>
-            <CardHeader>
-              <CardTitle>ใบสั่งงานล่าสุด</CardTitle>
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>ใบสั่งงานล่าสุด</GlassCardTitle>
               <Link href={`/work-orders?machineId=${machine.id}`} className="text-blue-600 hover:text-blue-800 text-xs font-medium">
                 ดูทั้งหมด →
               </Link>
-            </CardHeader>
+            </GlassCardHeader>
             {machine.workOrders.length === 0 ? (
-              <p className="text-slate-400 text-sm py-4 text-center">ยังไม่มีใบสั่งงาน</p>
+              <p className="text-muted-foreground text-sm py-4 text-center">ยังไม่มีใบสั่งงาน</p>
             ) : (
               <div className="space-y-2">
                 {machine.workOrders.map((wo: NonNullable<typeof machine>["workOrders"][number]) => (
-                  <div key={wo.id} className="flex flex-col gap-2 p-3 bg-slate-50 rounded-lg">
+                  <div key={wo.id} className="flex flex-col gap-2 p-3 bg-muted rounded-lg">
                     <div className="flex items-start justify-between">
                       <div className="pr-4">
-                        <p className="text-sm font-medium text-slate-800">{wo.title}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-sm font-medium text-foreground">{wo.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {wo.woNumber} · {wo.assignee ? `${wo.assignee.firstName} ${wo.assignee.lastName}` : "ยังไม่มอบหมาย"}
                         </p>
                       </div>
@@ -306,7 +306,7 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
                 ))}
               </div>
             )}
-          </Card>
+          </GlassCard>
         </div>
       </div>
     </div>

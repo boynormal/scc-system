@@ -243,7 +243,7 @@ export function LinkGpsVehicleModal({
   }
 
   const selectClass =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+    "w-full rounded-lg border border-border px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-cyan-500"
 
   return createPortal(
     <div
@@ -253,19 +253,19 @@ export function LinkGpsVehicleModal({
       aria-labelledby="link-gps-modal-title"
     >
       <div
-        className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl max-h-[90vh] overflow-y-auto"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h3 id="link-gps-modal-title" className="text-sm font-semibold text-slate-900">ผูก GPS กับ Master Data</h3>
-            <p className="mt-0.5 text-xs text-slate-500">เลือกทะเบียนจาก GPS — IMEI จะถูกบันทึกอัตโนมัติ</p>
+            <h3 id="link-gps-modal-title" className="text-sm font-semibold text-foreground">ผูก GPS กับ Master Data</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">เลือกทะเบียนจาก GPS — IMEI จะถูกบันทึกอัตโนมัติ</p>
           </div>
           <button
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-muted-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -274,7 +274,7 @@ export function LinkGpsVehicleModal({
         {/* GPS info read-only or picker */}
         {!gpsImei && linkableOptions.length > 0 ? (
           <div className="mb-4">
-            <label className="block text-xs font-medium text-slate-600 mb-1">ทะเบียนจาก GPS *</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">ทะเบียนจาก GPS *</label>
             <select
               value={selectedGpsId}
               onChange={(e) => {
@@ -294,14 +294,14 @@ export function LinkGpsVehicleModal({
         ) : null}
 
         {pickedGps && (
-          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+          <div className="mb-4 rounded-lg border border-border bg-muted px-3 py-2.5 text-sm">
             <div className="flex justify-between gap-2">
-              <span className="text-slate-500">ทะเบียน GPS</span>
-              <span className="font-mono font-semibold text-slate-900">{pickedGps.plateNumber || "—"}</span>
+              <span className="text-muted-foreground">ทะเบียน GPS</span>
+              <span className="font-mono font-semibold text-foreground">{pickedGps.plateNumber || "—"}</span>
             </div>
             <div className="mt-1 flex justify-between gap-2">
-              <span className="text-slate-500">IMEI</span>
-              <span className="font-mono text-xs text-slate-800">{pickedGps.imei}</span>
+              <span className="text-muted-foreground">IMEI</span>
+              <span className="font-mono text-xs text-foreground">{pickedGps.imei}</span>
             </div>
           </div>
         )}
@@ -319,7 +319,7 @@ export function LinkGpsVehicleModal({
         )}
 
         {/* Mode tabs */}
-        <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1">
+        <div className="mb-4 flex gap-1 rounded-lg bg-muted p-1">
           {(
             [
               { key: "link" as const, label: "ผูกกับรถที่มี" },
@@ -332,7 +332,7 @@ export function LinkGpsVehicleModal({
               onClick={() => setMode(t.key)}
               className={cn(
                 "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-                mode === t.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                mode === t.key ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {t.label}
@@ -347,7 +347,7 @@ export function LinkGpsVehicleModal({
         ) : mode === "link" ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">รถในระบบ (ยังไม่ผูก GPS)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">รถในระบบ (ยังไม่ผูก GPS)</label>
               <select
                 value={selectedVehicleId}
                 onChange={(e) => setSelectedVehicleId(e.target.value)}
@@ -377,7 +377,7 @@ export function LinkGpsVehicleModal({
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">สาขา *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">สาขา *</label>
               <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={selectClass}>
                 <option value="">-- เลือกสาขา --</option>
                 {branches.map((b) => (
@@ -386,7 +386,7 @@ export function LinkGpsVehicleModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อรถ *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">ชื่อรถ *</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -395,7 +395,7 @@ export function LinkGpsVehicleModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">ประเภทรถ *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">ประเภทรถ *</label>
               <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className={selectClass}>
                 <option value="">-- เลือกประเภท --</option>
                 {vehicleTypes.map((t) => (
@@ -404,7 +404,7 @@ export function LinkGpsVehicleModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">น้ำหนักรถเปล่า (กก.)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">น้ำหนักรถเปล่า (กก.)</label>
               <input
                 type="number"
                 min={0}
@@ -427,7 +427,7 @@ export function LinkGpsVehicleModal({
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/60"
           >
             ยกเลิก
           </button>

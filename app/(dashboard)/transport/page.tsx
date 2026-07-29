@@ -83,7 +83,7 @@ const JOB_STATUS_COLOR: Record<string, string> = {
   at_destination: "bg-emerald-100 text-emerald-800",
   unloading: "bg-emerald-100 text-emerald-800",
   completed: "bg-green-100 text-green-800",
-  cancelled: "bg-slate-100 text-slate-600",
+  cancelled: "bg-muted text-muted-foreground",
 }
 
 export default async function TransportDashboardPage() {
@@ -104,13 +104,13 @@ export default async function TransportDashboardPage() {
   return (
     <div className="space-y-8 p-4 md:p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">ภาพรวมขนส่ง</h1>
-        <p className="mt-1 text-sm text-slate-500">สถิติรถ คนขับ และใบงานขนส่ง</p>
+        <h1 className="text-2xl font-semibold text-foreground">ภาพรวมขนส่ง</h1>
+        <p className="mt-1 text-sm text-muted-foreground">สถิติรถ คนขับ และใบงานขนส่ง</p>
       </div>
 
       {/* Vehicle stats */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">ยานพาหนะ</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">ยานพาหนะ</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={<Truck className="h-5 w-5" />} label="รถทั้งหมด" value={stats.vehicles.total} color="bg-cyan-50 text-cyan-700" />
           <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="พร้อมใช้" value={stats.vehicles.available} color="bg-green-50 text-green-700" />
@@ -121,7 +121,7 @@ export default async function TransportDashboardPage() {
 
       {/* Driver stats */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">คนขับ</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">คนขับ</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <StatCard icon={<Users className="h-5 w-5" />} label="คนขับทั้งหมด" value={stats.drivers.total} color="bg-violet-50 text-violet-700" />
           <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="พร้อมรับงาน" value={stats.drivers.available} color="bg-green-50 text-green-700" />
@@ -130,9 +130,9 @@ export default async function TransportDashboardPage() {
 
       {/* Job stats */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">ใบงาน</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">ใบงาน</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={<ClipboardList className="h-5 w-5" />} label="ทั้งหมด" value={stats.jobs.total} color="bg-slate-50 text-slate-700" />
+          <StatCard icon={<ClipboardList className="h-5 w-5" />} label="ทั้งหมด" value={stats.jobs.total} color="bg-muted text-foreground" />
           <StatCard icon={<Clock className="h-5 w-5" />} label="รอมอบหมาย" value={stats.jobs.pending} color="bg-amber-50 text-amber-700" />
           <StatCard icon={<Truck className="h-5 w-5" />} label="กำลังดำเนินการ" value={stats.jobs.active} color="bg-blue-50 text-blue-700" />
           <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="เสร็จสิ้น" value={stats.jobs.completed} color="bg-green-50 text-green-700" />
@@ -142,14 +142,14 @@ export default async function TransportDashboardPage() {
       {/* Recent jobs */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">ใบงานล่าสุด</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">ใบงานล่าสุด</h2>
           <Link href="/transport/jobs" className="text-sm font-medium text-cyan-600 hover:text-cyan-700">
             ดูทั้งหมด →
           </Link>
         </div>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-xs font-medium uppercase tracking-wider text-slate-500">
+            <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left">เลขใบงาน</th>
                 <th className="px-4 py-3 text-left">ลูกค้า</th>
@@ -158,31 +158,31 @@ export default async function TransportDashboardPage() {
                 <th className="px-4 py-3 text-left">สถานะ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {recentJobs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-400">ยังไม่มีใบงาน</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">ยังไม่มีใบงาน</td>
                 </tr>
               ) : (
                 recentJobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-slate-50">
+                  <tr key={job.id} className="hover:bg-muted/60">
                     <td className="px-4 py-3 font-medium text-cyan-700">
                       <Link href={`/transport/jobs/${job.id}`}>{job.jobNumber}</Link>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{job.customerName ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-foreground">{job.customerName ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       {job.assignment ? (
                         <span>
                           {job.assignment.vehicle.plateNumber} /{" "}
                           {job.assignment.driver.firstName} {job.assignment.driver.lastName}
                         </span>
                       ) : (
-                        <span className="text-slate-400">ยังไม่มอบหมาย</span>
+                        <span className="text-muted-foreground">ยังไม่มอบหมาย</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{job._count.stops} จุด</td>
+                    <td className="px-4 py-3 text-muted-foreground">{job._count.stops} จุด</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${JOB_STATUS_COLOR[job.status] ?? "bg-slate-100 text-slate-600"}`}>
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${JOB_STATUS_COLOR[job.status] ?? "bg-muted text-muted-foreground"}`}>
                         {JOB_STATUS_LABEL[job.status] ?? job.status}
                       </span>
                     </td>

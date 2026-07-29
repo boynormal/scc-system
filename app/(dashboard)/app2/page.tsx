@@ -35,6 +35,7 @@ export default async function App2Page() {
         hiddenDepartmentIds={navPreferences.hiddenDepartmentIds}
         departmentOrderOverrides={navPreferences.departmentOrderOverrides}
         productLineImageOverrides={navPreferences.productLineImageOverrides}
+        moduleImageOverrides={navPreferences.moduleImageOverrides}
         appearance={navPreferences.appearance}
       />
     </div>

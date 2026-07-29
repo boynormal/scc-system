@@ -3,22 +3,53 @@ import sharp from "sharp"
 /**
  * โปรไฟล์การประมวลผลรูปตอนอัปโหลด — ใช้ร่วมกับ POST /api/upload
  * - "default": เก็บไฟล์ดิบเหมือนเดิม (รูปเครื่องจักร/อะไหล่/แนบไฟล์ ฯลฯ — ต้องการความละเอียดเดิม)
- * - "productLineIcon": ใช้เฉพาะไอคอนหมวด (product line) ที่หน้า /settings/home-screen —
+ * - "homeScreenIcon": ไอคอนหน้าจอหลัก (กลุ่มงาน / โมดูลย่อย) ที่ /settings/home-screen —
  *   ครอปเป็นสี่เหลี่ยมจัตุรัส กึ่งกลาง แล้วบีบอัดเป็น WebP ให้ตรงกับการแสดงผลจริง
- *   (sidebar rail / launcher ใช้ CSS `object-cover` ในกรอบสี่เหลี่ยม)
+ * - "productLineIcon": alias เก่าของ homeScreenIcon (ยังรับได้)
  */
-export type UploadProfile = "default" | "productLineIcon"
+export type UploadProfile = "default" | "homeScreenIcon" | "productLineIcon"
 
-export const UPLOAD_PROFILES = ["default", "productLineIcon"] as const
+export const UPLOAD_PROFILES = ["default", "homeScreenIcon", "productLineIcon"] as const
+
+export type HomeScreenAssetKind = "product-line" | "module"
+
+export const HOME_SCREEN_ASSET_KINDS = ["product-line", "module"] as const
 
 export function isUploadProfile(value: unknown): value is UploadProfile {
-  return value === "default" || value === "productLineIcon"
+  return value === "default" || value === "homeScreenIcon" || value === "productLineIcon"
+}
+
+export function isHomeScreenIconProfile(profile: UploadProfile): boolean {
+  return profile === "homeScreenIcon" || profile === "productLineIcon"
+}
+
+export function isHomeScreenAssetKind(value: unknown): value is HomeScreenAssetKind {
+  return value === "product-line" || value === "module"
 }
 
 /** ขนาดเป้าหมาย (px) สำหรับไอคอนหมวด — สี่เหลี่ยมจัตุรัส ใช้ทั้ง sidebar และ launcher */
 export const ICON_SQUARE_SIZE = 512
 
 const ICON_WEBP_QUALITY = 80
+
+const ASSET_ID_RE = /^[\w-]+$/
+
+export function isValidHomeScreenAssetId(value: unknown): value is string {
+  return typeof value === "string" && ASSET_ID_RE.test(value) && value.length <= 80
+}
+
+/** โฟลเดอร์ย่อยใต้ public/home-screen ตามชนิด asset */
+export function homeScreenSubdir(kind: HomeScreenAssetKind): "product-lines" | "modules" {
+  return kind === "product-line" ? "product-lines" : "modules"
+}
+
+/**
+ * URL พร้อม cache-bust สำหรับไฟล์ไอคอนหน้าจอหลัก
+ * รูปแบบ: /home-screen/{product-lines|modules}/{id}.webp?v={timestamp}
+ */
+export function homeScreenFileUrl(kind: HomeScreenAssetKind, assetId: string, cacheBust: number): string {
+  return `/home-screen/${homeScreenSubdir(kind)}/${assetId}.webp?v=${cacheBust}`
+}
 
 export interface ProcessedUpload {
   buffer: Buffer
@@ -35,7 +66,7 @@ export async function processUploadBuffer(
   originalExt: string,
   profile: UploadProfile
 ): Promise<ProcessedUpload> {
-  if (profile === "productLineIcon") {
+  if (isHomeScreenIconProfile(profile)) {
     const webp = await sharp(buffer)
       .rotate() // ปรับตาม EXIF orientation ก่อนครอป
       .resize(ICON_SQUARE_SIZE, ICON_SQUARE_SIZE, { fit: "cover", position: "centre" })

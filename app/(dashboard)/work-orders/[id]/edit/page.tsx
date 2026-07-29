@@ -7,11 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { BeforeAfterImages } from "@/components/ui/before-after-images"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 const schema = z.object({
   title: z.string().min(1, "กรุณากรอกหัวข้อ"),
@@ -137,12 +135,12 @@ export default function EditWorkOrderPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href={`/work-orders/${id}`} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+        <Link href={`/work-orders/${id}`} className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">แก้ไขใบสั่งงาน</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{woNumber} · {woTitle}</p>
+          <h1 className="text-2xl font-bold text-foreground">แก้ไขใบสั่งงาน</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{woNumber} · {woTitle}</p>
         </div>
       </div>
 
@@ -151,27 +149,27 @@ export default function EditWorkOrderPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลหลัก</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลหลัก</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select label="สถานะ" required options={statusOptions} {...register("status")} />
             <Select label="ความสำคัญ" required options={priorityOptions} {...register("priority")} />
             <div className="sm:col-span-2">
-              <Input label="หัวข้อ" required error={errors.title?.message} {...register("title")} />
+              <GlassInput label="หัวข้อ" required error={errors.title?.message} {...register("title")} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">รายละเอียด</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">รายละเอียด</label>
               <textarea
                 rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...register("description")}
               />
             </div>
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>การมอบหมายและเวลา</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>การมอบหมายและเวลา</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="ผู้รับผิดชอบ"
@@ -179,50 +177,50 @@ export default function EditWorkOrderPage() {
               options={users.map(u => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
               {...register("assignedTo")}
             />
-            <Input label="Downtime (นาที)" type="number" min={0} {...register("downtimeMin")} />
-            <Input label="วันเวลาเริ่มต้น (แผน)" type="datetime-local" {...register("plannedStart")} />
-            <Input label="วันเวลาสิ้นสุด (แผน)" type="datetime-local" {...register("plannedEnd")} />
-            <Input label="วันเวลาเริ่มจริง" type="datetime-local" {...register("actualStart")} />
-            <Input label="วันเวลาสิ้นสุดจริง" type="datetime-local" {...register("actualEnd")} />
+            <GlassInput label="Downtime (นาที)" type="number" min={0} {...register("downtimeMin")} />
+            <GlassInput label="วันเวลาเริ่มต้น (แผน)" type="datetime-local" {...register("plannedStart")} />
+            <GlassInput label="วันเวลาสิ้นสุด (แผน)" type="datetime-local" {...register("plannedEnd")} />
+            <GlassInput label="วันเวลาเริ่มจริง" type="datetime-local" {...register("actualStart")} />
+            <GlassInput label="วันเวลาสิ้นสุดจริง" type="datetime-local" {...register("actualEnd")} />
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>รูปภาพก่อน/หลังซ่อม</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รูปภาพก่อน/หลังซ่อม</GlassCardTitle></GlassCardHeader>
           <BeforeAfterImages
             beforeImages={imagesBefore}
             afterImages={imagesAfter}
             onBeforeChange={setImagesBefore}
             onAfterChange={setImagesAfter}
           />
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>สรุปผลการซ่อม</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>สรุปผลการซ่อม</GlassCardTitle></GlassCardHeader>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">สาเหตุของปัญหา (Root Cause)</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">สาเหตุของปัญหา (Root Cause)</label>
               <textarea rows={2} placeholder="อธิบายสาเหตุที่พบ..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...register("rootCause")} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">การแก้ไข (Corrective Action)</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">การแก้ไข (Corrective Action)</label>
               <textarea rows={3} placeholder="อธิบายสิ่งที่ดำเนินการเพื่อแก้ไขปัญหา..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...register("correctiveAction")} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">หมายเหตุ</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">หมายเหตุ</label>
               <textarea rows={2} placeholder="หมายเหตุเพิ่มเติม..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...register("remarks")} />
             </div>
           </div>
-        </Card>
+        </GlassCard>
 
         <div className="flex gap-3 justify-between">
-          <Button
+          <GlassButton
             type="button"
             variant="danger"
             icon={<Trash2 className="w-4 h-4" />}
@@ -234,17 +232,17 @@ export default function EditWorkOrderPage() {
             }}
           >
             ลบใบสั่งงาน
-          </Button>
+          </GlassButton>
           <div className="flex gap-3">
             <Link
               href={`/work-orders/${id}`}
-              className="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50"
+              className="px-4 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60"
             >
               ยกเลิก
             </Link>
-            <Button type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
+            <GlassButton type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
               บันทึก
-            </Button>
+            </GlassButton>
           </div>
         </div>
       </form>

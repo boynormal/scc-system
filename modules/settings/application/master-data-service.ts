@@ -1,16 +1,19 @@
 import { randomBytes } from "node:crypto"
 import { Prisma, type PrismaClient } from "@prisma/client"
 import { z } from "zod"
-import { ForbiddenError, NotFoundError } from "@/lib/errors"
-import type { Action, Resource } from "@/lib/permissions"
-
-type StoredPermission = Partial<Record<Resource, Action[]>> & { moduleAccess?: string[] | "all" }
+import { NotFoundError } from "@/lib/errors"
+import {
+  matrixFormToStored,
+  type StoredPermission,
+} from "@/shared/permissions/role-matrix"
 
 export const createBranchSchema = z.object({
   code: z.string().min(1).max(20),
   name: z.string().min(1).max(255),
   address: z.string().optional(),
   timezone: z.string().default("Asia/Bangkok"),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 })
 
 export const updateBranchSchema = z.object({
@@ -19,67 +22,39 @@ export const updateBranchSchema = z.object({
   address: z.string().nullable().optional(),
   timezone: z.string().optional(),
   isActive: z.boolean().optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 })
+
+function toBranchGeoData(input: {
+  latitude?: number | null
+  longitude?: number | null
+}) {
+  const data: { latitude?: Prisma.Decimal | null; longitude?: Prisma.Decimal | null } = {}
+  if (input.latitude !== undefined) {
+    data.latitude = input.latitude == null ? null : new Prisma.Decimal(input.latitude)
+  }
+  if (input.longitude !== undefined) {
+    data.longitude = input.longitude == null ? null : new Prisma.Decimal(input.longitude)
+  }
+  return data
+}
 
 export const createRoleSchema = z.object({
   name: z.string().min(1).max(100),
   permissions: z.record(z.boolean()).optional(),
-  moduleAccess: z.union([z.literal("all"), z.array(z.string())]).optional(),
 })
 
 export const updateRoleSchema = z.object({
   name: z.string().min(1).max(100),
   permissions: z.record(z.boolean()).optional(),
-  moduleAccess: z.union([z.literal("all"), z.array(z.string())]).optional(),
 })
-
-/**
- * แมปจาก dot-notation ในฟอร์ม เป็น { resource: actions[] }
- * "view" → "read", "edit" → "update", "close" → "approve", "manage" → หลาย action
- */
-const FORM_KEY_MAP: Record<string, { resource: Resource; actions: Action[] }> = {
-  "machines.view": { resource: "machines", actions: ["read"] },
-  "machines.create": { resource: "machines", actions: ["create"] },
-  "machines.edit": { resource: "machines", actions: ["update"] },
-  "machines.delete": { resource: "machines", actions: ["delete"] },
-  "work_orders.view": { resource: "work_orders", actions: ["read"] },
-  "work_orders.create": { resource: "work_orders", actions: ["create"] },
-  "work_orders.edit": { resource: "work_orders", actions: ["update"] },
-  "work_orders.close": { resource: "work_orders", actions: ["approve"] },
-  "maintenance.view": { resource: "maintenance_plans", actions: ["read"] },
-  "maintenance.create": { resource: "maintenance_plans", actions: ["create"] },
-  "maintenance.edit": { resource: "maintenance_plans", actions: ["update"] },
-  "spare_parts.view": { resource: "spare_parts", actions: ["read"] },
-  "spare_parts.create": { resource: "spare_parts", actions: ["create"] },
-  "spare_parts.edit": { resource: "spare_parts", actions: ["update"] },
-  "reports.view": { resource: "reports", actions: ["read"] },
-  "settings.view": { resource: "settings", actions: ["read"] },
-  "settings.manage": { resource: "settings", actions: ["read", "update"] },
-  "users.manage": { resource: "users", actions: ["create", "read", "update", "delete"] },
-}
 
 function normalizePermissions(
   raw: Record<string, boolean> | undefined,
-  moduleAccess?: string[] | "all"
+  previous?: Record<string, unknown> | null
 ): StoredPermission {
-  const out: StoredPermission = {}
-  if (raw) {
-    for (const [key, enabled] of Object.entries(raw)) {
-      if (!enabled) continue
-      const mapping = FORM_KEY_MAP[key]
-      if (!mapping) continue
-      const { resource, actions } = mapping
-      const existing = out[resource] ?? []
-      for (const action of actions) {
-        if (!existing.includes(action)) existing.push(action)
-      }
-      out[resource] = existing
-    }
-  }
-  if (moduleAccess !== undefined) {
-    out.moduleAccess = moduleAccess
-  }
-  return out
+  return matrixFormToStored(raw, previous)
 }
 
 export const createCategorySchema = z.object({
@@ -142,8 +117,13 @@ export async function createBranch(
   db: PrismaClient,
   params: { companyId: string; input: z.infer<typeof createBranchSchema> }
 ) {
+  const { latitude, longitude, ...rest } = params.input
   return db.branch.create({
-    data: { ...params.input, companyId: params.companyId },
+    data: {
+      ...rest,
+      companyId: params.companyId,
+      ...toBranchGeoData({ latitude, longitude }),
+    },
   })
 }
 
@@ -162,9 +142,13 @@ export async function updateBranch(
   })
   if (!branch) throw new NotFoundError("Branch not found")
 
+  const { latitude, longitude, ...rest } = params.input
   return db.branch.update({
     where: { id: params.id },
-    data: params.input,
+    data: {
+      ...rest,
+      ...toBranchGeoData({ latitude, longitude }),
+    },
   })
 }
 
@@ -198,8 +182,8 @@ export async function createRole(
   db: PrismaClient,
   params: { companyId: string; input: z.infer<typeof createRoleSchema> }
 ) {
-  const { name, permissions, moduleAccess } = params.input
-  const normalized = normalizePermissions(permissions, moduleAccess)
+  const { name, permissions } = params.input
+  const normalized = normalizePermissions(permissions)
   return db.role.create({
     data: { name, companyId: params.companyId, permissions: normalized as object },
   })
@@ -211,9 +195,18 @@ export async function updateRole(
 ) {
   const role = await db.role.findFirst({ where: { id: params.id, companyId: params.companyId } })
   if (!role) throw new NotFoundError("Role not found")
-  if (role.isSystem) throw new ForbiddenError("Cannot edit system role")
-  const { name, permissions, moduleAccess } = params.input
-  const normalized = normalizePermissions(permissions, moduleAccess)
+  const { name, permissions } = params.input
+  const previous = (role.permissions ?? null) as Record<string, unknown> | null
+  const normalized = normalizePermissions(permissions, previous)
+
+  // System roles: permissions editable; name locked (keeps DEFAULT_ROLE_PERMISSIONS key stable)
+  if (role.isSystem) {
+    return db.role.update({
+      where: { id: params.id },
+      data: { permissions: normalized as object },
+    })
+  }
+
   return db.role.update({
     where: { id: params.id },
     data: { name, permissions: normalized as object },

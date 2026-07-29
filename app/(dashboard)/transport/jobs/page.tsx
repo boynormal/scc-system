@@ -150,9 +150,9 @@ export default async function TransportJobsPage({
 
         <div>
 
-          <h1 className="text-xl font-semibold text-slate-900">ใบงานขนส่ง</h1>
+          <h1 className="text-xl font-semibold text-foreground">ใบงานขนส่ง</h1>
 
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
 
             {activeGroup.label} {result.total} รายการ
 
@@ -178,7 +178,7 @@ export default async function TransportJobsPage({
 
 
 
-      <div className="flex flex-wrap gap-x-1 overflow-x-auto border-b border-slate-200 -mb-px">
+      <div className="flex flex-wrap gap-x-1 overflow-x-auto border-b border-border -mb-px">
 
         {JOB_LIST_GROUPS.map((tab) => {
 
@@ -198,9 +198,9 @@ export default async function TransportJobsPage({
 
                 isActive
 
-                  ? "border-cyan-600 text-cyan-700"
+                  ? "border-cyan-600 text-cyan-700 dark:text-cyan-300"
 
-                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
 
               }`}
 
@@ -212,7 +212,7 @@ export default async function TransportJobsPage({
 
                 className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${
 
-                  isActive ? "bg-cyan-100 text-cyan-800" : "bg-slate-100 text-slate-600"
+                  isActive ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-200" : "bg-muted text-muted-foreground"
 
                 }`}
 
@@ -238,7 +238,7 @@ export default async function TransportJobsPage({
 
       {result.total > 20 && (
 
-        <div className="flex items-center justify-between text-sm text-slate-600">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
 
           <span>
 
@@ -266,7 +266,7 @@ export default async function TransportJobsPage({
 
                 })}
 
-                className="rounded-lg border px-3 py-1.5 hover:bg-slate-50"
+                className="rounded-lg border px-3 py-1.5 hover:bg-muted/60"
 
               >
 
@@ -294,7 +294,7 @@ export default async function TransportJobsPage({
 
                 })}
 
-                className="rounded-lg border px-3 py-1.5 hover:bg-slate-50"
+                className="rounded-lg border px-3 py-1.5 hover:bg-muted/60"
 
               >
 

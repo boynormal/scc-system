@@ -61,11 +61,11 @@ export default function NavCommandPalette({ navItems }: { navItems: ModuleNavNod
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+        className="flex items-center gap-2 rounded-lg border border-border bg-muted px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         title="ค้นหาเมนู (Ctrl+K หรือ ⌘K)"
       >
         <Search className="w-4 h-4 shrink-0" />
-        <span className="hidden sm:inline text-xs text-slate-500 tabular-nums">Ctrl+K</span>
+        <span className="hidden sm:inline text-xs text-muted-foreground tabular-nums">Ctrl+K</span>
       </button>
 
       {open ? (
@@ -77,22 +77,22 @@ export default function NavCommandPalette({ navItems }: { navItems: ModuleNavNod
           onMouseDown={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden"
+            className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl overflow-hidden"
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="border-b border-slate-100 p-3">
+            <div className="border-b border-border p-3">
               <input
                 type="search"
                 autoFocus
                 placeholder="ค้นหาหน้า… (ชื่อ, path, โมดูล)"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full border-0 bg-transparent px-1 py-1 text-base text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+                className="w-full border-0 bg-transparent px-1 py-1 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
               />
             </div>
             <ul className="max-h-[min(50vh,320px)] overflow-y-auto py-1">
               {filtered.length === 0 ? (
-                <li className="px-4 py-6 text-center text-sm text-slate-500">ไม่พบรายการ</li>
+                <li className="px-4 py-6 text-center text-sm text-muted-foreground">ไม่พบรายการ</li>
               ) : (
                 filtered.map((item, idx) => (
                   <li key={`${item.href}-${idx}`}>
@@ -104,8 +104,8 @@ export default function NavCommandPalette({ navItems }: { navItems: ModuleNavNod
                         "flex flex-col gap-0.5"
                       )}
                     >
-                      <span className="font-medium text-slate-800">{item.label}</span>
-                      <span className="text-xs text-slate-400 font-mono truncate">{item.href}</span>
+                      <span className="font-medium text-foreground">{item.label}</span>
+                      <span className="text-xs text-muted-foreground font-mono truncate">{item.href}</span>
                     </button>
                   </li>
                 ))

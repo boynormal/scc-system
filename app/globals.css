@@ -24,12 +24,26 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* Glass design tokens (RGB channels + alpha) */
+    --glass-rgb: 255 255 255;
+    --glass-bg-alpha: 0.55;
+    --glass-bg-soft-alpha: 0.35;
+    --glass-bg-strong-alpha: 0.72;
+    --glass-border-rgb: 255 255 255;
+    --glass-border-alpha: 0.55;
+    --glass-shadow: 0 8px 32px rgb(15 23 42 / 0.08);
+    --glass-blur: 20px;
+    --glass-radius: 1.25rem;
+    --glass-ring: 59 130 246 / 0.35;
+    --glass-ambient-from: 241 245 249;
+    --glass-ambient-to: 226 232 240;
   }
 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 217.2 32% 16%;
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
@@ -37,15 +51,42 @@
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217.2 32.6% 22%;
+    /* Brighter secondary text for dark glass surfaces */
+    --muted-foreground: 215 25% 78%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    /* Stronger edges so cards/tables separate from ambient */
+    --border: 215 20% 38%;
+    --input: 215 20% 38%;
     --ring: 224.3 76.3% 48%;
+
+    /* Lifted glass fill + clearer rim against dark ambient */
+    --glass-rgb: 30 41 59;
+    --glass-bg-alpha: 0.55;
+    --glass-bg-soft-alpha: 0.4;
+    --glass-bg-strong-alpha: 0.72;
+    --glass-border-rgb: 255 255 255;
+    --glass-border-alpha: 0.28;
+    --glass-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.06),
+      0 10px 36px rgb(0 0 0 / 0.45);
+    --glass-ring: 96 165 250 / 0.35;
+    --glass-ambient-from: 15 23 42;
+    --glass-ambient-to: 2 6 23;
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    :root,
+    .dark {
+      --glass-bg-alpha: 0.92;
+      --glass-bg-soft-alpha: 0.88;
+      --glass-bg-strong-alpha: 0.96;
+      --glass-border-alpha: 0.4;
+      --glass-blur: 0px;
+    }
   }
 }
 
@@ -56,5 +97,31 @@
   body {
     @apply bg-background text-foreground;
     font-family: "Noto Sans Thai", "Inter", sans-serif;
+  }
+}
+
+@layer utilities {
+  .bg-glass-ambient {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgb(125 211 252 / 0.35), transparent 55%),
+      radial-gradient(ellipse 70% 45% at 90% 10%, rgb(196 181 253 / 0.28), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgb(253 186 116 / 0.2), transparent 55%),
+      linear-gradient(
+        160deg,
+        rgb(var(--glass-ambient-from)),
+        rgb(var(--glass-ambient-to))
+      );
+  }
+
+  .dark .bg-glass-ambient {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgb(56 189 248 / 0.12), transparent 55%),
+      radial-gradient(ellipse 70% 45% at 90% 10%, rgb(139 92 246 / 0.12), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgb(244 114 182 / 0.08), transparent 55%),
+      linear-gradient(
+        160deg,
+        rgb(var(--glass-ambient-from)),
+        rgb(var(--glass-ambient-to))
+      );
   }
 }

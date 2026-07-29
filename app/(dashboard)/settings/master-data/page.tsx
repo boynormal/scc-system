@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
+import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { SupplierLinkedPartsDialog } from "@/components/settings/supplier-linked-parts-dialog"
 import { CategoryLinkedMachinesDialog } from "@/components/settings/category-linked-machines-dialog"
 
@@ -86,56 +83,56 @@ function CategoriesTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => { setEditingId("new"); setEditForm({ name: "", code: "" }) }} icon={<Plus className="w-4 h-4"/>}>
+        <GlassButton onClick={() => { setEditingId("new"); setEditForm({ name: "", code: "" }) }} icon={<Plus className="w-4 h-4"/>}>
           เพิ่มหมวดหมู่
-        </Button>
+        </GlassButton>
       </div>
-      <Card padding="none">
+      <GlassCard padding="none">
         <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 border-b border-slate-200">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="px-4 py-3 font-semibold text-slate-600">รหัส</th>
-              <th className="px-4 py-3 font-semibold text-slate-600">ชื่อหมวดหมู่</th>
-              <th className="px-4 py-3 font-semibold text-slate-600 text-center">ใช้งาน</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">รหัส</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อหมวดหมู่</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground text-center">ใช้งาน</th>
               <th className="px-4 py-3 w-32"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {editingId === "new" && (
               <tr className="bg-blue-50/50">
-                <td className="px-4 py-3"><Input value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} placeholder="รหัส" className="h-8" /></td>
-                <td className="px-4 py-3"><Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="ชื่อหมวดหมู่ *" className="h-8 border-blue-300" /></td>
+                <td className="px-4 py-3"><GlassInput value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} placeholder="รหัส" className="h-8" /></td>
+                <td className="px-4 py-3"><GlassInput value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="ชื่อหมวดหมู่ *" className="h-8 border-blue-300" /></td>
                 <td className="px-4 py-3 text-center">-</td>
                 <td className="px-4 py-3 text-right space-x-2">
-                  <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
                   <button onClick={() => handleSave("new")} className="p-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 rounded"><Save className="w-4 h-4" /></button>
                 </td>
               </tr>
             )}
             {data.map(item => (
-              <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+              <tr key={item.id} className="hover:bg-muted/60 transition-colors">
                 {editingId === item.id ? (
                   <>
-                    <td className="px-4 py-3"><Input value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} className="h-8" /></td>
-                    <td className="px-4 py-3"><Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="h-8 border-blue-300" /></td>
-                    <td className="px-4 py-3 text-center text-slate-500">
+                    <td className="px-4 py-3"><GlassInput value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} className="h-8" /></td>
+                    <td className="px-4 py-3"><GlassInput value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="h-8 border-blue-300" /></td>
+                    <td className="px-4 py-3 text-center text-muted-foreground">
                       {item._count?.machines || 0} เครื่อง
                     </td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+                      <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
                       <button onClick={() => handleSave(item.id)} className="p-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 rounded"><Save className="w-4 h-4" /></button>
                     </td>
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-3 font-mono text-slate-500">{item.code || "-"}</td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
-                    <td className="px-4 py-3 text-slate-600 align-top">
+                    <td className="px-4 py-3 font-mono text-muted-foreground">{item.code || "-"}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground align-top">
                       {(item._count?.machines || 0) === 0 ? (
-                        <div className="text-center text-slate-400">—</div>
+                        <div className="text-center text-muted-foreground">—</div>
                       ) : (
                         <div className="flex flex-col gap-1.5 items-center">
-                          <span className="text-sm font-semibold text-slate-700 tabular-nums">
+                          <span className="text-sm font-semibold text-foreground tabular-nums">
                             {item._count?.machines || 0} เครื่อง
                           </span>
                           <button
@@ -155,8 +152,8 @@ function CategoriesTab() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, code: item.code || "" }) }} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, code: item.code || "" }) }} className="p-1.5 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   </>
                 )}
@@ -164,8 +161,8 @@ function CategoriesTab() {
             ))}
           </tbody>
         </table>
-      </Card>
-      <p className="text-xs text-slate-500">
+      </GlassCard>
+      <p className="text-xs text-muted-foreground">
         จำนวนเครื่องนับเฉพาะที่ยังไม่ถูกลบออกจากระบบ · กดดูรายการเครื่องเพื่อเปิดรายการพร้อมช่องค้นหา
       </p>
       <CategoryLinkedMachinesDialog
@@ -228,65 +225,65 @@ function DepartmentsTab({ branches }: { branches: any[] }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => { setEditingId("new"); setEditForm({ name: "", code: "", branchId: branches[0]?.id || "", isActive: true }) }} icon={<Plus className="w-4 h-4"/>}>
+        <GlassButton onClick={() => { setEditingId("new"); setEditForm({ name: "", code: "", branchId: branches[0]?.id || "", isActive: true }) }} icon={<Plus className="w-4 h-4"/>}>
           เพิ่มแผนก
-        </Button>
+        </GlassButton>
       </div>
-      <Card padding="none">
+      <GlassCard padding="none">
         <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 border-b border-slate-200">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="px-4 py-3 font-semibold text-slate-600">รหัส</th>
-              <th className="px-4 py-3 font-semibold text-slate-600">ชื่อแผนก</th>
-              <th className="px-4 py-3 font-semibold text-slate-600">สาขา</th>
-              <th className="px-4 py-3 font-semibold text-slate-600 text-center">อ้างอิงเครื่องจักร</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">รหัส</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อแผนก</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">สาขา</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground text-center">อ้างอิงเครื่องจักร</th>
               <th className="px-4 py-3 w-32"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {editingId === "new" && (
               <tr className="bg-blue-50/50">
-                <td className="px-4 py-3"><Input value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} placeholder="รหัส" className="h-8" /></td>
-                <td className="px-4 py-3"><Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="ชื่อแผนก *" className="h-8 border-blue-300" /></td>
+                <td className="px-4 py-3"><GlassInput value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} placeholder="รหัส" className="h-8" /></td>
+                <td className="px-4 py-3"><GlassInput value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="ชื่อแผนก *" className="h-8 border-blue-300" /></td>
                 <td className="px-4 py-3">
-                  <select className="h-8 px-2 border border-slate-300 rounded text-sm w-full outline-blue-500" value={editForm.branchId} onChange={e => setEditForm({ ...editForm, branchId: e.target.value })}>
+                  <select className="h-8 w-full rounded border border-input bg-background px-2 text-sm text-foreground outline-blue-500" value={editForm.branchId} onChange={e => setEditForm({ ...editForm, branchId: e.target.value })}>
                     <option value="">เลือกสาขา</option>
                     {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </td>
                 <td className="px-4 py-3 text-center">-</td>
                 <td className="px-4 py-3 text-right space-x-2">
-                  <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
                   <button onClick={() => handleSave("new")} className="p-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 rounded"><Save className="w-4 h-4" /></button>
                 </td>
               </tr>
             )}
             {data.map(item => (
-              <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+              <tr key={item.id} className="hover:bg-muted/60 transition-colors">
                 {editingId === item.id ? (
                   <>
-                    <td className="px-4 py-3"><Input value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} className="h-8" /></td>
-                    <td className="px-4 py-3"><Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="h-8 border-blue-300" /></td>
+                    <td className="px-4 py-3"><GlassInput value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} className="h-8" /></td>
+                    <td className="px-4 py-3"><GlassInput value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="h-8 border-blue-300" /></td>
                     <td className="px-4 py-3">
-                      <select className="h-8 px-2 border border-slate-300 rounded text-sm w-full outline-blue-500" value={editForm.branchId} onChange={e => setEditForm({ ...editForm, branchId: e.target.value })}>
+                      <select className="h-8 w-full rounded border border-input bg-background px-2 text-sm text-foreground outline-blue-500" value={editForm.branchId} onChange={e => setEditForm({ ...editForm, branchId: e.target.value })}>
                         {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
                     </td>
                     <td className="px-4 py-3 text-center">{item._count?.machines || 0}</td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+                      <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
                       <button onClick={() => handleSave(item.id)} className="p-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 rounded"><Save className="w-4 h-4" /></button>
                     </td>
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-3 font-mono text-slate-500">{item.code || "-"}</td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{item.branch?.name}</td>
-                    <td className="px-4 py-3 text-center text-slate-500">{item._count?.machines || 0}</td>
+                    <td className="px-4 py-3 font-mono text-muted-foreground">{item.code || "-"}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{item.branch?.name}</td>
+                    <td className="px-4 py-3 text-center text-muted-foreground">{item._count?.machines || 0}</td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, code: item.code || "", branchId: item.branchId, isActive: item.isActive }) }} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, code: item.code || "", branchId: item.branchId, isActive: item.isActive }) }} className="p-1.5 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   </>
                 )}
@@ -294,7 +291,7 @@ function DepartmentsTab({ branches }: { branches: any[] }) {
             ))}
           </tbody>
         </table>
-      </Card>
+      </GlassCard>
     </div>
   )
 }
@@ -347,44 +344,44 @@ function MaintenanceTypesTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => { setEditingId("new"); setEditForm({ name: "", code: "", color: "#3b82f6" }) }} icon={<Plus className="w-4 h-4"/>}>
+        <GlassButton onClick={() => { setEditingId("new"); setEditForm({ name: "", code: "", color: "#3b82f6" }) }} icon={<Plus className="w-4 h-4"/>}>
           เพิ่มประเภท
-        </Button>
+        </GlassButton>
       </div>
-      <Card padding="none">
+      <GlassCard padding="none">
         <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 border-b border-slate-200">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="px-4 py-3 font-semibold text-slate-600 w-24">สีแนะนำ</th>
-              <th className="px-4 py-3 font-semibold text-slate-600">รหัส</th>
-              <th className="px-4 py-3 font-semibold text-slate-600">ชื่อประเภทงานซ่อม</th>
-              <th className="px-4 py-3 font-semibold text-slate-600 text-center">อ้างอิงใช้งาน</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สีแนะนำ</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">รหัส</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อประเภทงานซ่อม</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground text-center">อ้างอิงใช้งาน</th>
               <th className="px-4 py-3 w-32"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {editingId === "new" && (
               <tr className="bg-blue-50/50">
                 <td className="px-4 py-3"><input type="color" value={editForm.color} onChange={e => setEditForm(prev => ({ ...prev, color: e.target.value }))} className="w-8 h-8 rounded shrink-0 cursor-pointer" /></td>
-                <td className="px-4 py-3"><Input value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} placeholder="PM, BM *" className="h-8 border-blue-300" /></td>
-                <td className="px-4 py-3"><Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="Preventive Maintenance *" className="h-8 border-blue-300" /></td>
+                <td className="px-4 py-3"><GlassInput value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} placeholder="PM, BM *" className="h-8 border-blue-300" /></td>
+                <td className="px-4 py-3"><GlassInput value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="Preventive Maintenance *" className="h-8 border-blue-300" /></td>
                 <td className="px-4 py-3 text-center">-</td>
                 <td className="px-4 py-3 text-right space-x-2">
-                  <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
                   <button onClick={() => handleSave("new")} className="p-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 rounded"><Save className="w-4 h-4" /></button>
                 </td>
               </tr>
             )}
             {data.map(item => (
-              <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+              <tr key={item.id} className="hover:bg-muted/60 transition-colors">
                 {editingId === item.id ? (
                   <>
                     <td className="px-4 py-3"><input type="color" value={editForm.color} onChange={e => setEditForm(prev => ({ ...prev, color: e.target.value }))} className="w-8 h-8 rounded shrink-0 cursor-pointer" /></td>
-                    <td className="px-4 py-3"><Input value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} className="h-8 border-blue-300" /></td>
-                    <td className="px-4 py-3"><Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="h-8 border-blue-300" /></td>
+                    <td className="px-4 py-3"><GlassInput value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} className="h-8 border-blue-300" /></td>
+                    <td className="px-4 py-3"><GlassInput value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="h-8 border-blue-300" /></td>
                     <td className="px-4 py-3 text-center">{item._count?.workOrders || 0} ใบสั่งงาน / {item._count?.maintenancePlans || 0} แผน</td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+                      <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
                       <button onClick={() => handleSave(item.id)} className="p-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 rounded"><Save className="w-4 h-4" /></button>
                     </td>
                   </>
@@ -394,11 +391,11 @@ function MaintenanceTypesTab() {
                       <div className="w-6 h-6 rounded border border-black/10 shadow-sm" style={{ backgroundColor: item.color || "#ccc" }} />
                     </td>
                     <td className="px-4 py-3 font-mono font-medium" style={{ color: item.color || "inherit" }}>{item.code}</td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
-                    <td className="px-4 py-3 text-center text-slate-500 text-xs">{(item._count?.workOrders || 0) + (item._count?.maintenancePlans || 0)} รายการ</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                    <td className="px-4 py-3 text-center text-muted-foreground text-xs">{(item._count?.workOrders || 0) + (item._count?.maintenancePlans || 0)} รายการ</td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, code: item.code, color: item.color || "#3b82f6" }) }} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, code: item.code, color: item.color || "#3b82f6" }) }} className="p-1.5 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   </>
                 )}
@@ -406,7 +403,7 @@ function MaintenanceTypesTab() {
             ))}
           </tbody>
         </table>
-      </Card>
+      </GlassCard>
     </div>
   )
 }
@@ -547,22 +544,22 @@ function SuppliersTab() {
   const formGrid = (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {editingId && editingId !== "new" && (
-        <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
           รหัสซัพพลายเออร์:{" "}
-          <span className="font-mono font-medium text-slate-800">
+          <span className="font-mono font-medium text-foreground">
             {data.find((r) => r.id === editingId)?.code ?? "—"}
           </span>
-          <span className="text-slate-400 ml-2">ออกโดยระบบอัตโนมัติ (แก้ไขไม่ได้)</span>
+          <span className="text-muted-foreground ml-2">ออกโดยระบบอัตโนมัติ (แก้ไขไม่ได้)</span>
         </div>
       )}
       {editingId === "new" && (
-        <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2 text-xs text-slate-600">
-          รหัสจะถูกสร้างอัตโนมัติหลังบันทึก <span className="text-slate-400">(รูปแบบ S-XXXXXXXXXXXX)</span>
+        <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-blue-100 bg-blue-50/60 dark:border-blue-900/50 dark:bg-blue-950/40 px-3 py-2 text-xs text-muted-foreground">
+          รหัสจะถูกสร้างอัตโนมัติหลังบันทึก <span className="text-muted-foreground">(รูปแบบ S-XXXXXXXXXXXX)</span>
         </div>
       )}
       <div className="sm:col-span-2">
-        <label className="text-xs text-slate-500 block mb-1">ชื่อซัพพลายเออร์ *</label>
-        <Input
+        <label className="mb-1 block text-xs text-muted-foreground">ชื่อซัพพลายเออร์ *</label>
+        <GlassInput
           value={editForm.name}
           onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
           placeholder="บริษัท ..."
@@ -570,24 +567,24 @@ function SuppliersTab() {
         />
       </div>
       <div>
-        <label className="text-xs text-slate-500 block mb-1">ผู้ติดต่อ</label>
-        <Input
+        <label className="mb-1 block text-xs text-muted-foreground">ผู้ติดต่อ</label>
+        <GlassInput
           value={editForm.contactName}
           onChange={(e) => setEditForm((f) => ({ ...f, contactName: e.target.value }))}
           className="h-9"
         />
       </div>
       <div>
-        <label className="text-xs text-slate-500 block mb-1">โทรศัพท์</label>
-        <Input
+        <label className="mb-1 block text-xs text-muted-foreground">โทรศัพท์</label>
+        <GlassInput
           value={editForm.phone}
           onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
           className="h-9"
         />
       </div>
       <div>
-        <label className="text-xs text-slate-500 block mb-1">อีเมล</label>
-        <Input
+        <label className="mb-1 block text-xs text-muted-foreground">อีเมล</label>
+        <GlassInput
           value={editForm.email}
           onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
           className="h-9"
@@ -595,8 +592,8 @@ function SuppliersTab() {
         />
       </div>
       <div>
-        <label className="text-xs text-slate-500 block mb-1">วันรอของ (Lead time)</label>
-        <Input
+        <label className="mb-1 block text-xs text-muted-foreground">วันรอของ (Lead time)</label>
+        <GlassInput
           value={editForm.leadTimeDays}
           onChange={(e) => setEditForm((f) => ({ ...f, leadTimeDays: e.target.value }))}
           className="h-9"
@@ -606,20 +603,20 @@ function SuppliersTab() {
         />
       </div>
       <div className="sm:col-span-2">
-        <label className="text-xs text-slate-500 block mb-1">ที่อยู่</label>
-        <Input
+        <label className="mb-1 block text-xs text-muted-foreground">ที่อยู่</label>
+        <GlassInput
           value={editForm.address}
           onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
           className="h-9"
         />
       </div>
       <div className="flex items-end pb-1">
-        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
           <input
             type="checkbox"
             checked={editForm.isActive}
             onChange={(e) => setEditForm((f) => ({ ...f, isActive: e.target.checked }))}
-            className="rounded border-slate-300"
+            className="rounded border-border dark:border-slate-600"
           />
           เปิดใช้งาน
         </label>
@@ -630,7 +627,7 @@ function SuppliersTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button
+        <GlassButton
           onClick={() => {
             setEditingId("new")
             setEditForm({ ...emptySupplierForm })
@@ -638,68 +635,68 @@ function SuppliersTab() {
           icon={<Plus className="w-4 h-4" />}
         >
           เพิ่มซัพพลายเออร์
-        </Button>
+        </GlassButton>
       </div>
-      <Card padding="none">
+      <GlassCard padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[760px]">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-4 py-3 font-semibold text-slate-600">รหัส</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">ชื่อ</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">ผู้ติดต่อ</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">โทร</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 text-center">Lead (วัน)</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-[140px]">อะไหล่</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">สถานะ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">รหัส</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">ผู้ติดต่อ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">โทร</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Lead (วัน)</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-[140px]">อะไหล่</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
                 <th className="px-4 py-3 w-28"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {editingId === "new" && (
                 <tr className="bg-blue-50/50">
                   <td colSpan={8} className="px-4 py-4">
                     {formGrid}
                     <div className="flex justify-end gap-2 mt-4">
-                      <Button variant="outline" type="button" onClick={() => setEditingId(null)}>
+                      <GlassButton variant="outline" type="button" onClick={() => setEditingId(null)}>
                         ยกเลิก
-                      </Button>
-                      <Button type="button" onClick={() => handleSave("new")} icon={<Save className="w-4 h-4" />}>
+                      </GlassButton>
+                      <GlassButton type="button" onClick={() => handleSave("new")} icon={<Save className="w-4 h-4" />}>
                         บันทึก
-                      </Button>
+                      </GlassButton>
                     </div>
                   </td>
                 </tr>
               )}
               {data.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={item.id} className="hover:bg-muted/60 transition-colors">
                   {editingId === item.id ? (
                     <td colSpan={8} className="px-4 py-4 bg-blue-50/30">
                       {formGrid}
                       <div className="flex justify-end gap-2 mt-4">
-                        <Button variant="outline" type="button" onClick={() => setEditingId(null)}>
+                        <GlassButton variant="outline" type="button" onClick={() => setEditingId(null)}>
                           ยกเลิก
-                        </Button>
-                        <Button type="button" onClick={() => handleSave(item.id)} icon={<Save className="w-4 h-4" />}>
+                        </GlassButton>
+                        <GlassButton type="button" onClick={() => handleSave(item.id)} icon={<Save className="w-4 h-4" />}>
                           บันทึก
-                        </Button>
+                        </GlassButton>
                       </div>
                     </td>
                   ) : (
                     <>
-                      <td className="px-4 py-3 font-mono text-slate-700">{item.code}</td>
-                      <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
-                      <td className="px-4 py-3 text-slate-600">{item.contactName ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-600">{item.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-center text-slate-600">
+                      <td className="px-4 py-3 font-mono text-foreground">{item.code}</td>
+                      <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{item.contactName ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{item.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-center text-muted-foreground">
                         {item.leadTimeDays != null ? item.leadTimeDays : "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 align-top">
+                      <td className="px-4 py-3 text-muted-foreground align-top">
                         {item._count.spareParts === 0 ? (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-muted-foreground">—</span>
                         ) : (
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-sm font-semibold text-slate-700 tabular-nums">
+                            <span className="text-sm font-semibold text-foreground tabular-nums">
                               {item._count.spareParts} รายการ
                             </span>
                             <button
@@ -721,7 +718,7 @@ function SuppliersTab() {
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                            item.isActive ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"
+                            item.isActive ? "bg-green-100 text-green-800" : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {item.isActive ? "ใช้งาน" : "ปิด"}
@@ -731,14 +728,14 @@ function SuppliersTab() {
                         <button
                           type="button"
                           onClick={() => startEdit(item)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"
+                          className="p-1.5 text-muted-foreground hover:text-blue-600 transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(item.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"
+                          className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -750,8 +747,8 @@ function SuppliersTab() {
             </tbody>
           </table>
         </div>
-      </Card>
-      <p className="text-xs text-slate-500">
+      </GlassCard>
+      <p className="text-xs text-muted-foreground">
         รหัสซัพพลายเออร์สร้างอัตโนมัติเท่านั้น (ไม่ซ้ำทั้งระบบ · รูปแบบ S-XXXXXXXXXXXX) · หน้าเพิ่มอะไหล่แสดงเฉพาะซัพพลายเออร์ที่เปิดใช้งาน · รายชื่ออะไหล่จำนวนมากเปิดในหน้าต่างพร้อมช่องค้นหา
       </p>
 
@@ -781,18 +778,18 @@ export default function MasterDataPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">ข้อมูลพื้นฐาน (Master Data)</h1>
-        <p className="text-slate-500 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-foreground">ข้อมูลพื้นฐาน (Master Data)</h1>
+        <p className="text-muted-foreground text-sm mt-1">
           จัดการหมวดหมู่ แผนก ประเภทการซ่อมบำรุง และซัพพลายเออร์ในระบบ
         </p>
       </div>
 
-      <div className="flex flex-wrap border-b border-slate-200 gap-x-1">
+      <div className="flex flex-wrap border-b border-border gap-x-1">
         <button
           onClick={() => setActiveTab("categories")}
           className={classNames(
             "px-5 py-3 text-sm font-medium border-b-2 transition-colors",
-            activeTab === "categories" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            activeTab === "categories" ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           หมวดหมู่เครื่องจักร
@@ -801,7 +798,7 @@ export default function MasterDataPage() {
           onClick={() => setActiveTab("departments")}
           className={classNames(
             "px-5 py-3 text-sm font-medium border-b-2 transition-colors",
-            activeTab === "departments" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            activeTab === "departments" ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           แผนก / ฝ่าย (Departments)
@@ -810,7 +807,7 @@ export default function MasterDataPage() {
           onClick={() => setActiveTab("maintenance-types")}
           className={classNames(
             "px-5 py-3 text-sm font-medium border-b-2 transition-colors",
-            activeTab === "maintenance-types" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            activeTab === "maintenance-types" ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           ประเภทงานซ่อม (Maintenance Types)
@@ -822,7 +819,7 @@ export default function MasterDataPage() {
             "px-5 py-3 text-sm font-medium border-b-2 transition-colors",
             activeTab === "suppliers"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           ซัพพลายเออร์ (Suppliers)

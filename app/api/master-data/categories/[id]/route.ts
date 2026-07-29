@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/shared/db"
 import { auth } from "@/lib/auth"
+import type { UserRole } from "@/lib/permissions"
+import { forbidUnlessPermission } from "@/lib/require-permission"
 import { deleteCategory, updateCategory, updateCategorySchema } from "@/modules/settings"
 
 export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "settings", "update")
+  if (denied) return denied
 
   const body = await req.json()
   const parsed = updateCategorySchema.safeParse(body)
@@ -26,6 +31,9 @@ export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: s
   const params = await props.params
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "settings", "delete")
+  if (denied) return denied
 
   const result = await deleteCategory(prisma, {
     id: params.id,

@@ -54,11 +54,11 @@ export function AssignDriverModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+      <div className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">เลือกคนขับ</h3>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <h3 className="text-sm font-semibold text-foreground">เลือกคนขับ</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               มอบหมาย {jobNumber} → รถ {vehiclePlate}
             </p>
           </div>
@@ -66,7 +66,7 @@ export function AssignDriverModal({
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-muted-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -75,14 +75,14 @@ export function AssignDriverModal({
         <GpsLinkWarning gpsDeviceId={gpsDeviceId} plateNumber={vehiclePlate} compact />
 
         <div className="mt-3">
-          <label className="block text-xs font-medium text-slate-600 mb-1">คนขับ</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">คนขับ</label>
           {drivers.length === 0 ? (
             <p className="text-sm text-red-600">ไม่มีคนขับผูกกับรถคันนี้ — กรุณามอบหมายจากหน้าใบงาน</p>
           ) : (
             <select
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             >
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -102,7 +102,7 @@ export function AssignDriverModal({
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/60"
           >
             ยกเลิก
           </button>

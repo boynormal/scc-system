@@ -70,7 +70,7 @@ export default function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+        className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
@@ -81,10 +81,10 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <div className="absolute right-0 top-12 w-80 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-800 text-sm">การแจ้งเตือน</span>
+              <span className="font-semibold text-foreground text-sm">การแจ้งเตือน</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">
                   {unreadCount}
@@ -96,14 +96,14 @@ export default function NotificationBell() {
                 <button
                   onClick={markAllRead}
                   title="อ่านทั้งหมด"
-                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   <CheckCheck className="w-4 h-4" />
                 </button>
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-lg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -112,7 +112,7 @@ export default function NotificationBell() {
 
           <div className="max-h-96 overflow-y-auto divide-y divide-slate-50">
             {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                 <Bell className="w-8 h-8 mb-2 opacity-30" />
                 <p className="text-sm">ไม่มีการแจ้งเตือน</p>
               </div>
@@ -120,18 +120,18 @@ export default function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`flex gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer ${!n.isRead ? "bg-blue-50/40" : ""}`}
+                  className={`flex gap-3 px-4 py-3 hover:bg-muted/60 transition-colors cursor-pointer ${!n.isRead ? "bg-blue-50/40" : ""}`}
                   onClick={() => {
                     if (!n.isRead) markRead(n.id)
                     if (n.link) window.location.href = n.link
                   }}
                 >
-                  <div className="mt-0.5 shrink-0 w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                    {typeIcon[n.type] ?? <Bell className="w-4 h-4 text-slate-500" />}
+                  <div className="mt-0.5 shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                    {typeIcon[n.type] ?? <Bell className="w-4 h-4 text-muted-foreground" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm leading-snug ${!n.isRead ? "font-semibold text-slate-800" : "text-slate-700"}`}>
+                      <p className={`text-sm leading-snug ${!n.isRead ? "font-semibold text-foreground" : "text-foreground"}`}>
                         {n.title}
                       </p>
                       {!n.isRead && (
@@ -139,9 +139,9 @@ export default function NotificationBell() {
                       )}
                     </div>
                     {n.message && (
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                     )}
-                    <p className="text-xs text-slate-400 mt-1">{formatDateTime(n.createdAt)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{formatDateTime(n.createdAt)}</p>
                   </div>
                 </div>
               ))

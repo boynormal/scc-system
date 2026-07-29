@@ -90,75 +90,34 @@ describe("isAdminInBranch / isAdminInAnyBranch", () => {
 })
 
 describe("canAccessModule", () => {
-  it("allows Admin to access any module regardless of moduleAccess restrictions", () => {
-    const roles: UserRole[] = [role({ roleName: "Admin", permissions: { moduleAccess: ["hr"] } as never })]
+  it("allows Admin to access any module even with a restrictive user override", () => {
+    const roles: UserRole[] = [role({ roleName: "Admin" })]
 
-    expect(canAccessModule(roles, "transport")).toBe(true)
+    expect(canAccessModule(roles, "transport", ["hr"])).toBe(true)
   })
 
-  it("allows access when moduleAccess is not set on the role (backward compat)", () => {
-    const roles: UserRole[] = [role({ roleName: "Viewer", permissions: null })]
-
-    expect(canAccessModule(roles, "hr")).toBe(true)
-  })
-
-  it("allows access when moduleAccess is the literal string \"all\"", () => {
-    const roles: UserRole[] = [
-      role({ roleName: "Viewer", permissions: { moduleAccess: "all" } as never }),
-    ]
-
-    expect(canAccessModule(roles, "transport")).toBe(true)
-  })
-
-  it("denies access when moduleAccess is a list that does not include the moduleId", () => {
+  it("allows all modules when there is no user override (ignores legacy Role moduleAccess)", () => {
     const roles: UserRole[] = [
       role({ roleName: "Viewer", permissions: { moduleAccess: ["hr"] } as never }),
     ]
 
-    expect(canAccessModule(roles, "transport")).toBe(false)
-    expect(canAccessModule(roles, "hr")).toBe(true)
-  })
-
-  it("allows access if any of the user's multiple roles grants the module", () => {
-    const roles: UserRole[] = [
-      role({ branchId: "branch-1", roleName: "Viewer", permissions: { moduleAccess: ["hr"] } as never }),
-      role({ branchId: "branch-2", roleName: "Viewer", permissions: { moduleAccess: ["transport"] } as never }),
-    ]
-
     expect(canAccessModule(roles, "transport")).toBe(true)
+    expect(canAccessModule(roles, "hr")).toBe(true)
+    expect(canAccessModule(roles, "hr", null)).toBe(true)
+    expect(canAccessModule(roles, "transport", undefined)).toBe(true)
   })
 
-  it("ignores the role's moduleAccess and uses the per-user override when provided", () => {
-    const roles: UserRole[] = [
-      role({ roleName: "Viewer", permissions: { moduleAccess: "all" } as never }),
-    ]
+  it("restricts modules when a per-user override list is provided", () => {
+    const roles: UserRole[] = [role({ roleName: "Viewer", permissions: null })]
 
-    // Role allows everything, but the user-level override restricts to just "hr"
     expect(canAccessModule(roles, "transport", ["hr"])).toBe(false)
     expect(canAccessModule(roles, "hr", ["hr"])).toBe(true)
   })
 
-  it("falls back to role-level moduleAccess when the override is null or undefined", () => {
-    const roles: UserRole[] = [
-      role({ roleName: "Viewer", permissions: { moduleAccess: ["hr"] } as never }),
-    ]
-
-    expect(canAccessModule(roles, "hr", null)).toBe(true)
-    expect(canAccessModule(roles, "transport", undefined)).toBe(false)
-  })
-
   it("treats a user-level override of \"all\" as unrestricted", () => {
-    const roles: UserRole[] = [
-      role({ roleName: "Viewer", permissions: { moduleAccess: ["hr"] } as never }),
-    ]
+    const roles: UserRole[] = [role({ roleName: "Viewer" })]
 
     expect(canAccessModule(roles, "transport", "all")).toBe(true)
-  })
-
-  it("still allows Admin to access any module even with a restrictive user-level override", () => {
-    const roles: UserRole[] = [role({ roleName: "Admin" })]
-
-    expect(canAccessModule(roles, "transport", ["hr"])).toBe(true)
   })
 })
 

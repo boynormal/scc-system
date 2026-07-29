@@ -4,8 +4,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 import { formatDate } from "@/lib/utils"
 import { prisma } from "@/shared/db"
 import { getWorkOrderDetailForPage } from "@/modules/work_orders"
@@ -41,12 +41,12 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/work-orders" className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+          <Link href="/work-orders" className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">{workOrder.title}</h1>
-            <p className="text-slate-500 text-sm mt-0.5">{workOrder.woNumber}</p>
+            <h1 className="text-2xl font-bold text-foreground">{workOrder.title}</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">{workOrder.woNumber}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -62,43 +62,43 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card padding="none">
-            <CardHeader><CardTitle>ข้อมูลใบสั่งงาน</CardTitle></CardHeader>
+          <GlassCard padding="none">
+            <GlassCardHeader><GlassCardTitle>ข้อมูลใบสั่งงาน</GlassCardTitle></GlassCardHeader>
             <div className="px-5 pb-5 space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-slate-400 mb-1">เครื่องจักร</p>
-                  <p className="font-medium text-slate-800">{workOrder.machine.name}</p>
-                  <p className="text-slate-500 text-xs mt-0.5">{workOrder.machine.branch.name}</p>
+                  <p className="text-muted-foreground mb-1">เครื่องจักร</p>
+                  <p className="font-medium text-foreground">{workOrder.machine.name}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">{workOrder.machine.branch.name}</p>
                 </div>
                 <div>
-                  <p className="text-slate-400 mb-1">ความสำคัญ</p>
+                  <p className="text-muted-foreground mb-1">ความสำคัญ</p>
                   <Badge variant={priorityLabel[workOrder.priority]?.variant ?? "default"}>
                     {priorityLabel[workOrder.priority]?.label ?? workOrder.priority}
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-slate-400 mb-1">ผู้รับผิดชอบ</p>
+                  <p className="text-muted-foreground mb-1">ผู้รับผิดชอบ</p>
                   {workOrder.assignee ? (
-                    <p className="font-medium text-slate-800">
+                    <p className="font-medium text-foreground">
                       {workOrder.assignee.firstName} {workOrder.assignee.lastName}
                     </p>
                   ) : (
-                    <span className="text-slate-400 text-sm">ยังไม่มอบหมาย</span>
+                    <span className="text-muted-foreground text-sm">ยังไม่มอบหมาย</span>
                   )}
                 </div>
                 <div>
-                  <p className="text-slate-400 mb-1">Downtime (นาที)</p>
-                  <p className="font-medium text-slate-800">
+                  <p className="text-muted-foreground mb-1">Downtime (นาที)</p>
+                  <p className="font-medium text-foreground">
                     {workOrder.downtimeMin > 0 ? `${workOrder.downtimeMin} นาที` : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-400 mb-1">วันที่สร้าง</p>
-                  <p className="font-medium text-slate-800">{formatDate(workOrder.createdAt)}</p>
+                  <p className="text-muted-foreground mb-1">วันที่สร้าง</p>
+                  <p className="font-medium text-foreground">{formatDate(workOrder.createdAt)}</p>
                 </div>
                 <div>
-                  <p className="text-slate-400 mb-1">สถานะ</p>
+                  <p className="text-muted-foreground mb-1">สถานะ</p>
                   <Badge variant={statusLabel[workOrder.status]?.variant ?? "default"}>
                     {statusLabel[workOrder.status]?.label ?? workOrder.status}
                   </Badge>
@@ -106,105 +106,105 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
               </div>
               {workOrder.description && (
                 <div>
-                  <p className="text-slate-400 mb-1 text-sm">รายละเอียด</p>
-                  <p className="text-slate-700 text-sm whitespace-pre-wrap">{workOrder.description}</p>
+                  <p className="text-muted-foreground mb-1 text-sm">รายละเอียด</p>
+                  <p className="text-foreground text-sm whitespace-pre-wrap">{workOrder.description}</p>
                 </div>
               )}
               {(workOrder.actualStart || workOrder.actualEnd) && (
                 <div className="grid grid-cols-2 gap-4">
                   {workOrder.actualStart && (
                     <div>
-                      <p className="text-slate-400 mb-1 text-sm">เริ่มจริง</p>
-                      <p className="font-medium text-slate-800">{formatDate(workOrder.actualStart)}</p>
+                      <p className="text-muted-foreground mb-1 text-sm">เริ่มจริง</p>
+                      <p className="font-medium text-foreground">{formatDate(workOrder.actualStart)}</p>
                     </div>
                   )}
                   {workOrder.actualEnd && (
                     <div>
-                      <p className="text-slate-400 mb-1 text-sm">เสร็จจริง</p>
-                      <p className="font-medium text-slate-800">{formatDate(workOrder.actualEnd)}</p>
+                      <p className="text-muted-foreground mb-1 text-sm">เสร็จจริง</p>
+                      <p className="font-medium text-foreground">{formatDate(workOrder.actualEnd)}</p>
                     </div>
                   )}
                 </div>
               )}
               {workOrder.closedAt && (
                 <div>
-                  <p className="text-slate-400 mb-1 text-sm">วันที่ปิด</p>
-                  <p className="font-medium text-slate-800">{formatDate(workOrder.closedAt)}</p>
+                  <p className="text-muted-foreground mb-1 text-sm">วันที่ปิด</p>
+                  <p className="font-medium text-foreground">{formatDate(workOrder.closedAt)}</p>
                 </div>
               )}
               {workOrder.rootCause && (
                 <div>
-                  <p className="text-slate-400 mb-1 text-sm">สาเหตุ (Root Cause)</p>
-                  <p className="text-slate-700 text-sm whitespace-pre-wrap">{workOrder.rootCause}</p>
+                  <p className="text-muted-foreground mb-1 text-sm">สาเหตุ (Root Cause)</p>
+                  <p className="text-foreground text-sm whitespace-pre-wrap">{workOrder.rootCause}</p>
                 </div>
               )}
               {workOrder.correctiveAction && (
                 <div>
-                  <p className="text-slate-400 mb-1 text-sm">การแก้ไข (Corrective Action)</p>
-                  <p className="text-slate-700 text-sm whitespace-pre-wrap">{workOrder.correctiveAction}</p>
+                  <p className="text-muted-foreground mb-1 text-sm">การแก้ไข (Corrective Action)</p>
+                  <p className="text-foreground text-sm whitespace-pre-wrap">{workOrder.correctiveAction}</p>
                 </div>
               )}
               {workOrder.remarks && (
                 <div>
-                  <p className="text-slate-400 mb-1 text-sm">หมายเหตุ</p>
-                  <p className="text-slate-700 text-sm whitespace-pre-wrap">{workOrder.remarks}</p>
+                  <p className="text-muted-foreground mb-1 text-sm">หมายเหตุ</p>
+                  <p className="text-foreground text-sm whitespace-pre-wrap">{workOrder.remarks}</p>
                 </div>
               )}
             </div>
-          </Card>
+          </GlassCard>
 
           {workOrder.checklistResults.length > 0 && (
-            <Card padding="none">
-              <CardHeader><CardTitle>ผลการตรวจสอบ Checklist</CardTitle></CardHeader>
+            <GlassCard padding="none">
+              <GlassCardHeader><GlassCardTitle>ผลการตรวจสอบ Checklist</GlassCardTitle></GlassCardHeader>
               <div className="px-5 pb-5 space-y-2">
                 {workOrder.checklistResults.map((result: NonNullable<typeof workOrder>["checklistResults"][number]) => (
-                  <div key={result.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded">
+                  <div key={result.id} className="flex items-center gap-3 p-2 bg-muted rounded">
                     <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
                       result.status === "pass" ? "bg-green-500 border-green-500" :
                       result.status === "fail" ? "bg-red-500 border-red-500" :
-                      "border-slate-300"
+                      "border-border"
                     }`}>
                       {result.status === "pass" && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
                       {result.status === "fail" && <XCircle className="w-2.5 h-2.5 text-white" />}
                     </div>
-                    <span className="text-sm text-slate-700">{result.item.itemName}</span>
+                    <span className="text-sm text-foreground">{result.item.itemName}</span>
                     {result.actualValue && (
-                      <span className="text-xs text-slate-500 ml-auto">{result.actualValue}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{result.actualValue}</span>
                     )}
                   </div>
                 ))}
               </div>
-            </Card>
+            </GlassCard>
           )}
 
           {workOrder.parts.length > 0 && (
-            <Card padding="none">
-              <CardHeader><CardTitle>อะไหล่ที่ใช้</CardTitle></CardHeader>
+            <GlassCard padding="none">
+              <GlassCardHeader><GlassCardTitle>อะไหล่ที่ใช้</GlassCardTitle></GlassCardHeader>
               <div className="px-5 pb-5 space-y-2">
                 {workOrder.parts.map((p: NonNullable<typeof workOrder>["parts"][number]) => (
-                  <div key={p.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                  <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded">
                     <div>
-                      <p className="text-sm font-medium text-slate-800">{p.part.name}</p>
-                      <p className="text-xs text-slate-500">{p.part.code}</p>
+                      <p className="text-sm font-medium text-foreground">{p.part.name}</p>
+                      <p className="text-xs text-muted-foreground">{p.part.code}</p>
                     </div>
-                    <p className="text-sm text-slate-700">{p.qtyUsed} {p.part.unit}</p>
+                    <p className="text-sm text-foreground">{p.qtyUsed} {p.part.unit}</p>
                   </div>
                 ))}
               </div>
-            </Card>
+            </GlassCard>
           )}
         </div>
 
         <div className="space-y-6">
-          <Card padding="none">
-            <CardHeader><CardTitle>ข้อมูลเพิ่มเติม</CardTitle></CardHeader>
+          <GlassCard padding="none">
+            <GlassCardHeader><GlassCardTitle>ข้อมูลเพิ่มเติม</GlassCardTitle></GlassCardHeader>
             <div className="px-5 pb-5 space-y-3">
               {workOrder.schedule && (
                 <div>
-                  <p className="text-slate-400 mb-1 text-sm">เชื่อมโยงกับกำหนดการ</p>
-                  <div className="p-2 bg-slate-50 rounded">
-                    <p className="text-sm font-medium text-slate-800">{workOrder.schedule.plan.name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-muted-foreground mb-1 text-sm">เชื่อมโยงกับกำหนดการ</p>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-sm font-medium text-foreground">{workOrder.schedule.plan.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       กำหนด: {formatDate(workOrder.schedule.dueDate)}
                     </p>
                     {workOrder.schedule.plan.type && (
@@ -222,18 +222,18 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
                 </div>
               )}
             </div>
-          </Card>
+          </GlassCard>
 
           {((workOrder.imagesBefore?.length > 0) || (workOrder.imagesAfter?.length > 0)) && (
-            <Card>
-              <CardHeader><CardTitle>รูปภาพก่อน/หลังซ่อม</CardTitle></CardHeader>
+            <GlassCard>
+              <GlassCardHeader><GlassCardTitle>รูปภาพก่อน/หลังซ่อม</GlassCardTitle></GlassCardHeader>
               <div className="space-y-4">
                 {workOrder.imagesBefore && Array.isArray(workOrder.imagesBefore) && (workOrder.imagesBefore as string[]).length > 0 && (
                   <div>
-                    <p className="text-sm font-medium text-slate-700 mb-2">รูปก่อนซ่อม</p>
+                    <p className="text-sm font-medium text-foreground mb-2">รูปก่อนซ่อม</p>
                     <div className="grid grid-cols-3 gap-2">
                       {(workOrder.imagesBefore as string[]).map((img: string, idx: number) => (
-                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
+                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-border">
                           <Image src={img} alt={`Before ${idx + 1}`} fill className="object-cover" />
                         </div>
                       ))}
@@ -242,10 +242,10 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
                 )}
                 {workOrder.imagesAfter && Array.isArray(workOrder.imagesAfter) && (workOrder.imagesAfter as string[]).length > 0 && (
                   <div>
-                    <p className="text-sm font-medium text-slate-700 mb-2">รูปหลังซ่อม</p>
+                    <p className="text-sm font-medium text-foreground mb-2">รูปหลังซ่อม</p>
                     <div className="grid grid-cols-3 gap-2">
                       {(workOrder.imagesAfter as string[]).map((img: string, idx: number) => (
-                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
+                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-border">
                           <Image src={img} alt={`After ${idx + 1}`} fill className="object-cover" />
                         </div>
                       ))}
@@ -253,11 +253,11 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
                   </div>
                 )}
               </div>
-            </Card>
+            </GlassCard>
           )}
 
-          <Card padding="none">
-            <CardHeader><CardTitle>ดำเนินการ</CardTitle></CardHeader>
+          <GlassCard padding="none">
+            <GlassCardHeader><GlassCardTitle>ดำเนินการ</GlassCardTitle></GlassCardHeader>
             <div className="px-5 pb-5 space-y-3">
               {workOrder.status === "open" && (
                 <Link
@@ -277,12 +277,12 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
               )}
               <Link
                 href={`/work-orders/${params.id}/edit`}
-                className="block w-full text-center px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                className="block w-full text-center px-4 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors"
               >
                 แก้ไขใบสั่งงาน
               </Link>
             </div>
-          </Card>
+          </GlassCard>
         </div>
       </div>
     </div>

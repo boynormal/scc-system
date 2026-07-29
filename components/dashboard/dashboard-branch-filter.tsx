@@ -25,12 +25,12 @@ export function DashboardBranchFilter({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <label htmlFor="dashboard-branch" className="text-sm font-medium text-slate-600 shrink-0">
+      <label htmlFor="dashboard-branch" className="text-sm font-medium text-muted-foreground shrink-0">
         สาขา
       </label>
       <select
         id="dashboard-branch"
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-card min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
         value={currentBranchId ?? "all"}
         onChange={(e) => onChange(e.target.value)}
       >

@@ -238,7 +238,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
 
   if (jobs.length === 0 && vehicles.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
         ไม่มีใบงานในช่วงนี้
       </div>
     )
@@ -267,16 +267,16 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
       )}
 
       {unassignedJobs.length > 0 && (
-        <p className="mb-2 text-xs text-slate-500">
+        <p className="mb-2 text-xs text-muted-foreground">
           ลากใบงานจากแถว &quot;ยังไม่มอบหมายรถ&quot; ไปวางที่แถวรถ (วันเดียวกับวันนัด)
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <table className="min-w-full border-collapse text-sm">
           <thead>
-            <tr className="bg-slate-50">
-              <th className="w-40 border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-semibold text-slate-500">
+            <tr className="bg-muted">
+              <th className="w-40 border-b border-r border-border px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
                 ทะเบียนรถ
               </th>
               {days.map((day, i) => {
@@ -286,27 +286,27 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                   <th
                     key={i}
                     className={cn(
-                      "min-w-[120px] border-b border-r border-slate-200 px-2 py-3 text-center text-xs font-semibold",
-                      isToday ? "bg-cyan-50 text-cyan-700" : isWeekend ? "text-slate-400" : "text-slate-600"
+                      "min-w-[120px] border-b border-r border-border px-2 py-3 text-center text-xs font-semibold",
+                      isToday ? "bg-cyan-50 text-cyan-700" : isWeekend ? "text-muted-foreground" : "text-muted-foreground"
                     )}
                   >
                     <div>{DAY_SHORT[day.getDay()]}</div>
                     <div className={cn("text-base font-bold", isToday && "text-cyan-600")}>
                       {day.getDate()}
                     </div>
-                    <div className="font-normal text-slate-400">{MONTH_SHORT[day.getMonth()]}</div>
+                    <div className="font-normal text-muted-foreground">{MONTH_SHORT[day.getMonth()]}</div>
                   </th>
                 )
               })}
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {vehicles.map((vehicle) => (
-              <tr key={vehicle.id} className="hover:bg-slate-50/50">
-                <td className="border-r border-slate-200 px-4 py-3">
-                  <div className="font-semibold text-slate-800">{vehicle.plateNumber}</div>
-                  <div className="text-xs text-slate-400 truncate max-w-[120px]">{vehicle.name}</div>
+              <tr key={vehicle.id} className="hover:bg-muted/60/50">
+                <td className="border-r border-border px-4 py-3">
+                  <div className="font-semibold text-foreground">{vehicle.plateNumber}</div>
+                  <div className="text-xs text-muted-foreground truncate max-w-[120px]">{vehicle.name}</div>
                 </td>
                 {days.map((day, dayIdx) => {
                   const dayJobs = jobsForVehicleDay(vehicle.id, day)
@@ -320,7 +320,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                       onDragLeave={() => setDropTarget(null)}
                       onDrop={(e) => handleDrop(e, vehicle.id, dayIdx)}
                       className={cn(
-                        "relative border-r border-slate-100 px-1.5 py-2 align-top min-h-[48px]",
+                        "relative border-r border-border px-1.5 py-2 align-top min-h-[48px]",
                         isToday && "bg-cyan-50/30",
                         isDropTarget && "bg-cyan-100/60 ring-2 ring-inset ring-cyan-400"
                       )}
@@ -341,7 +341,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
 
             {unassignedJobs.length > 0 && (
               <tr className="bg-amber-50/30 hover:bg-amber-50/50">
-                <td className="border-r border-slate-200 px-4 py-3">
+                <td className="border-r border-border px-4 py-3">
                   <div className="text-xs font-semibold text-amber-700">ยังไม่มอบหมายรถ</div>
                   <div className="text-[10px] text-amber-600/80">ลากไปวางที่แถวรถ</div>
                 </td>
@@ -352,7 +352,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                     <td
                       key={dayIdx}
                       className={cn(
-                        "relative border-r border-slate-100 px-1.5 py-2 align-top",
+                        "relative border-r border-border px-1.5 py-2 align-top",
                         isToday && "bg-cyan-50/30"
                       )}
                     >

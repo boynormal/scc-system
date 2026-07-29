@@ -8,10 +8,8 @@ import { z } from "zod"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
-import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 const schema = z.object({
   machineId: z.string().uuid(),
@@ -83,18 +81,18 @@ function NewMaintenancePlanForm() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/maintenance/plans" className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+        <Link href="/maintenance/plans" className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">สร้างแผนซ่อมบำรุง</h1>
-          <p className="text-slate-500 text-sm mt-0.5">กำหนด PM/CM พร้อมความถี่และ checklist</p>
+          <h1 className="text-2xl font-bold text-foreground">สร้างแผนซ่อมบำรุง</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">กำหนด PM/CM พร้อมความถี่และ checklist</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลพื้นฐาน</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลพื้นฐาน</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="เครื่องจักร"
@@ -112,22 +110,22 @@ function NewMaintenancePlanForm() {
               error={errors.typeId?.message}
               {...register("typeId")}
             />
-            <Input label="ชื่อแผน" required error={errors.name?.message} {...register("name")} />
-            <Input label="ระยะเวลาโดยประมาณ (นาที)" type="number" {...register("estimatedDurationMin")} />
+            <GlassInput label="ชื่อแผน" required error={errors.name?.message} {...register("name")} />
+            <GlassInput label="ระยะเวลาโดยประมาณ (นาที)" type="number" {...register("estimatedDurationMin")} />
           </div>
           <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700 mb-1">ขอบเขตการทำงาน (Scope of Work) / รายละเอียด</label>
+            <label className="block text-sm font-medium text-foreground mb-1">ขอบเขตการทำงาน (Scope of Work) / รายละเอียด</label>
             <textarea
               rows={5}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               placeholder="ระบุรายการที่ต้องทำ เช่น&#10;- ตรวจสอบสายไฟ ท่อไฟ&#10;- อัดจารบีลูกปืน&#10;- เช็คความร้อนด้วย Temp Gun"
               {...register("description")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>ความถี่และวันที่</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ความถี่และวันที่</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="ความถี่"
@@ -136,7 +134,7 @@ function NewMaintenancePlanForm() {
               error={errors.frequencyUnit?.message}
               {...register("frequencyUnit")}
             />
-            <Input
+            <GlassInput
               label="ค่าความถี่"
               required
               type="number"
@@ -145,15 +143,15 @@ function NewMaintenancePlanForm() {
               error={errors.frequencyValue?.message}
               {...register("frequencyValue")}
             />
-            <Input
+            <GlassInput
               label="วันที่เริ่มต้น"
               required
               type="date"
               error={errors.startDate?.message}
               {...register("startDate")}
             />
-            <Input label="วันที่สิ้นสุด (ถ้ามี)" type="date" {...register("endDate")} />
-            <Input
+            <GlassInput label="วันที่สิ้นสุด (ถ้ามี)" type="date" {...register("endDate")} />
+            <GlassInput
               label="จำนวนวันแจ้งเตือนล่วงหน้า"
               type="number"
               min={0}
@@ -161,7 +159,7 @@ function NewMaintenancePlanForm() {
               {...register("leadTimeDays")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -170,12 +168,12 @@ function NewMaintenancePlanForm() {
         )}
 
         <div className="flex gap-3 justify-end">
-          <Link href="/maintenance/plans" className="px-5 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
+          <Link href="/maintenance/plans" className="px-5 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors">
             ยกเลิก
           </Link>
-          <Button type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
+          <GlassButton type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
             สร้างแผนซ่อมบำรุง
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

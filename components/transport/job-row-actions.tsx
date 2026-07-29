@@ -18,7 +18,7 @@ export function JobRowActions({ jobId, jobStatus }: Props) {
         <Link
           href={`/transport/jobs/${jobId}/edit`}
           title="แก้ไข"
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
         >
           <Pencil className="h-3.5 w-3.5" />
           แก้ไข
@@ -28,7 +28,7 @@ export function JobRowActions({ jobId, jobStatus }: Props) {
         href={`/transport/jobs/${jobId}/print`}
         target="_blank"
         title="พิมพ์"
-        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
       >
         <Printer className="h-3.5 w-3.5" />
         พิมพ์

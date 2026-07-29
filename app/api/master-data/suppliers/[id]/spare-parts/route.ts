@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/shared/db"
 import { auth } from "@/lib/auth"
+import type { UserRole } from "@/lib/permissions"
+import { forbidUnlessPermission } from "@/lib/require-permission"
 import { getSupplierSpareParts } from "@/modules/settings"
 
 export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "settings", "read")
+  if (denied) return denied
 
   const result = await getSupplierSpareParts(prisma, {
     id: params.id,

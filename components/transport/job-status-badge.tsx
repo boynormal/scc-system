@@ -12,11 +12,11 @@ const STATUS_CONFIG: Record<TransportJobStatus, { label: string; className: stri
   at_destination: { label: "ถึงปลายทาง", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   unloading: { label: "กำลังขนถ่าย", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   completed: { label: "เสร็จสิ้น", className: "bg-green-100 text-green-800 border-green-200" },
-  cancelled: { label: "ยกเลิก", className: "bg-slate-100 text-slate-600 border-slate-200" },
+  cancelled: { label: "ยกเลิก", className: "bg-muted text-muted-foreground border-border" },
 }
 
 export function JobStatusBadge({ status, className }: { status: TransportJobStatus; className?: string }) {
-  const config = STATUS_CONFIG[status] ?? { label: status, className: "bg-slate-100 text-slate-600" }
+  const config = STATUS_CONFIG[status] ?? { label: status, className: "bg-muted text-muted-foreground" }
   return (
     <span
       className={cn(

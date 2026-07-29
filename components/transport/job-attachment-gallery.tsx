@@ -21,7 +21,7 @@ type Attachment = {
 
 export function JobAttachmentGallery({ attachments }: { attachments: Attachment[] }) {
   if (attachments.length === 0) {
-    return <p className="text-sm text-slate-400">ไม่มีไฟล์แนบ</p>
+    return <p className="text-sm text-muted-foreground">ไม่มีไฟล์แนบ</p>
   }
 
   const grouped = attachments.reduce<Record<AttachmentStage, Attachment[]>>(
@@ -40,7 +40,7 @@ export function JobAttachmentGallery({ attachments }: { attachments: Attachment[
         if (!items?.length) return null
         return (
           <div key={stage}>
-            <h4 className="mb-2 text-sm font-medium text-slate-700">{STAGE_LABELS[stage]}</h4>
+            <h4 className="mb-2 text-sm font-medium text-foreground">{STAGE_LABELS[stage]}</h4>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
               {items.map((item) => (
                 <a
@@ -48,7 +48,7 @@ export function JobAttachmentGallery({ attachments }: { attachments: Attachment[
                   href={item.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                  className="group relative overflow-hidden rounded-lg border border-border bg-muted"
                 >
                   {item.fileType.startsWith("image/") ? (
                     <Image
@@ -60,12 +60,12 @@ export function JobAttachmentGallery({ attachments }: { attachments: Attachment[
                     />
                   ) : (
                     <div className="flex h-32 items-center justify-center">
-                      <span className="text-xs text-slate-500">{item.originalFileName}</span>
+                      <span className="text-xs text-muted-foreground">{item.originalFileName}</span>
                     </div>
                   )}
                   {item.caption && (
                     <div className="p-1.5">
-                      <p className="truncate text-xs text-slate-600">{item.caption}</p>
+                      <p className="truncate text-xs text-muted-foreground">{item.caption}</p>
                     </div>
                   )}
                 </a>

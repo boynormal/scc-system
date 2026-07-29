@@ -83,14 +83,15 @@ export function getBranchIds(roles: UserRole[]): string[] {
 }
 
 /**
- * ตรวจสอบว่า user (จาก roles) มีสิทธิ์เข้าถึง moduleId ที่ระบุหรือไม่
+ * ตรวจสอบว่า user มีสิทธิ์เข้าถึง moduleId หรือไม่ (nav / layout gate — thin override check)
  * Admin bypass ทุก module restriction
- * moduleAccess เก็บเป็น extra JSON field ใน Role.permissions — ไม่รบกวน Permission type
- * ถ้า role ไม่มี moduleAccess (undefined) = ไม่จำกัด (backward compat)
- */
-/**
+ * Visibility จาก Role มาจาก CRUD (`hasPermission` / `filterNavByPermission`) — ไม่ใช้ Role.moduleAccess
+ *
+ * สำหรับ product-area + coarse/fine override matching ใช้
+ * `canAccessModuleId` / `canEnterModuleArea` ใน `shared/permissions/module-access-catalog.ts`
+ *
  * @param userModuleAccess override รายบุคคล (User.moduleAccess) — ถ้ากำหนด (ไม่ใช่ null/undefined)
- * จะใช้แทนค่าจาก Role ทั้งหมด (ไม่ intersect); ถ้าไม่กำหนด fallback ไปตรวจ moduleAccess ของแต่ละ Role ตามเดิม
+ * จะจำกัดโมดูลเพิ่ม; ถ้าไม่กำหนด = ไม่จำกัดที่ชั้นนี้
  */
 export function canAccessModule(
   roles: UserRole[],
@@ -104,12 +105,7 @@ export function canAccessModule(
     return Array.isArray(userModuleAccess) && userModuleAccess.includes(moduleId)
   }
 
-  return roles.some((role) => {
-    const raw = role.permissions as (Permission & { moduleAccess?: string[] | "all" }) | null
-    const ma = raw?.moduleAccess
-    if (!ma || ma === "all") return true
-    return Array.isArray(ma) && ma.includes(moduleId)
-  })
+  return true
 }
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {

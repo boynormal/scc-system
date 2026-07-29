@@ -105,9 +105,9 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">การมอบหมาย</h3>
+        <h3 className="text-sm font-semibold text-foreground">การมอบหมาย</h3>
         {!isLocked && mode === "view" && (
           <button
             onClick={() => setMode("assigning")}
@@ -131,31 +131,31 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
           {currentAssignment ? (
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4 shrink-0 text-slate-400" />
+                <Truck className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <div>
-                  <div className="font-medium text-slate-800">{currentAssignment.vehicle.plateNumber}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="font-medium text-foreground">{currentAssignment.vehicle.plateNumber}</div>
+                  <div className="text-xs text-muted-foreground">
                     {currentAssignment.vehicle.name} · {currentAssignment.vehicle.vehicleType}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 shrink-0 text-slate-400" />
+                <User className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <div>
-                  <div className="font-medium text-slate-800">
+                  <div className="font-medium text-foreground">
                     {currentAssignment.driver.firstName} {currentAssignment.driver.lastName}
                   </div>
                   {currentAssignment.driver.phone && (
-                    <div className="text-xs text-slate-500">{currentAssignment.driver.phone}</div>
+                    <div className="text-xs text-muted-foreground">{currentAssignment.driver.phone}</div>
                   )}
                 </div>
               </div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-muted-foreground">
                 มอบหมายโดย: {currentAssignment.assignedByUser.firstName} {currentAssignment.assignedByUser.lastName}
               </div>
 
               {!isLocked && (
-                <div className="border-t border-slate-100 pt-3">
+                <div className="border-t border-border pt-3">
                   {!confirmRemove ? (
                     <button
                       onClick={() => setConfirmRemove(true)}
@@ -165,7 +165,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
                     </button>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-600">ยืนยันยกเลิก?</span>
+                      <span className="text-xs text-muted-foreground">ยืนยันยกเลิก?</span>
                       <button
                         onClick={handleUnassign}
                         disabled={removing}
@@ -175,7 +175,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
                       </button>
                       <button
                         onClick={() => setConfirmRemove(false)}
-                        className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                        className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted/60"
                       >
                         ไม่
                       </button>
@@ -186,7 +186,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
             </div>
           ) : (
             <div className="py-2 text-center">
-              <p className="text-sm text-slate-400">ยังไม่ได้มอบหมาย</p>
+              <p className="text-sm text-muted-foreground">ยังไม่ได้มอบหมาย</p>
               {!isLocked && (
                 <button
                   onClick={() => setMode("assigning")}
@@ -227,7 +227,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
             <button
               onClick={() => { setMode("view"); setError(null) }}
               disabled={saving}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/60"
             >
               ยกเลิก
             </button>

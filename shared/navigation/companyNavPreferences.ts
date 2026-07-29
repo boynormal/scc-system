@@ -3,6 +3,14 @@ import { PRODUCT_LINE_BY_ID } from "./productLineRegistry"
 
 const NAV_ICON_KEY_SET = new Set<string>(NAV_ICON_KEYS)
 
+/** URL ไอคอนหน้าจอหลักที่ commit ได้ + legacy uploads */
+export const HOME_SCREEN_IMAGE_URL_RE =
+  /^\/(?:home-screen\/(?:product-lines|modules)\/[\w.-]+\.webp(?:\?v=\d+)?|uploads\/[\w.-]+)$/
+
+export function isHomeScreenImageUrl(value: string): boolean {
+  return HOME_SCREEN_IMAGE_URL_RE.test(value)
+}
+
 export type AppAppearance = "light" | "dark"
 
 export type CompanyNavPreferences = {
@@ -20,6 +28,8 @@ export type CompanyNavPreferences = {
   productLineIconOverrides: Record<string, NavIconKey>
   /** รูปหมวดหมู่ที่อัปโหลดเอง — หากไม่มีจะใช้ไอคอนเริ่มต้นของ product line */
   productLineImageOverrides: Record<string, string>
+  /** รูปโมดูลย่อยบน launcher (/apps, /app2) — หากไม่มีจะใช้ Lucide */
+  moduleImageOverrides: Record<string, string>
   /** ธีมสว่าง/มืด — ใช้กับหน้า Settings, /apps, /app2 (ทั้งบริษัท) */
   appearance: AppAppearance
 }
@@ -32,6 +42,7 @@ const empty: CompanyNavPreferences = {
   departmentOrderOverrides: {},
   productLineIconOverrides: {},
   productLineImageOverrides: {},
+  moduleImageOverrides: {},
   appearance: "light",
 }
 
@@ -84,8 +95,18 @@ export function parseCompanyNavPreferences(settings: unknown): CompanyNavPrefere
   const productLineImageOverrides: Record<string, string> = {}
   if (imageOverridesRaw && typeof imageOverridesRaw === "object" && !Array.isArray(imageOverridesRaw)) {
     for (const [k, v] of Object.entries(imageOverridesRaw as Record<string, unknown>)) {
-      if (PRODUCT_LINE_BY_ID[k] && typeof v === "string" && /^\/uploads\/[\w.-]+$/.test(v)) {
+      if (PRODUCT_LINE_BY_ID[k] && typeof v === "string" && isHomeScreenImageUrl(v)) {
         productLineImageOverrides[k] = v
+      }
+    }
+  }
+
+  const moduleImageRaw = n.moduleImageOverrides
+  const moduleImageOverrides: Record<string, string> = {}
+  if (moduleImageRaw && typeof moduleImageRaw === "object" && !Array.isArray(moduleImageRaw)) {
+    for (const [k, v] of Object.entries(moduleImageRaw as Record<string, unknown>)) {
+      if (typeof k === "string" && k.length > 0 && typeof v === "string" && isHomeScreenImageUrl(v)) {
+        moduleImageOverrides[k] = v
       }
     }
   }
@@ -101,6 +122,7 @@ export function parseCompanyNavPreferences(settings: unknown): CompanyNavPrefere
     departmentOrderOverrides,
     productLineIconOverrides,
     productLineImageOverrides,
+    moduleImageOverrides,
     appearance,
   }
 }

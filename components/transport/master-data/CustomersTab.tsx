@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { isAutoCustomerCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import {
@@ -102,7 +100,7 @@ function CustomerFormRows({
     <>
       <tr className="bg-cyan-50/50">
         <td className="px-4 py-3">
-          <Input
+          <GlassInput
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="ชื่อลูกค้า/ปลายทาง *"
@@ -110,16 +108,16 @@ function CustomerFormRows({
           />
         </td>
         <td className="px-4 py-3">
-          <Input
+          <GlassInput
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
             placeholder="ที่อยู่"
             className="h-8 border-cyan-300"
           />
         </td>
-        <td className="px-4 py-3 align-top text-slate-400 text-xs">กำหนดด้านล่าง</td>
+        <td className="px-4 py-3 align-top text-muted-foreground text-xs">กำหนดด้านล่าง</td>
         <td className="px-4 py-3">
-          <Input
+          <GlassInput
             value={form.contactName}
             onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
             placeholder="ผู้ติดต่อ"
@@ -127,7 +125,7 @@ function CustomerFormRows({
           />
         </td>
         <td className="px-4 py-3 align-top">
-          <Input
+          <GlassInput
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
             placeholder="เบอร์โทร"
@@ -139,7 +137,7 @@ function CustomerFormRows({
         </td>
         <td className="px-4 py-3 align-top">-</td>
         <td className="px-4 py-3 text-right space-x-2 align-top">
-          <button type="button" onClick={onCancel} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white">
+          <button type="button" onClick={onCancel} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background">
             <X className="w-4 h-4" />
           </button>
           <button type="button" onClick={onSave} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded">
@@ -267,37 +265,37 @@ export function CustomersTab() {
           <p>
             มีลูกค้า/ปลายทาง <strong>{legacyCount}</strong> รายการที่ใช้รหัสแบบเก่า (ไม่ตรงรูปแบบ CUST-YYYY-00001)
           </p>
-          <Button
-            variant="secondary"
+          <GlassButton
+            variant="outline"
             size="sm"
             disabled={migrating}
             onClick={handleMigrateLegacyCodes}
           >
             {migrating ? "กำลังปรับรหัส..." : "ปรับรหัสเป็นรูปแบบใหม่"}
-          </Button>
+          </GlassButton>
         </div>
       )}
       <div className="flex justify-end">
-        <Button onClick={() => { setEditingId("new"); setEditForm(emptyForm) }} icon={<Plus className="w-4 h-4" />}>
+        <GlassButton onClick={() => { setEditingId("new"); setEditForm(emptyForm) }} icon={<Plus className="w-4 h-4" />}>
           เพิ่มลูกค้า/ปลายทาง
-        </Button>
+        </GlassButton>
       </div>
-      <Card padding="none">
+      <GlassCard padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[960px]">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-4 py-3 font-semibold text-slate-600">ชื่อลูกค้า/ปลายทาง</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">ที่อยู่</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-36">พิกัด</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-32">ผู้ติดต่อ</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-28">เบอร์โทร</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 min-w-[160px]">รายละเอียด</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-20">สถานะ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อลูกค้า/ปลายทาง</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">ที่อยู่</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-36">พิกัด</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-32">ผู้ติดต่อ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">เบอร์โทร</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground min-w-[160px]">รายละเอียด</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-20">สถานะ</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {editingId === "new" && (
                 <CustomerFormRows
                   formKey="new"
@@ -318,9 +316,9 @@ export function CustomersTab() {
                     onSave={() => handleSave(item.id)}
                   />
                 ) : (
-                  <tr key={item.id} className={`hover:bg-slate-50 ${!item.isActive ? "opacity-50" : ""}`}>
-                    <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
-                    <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={item.address ?? ""}>
+                  <tr key={item.id} className={`hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}>
+                    <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={item.address ?? ""}>
                       {item.address ?? "—"}
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -329,14 +327,14 @@ export function CustomersTab() {
                         longitude={decimalToNumber(item.longitude)}
                       />
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{item.contactName ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-600 align-top">{item.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{item.contactName ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground align-top">{item.phone ?? "—"}</td>
                     <td className="px-4 py-3 align-top max-w-xs">
                       <DetailsDisplay value={item.details} />
                     </td>
                     <td className="px-4 py-3 align-top">
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${item.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}
+                        className={`text-xs px-2 py-0.5 rounded-full ${item.isActive ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}
                       >
                         {item.isActive ? "ใช้งาน" : "ปิด"}
                       </span>
@@ -347,14 +345,14 @@ export function CustomersTab() {
                           <button
                             type="button"
                             onClick={() => startEdit(item)}
-                            className="p-1.5 text-slate-400 hover:text-cyan-600"
+                            className="p-1.5 text-muted-foreground hover:text-cyan-600"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeactivate(item.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600"
+                            className="p-1.5 text-muted-foreground hover:text-red-600"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -375,7 +373,7 @@ export function CustomersTab() {
             </tbody>
           </table>
         </div>
-      </Card>
+      </GlassCard>
     </div>
   )
 }

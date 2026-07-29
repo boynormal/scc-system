@@ -86,15 +86,15 @@ export default function TransportMonitorPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">มอนิเตอร์รถ</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-xl font-semibold text-foreground">มอนิเตอร์รถ</h1>
+          <p className="text-sm text-muted-foreground">
             {lastFetch ? `อัปเดต ${lastFetch.toLocaleTimeString("th-TH")}` : "กำลังโหลด..."}
             {" · "}รีเฟรชอัตโนมัติใน {countdown}s
           </p>
         </div>
         <button
           onClick={() => { fetchGps(); setCountdown(POLL_INTERVAL / 1000) }}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/60"
         >
           <RefreshCw className="h-4 w-4" /> รีเฟรช
         </button>
@@ -102,16 +102,16 @@ export default function TransportMonitorPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="รถทั้งหมด" value={stats.total} color="bg-slate-50 text-slate-700" />
-        <StatCard label="ว่าง" value={stats.available} color="bg-emerald-50 text-emerald-700" />
-        <StatCard label="ไม่ว่าง" value={stats.busy} color={stats.busy > 0 ? "bg-orange-50 text-orange-700" : "bg-slate-50 text-slate-400"} />
-        <StatCard label="กำลังวิ่ง" value={stats.moving} color="bg-blue-50 text-blue-700" />
-        <StatCard label="มี Alert" value={stats.alert} color={stats.alert > 0 ? "bg-red-50 text-red-700" : "bg-slate-50 text-slate-400"} />
+        <StatCard label="รถทั้งหมด" value={stats.total} color="bg-muted text-foreground" />
+        <StatCard label="ว่าง" value={stats.available} color="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" />
+        <StatCard label="ไม่ว่าง" value={stats.busy} color={stats.busy > 0 ? "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300" : "bg-muted text-muted-foreground"} />
+        <StatCard label="กำลังวิ่ง" value={stats.moving} color="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" />
+        <StatCard label="มี Alert" value={stats.alert} color={stats.alert > 0 ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300" : "bg-muted text-muted-foreground"} />
       </div>
 
       {/* Filters + Search */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+        <div className="flex gap-1 rounded-lg bg-muted p-1">
           {FILTERS.map((f) => (
             <button
               key={f.key}
@@ -119,8 +119,8 @@ export default function TransportMonitorPage() {
               className={cn(
                 "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                 filter === f.key
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {f.icon}
@@ -128,7 +128,7 @@ export default function TransportMonitorPage() {
               {f.count > 0 && (
                 <span className={cn(
                   "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  f.key === "alert" && f.count > 0 ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"
+                  f.key === "alert" && f.count > 0 ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" : "bg-muted text-muted-foreground"
                 )}>
                   {f.count}
                 </span>
@@ -142,7 +142,7 @@ export default function TransportMonitorPage() {
           placeholder="ค้นหาทะเบียน / คนขับ..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-400"
         />
       </div>
 
@@ -151,12 +151,12 @@ export default function TransportMonitorPage() {
         const v = vehicles.find((x) => x.id === selectedId)
         if (!v) return null
         return (
-          <div className="rounded-xl border border-cyan-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-cyan-200 bg-card p-4 shadow-sm dark:border-cyan-800">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">รายละเอียดรถที่เลือก</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">รายละเอียดรถที่เลือก</span>
               <button
                 onClick={() => setSelectedId(null)}
-                className="text-xs text-slate-400 hover:text-slate-600"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 ✕ ปิด
               </button>
@@ -167,14 +167,14 @@ export default function TransportMonitorPage() {
       })()}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         {error ? (
           <div className="px-6 py-10 text-center text-sm text-red-500">{error}</div>
         ) : loading ? (
-          <div className="px-6 py-10 text-center text-sm text-slate-400">กำลังโหลดข้อมูล GPS...</div>
+          <div className="px-6 py-10 text-center text-sm text-muted-foreground">กำลังโหลดข้อมูล GPS...</div>
         ) : (
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-xs font-medium uppercase tracking-wider text-slate-500">
+            <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left">ทะเบียน</th>
                 <th className="px-4 py-3 text-left">ความพร้อม</th>
@@ -189,10 +189,10 @@ export default function TransportMonitorPage() {
                 <th className="px-4 py-3 text-left">Alert</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-slate-400">ไม่พบข้อมูล</td>
+                  <td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">ไม่พบข้อมูล</td>
                 </tr>
               ) : (
                 filtered.map((v) => (
@@ -214,7 +214,7 @@ export default function TransportMonitorPage() {
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className={cn("rounded-xl border border-white/60 p-3 shadow-sm", color)}>
+    <div className={cn("rounded-xl border border-border p-3 shadow-sm", color)}>
       <p className="text-2xl font-bold">{value}</p>
       <p className="text-xs font-medium opacity-75">{label}</p>
     </div>

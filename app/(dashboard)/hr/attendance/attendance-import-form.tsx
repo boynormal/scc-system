@@ -62,22 +62,22 @@ export function AttendanceImportForm({ branch }: { branch: BranchOpt }) {
         </div>
       )}
       {msg && <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2">{msg}</p>}
-      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-        <p className="text-slate-500">สาขาปลายทาง (ล็อกจากบริบทหน้า)</p>
-        <p className="font-medium text-slate-800 mt-1">
+      <div className="rounded-lg border border-border bg-muted p-3 text-sm">
+        <p className="text-muted-foreground">สาขาปลายทาง (ล็อกจากบริบทหน้า)</p>
+        <p className="font-medium text-foreground mt-1">
           {branch.code} {branch.name}
         </p>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">ไฟล์ Excel บันทึกเวลา (.xls / .xlsx)</label>
+        <label className="block text-sm font-medium text-foreground">ไฟล์ Excel บันทึกเวลา (.xls / .xlsx)</label>
         <input
           name="file"
           type="file"
           accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          className="mt-1 block w-full text-sm text-slate-600"
+          className="mt-1 block w-full text-sm text-muted-foreground"
         />
       </div>
-      <p className="text-xs text-slate-500 leading-relaxed">
+      <p className="text-xs text-muted-foreground leading-relaxed">
         รูปแบบคอลัมน์: A=ลำดับ, C=ชื่อ, D=กลุ่มงาน, E=วันที่ (DD-MM-YYYY), คอลัมน์ถัดไปเป็นเวลา HH:MM ตามลำดับการสแกน
       </p>
       <button

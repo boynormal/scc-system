@@ -52,11 +52,25 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        glass: {
+          DEFAULT: "rgb(var(--glass-rgb) / var(--glass-bg-alpha))",
+          soft: "rgb(var(--glass-rgb) / var(--glass-bg-soft-alpha))",
+          strong: "rgb(var(--glass-rgb) / var(--glass-bg-strong-alpha))",
+          border: "rgb(var(--glass-border-rgb) / var(--glass-border-alpha))",
+          ring: "rgb(var(--glass-ring))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        glass: "var(--glass-radius)",
+      },
+      boxShadow: {
+        glass: "var(--glass-shadow)",
+      },
+      backdropBlur: {
+        glass: "var(--glass-blur)",
       },
       keyframes: {
         "accordion-down": {

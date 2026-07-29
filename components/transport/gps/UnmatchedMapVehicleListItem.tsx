@@ -25,7 +25,7 @@ export function UnmatchedMapVehicleListItem({ vehicle: v, selected, onClick, onL
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-bold text-slate-900">
+            <span className="font-mono text-sm font-bold text-foreground">
               {v.plateNumber || "—"}
             </span>
             <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
@@ -33,9 +33,9 @@ export function UnmatchedMapVehicleListItem({ vehicle: v, selected, onClick, onL
             </span>
           </div>
           {v.imei && (
-            <p className="mt-0.5 font-mono text-[11px] text-slate-600">IMEI: {v.imei}</p>
+            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">IMEI: {v.imei}</p>
           )}
-          <p className="mt-1 text-[11px] text-slate-500 truncate">
+          <p className="mt-1 text-[11px] text-muted-foreground truncate">
             {v.address || v.near || "ไม่มีที่อยู่"}
           </p>
           <button

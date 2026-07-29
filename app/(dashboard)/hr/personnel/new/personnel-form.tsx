@@ -70,20 +70,20 @@ export function HrPersonnelForm({ branches }: { branches: BranchOpt[] }) {
       {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
 
       <div>
-        <p className="block text-sm font-medium text-slate-700 mb-2">สาขาที่ใช้งาน / ลงเวลาได้ (เลือกได้หลายสาขา)</p>
-        <div className="rounded-lg border border-slate-200 divide-y divide-slate-100 max-h-48 overflow-y-auto">
+        <p className="block text-sm font-medium text-foreground mb-2">สาขาที่ใช้งาน / ลงเวลาได้ (เลือกได้หลายสาขา)</p>
+        <div className="rounded-lg border border-border divide-y divide-border max-h-48 overflow-y-auto">
           {branches.length === 0 ? (
             <p className="p-3 text-sm text-amber-700">ยังไม่มีสาขาในระบบ</p>
           ) : (
             branches.map((b) => (
-              <label key={b.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 cursor-pointer">
+              <label key={b.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selectedSet.has(b.id)}
                   onChange={() => toggleBranch(b.id)}
-                  className="rounded border-slate-300"
+                  className="rounded border-border"
                 />
-                <span className="text-sm text-slate-800">
+                <span className="text-sm text-foreground">
                   {b.code} — {b.name}
                 </span>
               </label>
@@ -92,7 +92,7 @@ export function HrPersonnelForm({ branches }: { branches: BranchOpt[] }) {
         </div>
         {selectedBranchIds.length > 1 && (
           <div className="mt-3 space-y-2">
-            <p className="text-xs font-medium text-slate-600">สาขาหลัก (แสดงเป็นค่าเริ่ม / หัวเรคอร์ด)</p>
+            <p className="text-xs font-medium text-muted-foreground">สาขาหลัก (แสดงเป็นค่าเริ่ม / หัวเรคอร์ด)</p>
             <div className="flex flex-wrap gap-2">
               {selectedBranchIds.map((id) => {
                 const b = branches.find((x) => x.id === id)
@@ -104,7 +104,7 @@ export function HrPersonnelForm({ branches }: { branches: BranchOpt[] }) {
                       name="primaryBranchPick"
                       checked={primaryBranchId === id}
                       onChange={() => setPrimaryBranchId(id)}
-                      className="border-slate-300"
+                      className="border-border"
                     />
                     <span>
                       {b.code} — {b.name}
@@ -118,30 +118,30 @@ export function HrPersonnelForm({ branches }: { branches: BranchOpt[] }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700">รหัสรายชื่อ (ลำดับ) *</label>
-        <input name="rosterNo" required className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <label className="block text-sm font-medium text-foreground">รหัสรายชื่อ (ลำดับ) *</label>
+        <input name="rosterNo" required className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">ชื่อแสดง *</label>
-        <input name="displayName" required className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <label className="block text-sm font-medium text-foreground">ชื่อแสดง *</label>
+        <input name="displayName" required className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">กลุ่มงาน</label>
-        <input name="jobGroup" className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <label className="block text-sm font-medium text-foreground">กลุ่มงาน</label>
+        <input name="jobGroup" className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-slate-700">ชื่อจริง</label>
-          <input name="firstName" className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <label className="block text-sm font-medium text-foreground">ชื่อจริง</label>
+          <input name="firstName" className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700">นามสกุล</label>
-          <input name="lastName" className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <label className="block text-sm font-medium text-foreground">นามสกุล</label>
+          <input name="lastName" className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">โทรศัพท์</label>
-        <input name="phone" className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        <label className="block text-sm font-medium text-foreground">โทรศัพท์</label>
+        <input name="phone" className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm" />
       </div>
       <button
         type="submit"

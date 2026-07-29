@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { Loader2, MapPin } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { GlassInput } from "@/components/glass"
 import {
   formatLatLng,
   googleMapsUrl,
@@ -15,7 +15,7 @@ const LocationPickerMapInner = dynamic(() => import("./LocationPickerMapInner"),
   ssr: false,
   loading: () => (
     <div
-      className="flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50"
+      className="flex items-center justify-center rounded-lg border border-border bg-muted"
       style={{ height: MAP_HEIGHT }}
     >
       <Loader2 className="h-5 w-5 animate-spin text-cyan-500" />
@@ -50,12 +50,12 @@ export function CustomerLocationField({ value, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <MapPin className="h-3.5 w-3.5 text-cyan-600" />
         พิกัด / ปักหมุดบนแผนที่
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
+        <GlassInput
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="13.610387, 100.539879"
@@ -64,7 +64,7 @@ export function CustomerLocationField({ value, onChange }: Props) {
         <button
           type="button"
           onClick={handleUseCurrentLocation}
-          className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
         >
           ใช้ตำแหน่งปัจจุบัน
         </button>
@@ -79,7 +79,7 @@ export function CustomerLocationField({ value, onChange }: Props) {
           </a>
         )}
       </div>
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[11px] text-muted-foreground">
         วางค่าพิกัด เช่น 13.61038705333664, 100.53987935289308 หรือคลิก/ลากหมุดบนแผนที่
       </p>
       {value.trim() && !hasLocation && (
@@ -103,12 +103,12 @@ export function CustomerLocationDisplay({
   longitude: number | null
 }) {
   if (latitude == null || longitude == null) {
-    return <span className="text-slate-400">—</span>
+    return <span className="text-muted-foreground">—</span>
   }
 
   return (
     <div className="space-y-1">
-      <p className="font-mono text-[11px] text-slate-700">{formatLatLng(latitude, longitude)}</p>
+      <p className="font-mono text-[11px] text-foreground">{formatLatLng(latitude, longitude)}</p>
       <a
         href={googleMapsUrl(latitude, longitude)}
         target="_blank"

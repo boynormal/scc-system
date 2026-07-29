@@ -70,13 +70,35 @@ describe("filterNavByPermission", () => {
     expect(filterNavByPermission(nodes, roles)).toHaveLength(0)
   })
 
-  it("drops a link when moduleId is blocked by moduleAccess even if the resource permission passes", () => {
+  it("ignores legacy Role moduleAccess and keeps the link when resource permission passes", () => {
     const roles: UserRole[] = [
       role({ roleName: "Viewer", permissions: { moduleAccess: ["hr"] } as never }),
     ]
     const nodes = [link({ key: "machines-link", moduleId: "transport" })]
 
-    expect(filterNavByPermission(nodes, roles)).toHaveLength(0)
+    expect(filterNavByPermission(nodes, roles)).toHaveLength(1)
+  })
+
+  it("drops a link when blocked by per-user moduleAccess override", () => {
+    const roles: UserRole[] = [role({ roleName: "Viewer" })]
+    const nodes = [link({ key: "machines-link", moduleId: "transport" })]
+
+    expect(filterNavByPermission(nodes, roles, ["hr"])).toHaveLength(0)
+    expect(filterNavByPermission(nodes, roles, ["transport"])).toHaveLength(1)
+  })
+
+  it("unlocks fine nav moduleIds when coarse catalog area is in user override", () => {
+    const roles: UserRole[] = [role({ roleName: "Viewer" })]
+    const nodes = [
+      link({
+        key: "tj",
+        moduleId: "transport_jobs",
+        permission: { resource: "machines", action: "read" },
+      }),
+    ]
+
+    expect(filterNavByPermission(nodes, roles, ["transport"])).toHaveLength(1)
+    expect(filterNavByPermission(nodes, roles, ["hr"])).toHaveLength(0)
   })
 
   it("drops a group when none of its children survive filtering", () => {

@@ -75,10 +75,16 @@ async function main() {
   const adminPasswordHash = await bcrypt.hash("Admin@1234", 12)
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@demo.com" },
-    update: { passwordHash: adminPasswordHash, deletedAt: null, isActive: true },
+    update: {
+      passwordHash: adminPasswordHash,
+      deletedAt: null,
+      isActive: true,
+      username: "admin",
+    },
     create: {
       companyId: company.id,
       employeeCode: "EMP001",
+      username: "admin",
       email: "admin@demo.com",
       passwordHash: adminPasswordHash,
       firstName: "System",
@@ -86,7 +92,7 @@ async function main() {
       isActive: true,
     },
   })
-  console.log("✅ Admin user:", adminUser.email)
+  console.log("✅ Admin user:", adminUser.username, adminUser.email)
 
   await prisma.userBranchRole.upsert({
     where: {
@@ -108,10 +114,16 @@ async function main() {
   const testPasswordHash = await bcrypt.hash("Test@1234", 12)
   const testUser = await prisma.user.upsert({
     where: { email: "test@demo.com" },
-    update: { passwordHash: testPasswordHash, deletedAt: null, isActive: true },
+    update: {
+      passwordHash: testPasswordHash,
+      deletedAt: null,
+      isActive: true,
+      username: "test",
+    },
     create: {
       companyId: company.id,
       employeeCode: "EMP002",
+      username: "test",
       email: "test@demo.com",
       passwordHash: testPasswordHash,
       firstName: "Demo",
@@ -252,10 +264,12 @@ async function main() {
 
   console.log("\n🎉 Seed completed successfully!")
   console.log("─────────────────────────────────────")
+  console.log("👤 Admin username : admin")
   console.log("📧 Admin email    : admin@demo.com")
   console.log("🔑 Admin password : Admin@1234")
-  console.log("📧 Test email      : test@demo.com")
-  console.log("🔑 Test password   : Test@1234")
+  console.log("👤 Test username  : test")
+  console.log("📧 Test email     : test@demo.com")
+  console.log("🔑 Test password  : Test@1234")
   console.log("─────────────────────────────────────")
 }
 

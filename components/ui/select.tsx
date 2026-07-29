@@ -21,9 +21,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label htmlFor={selectId} className="block text-sm font-medium text-slate-700">
+          <label htmlFor={selectId} className="block text-sm font-medium text-foreground">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
+            {props.required && <span className="ml-1 text-red-500">*</span>}
           </label>
         )}
         <div className="relative">
@@ -32,12 +32,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             id={selectId}
             {...props}
             className={cn(
-              "w-full border rounded-lg text-sm text-slate-800 appearance-none pr-8 px-3 py-2 transition-colors",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+              "w-full appearance-none rounded-lg border px-3 py-2 pr-8 text-sm text-foreground transition-colors",
+              "bg-background focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500",
               error
-                ? "border-red-400 bg-red-50"
-                : "border-slate-300 bg-white hover:border-slate-400",
-              props.disabled && "bg-slate-50 text-slate-400 cursor-not-allowed",
+                ? "border-red-400 bg-red-50 dark:bg-red-950/40"
+                : "border-input hover:border-slate-400 dark:hover:border-white/25",
+              props.disabled && "cursor-not-allowed bg-muted text-muted-foreground",
               className
             )}
           >
@@ -50,10 +50,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 ))
               : children}
           </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         </div>
         {error && <p className="text-xs text-red-500">{error}</p>}
-        {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
+        {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
       </div>
     )
   }

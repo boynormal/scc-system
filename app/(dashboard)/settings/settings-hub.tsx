@@ -2,20 +2,21 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Building2,
   Database,
   Info,
   LayoutGrid,
   Moon,
+  Palette,
   Search,
   ShieldCheck,
   Sun,
   Users,
   type LucideIcon,
 } from "lucide-react"
-import { Card } from "@/components/ui/card"
+import { GlassCard, GlassInput, GlassStatCard } from "@/components/glass"
 import { Switch } from "@/components/ui/switch"
 import { APP_BRAND } from "@/shared/branding"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
@@ -58,6 +59,7 @@ export function SettingsHub({
   appVersion: string
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [search, setSearch] = useState("")
   const [currentAppearance, setCurrentAppearance] = useState<AppAppearance>(appearance)
   const [savingAppearance, setSavingAppearance] = useState(false)
@@ -148,10 +150,10 @@ export function SettingsHub({
             id: "home-screen",
             href: "/settings/home-screen",
             label: "ไอคอนหมวดหมู่",
-            description: "อัปโหลดภาพสำหรับกลุ่มงานบน Sidebar และหน้า /apps (หน้าหลัก)",
+            description: "อัปโหลดภาพกลุ่มงานและโมดูลย่อย — เก็บที่ public/home-screen เพื่อ commit ขึ้น git",
             icon: LayoutGrid,
-            keywords: ["icon", "ไอคอน", "รูปภาพ", "apps", "หน้าหลัก"],
-            valueLabel: customIconCount > 0 ? `ปรับแล้ว ${customIconCount} หมวดหมู่` : "ไอคอนเริ่มต้น",
+            keywords: ["icon", "ไอคอน", "รูปภาพ", "apps", "หน้าหลัก", "โมดูล"],
+            valueLabel: customIconCount > 0 ? `ปรับแล้ว ${customIconCount} รายการ` : "ไอคอนเริ่มต้น",
           },
           {
             id: "appearance",
@@ -202,33 +204,40 @@ export function SettingsHub({
   }, [isSearching, query, sections])
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="w-full space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">ตั้งค่า</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          ค้นหาและจัดการการตั้งค่าของระบบ
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">ตั้งค่า</h1>
+        <p className="mt-1 text-sm text-muted-foreground">ภาพรวม — เลือกรายการเพื่อเปิดทางขวา</p>
       </div>
 
-      <label className="relative block">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="ค้นหาการตั้งค่า..."
-          className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/40"
-          aria-label="ค้นหาการตั้งค่า"
+      <div className="grid grid-cols-3 gap-2">
+        <GlassStatCard
+          label="ธีม"
+          value={currentAppearance === "dark" ? "มืด" : "สว่าง"}
+          icon={currentAppearance === "dark" ? Moon : Sun}
+          className="p-3"
         />
-      </label>
+        <GlassStatCard label="ไอคอน" value={customIconCount} icon={Palette} className="p-3" />
+        <GlassStatCard label="เวอร์ชัน" value={appVersion} icon={Info} className="p-3" />
+      </div>
+
+      <GlassInput
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="ค้นหาการตั้งค่า..."
+        aria-label="ค้นหาการตั้งค่า"
+        icon={<Search className="h-4 w-4" />}
+        className="h-10 rounded-xl"
+      />
 
       {isSearching ? (
-        <Card padding="none">
+        <GlassCard padding="none">
           {filteredEntries.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-slate-400">
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               ไม่พบการตั้งค่าที่ตรงกับ “{search.trim()}”
             </p>
           ) : (
-            <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+            <ul className="divide-y divide-border/80 dark:divide-white/10">
               {filteredEntries.map((entry) => (
                 <HubRow
                   key={entry.id}
@@ -237,20 +246,21 @@ export function SettingsHub({
                   appearance={currentAppearance}
                   savingAppearance={savingAppearance}
                   onToggleAppearance={toggleAppearance}
+                  pathname={pathname}
                 />
               ))}
             </ul>
           )}
-        </Card>
+        </GlassCard>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {sections.map((section) => (
             <div key={section.id}>
-              <p className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+              <p className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
                 {section.label}
               </p>
-              <Card padding="none">
-                <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+              <GlassCard padding="none">
+                <ul className="divide-y divide-border/80 dark:divide-white/10">
                   {section.entries.map((entry) => (
                     <HubRow
                       key={entry.id}
@@ -258,10 +268,11 @@ export function SettingsHub({
                       appearance={currentAppearance}
                       savingAppearance={savingAppearance}
                       onToggleAppearance={toggleAppearance}
+                      pathname={pathname}
                     />
                   ))}
                 </ul>
-              </Card>
+              </GlassCard>
             </div>
           ))}
         </div>
@@ -276,33 +287,45 @@ function HubRow({
   appearance,
   savingAppearance,
   onToggleAppearance,
+  pathname,
 }: {
   entry: HubEntry
   sublabel?: string
   appearance: AppAppearance
   savingAppearance: boolean
   onToggleAppearance: () => void
+  pathname: string
 }) {
   const Icon = entry.icon
   const isSwitch = entry.render === "appearance-switch"
+  const active =
+    !!entry.href &&
+    (pathname === entry.href || pathname.startsWith(`${entry.href}/`))
 
   const inner = (
-    <div className="flex items-center gap-3 px-4 py-3.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+    <div className="flex items-center gap-3 px-3.5 py-3">
+      <span
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground",
+          active
+            ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-950/50 dark:text-blue-300"
+            : "border-glass bg-glass-soft"
+        )}
+      >
         <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+        <p className="truncate text-sm font-semibold text-foreground">
           {entry.label}
           {sublabel && (
-            <span className="ml-2 text-xs font-normal text-slate-400">{sublabel}</span>
+            <span className="ml-2 text-xs font-normal text-muted-foreground">{sublabel}</span>
           )}
         </p>
-        <p className="truncate text-xs text-slate-400">{entry.description}</p>
+        <p className="truncate text-xs text-muted-foreground">{entry.description}</p>
       </div>
       {isSwitch ? (
         <div className="flex shrink-0 items-center gap-2.5">
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span className="text-xs font-medium text-muted-foreground">
             {appearance === "dark" ? "มืด" : "สว่าง"}
           </span>
           <Switch
@@ -314,7 +337,7 @@ function HubRow({
         </div>
       ) : (
         entry.valueLabel && (
-          <span className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">
             {entry.valueLabel}
           </span>
         )
@@ -328,7 +351,15 @@ function HubRow({
 
   return (
     <li>
-      <Link href={entry.href} className="block transition hover:bg-slate-50 dark:hover:bg-slate-700/40">
+      <Link
+        href={entry.href}
+        className={cn(
+          "block transition",
+          active
+            ? "bg-blue-50/80 dark:bg-blue-950/30"
+            : "hover:bg-white/40 dark:hover:bg-white/5"
+        )}
+      >
         {inner}
       </Link>
     </li>

@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2, Link2 } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { VehicleStatusBadge } from "@/components/transport/vehicle-status-badge"
 import { LinkGpsVehicleModal, type GpsVehicleInput } from "@/components/transport/LinkGpsVehicleModal"
 import {
@@ -200,7 +198,7 @@ export function VehiclesTab() {
     if (res.ok) loadData()
   }
 
-  const fieldClass = "h-8 w-full rounded-lg border border-slate-300 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+  const fieldClass = "h-8 w-full rounded-lg border border-border px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
 
   const renderForm = (id: string, itemGpsDeviceId?: string | null) => (
     <>
@@ -212,8 +210,8 @@ export function VehiclesTab() {
           ))}
         </select>
       </td>
-      <td className="px-4 py-3"><Input value={editForm.plateNumber} onChange={(e) => setEditForm((f) => ({ ...f, plateNumber: e.target.value }))} className="h-8 border-cyan-300" /></td>
-      <td className="px-4 py-3"><Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className="px-4 py-3"><GlassInput value={editForm.plateNumber} onChange={(e) => setEditForm((f) => ({ ...f, plateNumber: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className="px-4 py-3"><GlassInput value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="h-8 border-cyan-300" /></td>
       <td className="px-4 py-3">
         <select value={editForm.vehicleType} onChange={(e) => setEditForm((f) => ({ ...f, vehicleType: e.target.value }))} className={fieldClass}>
           <option value="">-- ประเภทรถ --</option>
@@ -222,11 +220,11 @@ export function VehiclesTab() {
           ))}
         </select>
       </td>
-      <td className="px-4 py-3"><Input type="number" min={0} value={editForm.maxWeightKg} onChange={(e) => setEditForm((f) => ({ ...f, maxWeightKg: e.target.value }))} placeholder="น้ำหนักรถเปล่า" className="h-8 border-cyan-300" /></td>
-      <td className="px-4 py-3"><Input type="number" min={0} value={editForm.loadCapacityKg} onChange={(e) => setEditForm((f) => ({ ...f, loadCapacityKg: e.target.value }))} placeholder="น้ำหนักรวมสูงสุด" className="h-8 border-cyan-300" /></td>
+      <td className="px-4 py-3"><GlassInput type="number" min={0} value={editForm.maxWeightKg} onChange={(e) => setEditForm((f) => ({ ...f, maxWeightKg: e.target.value }))} placeholder="น้ำหนักรถเปล่า" className="h-8 border-cyan-300" /></td>
+      <td className="px-4 py-3"><GlassInput type="number" min={0} value={editForm.loadCapacityKg} onChange={(e) => setEditForm((f) => ({ ...f, loadCapacityKg: e.target.value }))} placeholder="น้ำหนักรวมสูงสุด" className="h-8 border-cyan-300" /></td>
       <td className="px-4 py-3">
         {itemGpsDeviceId ? (
-          <span className="font-mono text-xs text-slate-700">{itemGpsDeviceId}</span>
+          <span className="font-mono text-xs text-foreground">{itemGpsDeviceId}</span>
         ) : (
           <div className="space-y-1">
             <select
@@ -241,7 +239,7 @@ export function VehiclesTab() {
               ))}
             </select>
             {editSelectedGps && (
-              <p className="text-[10px] text-slate-500 font-mono">IMEI: {editSelectedGps.imei}</p>
+              <p className="text-[10px] text-muted-foreground font-mono">IMEI: {editSelectedGps.imei}</p>
             )}
             {id !== "new" && linkableGps.length > 0 && (
               <button
@@ -260,7 +258,7 @@ export function VehiclesTab() {
       </td>
       <td className="px-4 py-3 align-top">-</td>
       <td className="px-4 py-3 text-right space-x-2 align-top">
-        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background"><X className="w-4 h-4" /></button>
         <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded"><Save className="w-4 h-4" /></button>
       </td>
     </>
@@ -277,9 +275,9 @@ export function VehiclesTab() {
   return (
     <div className="space-y-4">
       {/* GPS link card */}
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-slate-800 mb-1">ผูก GPS กับรถ</h3>
-        <p className="text-xs text-slate-500 mb-3">เลือกทะเบียนจาก GPS — ระบบจะบันทึก IMEI ให้อัตโนมัติ</p>
+      <GlassCard className="p-4">
+        <h3 className="text-sm font-semibold text-foreground mb-1">ผูก GPS กับรถ</h3>
+        <p className="text-xs text-muted-foreground mb-3">เลือกทะเบียนจาก GPS — ระบบจะบันทึก IMEI ให้อัตโนมัติ</p>
 
         {gpsError && (
           <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
@@ -289,7 +287,7 @@ export function VehiclesTab() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">รถในระบบ (ยังไม่ผูก GPS)</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">รถในระบบ (ยังไม่ผูก GPS)</label>
             <select
               value={linkMasterId}
               onChange={(e) => setLinkMasterId(e.target.value)}
@@ -303,7 +301,7 @@ export function VehiclesTab() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">ทะเบียนจาก GPS (ยังไม่ผูก IMEI)</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">ทะเบียนจาก GPS (ยังไม่ผูก IMEI)</label>
             <select
               value={linkGpsId}
               onChange={(e) => setLinkGpsId(e.target.value)}
@@ -319,7 +317,7 @@ export function VehiclesTab() {
         </div>
 
         {selectedGpsOption && (
-          <p className="mt-2 text-xs text-slate-600">
+          <p className="mt-2 text-xs text-muted-foreground">
             IMEI ที่จะบันทึก: <span className="font-mono font-medium">{selectedGpsOption.imei}</span>
           </p>
         )}
@@ -329,26 +327,26 @@ export function VehiclesTab() {
         )}
 
         <div className="mt-3 flex items-center gap-2">
-          <Button
+          <GlassButton
             onClick={handleLinkFromCard}
             disabled={linkSaving || gpsLoading || !linkMasterId || !linkGpsId}
             icon={linkSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
           >
             {linkSaving ? "กำลังผูก..." : "ผูก GPS"}
-          </Button>
+          </GlassButton>
           <button
             type="button"
             onClick={loadGps}
             disabled={gpsLoading}
-            className="text-xs text-slate-500 hover:text-slate-700 underline"
+            className="text-xs text-muted-foreground hover:text-foreground underline"
           >
             รีเฟรชรายการ GPS
           </button>
         </div>
-      </Card>
+      </GlassCard>
 
       <div className="flex justify-end">
-        <Button
+        <GlassButton
           onClick={() => {
             setEditingId("new")
             setEditForm({ ...emptyForm, branchId: branches.length === 1 ? branches[0].id : "" })
@@ -356,42 +354,42 @@ export function VehiclesTab() {
           icon={<Plus className="w-4 h-4" />}
         >
           เพิ่มรถ
-        </Button>
+        </GlassButton>
       </div>
 
-      <Card padding="none">
+      <GlassCard padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[900px]">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-4 py-3 font-semibold text-slate-600">สาขา</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-28">ทะเบียน</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">ชื่อรถ</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-28">ประเภท</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-28">น้ำหนักรถเปล่า (กก.)</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-32">น้ำหนักรวมสูงสุด (กก.)</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-32">GPS (IMEI)</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 min-w-[160px]">รายละเอียด</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-24">สถานะ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">สาขา</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">ทะเบียน</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อรถ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">ประเภท</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">น้ำหนักรถเปล่า (กก.)</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-32">น้ำหนักรวมสูงสุด (กก.)</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-32">GPS (IMEI)</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground min-w-[160px]">รายละเอียด</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {editingId === "new" && <tr className="bg-cyan-50/50">{renderForm("new")}</tr>}
               {data.map((item) =>
                 editingId === item.id ? (
                   <tr key={item.id} className="bg-cyan-50/50">{renderForm(item.id, item.gpsDeviceId)}</tr>
                 ) : (
-                  <tr key={item.id} className={`hover:bg-slate-50 ${!item.isActive ? "opacity-50" : ""}`}>
-                    <td className="px-4 py-3 text-slate-600">{item.branch.name}</td>
+                  <tr key={item.id} className={`hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}>
+                    <td className="px-4 py-3 text-muted-foreground">{item.branch.name}</td>
                     <td className="px-4 py-3 font-mono font-medium">{item.plateNumber}</td>
-                    <td className="px-4 py-3 text-slate-800">{item.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{item.vehicleType}</td>
-                    <td className="px-4 py-3 text-slate-600">{item.maxWeightKg ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-600">{item.loadCapacityKg ?? "—"}</td>
+                    <td className="px-4 py-3 text-foreground">{item.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{item.vehicleType}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{item.maxWeightKg ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{item.loadCapacityKg ?? "—"}</td>
                     <td className="px-4 py-3">
                       {item.gpsDeviceId ? (
-                        <span className="font-mono text-xs text-slate-700">{item.gpsDeviceId}</span>
+                        <span className="font-mono text-xs text-foreground">{item.gpsDeviceId}</span>
                       ) : (
                         <button
                           type="button"
@@ -434,11 +432,11 @@ export function VehiclesTab() {
                                 linkGpsId: "",
                               })
                             }}
-                            className="p-1.5 text-slate-400 hover:text-cyan-600"
+                            className="p-1.5 text-muted-foreground hover:text-cyan-600"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-slate-400 hover:text-red-600">
+                          <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
@@ -454,7 +452,7 @@ export function VehiclesTab() {
             </tbody>
           </table>
         </div>
-      </Card>
+      </GlassCard>
 
       <LinkGpsVehicleModal
         open={modalOpen}

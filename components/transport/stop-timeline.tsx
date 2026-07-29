@@ -3,11 +3,11 @@ import type { StopStatus } from "@prisma/client"
 import { CheckCircle2, Circle, XCircle, SkipForward } from "lucide-react"
 
 const STATUS_CONFIG: Record<StopStatus, { label: string; icon: React.ReactNode; color: string }> = {
-  pending: { label: "รอ", icon: <Circle className="h-5 w-5" />, color: "text-slate-400" },
+  pending: { label: "รอ", icon: <Circle className="h-5 w-5" />, color: "text-muted-foreground" },
   arrived: { label: "ถึงแล้ว", icon: <Circle className="h-5 w-5 fill-blue-200" />, color: "text-blue-600" },
   loading: { label: "กำลังโหลด", icon: <Circle className="h-5 w-5 fill-amber-200" />, color: "text-amber-600" },
   completed: { label: "เสร็จ", icon: <CheckCircle2 className="h-5 w-5" />, color: "text-green-600" },
-  skipped: { label: "ข้าม", icon: <SkipForward className="h-5 w-5" />, color: "text-slate-400" },
+  skipped: { label: "ข้าม", icon: <SkipForward className="h-5 w-5" />, color: "text-muted-foreground" },
   cancelled: { label: "ยกเลิก", icon: <XCircle className="h-5 w-5" />, color: "text-red-500" },
 }
 
@@ -27,7 +27,7 @@ type Stop = {
 
 export function StopTimeline({ stops }: { stops: Stop[] }) {
   if (stops.length === 0) {
-    return <p className="text-sm text-slate-400">ไม่มีจุดแวะ</p>
+    return <p className="text-sm text-muted-foreground">ไม่มีจุดแวะ</p>
   }
 
   return (
@@ -44,16 +44,16 @@ export function StopTimeline({ stops }: { stops: Stop[] }) {
             {/* Icon */}
             <div className={cn("relative z-10 mt-0.5 shrink-0", cfg.color)}>{cfg.icon}</div>
             {/* Content */}
-            <div className="mb-6 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-6 min-w-0 flex-1 rounded-lg border border-border bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="text-xs font-medium text-slate-400">Stop {stop.sequence}</span>
-                  <h4 className="font-semibold text-slate-900">{stop.customerName}</h4>
-                  <p className="mt-0.5 text-sm text-slate-600">{stop.address}</p>
+                  <span className="text-xs font-medium text-muted-foreground">Stop {stop.sequence}</span>
+                  <h4 className="font-semibold text-foreground">{stop.customerName}</h4>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{stop.address}</p>
                 </div>
                 <span className={cn("shrink-0 text-xs font-medium", cfg.color)}>{cfg.label}</span>
               </div>
-              <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+              <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                 {stop.contactName && <span>ติดต่อ: {stop.contactName}</span>}
                 {stop.contactPhone && <span>โทร: {stop.contactPhone}</span>}
                 {stop.weightKg != null && (
@@ -70,7 +70,7 @@ export function StopTimeline({ stops }: { stops: Stop[] }) {
                   <span>ถึงจริง: {new Date(stop.actualArrival).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}</span>
                 )}
               </div>
-              {stop.notes && <p className="mt-2 text-xs text-slate-500 italic">{stop.notes}</p>}
+              {stop.notes && <p className="mt-2 text-xs text-muted-foreground italic">{stop.notes}</p>}
             </div>
           </li>
         )

@@ -7,10 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save, Loader2, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 const schema = z.object({
   code: z.string().min(1, "กรุณากรอกรหัสอะไหล่").max(50),
@@ -82,7 +80,7 @@ export default function EditSparePartPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -90,12 +88,12 @@ export default function EditSparePartPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/spare-parts" className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+        <Link href="/spare-parts" className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">แก้ไขอะไหล่</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{partName}</p>
+          <h1 className="text-2xl font-bold text-foreground">แก้ไขอะไหล่</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{partName}</p>
         </div>
       </div>
 
@@ -104,24 +102,24 @@ export default function EditSparePartPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลอะไหล่</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลอะไหล่</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="รหัสอะไหล่" required error={errors.code?.message} {...register("code")} />
-            <Input label="ชื่ออะไหล่" required error={errors.name?.message} {...register("name")} />
+            <GlassInput label="รหัสอะไหล่" required error={errors.code?.message} {...register("code")} />
+            <GlassInput label="ชื่ออะไหล่" required error={errors.name?.message} {...register("name")} />
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">รายละเอียด</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">รายละเอียด</label>
               <textarea
                 rows={2}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 {...register("description")}
               />
             </div>
-            <Input label="หน่วย" required error={errors.unit?.message} {...register("unit")} />
+            <GlassInput label="หน่วย" required error={errors.unit?.message} {...register("unit")} />
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">ซัพพลายเออร์</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">ซัพพลายเออร์</label>
               <select
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-card"
                 {...register("supplierId")}
               >
                 <option value="">— ไม่ระบุ —</option>
@@ -131,24 +129,24 @@ export default function EditSparePartPage() {
               </select>
             </div>
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>รูปภาพอะไหล่</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รูปภาพอะไหล่</GlassCardTitle></GlassCardHeader>
           <ImageUpload value={imageUrl} onChange={setImageUrl} />
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>ราคาและสต็อก</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ราคาและสต็อก</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input label="ราคาต่อหน่วย (฿)" type="number" min={0} step={0.01} error={errors.unitCost?.message} {...register("unitCost")} />
-            <Input label="สต็อกขั้นต่ำ" type="number" min={0} error={errors.minStock?.message} {...register("minStock")} />
-            <Input label="Lead Time (วัน)" type="number" min={0} error={errors.leadTimeDays?.message} {...register("leadTimeDays")} />
+            <GlassInput label="ราคาต่อหน่วย (฿)" type="number" min={0} step={0.01} error={errors.unitCost?.message} {...register("unitCost")} />
+            <GlassInput label="สต็อกขั้นต่ำ" type="number" min={0} error={errors.minStock?.message} {...register("minStock")} />
+            <GlassInput label="Lead Time (วัน)" type="number" min={0} error={errors.leadTimeDays?.message} {...register("leadTimeDays")} />
           </div>
-        </Card>
+        </GlassCard>
 
         <div className="flex gap-3 justify-between">
-          <Button
+          <GlassButton
             type="button"
             variant="danger"
             icon={<Trash2 className="w-4 h-4" />}
@@ -160,14 +158,14 @@ export default function EditSparePartPage() {
             }}
           >
             ปิดใช้งาน
-          </Button>
+          </GlassButton>
           <div className="flex gap-3">
-            <Link href="/spare-parts" className="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50">
+            <Link href="/spare-parts" className="px-4 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60">
               ยกเลิก
             </Link>
-            <Button type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
+            <GlassButton type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
               บันทึกการแก้ไข
-            </Button>
+            </GlassButton>
           </div>
         </div>
       </form>

@@ -66,11 +66,11 @@ function resolveGpsStatusKind(
 }
 
 const GPS_STATUS_COLORS: Record<GpsStatusKind, { className: string; bg: string; text: string }> = {
-  offline: { className: "bg-slate-200 text-slate-600", bg: "#e2e8f0", text: "#475569" },
-  moving: { className: "bg-green-100 text-green-700", bg: "#dcfce7", text: "#15803d" },
-  engineOn: { className: "bg-amber-100 text-amber-700", bg: "#fef3c7", text: "#b45309" },
-  engineOff: { className: "bg-blue-100 text-blue-700", bg: "#dbeafe", text: "#1d4ed8" },
-  unknown: { className: "bg-slate-100 text-slate-700", bg: "#f1f5f9", text: "#334155" },
+  offline: { className: "bg-muted text-foreground dark:bg-slate-700 dark:text-slate-200", bg: "#e2e8f0", text: "#475569" },
+  moving: { className: "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300", bg: "#dcfce7", text: "#15803d" },
+  engineOn: { className: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300", bg: "#fef3c7", text: "#b45309" },
+  engineOff: { className: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300", bg: "#dbeafe", text: "#1d4ed8" },
+  unknown: { className: "bg-muted text-foreground dark:bg-slate-700 dark:text-slate-200", bg: "#f1f5f9", text: "#334155" },
 }
 
 export function getGpsStatusColors(
@@ -99,7 +99,7 @@ export function getMovementStatus(v: Pick<GpsVehicleData, "online" | "speed" | "
     }
   }
 
-  if (!v.online) return { label: "OFFLINE", className: "bg-slate-200 text-slate-600" }
+  if (!v.online) return { label: "OFFLINE", className: "bg-slate-200 text-muted-foreground" }
   if (v.speed > 0) return { label: "กำลังวิ่ง", className: "bg-green-100 text-green-700" }
   if (v.engineOn) return { label: "ติดเครื่อง", className: "bg-amber-100 text-amber-700" }
   return { label: "ดับเครื่อง", className: "bg-blue-100 text-blue-700" }

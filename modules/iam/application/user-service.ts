@@ -11,10 +11,17 @@ function toModuleAccessJson(
   return value
 }
 
-/** null/undefined = ใช้ moduleAccess ตาม Role, "all" = ทุกโมดูล, array = เฉพาะโมดูลที่ระบุ */
+/** null/undefined = มองเห็นตามสิทธิ์อ่านของ Role, "all" = ทุกโมดูล, array = เฉพาะโมดูลที่ระบุ */
 const moduleAccessSchema = z.union([z.literal("all"), z.array(z.string())]).nullable().optional()
 
+const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9._]{3,50}$/, "Username ต้องเป็น a-z, 0-9, . หรือ _ ความยาว 3–50 ตัว")
+
 export const createUserSchema = z.object({
+  username: usernameSchema,
   email: z.string().email(),
   password: z.string().min(8),
   firstName: z.string().min(1),
@@ -28,6 +35,7 @@ export const createUserSchema = z.object({
 
 export const updateUserSchema = z
   .object({
+    username: usernameSchema.optional(),
     email: z.string().email().optional(),
     firstName: z.string().min(1).optional(),
     lastName: z.string().min(1).optional(),
@@ -64,6 +72,7 @@ export async function listUsers(
         { firstName: { contains: params.search, mode: "insensitive" as never } },
         { lastName: { contains: params.search, mode: "insensitive" as never } },
         { email: { contains: params.search, mode: "insensitive" as never } },
+        { username: { contains: params.search, mode: "insensitive" as never } },
         { employeeCode: { contains: params.search, mode: "insensitive" as never } },
       ],
     }),
@@ -74,6 +83,7 @@ export async function listUsers(
       where,
       select: {
         id: true,
+        username: true,
         employeeCode: true,
         email: true,
         firstName: true,
@@ -110,8 +120,14 @@ export async function createUser(
   db: PrismaClient,
   params: { companyId: string; input: z.infer<typeof createUserSchema> }
 ) {
+  const username = params.input.username
+  const existsUsername = await db.user.findUnique({ where: { username } })
+  if (existsUsername) {
+    return { error: { message: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว" }, status: 409 as const }
+  }
+
   const exists = await db.user.findUnique({ where: { email: params.input.email } })
-  if (exists) return { error: { message: "Email already exists" }, status: 409 as const }
+  if (exists) return { error: { message: "อีเมลนี้ถูกใช้งานแล้ว" }, status: 409 as const }
 
   const [branch, role] = await Promise.all([
     db.branch.findFirst({
@@ -143,6 +159,7 @@ export async function createUser(
   const user = await db.user.create({
     data: {
       ...userData,
+      username,
       moduleAccess: toModuleAccessJson(moduleAccess),
       passwordHash,
       companyId: params.companyId,
@@ -153,7 +170,7 @@ export async function createUser(
     },
   })
 
-  return { data: { id: user.id, email: user.email } }
+  return { data: { id: user.id, email: user.email, username: user.username } }
 }
 
 export async function getUserById(db: PrismaClient, params: { id: string; companyId: string }) {
@@ -161,6 +178,7 @@ export async function getUserById(db: PrismaClient, params: { id: string; compan
     where: { id: params.id, companyId: params.companyId, deletedAt: null },
     select: {
       id: true,
+      username: true,
       employeeCode: true,
       email: true,
       firstName: true,
@@ -195,7 +213,18 @@ export async function updateUser(
   })
   if (!user) return { error: "Not found" as const, status: 404 as const }
 
-  const { password, branchId, roleId, userBranchRoleId, moduleAccess, email, ...rest } = params.input
+  const { password, branchId, roleId, userBranchRoleId, moduleAccess, email, username, ...rest } =
+    params.input
+
+  if (username && username !== user.username) {
+    const dupUsername = await db.user.findFirst({
+      where: { username, id: { not: params.id } },
+      select: { id: true },
+    })
+    if (dupUsername) {
+      return { error: { message: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว" }, status: 409 as const }
+    }
+  }
 
   if (email && email !== user.email) {
     const dupEmail = await db.user.findFirst({
@@ -224,7 +253,6 @@ export async function updateUser(
     const existingRoles = user.userBranchRoles
 
     if (userBranchRoleId) {
-      // แก้ไขเฉพาะแถวที่ระบุ — ไม่กระทบ (branch, role) อื่นของ user คนนี้
       const target = existingRoles.find((r) => r.id === userBranchRoleId)
       if (!target) {
         return { error: { message: "Branch/role assignment not found" }, status: 400 as const }
@@ -238,13 +266,11 @@ export async function updateUser(
         data: { userId: params.id, branchId, roleId, assignedBy: params.assignedBy },
       })
     } else if (existingRoles.length === 1) {
-      // กรณีปกติ (user มีสาขา/role เดียว) — อัปเดตแถวเดิมในที่ ไม่ลบ+สร้างใหม่
       await db.userBranchRole.update({
         where: { id: existingRoles[0].id },
         data: { branchId, roleId, assignedBy: params.assignedBy, assignedAt: new Date() },
       })
     } else {
-      // user มีหลายสาขา/role — ต้องระบุ userBranchRoleId ให้ชัดเจน ป้องกันการลบสิทธิ์สาขาอื่นโดยไม่ตั้งใจ
       return {
         error: {
           message:
@@ -259,13 +285,14 @@ export async function updateUser(
     where: { id: params.id },
     data: {
       ...rest,
+      ...(username && { username }),
       ...(email && { email }),
       ...(moduleAccess !== undefined && { moduleAccess: toModuleAccessJson(moduleAccess) }),
       ...(password && { passwordHash: await bcrypt.hash(password, 12) }),
     },
   })
 
-  return { data: { id: updated.id, email: updated.email } }
+  return { data: { id: updated.id, email: updated.email, username: updated.username } }
 }
 
 export async function deactivateUser(

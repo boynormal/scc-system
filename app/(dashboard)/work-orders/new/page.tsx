@@ -7,11 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { BeforeAfterImages } from "@/components/ui/before-after-images"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 const schema = z.object({
   machineId: z.string().uuid("กรุณาเลือกเครื่องจักร"),
@@ -116,18 +114,18 @@ function NewWorkOrderForm() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/work-orders" className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+        <Link href="/work-orders" className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">สร้างใบสั่งงาน</h1>
-          <p className="text-slate-500 text-sm mt-0.5">สร้างใบสั่งงานซ่อมบำรุงใหม่</p>
+          <h1 className="text-2xl font-bold text-foreground">สร้างใบสั่งงาน</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">สร้างใบสั่งงานซ่อมบำรุงใหม่</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลพื้นฐาน</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลพื้นฐาน</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="เครื่องจักร"
@@ -161,22 +159,22 @@ function NewWorkOrderForm() {
               {...register("priority")}
             />
             <div className="sm:col-span-2">
-              <Input label="หัวข้อ" required error={errors.title?.message} {...register("title")} />
+              <GlassInput label="หัวข้อ" required error={errors.title?.message} {...register("title")} />
             </div>
           </div>
           <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700 mb-1">รายละเอียด</label>
+            <label className="block text-sm font-medium text-foreground mb-1">รายละเอียด</label>
             <textarea
               rows={4}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="รายละเอียดเกี่ยวกับปัญหาและสิ่งที่ต้องทำ"
               {...register("description")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>มอบหมายและเชื่อมโยง</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>มอบหมายและเชื่อมโยง</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="ผู้รับผิดชอบ"
@@ -194,17 +192,17 @@ function NewWorkOrderForm() {
               {...register("scheduleId")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>รูปภาพก่อน/หลังซ่อม</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รูปภาพก่อน/หลังซ่อม</GlassCardTitle></GlassCardHeader>
           <BeforeAfterImages
             beforeImages={imagesBefore}
             afterImages={imagesAfter}
             onBeforeChange={setImagesBefore}
             onAfterChange={setImagesAfter}
           />
-        </Card>
+        </GlassCard>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -213,12 +211,12 @@ function NewWorkOrderForm() {
         )}
 
         <div className="flex gap-3 justify-end">
-          <Link href="/work-orders" className="px-5 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
+          <Link href="/work-orders" className="px-5 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors">
             ยกเลิก
           </Link>
-          <Button type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
+          <GlassButton type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
             สร้างใบสั่งงาน
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

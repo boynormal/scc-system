@@ -55,15 +55,15 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">การแจ้งเตือน</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">การแจ้งเตือน</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             {unreadCount > 0 ? `ยังไม่ได้อ่าน ${unreadCount} รายการ` : "อ่านทั้งหมดแล้ว"}
           </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={fetchNotifications}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 border border-slate-300 hover:bg-slate-50 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground border border-border hover:bg-muted/60 rounded-lg transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             รีเฟรช
@@ -81,13 +81,13 @@ export default function NotificationsPage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit">
         {(["all", "unread"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              filter === f ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              filter === f ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {f === "all" ? "ทั้งหมด" : `ยังไม่อ่าน${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
@@ -96,42 +96,42 @@ export default function NotificationsPage() {
       </div>
 
       {/* List */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <RefreshCw className="w-6 h-6 text-slate-400 animate-spin" />
+            <RefreshCw className="w-6 h-6 text-muted-foreground animate-spin" />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Bell className="w-12 h-12 mb-3 opacity-20" />
             <p className="font-medium">ไม่มีการแจ้งเตือน</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border">
             {notifications.map((n) => {
               const config = typeConfig[n.type]
               return (
                 <div
                   key={n.id}
-                  className={`flex gap-4 px-5 py-4 hover:bg-slate-50 transition-colors ${!n.isRead ? "bg-blue-50/30" : ""}`}
+                  className={`flex gap-4 px-5 py-4 hover:bg-muted/60 transition-colors ${!n.isRead ? "bg-blue-50/30" : ""}`}
                 >
-                  <div className={`mt-0.5 shrink-0 w-10 h-10 ${config?.bg ?? "bg-slate-100"} rounded-full flex items-center justify-center`}>
-                    {config?.icon ?? <Bell className="w-4 h-4 text-slate-500" />}
+                  <div className={`mt-0.5 shrink-0 w-10 h-10 ${config?.bg ?? "bg-muted"} rounded-full flex items-center justify-center`}>
+                    {config?.icon ?? <Bell className="w-4 h-4 text-muted-foreground" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className={`text-sm ${!n.isRead ? "font-semibold text-slate-800" : "text-slate-700"}`}>
+                        <p className={`text-sm ${!n.isRead ? "font-semibold text-foreground" : "text-foreground"}`}>
                           {n.title}
                         </p>
                         {n.message && (
-                          <p className="text-sm text-slate-500 mt-0.5">{n.message}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">{n.message}</p>
                         )}
                         <div className="flex items-center gap-3 mt-1.5">
                           {config && (
-                            <span className="text-xs text-slate-400">{config.label}</span>
+                            <span className="text-xs text-muted-foreground">{config.label}</span>
                           )}
-                          <span className="text-xs text-slate-400">{formatDateTime(n.createdAt)}</span>
+                          <span className="text-xs text-muted-foreground">{formatDateTime(n.createdAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -149,7 +149,7 @@ export default function NotificationsPage() {
                         {n.link && (
                           <a
                             href={n.link}
-                            className="text-xs text-slate-500 hover:text-slate-700 hover:underline"
+                            className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                           >
                             ดูรายละเอียด →
                           </a>

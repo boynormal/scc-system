@@ -78,14 +78,14 @@ export function CustomerPicker({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="ค้นหาลูกค้า..."
-        className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+        className="w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
       />
       <select
         required={required}
         value={value}
         onChange={(e) => handleSelect(e.target.value)}
         disabled={loading}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
+        className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-card"
       >
         <option value="">{loading ? "กำลังโหลด..." : placeholder}</option>
         {filtered.map((c) => (

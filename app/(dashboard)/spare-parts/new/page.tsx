@@ -7,10 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 const schema = z.object({
   code: z.string().min(1, "กรุณากรอกรหัสอะไหล่").max(50),
@@ -61,12 +59,12 @@ export default function NewSparePartPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
-        <Link href="/spare-parts" className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+        <Link href="/spare-parts" className="p-2 hover:bg-muted rounded-lg text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">เพิ่มอะไหล่ใหม่</h1>
-          <p className="text-slate-500 text-sm mt-0.5">ลงทะเบียนอะไหล่ในระบบคลัง</p>
+          <h1 className="text-2xl font-bold text-foreground">เพิ่มอะไหล่ใหม่</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">ลงทะเบียนอะไหล่ในระบบคลัง</p>
         </div>
       </div>
 
@@ -75,17 +73,17 @@ export default function NewSparePartPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลอะไหล่</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลอะไหล่</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
+            <GlassInput
               label="รหัสอะไหล่"
               required
               placeholder="เช่น SP-001"
               error={errors.code?.message}
               {...register("code")}
             />
-            <Input
+            <GlassInput
               label="ชื่ออะไหล่"
               required
               placeholder="เช่น ตลับลูกปืน SKF 6205"
@@ -93,15 +91,15 @@ export default function NewSparePartPage() {
               {...register("name")}
             />
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">รายละเอียด</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">รายละเอียด</label>
               <textarea
                 rows={2}
                 placeholder="รายละเอียดเพิ่มเติม..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 {...register("description")}
               />
             </div>
-            <Input
+            <GlassInput
               label="หน่วย"
               required
               placeholder="เช่น ชิ้น, เมตร, กล่อง"
@@ -109,9 +107,9 @@ export default function NewSparePartPage() {
               {...register("unit")}
             />
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">ซัพพลายเออร์</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">ซัพพลายเออร์</label>
               <select
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-card"
                 {...register("supplierId")}
               >
                 <option value="">— ไม่ระบุ —</option>
@@ -121,17 +119,17 @@ export default function NewSparePartPage() {
               </select>
             </div>
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>รูปภาพอะไหล่</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รูปภาพอะไหล่</GlassCardTitle></GlassCardHeader>
           <ImageUpload value={imageUrl} onChange={setImageUrl} />
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <CardHeader><CardTitle>ราคาและสต็อก</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ราคาและสต็อก</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input
+            <GlassInput
               label="ราคาต่อหน่วย (฿)"
               type="number"
               min={0}
@@ -139,14 +137,14 @@ export default function NewSparePartPage() {
               error={errors.unitCost?.message}
               {...register("unitCost")}
             />
-            <Input
+            <GlassInput
               label="สต็อกขั้นต่ำ"
               type="number"
               min={0}
               error={errors.minStock?.message}
               {...register("minStock")}
             />
-            <Input
+            <GlassInput
               label="Lead Time (วัน)"
               type="number"
               min={0}
@@ -154,16 +152,16 @@ export default function NewSparePartPage() {
               {...register("leadTimeDays")}
             />
           </div>
-        </Card>
+        </GlassCard>
 
         <div className="flex justify-end gap-3">
-          <Link href="/spare-parts" className="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50">
+          <Link href="/spare-parts" className="px-4 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60">
             ยกเลิก
           </Link>
-          <Button type="submit" loading={isSubmitting}>
+          <GlassButton type="submit" loading={isSubmitting}>
             <Save className="w-4 h-4" />
             บันทึกอะไหล่
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

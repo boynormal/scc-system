@@ -55,7 +55,7 @@ export function DeleteButton({
     <button
       onClick={handleDelete}
       disabled={isDeleting}
-      className={`p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       title="ลบ"
     >
       {isDeleting ? (

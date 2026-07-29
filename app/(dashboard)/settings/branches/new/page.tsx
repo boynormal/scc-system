@@ -6,10 +6,13 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save } from "lucide-react"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import {
+  BranchLocationField,
+  coordsFromLocationString,
+} from "@/components/settings/branch-location-field"
+import { parseLatLngInput } from "@/shared/transport/coordinates"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 
 const schema = z.object({
   code: z.string().min(1, "กรุณากรอกรหัสสาขา").max(20),
@@ -23,6 +26,7 @@ type FormData = z.infer<typeof schema>
 export default function NewBranchPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [locationText, setLocationText] = useState("")
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { timezone: "Asia/Bangkok" },
@@ -30,10 +34,15 @@ export default function NewBranchPage() {
 
   const onSubmit = async (data: FormData) => {
     setError(null)
+    if (locationText.trim() && !parseLatLngInput(locationText)) {
+      setError("รูปแบบพิกัดไม่ถูกต้อง — ใช้ lat, lng")
+      return
+    }
+    const geo = coordsFromLocationString(locationText)
     const res = await fetch("/api/settings/branches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, ...geo }),
     })
     if (!res.ok) {
       const json = await res.json()
@@ -45,14 +54,14 @@ export default function NewBranchPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
-        <Link href="/settings/branches" className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+        <Link href="/settings/branches" className="p-2 hover:bg-muted rounded-lg text-muted-foreground">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">เพิ่มสาขาใหม่</h1>
-          <p className="text-slate-500 text-sm mt-0.5">สร้างสาขาหรือโรงงานในเครือบริษัท</p>
+          <h1 className="text-2xl font-bold text-foreground">เพิ่มสาขาใหม่</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">สร้างสาขาหรือโรงงานในเครือบริษัท</p>
         </div>
       </div>
 
@@ -61,17 +70,17 @@ export default function NewBranchPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Card>
-          <CardHeader><CardTitle>ข้อมูลสาขา</CardTitle></CardHeader>
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>ข้อมูลสาขา</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
+            <GlassInput
               label="รหัสสาขา"
               required
               placeholder="เช่น HQ, BKK01"
               error={errors.code?.message}
               {...register("code")}
             />
-            <Input
+            <GlassInput
               label="ชื่อสาขา"
               required
               placeholder="เช่น สำนักงานใหญ่"
@@ -79,33 +88,40 @@ export default function NewBranchPage() {
               {...register("name")}
             />
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">ที่อยู่</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">ที่อยู่</label>
               <textarea
                 rows={3}
                 placeholder="ที่อยู่สาขา..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 {...register("address")}
               />
             </div>
-            <Input
+            <GlassInput
               label="Timezone"
               placeholder="Asia/Bangkok"
               {...register("timezone")}
             />
           </div>
-        </Card>
+        </GlassCard>
+
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>ตำแหน่งสำหรับสภาพอากาศ</GlassCardTitle>
+          </GlassCardHeader>
+          <BranchLocationField value={locationText} onChange={setLocationText} />
+        </GlassCard>
 
         <div className="flex justify-end gap-3">
           <Link
             href="/settings/branches"
-            className="px-4 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50"
+            className="px-4 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60"
           >
             ยกเลิก
           </Link>
-          <Button type="submit" loading={isSubmitting}>
+          <GlassButton type="submit" loading={isSubmitting}>
             <Save className="w-4 h-4" />
             บันทึกสาขา
-          </Button>
+          </GlassButton>
         </div>
       </form>
     </div>

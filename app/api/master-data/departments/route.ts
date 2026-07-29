@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/shared/db"
 import { auth } from "@/lib/auth"
+import type { UserRole } from "@/lib/permissions"
+import { forbidUnlessPermission } from "@/lib/require-permission"
 import { createDepartment, createDepartmentSchema, listDepartments } from "@/modules/settings"
 
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  // Auth-only: used as dropdown on machine forms
   const branchId = new URL(req.url).searchParams.get("branchId")
   const data = await listDepartments(prisma, {
     companyId: session.user.companyId as string,
@@ -19,6 +22,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "settings", "update")
+  if (denied) return denied
 
   const body = await req.json()
   const parsed = createDepartmentSchema.safeParse(body)

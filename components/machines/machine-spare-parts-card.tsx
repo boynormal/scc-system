@@ -3,11 +3,9 @@
 import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
 import { ChevronDown, ChevronUp, Loader2, Package, Plus, Search, Trash2, X } from "lucide-react"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { ClickableImage } from "@/components/ui/clickable-image"
+import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 
 type SupplierMini = { id: string; name: string } | null
 
@@ -210,40 +208,40 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <CardTitle className="flex items-center gap-2 min-w-0 flex-1">
-            <Package className="w-5 h-5 text-slate-500 shrink-0" />
+      <GlassCard>
+        <GlassCardHeader className="flex flex-row items-center justify-between gap-3">
+          <GlassCardTitle className="flex items-center gap-2 min-w-0 flex-1">
+            <Package className="w-5 h-5 text-muted-foreground shrink-0" />
             <span className="truncate">อะไหล่แนะนำ (BOM)</span>
-          </CardTitle>
+          </GlassCardTitle>
           {canEdit ? (
             <div className="shrink-0">
-              <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="gap-1.5">
+              <GlassButton type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="gap-1.5">
                 <Plus className="w-4 h-4" />
                 เพิ่มอะไหล่
-              </Button>
+              </GlassButton>
             </div>
           ) : null}
-        </CardHeader>
+        </GlassCardHeader>
         <div className="px-6 pb-6">
           {error && (
             <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
           )}
           {loading ? (
-            <div className="flex items-center justify-center py-10 text-slate-400 gap-2">
+            <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
               <Loader2 className="w-5 h-5 animate-spin" />
               กำลังโหลด…
             </div>
           ) : sorted.length === 0 ? (
-            <div className="text-sm text-slate-500 text-center py-6 space-y-2 px-1">
+            <div className="text-sm text-muted-foreground text-center py-6 space-y-2 px-1">
               <p>ยังไม่มีรายการอะไหล่ที่ผูกกับเครื่องนี้</p>
               {canEdit ? (
-                <p className="text-slate-400">
-                  กดปุ่ม <span className="font-medium text-slate-600">เพิ่มอะไหล่</span> ที่มุมขวาของหัวข้อการ์ดด้านบน
+                <p className="text-muted-foreground">
+                  กดปุ่ม <span className="font-medium text-muted-foreground">เพิ่มอะไหล่</span> ที่มุมขวาของหัวข้อการ์ดด้านบน
                   แล้วค้นหาอะไหล่จากคลังเพื่อผูกกับเครื่อง
                 </p>
               ) : (
-                <p className="text-slate-400">
+                <p className="text-muted-foreground">
                   บัญชีของคุณไม่มีสิทธิ์แก้ไขเครื่องในสาขานี้ — จึงไม่มีปุ่มเพิ่ม
                   ให้ผู้จัดการหรือแอดมิน (สิทธิ์แก้ไขเครื่อง) ช่วยเพิ่มรายการให้
                 </p>
@@ -254,10 +252,10 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
               {sorted.map((row, idx) => (
                 <li
                   key={row.id}
-                  className="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100"
+                  className="flex flex-col gap-3 p-3 bg-muted rounded-lg border border-border"
                 >
                   <div className="flex gap-3 items-start">
-                    <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shrink-0 bg-white">
+                    <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-border shrink-0 bg-card">
                       {row.part.imageUrl ? (
                         <ClickableImage
                           src={row.part.imageUrl}
@@ -267,22 +265,22 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                           <Package className="w-6 h-6" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">
+                      <p className="text-sm font-semibold text-foreground truncate">
                         {row.part.code} — {row.part.name}
                       </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {row.part.supplier ? row.part.supplier.name : "—"} · หน่วย {row.part.unit}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
-                        <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           จำนวนอ้างอิง
-                          <Input
+                          <GlassInput
                             type="number"
                             min={1}
                             className="h-8 w-16 text-xs"
@@ -296,7 +294,7 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                             }}
                           />
                         </label>
-                        <Input
+                        <GlassInput
                           placeholder="หมายเหตุ"
                           className="h-8 max-w-xs text-xs flex-1 min-w-[120px]"
                           disabled={!canEdit || mutatingId === row.id}
@@ -316,7 +314,7 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                           title="ขึ้น"
                           disabled={idx === 0 || mutatingId === row.id}
                           onClick={() => move(idx, -1)}
-                          className="p-1 text-slate-500 hover:bg-white rounded border border-transparent hover:border-slate-200 disabled:opacity-30"
+                          className="p-1 text-muted-foreground hover:bg-white rounded border border-transparent hover:border-border disabled:opacity-30"
                         >
                           <ChevronUp className="w-4 h-4" />
                         </button>
@@ -325,7 +323,7 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                           title="ลง"
                           disabled={idx === sorted.length - 1 || mutatingId === row.id}
                           onClick={() => move(idx, 1)}
-                          className="p-1 text-slate-500 hover:bg-white rounded border border-transparent hover:border-slate-200 disabled:opacity-30"
+                          className="p-1 text-muted-foreground hover:bg-white rounded border border-transparent hover:border-border disabled:opacity-30"
                         >
                           <ChevronDown className="w-4 h-4" />
                         </button>
@@ -343,13 +341,13 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                   </div>
 
                   {(canEdit || row.locationOnMachine || row.installPhotoUrl) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/80">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/80">
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-medium text-slate-600">
+                        <label className="block text-xs font-medium text-muted-foreground">
                           ตำแหน่งบนเครื่อง / จุดติดตั้งอะไหล่
                         </label>
                         <textarea
-                          className="w-full min-h-[72px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                          className="w-full min-h-[72px] px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-muted disabled:text-muted-foreground"
                           placeholder="เช่น ฝาครอบมอเตอร์ด้านขวา, วาล์วไฮดรอลิกชุด A"
                           disabled={!canEdit || mutatingId === row.id}
                           defaultValue={row.locationOnMachine ?? ""}
@@ -384,16 +382,16 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
             </ul>
           )}
         </div>
-      </Card>
+      </GlassCard>
 
       {pickerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" role="dialog">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-800">เลือกอะไหล่จากคลัง</h2>
+          <div className="bg-card rounded-xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">เลือกอะไหล่จากคลัง</h2>
               <button
                 type="button"
-                className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
                 onClick={() => {
                   setPickerOpen(false)
                   setSearch("")
@@ -403,10 +401,10 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 border-b border-slate-100">
+            <div className="p-4 border-b border-border">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <GlassInput
                   className="pl-9"
                   placeholder="ค้นหารหัสหรือชื่ออะไหล่…"
                   value={search}
@@ -414,25 +412,25 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                   autoFocus
                 />
               </div>
-              <p className="text-xs text-slate-400 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 แสดงอะไหล่ในระบบล่าสุด — พิมพ์เพื่อค้นหารหัสหรือชื่อ
               </p>
             </div>
             <div className="flex-1 overflow-y-auto p-2 min-h-[200px]">
               {searchLoading ? (
-                <div className="flex justify-center py-8 text-slate-400">
+                <div className="flex justify-center py-8 text-muted-foreground">
                   <Loader2 className="w-6 h-6 animate-spin" />
                 </div>
               ) : searchResults.length === 0 ? (
-                <div className="text-center text-sm text-slate-400 py-8 space-y-2 px-2">
+                <div className="text-center text-sm text-muted-foreground py-8 space-y-2 px-2">
                   <p>
                     {search.trim().length >= 1
                       ? "ไม่พบอะไหล่ที่ตรงกับคำค้น"
                       : "ยังไม่มีอะไหล่ในระบบสำหรับบริษัทนี้"}
                   </p>
                   <p className="text-xs">
-                    เพิ่มอะไหล่ได้ที่เมนู <span className="font-medium text-slate-600">อะไหล่</span> →{" "}
-                    <span className="font-medium text-slate-600">เพิ่มอะไหล่</span> (/spare-parts/new)
+                    เพิ่มอะไหล่ได้ที่เมนู <span className="font-medium text-muted-foreground">อะไหล่</span> →{" "}
+                    <span className="font-medium text-muted-foreground">เพิ่มอะไหล่</span> (/spare-parts/new)
                   </p>
                 </div>
               ) : (
@@ -445,22 +443,22 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
                           type="button"
                           disabled={already || addingId === p.id}
                           onClick={() => !already && addPart(p.id)}
-                          className="w-full flex gap-3 p-2 rounded-lg text-left hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed border border-transparent hover:border-slate-200"
+                          className="w-full flex gap-3 p-2 rounded-lg text-left hover:bg-muted/60 disabled:opacity-50 disabled:cursor-not-allowed border border-transparent hover:border-border"
                         >
-                          <div className="relative w-10 h-10 rounded border border-slate-200 overflow-hidden shrink-0 bg-slate-100">
+                          <div className="relative w-10 h-10 rounded border border-border overflow-hidden shrink-0 bg-muted">
                             {p.imageUrl ? (
                               <Image src={p.imageUrl} alt="" fill sizes="40px" className="object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-300">
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                                 <Package className="w-4 h-4" />
                               </div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800 truncate">
+                            <p className="text-sm font-medium text-foreground truncate">
                               {p.code} — {p.name}
                             </p>
-                            <p className="text-xs text-slate-500">{p.supplier?.name ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">{p.supplier?.name ?? "—"}</p>
                             {already && <span className="text-xs text-amber-600">มีในรายการแล้ว</span>}
                           </div>
                           {addingId === p.id && <Loader2 className="w-4 h-4 animate-spin shrink-0 mt-2" />}

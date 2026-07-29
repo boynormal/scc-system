@@ -3,10 +3,10 @@ import { Factory, Plus, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
-import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DeleteButton } from "@/components/ui/delete-button"
+import { GlassCard } from "@/components/glass"
 
 export const metadata: Metadata = { title: "แผนซ่อมบำรุง" }
 
@@ -54,8 +54,8 @@ export default async function MaintenancePlansPage(
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">แผนซ่อมบำรุง</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">แผนซ่อมบำรุง</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             ทั้งหมด {plans.length} แผน · ใช้งาน {active} แผน
           </p>
         </div>
@@ -68,7 +68,7 @@ export default async function MaintenancePlansPage(
         </Link>
       </div>
 
-      <Card padding="none">
+      <GlassCard padding="none">
         {plans.length === 0 ? (
           <EmptyState
             icon={Factory}
@@ -84,23 +84,23 @@ export default async function MaintenancePlansPage(
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide w-16"></th>
-                  <th className="text-left px-3 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">เครื่องจักร</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">ชื่อแผน</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">ประเภท</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">ความถี่</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">กำหนดการ</th>
-                  <th className="text-left px-5 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wide">สถานะ</th>
+                <tr className="border-b border-border bg-muted">
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide w-16"></th>
+                  <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">เครื่องจักร</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ชื่อแผน</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ประเภท</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ความถี่</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">กำหนดการ</th>
+                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">สถานะ</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {plans.map((plan: Plan) => (
-                  <tr key={plan.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={plan.id} className="hover:bg-muted/60 transition-colors">
                     <td className="px-5 py-3.5">
                       {plan.machine.images?.[0] ? (
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-200">
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border">
                           <img
                             src={plan.machine.images[0].fileUrl}
                             alt={plan.machine.name}
@@ -110,21 +110,21 @@ export default async function MaintenancePlansPage(
                           />
                         </div>
                       ) : (
-                        <div className="w-12 h-12 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center">
-                          <ImageIcon className="w-5 h-5 text-slate-300" />
+                        <div className="w-12 h-12 rounded-lg border border-border bg-muted flex items-center justify-center">
+                          <ImageIcon className="w-5 h-5 text-muted-foreground" />
                         </div>
                       )}
                     </td>
                     <td className="px-3 py-3.5">
                       <Link href={`/machines/${plan.machine.id}`} className="hover:text-blue-600 transition-colors">
-                        <p className="font-semibold text-slate-800">{plan.machine.code}</p>
-                        <p className="text-slate-500 text-xs mt-0.5">{plan.machine.name} · {plan.machine.branch.name}</p>
+                        <p className="font-semibold text-foreground">{plan.machine.code}</p>
+                        <p className="text-muted-foreground text-xs mt-0.5">{plan.machine.name} · {plan.machine.branch.name}</p>
                       </Link>
                     </td>
                     <td className="px-5 py-3.5">
-                      <p className="font-semibold text-slate-800">{plan.name}</p>
+                      <p className="font-semibold text-foreground">{plan.name}</p>
                       {plan.estimatedDurationMin && (
-                        <p className="text-slate-400 text-xs mt-0.5">~{plan.estimatedDurationMin} นาที</p>
+                        <p className="text-muted-foreground text-xs mt-0.5">~{plan.estimatedDurationMin} นาที</p>
                       )}
                     </td>
                     <td className="px-5 py-3.5">
@@ -139,10 +139,10 @@ export default async function MaintenancePlansPage(
                         {plan.type.code}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600">
+                    <td className="px-5 py-3.5 text-muted-foreground">
                       ทุก {plan.frequencyValue} {freqLabel[plan.frequencyUnit] ?? plan.frequencyUnit}
                     </td>
-                    <td className="px-5 py-3.5 text-slate-500 text-xs">
+                    <td className="px-5 py-3.5 text-muted-foreground text-xs">
                       {plan._count.schedules} กำหนดการ
                     </td>
                     <td className="px-5 py-3.5">
@@ -165,7 +165,7 @@ export default async function MaintenancePlansPage(
             </table>
           </div>
         )}
-      </Card>
+      </GlassCard>
     </div>
   )
 }

@@ -88,7 +88,7 @@ export default function LocationPickerMapInner({
       />
       <div
         ref={mapContainerRef}
-        className="w-full rounded-lg border border-slate-200 overflow-hidden z-0"
+        className="w-full rounded-lg border border-border overflow-hidden z-0"
         style={{ height }}
       />
     </>

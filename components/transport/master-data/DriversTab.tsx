@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useMemo, Fragment } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2, ChevronDown, ChevronRight } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { isAutoDriverCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import {
@@ -175,7 +173,7 @@ export function DriversTab() {
     }
   }
 
-  const fieldClass = "h-8 w-full rounded-lg border border-slate-300 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+  const fieldClass = "h-8 w-full rounded-lg border border-border px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
   const branchVehicles = vehicles.filter(
     (v) => !editForm.branchId || v.branchId === editForm.branchId
   )
@@ -202,9 +200,9 @@ export function DriversTab() {
           ))}
         </select>
       </td>
-      <td className="px-4 py-3 align-top"><Input value={editForm.firstName} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} className="h-8 border-cyan-300" /></td>
-      <td className="px-4 py-3 align-top"><Input value={editForm.lastName} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} className="h-8 border-cyan-300" /></td>
-      <td className="px-4 py-3 align-top"><Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className="px-4 py-3 align-top"><GlassInput value={editForm.firstName} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className="px-4 py-3 align-top"><GlassInput value={editForm.lastName} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className="px-4 py-3 align-top"><GlassInput value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-8 border-cyan-300" /></td>
       <td className="px-4 py-3 align-top">
         <select value={editForm.assignedVehicleId} onChange={(e) => setEditForm((f) => ({ ...f, assignedVehicleId: e.target.value }))} className={fieldClass}>
           <option value="">-- ไม่ระบุรถประจำ --</option>
@@ -221,7 +219,7 @@ export function DriversTab() {
         />
       </td>
       <td className="px-4 py-3 text-right space-x-2 align-top">
-        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded bg-white"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background"><X className="w-4 h-4" /></button>
         <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded"><Save className="w-4 h-4" /></button>
       </td>
     </>
@@ -231,7 +229,7 @@ export function DriversTab() {
     <td colSpan={MAIN_COL_COUNT} className="px-4 py-3 bg-cyan-50/30 border-t border-cyan-100">
       <div className="grid sm:grid-cols-2 gap-4 pl-8">
         <div>
-          <p className="text-xs font-semibold text-slate-500 mb-2">ประเภทรถที่ขับได้</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">ประเภทรถที่ขับได้</p>
           <MultiSelectCheckbox
             options={DRIVER_DRIVABLE_VEHICLE_TYPES}
             value={editForm.drivableVehicleTypes}
@@ -240,7 +238,7 @@ export function DriversTab() {
           />
         </div>
         <div>
-          <p className="text-xs font-semibold text-slate-500 mb-2">รายละเอียด</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">รายละเอียด</p>
           <DetailsField value={editForm.notes} onChange={(notes) => setEditForm((f) => ({ ...f, notes }))} />
         </div>
       </div>
@@ -248,14 +246,14 @@ export function DriversTab() {
   )
 
   const renderViewSubRow = (item: Driver) => (
-    <td colSpan={MAIN_COL_COUNT} className="px-4 py-3 bg-slate-50/80 border-t border-slate-100">
+    <td colSpan={MAIN_COL_COUNT} className="px-4 py-3 bg-muted/80 border-t border-border">
       <div className="grid sm:grid-cols-2 gap-4 pl-8">
         <div>
-          <p className="text-xs font-semibold text-slate-500 mb-1.5">ประเภทรถที่ขับได้</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1.5">ประเภทรถที่ขับได้</p>
           <MultiSelectDisplay value={parseStringArray(item.drivableVehicleTypes)} />
         </div>
         <div>
-          <p className="text-xs font-semibold text-slate-500 mb-1.5">รายละเอียด</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1.5">รายละเอียด</p>
           <DetailsDisplay value={item.notes} expanded />
         </div>
       </div>
@@ -277,18 +275,18 @@ export function DriversTab() {
           <p>
             มีคนขับ <strong>{legacyCount}</strong> รายการที่ใช้รหัสแบบเก่า (ไม่ตรงรูปแบบ DRV-YYYY-00001)
           </p>
-          <Button
-            variant="secondary"
+          <GlassButton
+            variant="outline"
             size="sm"
             disabled={migrating}
             onClick={handleMigrateLegacyCodes}
           >
             {migrating ? "กำลังปรับรหัส..." : "ปรับรหัสเป็นรูปแบบใหม่"}
-          </Button>
+          </GlassButton>
         </div>
       )}
       <div className="flex justify-end">
-        <Button
+        <GlassButton
           onClick={() => {
             setEditingId("new")
             setEditForm({ ...emptyForm, branchId: branches.length === 1 ? branches[0].id : "" })
@@ -296,20 +294,20 @@ export function DriversTab() {
           icon={<Plus className="w-4 h-4" />}
         >
           เพิ่มคนขับ
-        </Button>
+        </GlassButton>
       </div>
-      <Card padding="none">
+      <GlassCard padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-muted border-b border-border">
               <tr>
                 <th className="px-2 py-3 w-10"></th>
-                <th className="px-4 py-3 font-semibold text-slate-600">สาขา</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">ชื่อ</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">นามสกุล</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-28">โทรศัพท์</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-36" title="รถที่ใช้งานประจำของคนขับ">รถประจำ</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">ใบขับขี่</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">สาขา</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">นามสกุล</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">โทรศัพท์</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground w-36" title="รถที่ใช้งานประจำของคนขับ">รถประจำ</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">ใบขับขี่</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
             </thead>
@@ -330,13 +328,13 @@ export function DriversTab() {
                   <Fragment key={item.id}>
                     <tr
                       key={item.id}
-                      className={`border-t border-slate-100 hover:bg-slate-50 ${!item.isActive ? "opacity-50" : ""}`}
+                      className={`border-t border-border hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}
                     >
                       <td className="px-2 py-3 align-top w-10">
                         <button
                           type="button"
                           onClick={() => toggleExpanded(item.id)}
-                          className="p-1 text-slate-400 hover:text-slate-600 rounded"
+                          className="p-1 text-muted-foreground hover:text-muted-foreground rounded"
                           aria-label={isExpanded(item.id) ? "หุบรายละเอียด" : "ขยายรายละเอียด"}
                         >
                           {isExpanded(item.id) ? (
@@ -346,11 +344,11 @@ export function DriversTab() {
                           )}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-slate-600 align-top">{item.branch.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground align-top">{item.branch.name}</td>
                       <td className="px-4 py-3 align-top">{item.firstName}</td>
                       <td className="px-4 py-3 align-top">{item.lastName}</td>
-                      <td className="px-4 py-3 text-slate-600 align-top">{item.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-600 align-top">{item.assignedVehicle?.plateNumber ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground align-top">{item.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground align-top">{item.assignedVehicle?.plateNumber ?? "—"}</td>
                       <td className="px-4 py-3 align-top">
                         <MultiSelectDisplay value={parseStringArray(item.licenseTypes)} />
                       </td>
@@ -363,11 +361,11 @@ export function DriversTab() {
                                 setEditingId(item.id)
                                 setEditForm(driverToForm(item))
                               }}
-                              className="p-1.5 text-slate-400 hover:text-cyan-600"
+                              className="p-1.5 text-muted-foreground hover:text-cyan-600"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-slate-400 hover:text-red-600">
+                            <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </>
@@ -389,7 +387,7 @@ export function DriversTab() {
             </tbody>
           </table>
         </div>
-      </Card>
+      </GlassCard>
     </div>
   )
 }

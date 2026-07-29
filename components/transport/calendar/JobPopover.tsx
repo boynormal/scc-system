@@ -9,7 +9,7 @@ export const PRIORITY_CONFIG = {
   urgent: { label: "ด่วนมาก", bg: "bg-red-500", text: "text-white", light: "bg-red-100 text-red-700" },
   high: { label: "สูง", bg: "bg-orange-400", text: "text-white", light: "bg-orange-100 text-orange-700" },
   normal: { label: "ปกติ", bg: "bg-cyan-500", text: "text-white", light: "bg-cyan-100 text-cyan-700" },
-  low: { label: "ต่ำ", bg: "bg-slate-400", text: "text-white", light: "bg-slate-100 text-slate-600" },
+  low: { label: "ต่ำ", bg: "bg-slate-400", text: "text-white", light: "bg-muted text-muted-foreground" },
 } as const
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -36,7 +36,7 @@ export function JobPopover({ job, onClose }: Props) {
   const scheduledDate = new Date(job.scheduledDate)
 
   return (
-    <div className="absolute z-50 w-72 rounded-xl border border-slate-200 bg-white shadow-xl"
+    <div className="absolute z-50 w-72 rounded-xl border border-border bg-card shadow-xl"
       style={{ top: "100%", left: 0, marginTop: 4 }}
     >
       {/* Header */}
@@ -67,7 +67,7 @@ export function JobPopover({ job, onClose }: Props) {
       </div>
 
       {/* Footer */}
-      <div className="border-t border-slate-100 px-4 py-3">
+      <div className="border-t border-border px-4 py-3">
         <Link
           href={`/transport/jobs/${job.id}`}
           className="block w-full rounded-lg bg-slate-900 py-1.5 text-center text-xs font-semibold text-white hover:bg-slate-700"
@@ -82,8 +82,8 @@ export function JobPopover({ job, onClose }: Props) {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-2">
-      <span className="text-slate-400 shrink-0">{label}</span>
-      <span className="text-right font-medium text-slate-800">{value}</span>
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="text-right font-medium text-foreground">{value}</span>
     </div>
   )
 }

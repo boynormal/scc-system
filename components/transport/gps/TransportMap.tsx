@@ -6,7 +6,7 @@ import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 const LeafletMapInner = dynamic(() => import("./LeafletMapInner"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
+    <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
       กำลังโหลดแผนที่...
     </div>
   ),

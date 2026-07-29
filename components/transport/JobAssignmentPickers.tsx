@@ -134,7 +134,7 @@ export function JobAssignmentPickers({
       )}
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">
+        <label className="block text-xs font-medium text-muted-foreground mb-1">
           {vehicleLabel}
           {vehicleRequired && " *"}
         </label>
@@ -144,8 +144,8 @@ export function JobAssignmentPickers({
           required={vehicleRequired}
           disabled={vehiclesScope === "branch" && !branchId}
           className={cn(
-            "w-full rounded-lg border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500",
-            !vehicleId ? "border-slate-300" : "border-cyan-400"
+            "w-full rounded-lg border px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-cyan-500",
+            !vehicleId ? "border-border" : "border-cyan-400"
           )}
         >
           <option value="">-- เลือกรถ --</option>
@@ -169,7 +169,7 @@ export function JobAssignmentPickers({
       )}
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">
+        <label className="block text-xs font-medium text-muted-foreground mb-1">
           {driverLabel}
           {driverRequired && " *"}
         </label>
@@ -179,8 +179,8 @@ export function JobAssignmentPickers({
           required={driverRequired}
           disabled={driversScope === "branch" && !branchId}
           className={cn(
-            "w-full rounded-lg border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500",
-            !driverId ? "border-slate-300" : "border-cyan-400"
+            "w-full rounded-lg border px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-cyan-500",
+            !driverId ? "border-border" : "border-cyan-400"
           )}
         >
           <option value="">-- เลือกคนขับ --</option>

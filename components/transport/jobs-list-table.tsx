@@ -5,8 +5,8 @@ import type { listJobs } from "@/modules/transport"
 
 const PRIORITY_LABEL: Record<string, string> = { low: "ต่ำ", normal: "ปกติ", high: "สูง", urgent: "ด่วน" }
 const PRIORITY_COLOR: Record<string, string> = {
-  low: "text-slate-500",
-  normal: "text-slate-700",
+  low: "text-muted-foreground",
+  normal: "text-foreground",
   high: "text-amber-600 font-semibold",
   urgent: "text-red-600 font-bold",
 }
@@ -19,9 +19,9 @@ type Props = {
 
 export function JobsListTable({ items }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-xs font-medium uppercase tracking-wider text-slate-500">
+        <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left">เลขใบงาน</th>
             <th className="px-4 py-3 text-left">ลูกค้า / ประเภทงาน</th>
@@ -33,16 +33,16 @@ export function JobsListTable({ items }: Props) {
             <th className="px-4 py-3 text-right">จัดการ</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-border">
           {items.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+              <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                 ไม่พบใบงาน
               </td>
             </tr>
           ) : (
             items.map((job) => (
-              <tr key={job.id} className="hover:bg-slate-50">
+              <tr key={job.id} className="hover:bg-muted/60">
                 <td className="px-4 py-3">
                   <Link
                     href={`/transport/jobs/${job.id}`}
@@ -52,25 +52,25 @@ export function JobsListTable({ items }: Props) {
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-slate-800">
+                  <div className="font-medium text-foreground">
                     {job.customerName ?? job.customer?.name ?? "—"}
                   </div>
-                  <div className="text-xs text-slate-500">{job.jobType}</div>
+                  <div className="text-xs text-muted-foreground">{job.jobType}</div>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{job.branch.name}</td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-muted-foreground">{job.branch.name}</td>
+                <td className="px-4 py-3 text-muted-foreground">
                   {job.assignment ? (
                     <div>
                       <div>{job.assignment.vehicle.plateNumber}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-muted-foreground">
                         {job.assignment.driver.firstName} {job.assignment.driver.lastName}
                       </div>
                     </div>
                   ) : (
-                    <span className="text-slate-400">—</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{job._count.stops}</td>
+                <td className="px-4 py-3 text-muted-foreground">{job._count.stops}</td>
                 <td className={`px-4 py-3 text-xs ${PRIORITY_COLOR[job.priority] ?? ""}`}>
                   {PRIORITY_LABEL[job.priority] ?? job.priority}
                 </td>

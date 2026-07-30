@@ -3,14 +3,37 @@ import type { PrismaClient, TransportRepairStatus } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { hasPermission, isAdminInAnyBranch, getBranchIds, type UserRole } from "@/lib/permissions"
 import { getBangkokDateRange, getBangkokTodayRange } from "./transport-date-utils"
+import {
+  TRANSPORT_PAYMENT_METHODS,
+  type TransportPaymentMethodOption,
+} from "./payment-options"
 
-export const createRepairSchema = z.object({
-  vehicleId: z.string().uuid(),
-  symptom: z.string().min(1).max(2000),
-  notes: z.string().max(2000).optional(),
-  mileageAtReport: z.number().min(0).optional(),
-  repairCost: z.number().min(0).nullable().optional(),
-})
+const paymentMethodSchema = z.enum(TRANSPORT_PAYMENT_METHODS)
+
+function refineCostWithPaymentMethod(
+  data: { repairCost?: number | null; paymentMethod?: TransportPaymentMethodOption | null },
+  ctx: z.RefinementCtx
+) {
+  const cost = data.repairCost
+  if (cost != null && cost > 0 && !data.paymentMethod) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["paymentMethod"],
+      message: "กรุณาเลือกวิธีจ่ายเมื่อมีราคาซ่อม",
+    })
+  }
+}
+
+export const createRepairSchema = z
+  .object({
+    vehicleId: z.string().uuid(),
+    symptom: z.string().min(1).max(2000),
+    notes: z.string().max(2000).optional(),
+    mileageAtReport: z.number().min(0).optional(),
+    repairCost: z.number().min(0).nullable().optional(),
+    paymentMethod: paymentMethodSchema.nullable().optional(),
+  })
+  .superRefine(refineCostWithPaymentMethod)
 
 export type CreateRepairInput = z.infer<typeof createRepairSchema>
 
@@ -196,6 +219,7 @@ export async function createRepair(
       mileageAtReport:
         params.input.mileageAtReport ?? (vehicle.mileage != null ? Number(vehicle.mileage) : null),
       repairCost: params.input.repairCost ?? null,
+      paymentMethod: params.input.paymentMethod ?? null,
     },
     include: repairInclude,
   })
@@ -328,13 +352,24 @@ export async function cancelRepair(
   })
 }
 
-export const updateRepairSchema = z.object({
-  vehicleId: z.string().uuid().optional(),
-  symptom: z.string().min(1).max(2000).optional(),
-  notes: z.string().max(2000).nullable().optional(),
-  repairCost: z.number().min(0).nullable().optional(),
-  status: z.enum(["reported", "in_repair", "closed", "cancelled"]).optional(),
-})
+export const updateRepairSchema = z
+  .object({
+    vehicleId: z.string().uuid().optional(),
+    symptom: z.string().min(1).max(2000).optional(),
+    notes: z.string().max(2000).nullable().optional(),
+    repairCost: z.number().min(0).nullable().optional(),
+    paymentMethod: paymentMethodSchema.nullable().optional(),
+    status: z.enum(["reported", "in_repair", "closed", "cancelled"]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.repairCost != null && data.repairCost > 0 && data.paymentMethod === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["paymentMethod"],
+        message: "กรุณาเลือกวิธีจ่ายเมื่อมีราคาซ่อม",
+      })
+    }
+  })
 
 export type UpdateRepairInput = z.infer<typeof updateRepairSchema>
 
@@ -360,6 +395,7 @@ export async function updateRepair(
     input.symptom === undefined &&
     input.notes === undefined &&
     input.repairCost === undefined &&
+    input.paymentMethod === undefined &&
     input.status === undefined
   ) {
     throw new ValidationError("ไม่มีข้อมูลที่จะอัปเดต")
@@ -434,6 +470,7 @@ export async function updateRepair(
         ...(input.symptom !== undefined ? { symptom: input.symptom.trim() } : {}),
         ...(input.notes !== undefined ? { notes: input.notes?.trim() || null } : {}),
         ...(input.repairCost !== undefined ? { repairCost: input.repairCost } : {}),
+        ...(input.paymentMethod !== undefined ? { paymentMethod: input.paymentMethod } : {}),
         ...statusData,
       },
       include: repairInclude,

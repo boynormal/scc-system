@@ -16,6 +16,7 @@ import { GlassButton, GlassCard } from "@/components/glass"
 import { RepairStatusBadge, type RepairStatus } from "@/components/transport/repairs/RepairStatusBadge"
 import { ReportRepairModal } from "@/components/transport/repairs/ReportRepairModal"
 import { EditRepairModal } from "@/components/transport/repairs/EditRepairModal"
+import { TRANSPORT_PAYMENT_METHOD_LABELS } from "@/modules/transport/application/payment-options"
 import { cn } from "@/lib/utils"
 
 type RepairRow = {
@@ -27,6 +28,7 @@ type RepairRow = {
   startedAt: string | null
   closedAt: string | null
   repairCost: string | number | null
+  paymentMethod: "cash" | "credit" | null
   vehicle: {
     id: string
     plateNumber: string
@@ -408,49 +410,133 @@ export function RepairsPageClient() {
           ไม่มีใบแจ้งซ่อมในตัวกรองนี้ — กด &quot;แจ้งซ่อม&quot; เพื่อสร้างใบใหม่ หรือปรับช่วงเวลา
         </GlassCard>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <GlassCard key={item.id} className="p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm font-semibold text-foreground">
-                      {item.vehicle.plateNumber}
-                    </span>
-                    <span className="text-sm text-muted-foreground">{item.vehicle.name}</span>
-                    <RepairStatusBadge status={item.status} />
-                  </div>
-                  <p className="text-sm text-foreground">{item.symptom}</p>
-                  {item.notes && <p className="text-xs text-muted-foreground">{item.notes}</p>}
-                  <p className="text-[11px] text-muted-foreground">
-                    {item.branch.name} · แจ้งเมื่อ {formatDt(item.reportedAt)}
-                    {item.reportedBy
-                      ? ` · โดย ${item.reportedBy.firstName} ${item.reportedBy.lastName}`
-                      : ""}
-                    {` · ราคา ${formatCostDisplay(item.repairCost)} บาท`}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {items.map((item) => {
+            const plate = item.vehicle.plateNumber
+            const vehicleName =
+              item.vehicle.name &&
+              item.vehicle.name.trim() !== plate.trim()
+                ? item.vehicle.name
+                : null
+            const paymentLabel = item.paymentMethod
+              ? TRANSPORT_PAYMENT_METHOD_LABELS[item.paymentMethod]
+              : null
+
+            return (
+            <GlassCard
+              key={item.id}
+              padding="none"
+              className="flex h-full flex-col overflow-hidden"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
+                <RepairStatusBadge status={item.status} />
+                {(item.status === "closed" || item.status === "cancelled") && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Wrench className="h-3 w-3 shrink-0" />
+                    {item.status === "closed" ? formatDt(item.closedAt) : "ยกเลิกแล้ว"}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+                <div>
+                  <p className="mb-0.5 text-[11px] font-medium text-muted-foreground">ทะเบียน</p>
+                  <p className="font-mono text-base font-bold tracking-wide text-foreground">
+                    {plate}
                   </p>
+                  {vehicleName ? (
+                    <p className="mt-0.5 text-sm text-muted-foreground">{vehicleName}</p>
+                  ) : null}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div>
+                  <p className="mb-0.5 text-[11px] font-medium text-muted-foreground">อาการ</p>
+                  <p className="text-sm leading-snug text-foreground">{item.symptom}</p>
+                  {item.notes ? (
+                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                      <span className="font-medium text-foreground/80">หมายเหตุ:</span> {item.notes}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">ค่าใช้จ่าย</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatCostDisplay(item.repairCost)} บาท
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">วิธีจ่าย</p>
+                    {paymentLabel ? (
+                      <span
+                        className={cn(
+                          "mt-0.5 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
+                          item.paymentMethod === "cash"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-violet-100 text-violet-800"
+                        )}
+                      >
+                        {paymentLabel}
+                      </span>
+                    ) : (
+                      <p className="text-sm font-medium text-muted-foreground">ไม่ระบุ</p>
+                    )}
+                  </div>
+                </div>
+
+                <dl className="mt-auto space-y-1.5 text-xs">
+                  <div className="flex justify-between gap-2">
+                    <dt className="shrink-0 text-muted-foreground">สาขา</dt>
+                    <dd className="text-right font-medium text-foreground">{item.branch.name}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="shrink-0 text-muted-foreground">แจ้งเมื่อ</dt>
+                    <dd className="text-right font-medium text-foreground">{formatDt(item.reportedAt)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="shrink-0 text-muted-foreground">ผู้แจ้ง</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {item.reportedBy
+                        ? `${item.reportedBy.firstName} ${item.reportedBy.lastName}`
+                        : "—"}
+                    </dd>
+                  </div>
+                  {item.startedAt && (
+                    <div className="flex justify-between gap-2">
+                      <dt className="shrink-0 text-muted-foreground">เข้าซ่อม</dt>
+                      <dd className="text-right font-medium text-foreground">{formatDt(item.startedAt)}</dd>
+                    </div>
+                  )}
+                  {item.closedAt && item.status === "closed" && (
+                    <div className="flex justify-between gap-2">
+                      <dt className="shrink-0 text-muted-foreground">ปิดงาน</dt>
+                      <dd className="text-right font-medium text-foreground">{formatDt(item.closedAt)}</dd>
+                    </div>
+                  )}
+                </dl>
+
+                <div className="flex flex-wrap gap-1.5 border-t border-border pt-2">
                   <button
                     type="button"
                     onClick={() => setEditingRepair(item)}
                     disabled={actionId === item.id}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-3.5 w-3.5" />
                     แก้ไข
                   </button>
                   {item.status === "reported" && (
                     <>
                       <GlassButton
+                        size="sm"
                         onClick={() => runAction(item.id, "start")}
                         disabled={actionId === item.id}
                         icon={
                           actionId === item.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <Play className="h-4 w-4" />
+                            <Play className="h-3.5 w-3.5" />
                           )
                         }
                       >
@@ -460,38 +546,34 @@ export function RepairsPageClient() {
                         type="button"
                         onClick={() => runAction(item.id, "cancel")}
                         disabled={actionId === item.id}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
                       >
-                        <XCircle className="h-4 w-4" />
+                        <XCircle className="h-3.5 w-3.5" />
                         ยกเลิก
                       </button>
                     </>
                   )}
                   {item.status === "in_repair" && (
                     <GlassButton
+                      size="sm"
                       onClick={() => runAction(item.id, "close")}
                       disabled={actionId === item.id}
                       icon={
                         actionId === item.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <CheckCircle2 className="h-4 w-4" />
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                         )
                       }
                     >
-                      ปิดงานซ่อม
+                      ปิดงาน
                     </GlassButton>
-                  )}
-                  {(item.status === "closed" || item.status === "cancelled") && (
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Wrench className="h-3.5 w-3.5" />
-                      {item.status === "closed" ? `ปิดเมื่อ ${formatDt(item.closedAt)}` : "ยกเลิกแล้ว"}
-                    </span>
                   )}
                 </div>
               </div>
             </GlassCard>
-          ))}
+            )
+          })}
         </div>
       )}
 

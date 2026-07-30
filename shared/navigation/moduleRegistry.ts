@@ -21,6 +21,7 @@ export const NAV_ICON_KEYS = [
   "Ticket",
   "Fence",
   "ScanLine",
+  "CircleDot",
 ] as const
 
 export type NavIconKey = (typeof NAV_ICON_KEYS)[number]
@@ -310,13 +311,25 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
       },
       {
         type: "link",
+        key: "transport_tires",
+        href: "/transport/tires",
+        label: "จัดการยาง",
+        icon: "CircleDot",
+        permission: { resource: "transport_vehicles", action: "read" },
+        moduleId: "transport_tires",
+        order: 6,
+        keywords: ["tire", "ยาง", "ล้อ", "เปลี่ยนยาง", "ปะยาง"],
+        launcher: { departmentId: "transport" },
+      },
+      {
+        type: "link",
         key: "transport_master_data",
         href: "/transport/master-data",
         label: "ข้อมูลพื้นฐาน",
         icon: "Database",
         permission: { resource: "transport_jobs", action: "read" },
         moduleId: "transport_master_data",
-        order: 6,
+        order: 7,
         keywords: ["master data", "ข้อมูลพื้นฐาน", "ลูกค้า", "ประเภทงาน", "รถ", "คนขับ", "fleet"],
         launcher: { departmentId: "transport" },
       },

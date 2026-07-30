@@ -18,6 +18,7 @@ export type EditableRepair = {
   notes: string | null
   status: RepairStatus
   repairCost: string | number | null
+  paymentMethod: "cash" | "credit" | null
   vehicle: { id: string; plateNumber: string; name: string }
 }
 
@@ -49,6 +50,7 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
   const [notes, setNotes] = useState("")
   const [status, setStatus] = useState<RepairStatus>("reported")
   const [repairCost, setRepairCost] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit">("cash")
   const [vehicles, setVehicles] = useState<VehicleOption[]>([])
   const [loadingVehicles, setLoadingVehicles] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -65,6 +67,7 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
     setNotes(repair.notes ?? "")
     setStatus(repair.status)
     setRepairCost(costToInput(repair.repairCost))
+    setPaymentMethod(repair.paymentMethod === "credit" ? "credit" : "cash")
     setError(null)
 
     let cancelled = false
@@ -119,6 +122,10 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
       }
       costValue = n
     }
+    if (costValue != null && costValue > 0 && !paymentMethod) {
+      setError("กรุณาเลือกวิธีจ่าย")
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -131,6 +138,7 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
           symptom: symptom.trim(),
           notes: notes.trim() || null,
           repairCost: costValue,
+          paymentMethod: costValue != null && costValue > 0 ? paymentMethod : null,
           status,
         }),
       })
@@ -203,6 +211,30 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
               onChange={(e) => setRepairCost(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">วิธีจ่าย</label>
+            <div className="flex gap-4 text-sm">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="editPaymentMethod"
+                  checked={paymentMethod === "cash"}
+                  onChange={() => setPaymentMethod("cash")}
+                />
+                เงินสด
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="editPaymentMethod"
+                  checked={paymentMethod === "credit"}
+                  onChange={() => setPaymentMethod("credit")}
+                />
+                เครดิต
+              </label>
+            </div>
           </div>
 
           <div>

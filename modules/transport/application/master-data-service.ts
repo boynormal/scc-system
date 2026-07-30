@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { PrismaClient } from "@prisma/client"
 import { Prisma } from "@prisma/client"
-import { ForbiddenError, NotFoundError } from "@/lib/errors"
+import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import {
   generateTmsCustomerCode,
   migrateLegacyCustomerCodes,
@@ -13,6 +13,13 @@ import {
   isAdminInAnyBranch,
   type UserRole,
 } from "@/lib/permissions"
+import {
+  getDefaultWheelLayout,
+  validateWheelLayoutAgainstCount,
+  vehicleWheelCountSchema,
+  type VehicleWheelCount,
+  type WheelLayout,
+} from "./vehicle-wheel-layouts"
 
 const lookupSchema = z.object({
   name: z.string().min(1).max(100),
@@ -25,8 +32,46 @@ export const createJobTypeSchema = lookupSchema
 export const updateJobTypeSchema = lookupSchema.partial()
 export const createCargoTypeSchema = lookupSchema
 export const updateCargoTypeSchema = lookupSchema.partial()
-export const createVehicleTypeSchema = lookupSchema
-export const updateVehicleTypeSchema = lookupSchema.partial()
+
+const vehicleTypeBaseSchema = lookupSchema.extend({
+  wheelCount: vehicleWheelCountSchema,
+  wheelLayout: z.array(z.array(z.number().int().positive()).min(1)).min(1).optional(),
+})
+
+function refineVehicleTypeWheelFields<T extends z.ZodTypeAny>(schema: T) {
+  return schema.superRefine((data: { wheelCount?: number; wheelLayout?: unknown }, ctx) => {
+    if (data.wheelCount === undefined) return
+    if (data.wheelLayout === undefined) return
+    const result = validateWheelLayoutAgainstCount(data.wheelLayout, data.wheelCount)
+    if (!result.ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["wheelLayout"],
+        message: result.message,
+      })
+    }
+  })
+}
+
+export const createVehicleTypeSchema = refineVehicleTypeWheelFields(vehicleTypeBaseSchema)
+export const updateVehicleTypeSchema = refineVehicleTypeWheelFields(
+  vehicleTypeBaseSchema.partial()
+)
+
+function resolveWheelFieldsForCreate(input: {
+  wheelCount: VehicleWheelCount
+  wheelLayout?: WheelLayout
+}): { wheelCount: VehicleWheelCount; wheelLayout: WheelLayout } {
+  if (input.wheelLayout) {
+    const result = validateWheelLayoutAgainstCount(input.wheelLayout, input.wheelCount)
+    if (!result.ok) throw new ValidationError(result.message)
+    return { wheelCount: input.wheelCount, wheelLayout: result.layout }
+  }
+  return {
+    wheelCount: input.wheelCount,
+    wheelLayout: getDefaultWheelLayout(input.wheelCount),
+  }
+}
 
 const tmsCustomerBaseSchema = z.object({
   name: z.string().min(1).max(255),
@@ -237,12 +282,18 @@ export function createVehicleType(
   params: { companyId: string; roles: UserRole[]; input: z.infer<typeof createVehicleTypeSchema> }
 ) {
   if (!canWriteTransportJobs(params.roles)) throw new ForbiddenError()
+  const wheels = resolveWheelFieldsForCreate({
+    wheelCount: params.input.wheelCount,
+    wheelLayout: params.input.wheelLayout,
+  })
   return db.transportVehicleType.create({
     data: {
       companyId: params.companyId,
       name: params.input.name,
       details: optText(params.input.details) ?? null,
       sortOrder: params.input.sortOrder ?? 0,
+      wheelCount: wheels.wheelCount,
+      wheelLayout: wheels.wheelLayout,
       ...(params.input.isActive !== undefined ? { isActive: params.input.isActive } : {}),
     },
   })
@@ -262,14 +313,38 @@ export async function updateVehicleType(
     where: { id: params.id, companyId: params.companyId },
   })
   if (!existing) throw new NotFoundError()
+
+  const data: Prisma.TransportVehicleTypeUpdateInput = {
+    ...(params.input.name !== undefined ? { name: params.input.name } : {}),
+    ...(params.input.details !== undefined ? { details: optText(params.input.details) ?? null } : {}),
+    ...(params.input.sortOrder !== undefined ? { sortOrder: params.input.sortOrder } : {}),
+    ...(params.input.isActive !== undefined ? { isActive: params.input.isActive } : {}),
+  }
+
+  if (params.input.wheelCount !== undefined) {
+    const nextCount = params.input.wheelCount
+    if (params.input.wheelLayout !== undefined) {
+      const result = validateWheelLayoutAgainstCount(params.input.wheelLayout, nextCount)
+      if (!result.ok) throw new ValidationError(result.message)
+      data.wheelCount = nextCount
+      data.wheelLayout = result.layout
+    } else {
+      data.wheelCount = nextCount
+      data.wheelLayout = getDefaultWheelLayout(nextCount)
+    }
+  } else if (params.input.wheelLayout !== undefined) {
+    const count = existing.wheelCount
+    if (count == null) {
+      throw new ValidationError("wheelCount is required before setting wheelLayout")
+    }
+    const result = validateWheelLayoutAgainstCount(params.input.wheelLayout, count)
+    if (!result.ok) throw new ValidationError(result.message)
+    data.wheelLayout = result.layout
+  }
+
   return db.transportVehicleType.update({
     where: { id: params.id },
-    data: {
-      ...(params.input.name !== undefined ? { name: params.input.name } : {}),
-      ...(params.input.details !== undefined ? { details: optText(params.input.details) ?? null } : {}),
-      ...(params.input.sortOrder !== undefined ? { sortOrder: params.input.sortOrder } : {}),
-      ...(params.input.isActive !== undefined ? { isActive: params.input.isActive } : {}),
-    },
+    data,
   })
 }
 
@@ -409,7 +484,12 @@ export async function deactivateTmsCustomer(
 export async function seedTransportMasterData(db: PrismaClient, companyId: string) {
   const jobTypes = ["รับ-ส่ง", "ส่งอย่างเดียว", "รับอย่างเดียว", "Multi-stop", "ขนถ่าย"]
   const cargoTypes = ["สินค้าทั่วไป", "อาหารสัตว์", "วัตถุดิบ", "สินค้าเย็น"]
-  const vehicleTypes = ["6 ล้อ", "10 ล้อ", "รถตู้", "รถกระบะ"]
+  const vehicleTypes: { name: string; wheelCount: VehicleWheelCount }[] = [
+    { name: "6 ล้อ", wheelCount: 6 },
+    { name: "10 ล้อ", wheelCount: 10 },
+    { name: "รถตู้", wheelCount: 4 },
+    { name: "รถกระบะ", wheelCount: 4 },
+  ]
 
   await db.transportJobType.createMany({
     data: jobTypes.map((name, i) => ({ companyId, name, sortOrder: i + 1 })),
@@ -420,7 +500,13 @@ export async function seedTransportMasterData(db: PrismaClient, companyId: strin
     skipDuplicates: true,
   })
   await db.transportVehicleType.createMany({
-    data: vehicleTypes.map((name, i) => ({ companyId, name, sortOrder: i + 1 })),
+    data: vehicleTypes.map((vt, i) => ({
+      companyId,
+      name: vt.name,
+      sortOrder: i + 1,
+      wheelCount: vt.wheelCount,
+      wheelLayout: getDefaultWheelLayout(vt.wheelCount),
+    })),
     skipDuplicates: true,
   })
 }

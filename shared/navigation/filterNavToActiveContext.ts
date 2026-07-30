@@ -41,10 +41,17 @@ function pruneTree(
 }
 
 /** คู่กับ product line "การจัดการซ่อมบำรุง" — แสดงคู่กับเครื่องจักร */
-const MACHINE_COMPANION_OPERATION_KEYS = new Set(["maintenance", "work_orders", "notifications"])
+const MACHINE_COMPANION_OPERATION_KEYS = new Set([
+  "maintenance_plans",
+  "maintenance_schedules",
+  "maintenance_calendar",
+  "work_orders",
+  "reports",
+  "notifications",
+])
 
 /**
- * บน /machines ให้เห็น "ภาพรวม" (เครื่องจักร) คู่กับรายการในกลุ่มงานซ่อม (แดชบอร์ด · แผน PM · รายงาน · WO · แจ้งเตือน)
+ * บน /machines ให้เห็นหมวดเครื่องจักร คู่กับรายการในกลุ่มงานซ่อม (แผน PM · ตาราง · ปฏิทิน · WO · รายงาน · แจ้งเตือน)
  * โดยไม่เอา อะไหล่ ฯลฯ มาปน
  */
 function navForMachineRoutes(navItems: ModuleNavNode[], pathname: string): ModuleNavNode[] | null {
@@ -71,7 +78,7 @@ function navForMachineRoutes(navItems: ModuleNavNode[], pathname: string): Modul
   const workMgmtSection: ModuleNavNode = {
     ...operations,
     key: "sec_work_mgmt_beside_machines",
-    label: "การจัดการซ่อมบำรุง",
+    label: "การดำเนินงาน",
     children: companionChildren,
   }
 

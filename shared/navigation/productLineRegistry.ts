@@ -23,7 +23,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     id: "maintenance_mgmt",
     labelTh: "การจัดการซ่อมบำรุง",
     labelEn: "Maintenance Management",
-    description: "แดชบอร์ด · รายงาน · แผน PM · ใบสั่งงาน · เครื่องจักร · แจ้งเตือน",
+    description: "เครื่องจักร · แผน PM · ตาราง · ปฏิทิน · ใบสั่งงาน · รายงาน · แจ้งเตือน",
     departmentIds: ["asset_management", "work_management"],
     order: 1,
     accent: "from-blue-500 to-indigo-600 shadow-blue-500/20",

@@ -33,6 +33,7 @@ export function ReportRepairModal({
   const [symptom, setSymptom] = useState("")
   const [notes, setNotes] = useState("")
   const [repairCost, setRepairCost] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit">("cash")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,6 +51,7 @@ export function ReportRepairModal({
     setSymptom("")
     setNotes("")
     setRepairCost("")
+    setPaymentMethod("cash")
     setError(null)
     setSelectedVehicleId(lockedVehicleId ?? "")
 
@@ -107,6 +109,10 @@ export function ReportRepairModal({
       }
       costValue = n
     }
+    if (costValue != null && costValue > 0 && !paymentMethod) {
+      setError("กรุณาเลือกวิธีจ่าย")
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -119,6 +125,7 @@ export function ReportRepairModal({
           symptom: symptom.trim(),
           notes: notes.trim() || undefined,
           repairCost: costValue,
+          paymentMethod: costValue != null && costValue > 0 ? paymentMethod : null,
         }),
       })
       const json = await res.json()
@@ -208,6 +215,31 @@ export function ReportRepairModal({
               placeholder="ถ้าทราบราคาแล้ว"
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">วิธีจ่าย</label>
+            <div className="flex gap-4 text-sm">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  checked={paymentMethod === "cash"}
+                  onChange={() => setPaymentMethod("cash")}
+                />
+                เงินสด
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  checked={paymentMethod === "credit"}
+                  onChange={() => setPaymentMethod("credit")}
+                />
+                เครดิต
+              </label>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">ใช้เมื่อระบุราคาซ่อม</p>
           </div>
 
           {error && (

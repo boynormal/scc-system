@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client"
 
 /** Bump when schema changes require a fresh PrismaClient (dev hot-reload keeps old singleton). */
-const PRISMA_SCHEMA_FINGERPRINT = "20260730-transport-repair-logs"
+const PRISMA_SCHEMA_FINGERPRINT = "20260730-transport-payment-method"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined

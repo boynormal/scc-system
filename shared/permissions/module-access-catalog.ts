@@ -68,6 +68,7 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
       "transport_map",
       "transport_monitor",
       "transport_repairs",
+      "transport_tires",
       "transport_master_data",
     ],
   },

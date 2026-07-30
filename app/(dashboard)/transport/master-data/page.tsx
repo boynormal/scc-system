@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { LookupTypesTab } from "@/components/transport/master-data/LookupTypesTab"
+import { VehicleTypesTab } from "@/components/transport/master-data/VehicleTypesTab"
 import { CustomersTab } from "@/components/transport/master-data/CustomersTab"
 import { VehiclesTab } from "@/components/transport/master-data/VehiclesTab"
 import { DriversTab } from "@/components/transport/master-data/DriversTab"
@@ -83,13 +84,7 @@ function MasterDataContent() {
             nameLabel="ประเภทสินค้า"
           />
         )}
-        {activeTab === "vehicle-types" && (
-          <LookupTypesTab
-            apiPath="/api/transport/master-data/vehicle-types"
-            addLabel="เพิ่มประเภทรถ"
-            nameLabel="ประเภทรถ"
-          />
-        )}
+        {activeTab === "vehicle-types" && <VehicleTypesTab />}
         {activeTab === "customers" && <CustomersTab />}
         {activeTab === "vehicles" && <VehiclesTab />}
         {activeTab === "drivers" && <DriversTab />}

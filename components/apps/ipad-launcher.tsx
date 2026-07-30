@@ -20,6 +20,7 @@ import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
 import { APP_BRAND } from "@/shared/branding"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 import { LauncherClockWeather, type WeatherBranchOption } from "@/components/apps/launcher-clock-weather"
 
 type LineSection = { departmentId: string; label: string; apps: LauncherAppItem[] }
@@ -84,6 +85,7 @@ export function IpadLauncher({
   weatherBranches?: WeatherBranchOption[]
 }) {
   const isDark = appearance === "dark"
+  const t = useTranslations("apps")
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
   const [favorites, setFavorites] = useState<string[]>([])
@@ -194,9 +196,9 @@ export function IpadLauncher({
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="ค้นหาโมดูล..."
+                placeholder={t("searchPlaceholder")}
                 className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-10 pr-4 text-sm text-foreground shadow-sm outline-none backdrop-blur-md transition placeholder:text-muted-foreground focus:border-white focus:bg-white focus:ring-4 focus:ring-white/20 dark:border-white/20 dark:bg-slate-950/30 dark:text-white dark:placeholder:text-white/55 dark:focus:border-white/40 dark:focus:bg-slate-950/45"
-                aria-label="ค้นหาโมดูล"
+                aria-label={t("searchPlaceholder")}
               />
             </label>
             <Link
@@ -216,8 +218,8 @@ export function IpadLauncher({
           <div className="mt-10">
             {searchResults.length === 0 ? (
               <div className="rounded-[1.75rem] border border-white/60 bg-white/50 px-6 py-14 text-center text-foreground backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white/80">
-                <p className="font-semibold">ไม่พบโมดูลที่ตรงกับ “{deferredSearch.trim()}”</p>
-                <p className="mt-1 text-sm text-muted-foreground dark:text-white/60">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหา</p>
+                <p className="font-semibold">{t("noResults")}</p>
+                <p className="mt-1 text-sm text-muted-foreground dark:text-white/60">{t("noResultsHint")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-x-4 gap-y-8 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">

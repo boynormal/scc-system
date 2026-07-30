@@ -69,6 +69,8 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import("leaflet").Map | null>(null)
   const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map())
+  /** Fit bounds once on first vehicle data — do not reset zoom/pan on GPS refresh. */
+  const hasInitialFitRef = useRef(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -111,6 +113,7 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
         mapRef.current = null
       }
       markers.clear()
+      hasInitialFitRef.current = false
     }
   }, [])
 
@@ -204,14 +207,13 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
         }
       }
 
-      // Auto-fit bounds if vehicles exist
-      if (vehicles.length > 0 && markersRef.current.size > 0) {
+      // Auto-fit bounds only on first successful load (preserve user zoom on refresh)
+      if (!hasInitialFitRef.current && !selectedId && markersRef.current.size > 0) {
         const validVehicles = vehicles.filter((v) => v.lat && v.lng)
         if (validVehicles.length > 0) {
-          const bounds = L.latLngBounds(validVehicles.map((v) => [v.lat, v.lng]))
-          if (!selectedId) {
-            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
-          }
+          const bounds = L.latLngBounds(validVehicles.map((v) => [v.lat, v.lng] as [number, number]))
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
+          hasInitialFitRef.current = true
         }
       }
     }

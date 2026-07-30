@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { useTranslations } from "next-intl"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { hasAnyAlert } from "@/components/transport/gps/GpsAlertBadge"
 import { VehicleGpsRow } from "@/components/transport/gps/VehicleGpsRow"
@@ -13,6 +14,7 @@ const POLL_INTERVAL = 45_000
 type Filter = "all" | "alert" | "available" | "busy" | "maintenance"
 
 export default function TransportMonitorPage() {
+  const t = useTranslations("transport")
   const [vehicles, setVehicles] = useState<GpsVehicleData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +31,7 @@ export default function TransportMonitorPage() {
       const res = await fetch("/api/transport/gps")
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error ?? "ไม่สามารถดึงข้อมูล GPS ได้")
+        setError(json.error ?? t("loadFailed"))
         return
       }
       setVehicles(json.data ?? [])
@@ -37,11 +39,11 @@ export default function TransportMonitorPage() {
       setError(null)
       setCountdown(POLL_INTERVAL / 1000)
     } catch {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ GPS")
+      setError(t("loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchGps()
@@ -77,7 +79,7 @@ export default function TransportMonitorPage() {
   }
 
   const FILTERS: { key: Filter; label: string; count: number; icon?: React.ReactNode }[] = [
-    { key: "all", label: "ทั้งหมด", count: stats.total },
+    { key: "all", label: t("filterAll"), count: stats.total },
     { key: "available", label: "ว่าง", count: stats.available },
     { key: "busy", label: "ไม่ว่าง", count: stats.busy },
     { key: "maintenance", label: "ซ่อมบำรุง", count: stats.maintenance },
@@ -89,8 +91,10 @@ export default function TransportMonitorPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">มอนิเตอร์รถ</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t("monitorTitle")}</h1>
           <p className="text-sm text-muted-foreground">
+            {t("monitorDesc")}
+            {" · "}
             {lastFetch ? `อัปเดต ${lastFetch.toLocaleTimeString("th-TH")}` : "กำลังโหลด..."}
             {" · "}รีเฟรชอัตโนมัติใน {countdown}s
           </p>
@@ -99,7 +103,7 @@ export default function TransportMonitorPage() {
           onClick={() => { fetchGps(); setCountdown(POLL_INTERVAL / 1000) }}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/60"
         >
-          <RefreshCw className="h-4 w-4" /> รีเฟรช
+          <RefreshCw className="h-4 w-4" /> {t("refresh")}
         </button>
       </div>
 

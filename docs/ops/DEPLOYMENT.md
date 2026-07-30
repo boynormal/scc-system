@@ -2,7 +2,7 @@
 
 วิธีติดตั้งและ deploy แอปนี้บน Node process / VPS (repo **ยังไม่มี** Dockerfile — ไม่สร้างในรอบเอกสารนี้)
 
-ดูเพิ่ม: [SECURITY.md](../SECURITY.md), [BACKUP.md](./BACKUP.md), [architecture/rollout-runbook.md](../architecture/rollout-runbook.md)
+ดูเพิ่ม: [SECURITY.md](../SECURITY.md), [BACKUP.md](./BACKUP.md), [MONITORING.md](./MONITORING.md), [architecture/rollout-runbook.md](../architecture/rollout-runbook.md)
 
 ## Prerequisites
 

@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getTranslations } from "next-intl/server"
 import { AppsLauncher } from "@/components/apps/apps-launcher"
 import { buildDashboardNav, flattenNavForLauncher } from "@/shared/navigation"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
+import { translateNavTree } from "@/shared/navigation/translateNav"
 import { cn } from "@/lib/utils"
 import { redirect } from "next/navigation"
 
@@ -17,7 +19,11 @@ export default async function App2Page() {
   })
 
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
-  const navItems = buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess)
+  const tNav = await getTranslations("nav")
+  const navItems = translateNavTree(
+    buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess),
+    (key) => tNav(key)
+  )
   const apps = flattenNavForLauncher(navItems)
   const isDark = navPreferences.appearance === "dark"
 

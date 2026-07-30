@@ -3,7 +3,8 @@
 convention และแผนที่กลุ่ม endpoint — **ไม่** enumerate ทุก route (มีหลายสิบไฟล์ใต้ `app/api/**`)
 
 รายละเอียดสิทธิ์/ความปลอดภัย: [SECURITY.md](./SECURITY.md)  
-Transport application layer: `modules/transport/application` (route เป็น thin adapter)
+Transport application layer: `modules/transport/application` (route เป็น thin adapter)  
+กฎ import: [architecture/core-platform-convention.md](./architecture/core-platform-convention.md)
 
 ## Convention
 
@@ -12,16 +13,74 @@ Transport application layer: `modules/transport/application` (route เป็น
 | ที่อยู่ | Next.js Route Handlers ใน `app/api/**/route.ts` |
 | Auth | Session ผ่าน Auth.js; หลาย route ใช้ `withAuth` จาก [`lib/api-handler.ts`](../lib/api-handler.ts) |
 | Validation | Zod (และ schema ในโมดูล/route ตามที่แต่ละไฟล์ใช้) |
-| Errors | `AppError` → `{ error, code }` + HTTP status; อื่นๆ → 500 |
+| Errors | เป้า: `AppError` → `{ error, code }` + HTTP status (ดูด้านล่าง); อื่นๆ → 500 |
 | ขอบเขตข้อมูล | กรองตาม `companyId` / branch จาก session + RBAC |
 
-### ตัวอย่าง error เมื่อไม่ได้ล็อกอิน
+### Errors — เป้า / มาตรฐาน `withAuth`
+
+จาก [`lib/api-handler.ts`](../lib/api-handler.ts) และ [`lib/errors.ts`](../lib/errors.ts):
+
+```json
+{ "error": "<message>", "code": "<CODE>" }
+```
+
+| Code | Status | แหล่ง |
+|------|--------|--------|
+| `UNAUTHORIZED` | 401 | ไม่มี session / `UnauthorizedError` |
+| `FORBIDDEN` | 403 | `ForbiddenError` |
+| `NOT_FOUND` | 404 | `NotFoundError` |
+| `VALIDATION_ERROR` | 400 | `ValidationError` |
+| `INTERNAL_ERROR` | 500 | ข้อผิดพลาดที่ไม่ใช่ `AppError` (ไม่เปิด stack ให้ client) |
+
+ตัวอย่างเมื่อไม่ได้ล็อกอิน (`withAuth`):
 
 ```json
 { "error": "Unauthorized", "code": "UNAUTHORIZED" }
 ```
 
-สถานะ: `401`
+### Errors — as-is ที่ยังมี (legacy / โดเมน)
+
+ยังไม่บังคับ unify ทั้งระบบในรอบเอกสารนี้ — รู้ไว้ตอนอ่าน/แก้ route:
+
+- บาง route เก่า: `{ "error": "Unauthorized" }` **ไม่มี** `code`
+- Zod บางจุด: `{ "error": <zod flatten object> }` แทนข้อความ + `VALIDATION_ERROR`
+- GPS และโดเมนเฉพาะ: มี `code` ของตัวเอง เช่น `GPS_NOT_CONFIGURED`, `GPS_UPSTREAM_ERROR`, `GPS_FETCH_ERROR`
+
+### Success — รูปแบบที่ใช้บ่อย
+
+| กรณี | Shape | หมายเหตุ |
+|------|--------|----------|
+| อ่านรายการ / รายการเดียว | `{ "data": ... }` | ใช้กว้างขวาง |
+| สร้างใหม่ | `{ "data": ... }` + HTTP `201` | |
+| ลบ (บาง route) | `{ "success": true }` | เช่น transport vehicle/driver delete |
+| List แบบแบ่งหน้า | `{ "data", "total", "page", "pageSize", "totalPages" }` | ตัวอย่าง: HR personnel/attendance, machines list service |
+
+ตัวอย่าง list ไม่แบ่งหน้า:
+
+```json
+{ "data": [ /* ... */ ] }
+```
+
+ตัวอย่าง list แบ่งหน้า (เป้าเมื่อเพิ่ม list API ใหม่ที่ต้อง paginate):
+
+```json
+{
+  "data": [],
+  "total": 0,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 0
+}
+```
+
+**Variant:** บาง service (เช่น transport repairs) ใช้ `meta: { total, truncated, ... }` — อย่าเพิ่มรูปแบบ `meta` ใหม่โดยไม่จำเป็น; โค้ด list ใหม่ให้ใช้ envelope แบ่งหน้าด้านบน
+
+### กฎสำหรับโค้ดใหม่ / เมื่อแก้ route
+
+- ชอบ `withAuth` + throw `AppError` + คืน `{ error, code }`
+- List ใหม่ที่ต้องแบ่งหน้า: ใช้ `{ data, total, page, pageSize, totalPages }`
+- ห้ามเปลี่ยน response shape แบบ breaking โดยไม่ตั้งใจ — ถ้าเปลี่ยน ต้องอัปเดต caller (UI/client) คู่กัน
+- รายละเอียดรูปแบบที่ route เก่ายังต่างจากเป้า: ดูตาราง as-is ด้านบน ไม่เดาจาก route เดียว
 
 ### ตัวอย่างเรียก cron
 
@@ -32,20 +91,10 @@ Authorization: Bearer <CRON_SECRET>
 
 ผิด secret → `401`
 
-### ตัวอย่าง list (รูปแบบทั่วไป)
-
-หลาย list API คืนประมาณ:
-
-```json
-{ "data": [ /* ... */ ] }
-```
-
-ตรวจ response จริงในแต่ละ route — บางอันมี pagination / `error` ต่างรูปแบบเล็กน้อย
-
 ## กลุ่ม endpoint หลัก
 
 | กลุ่ม | Prefix | หมายเหตุ |
-|-------|--------|----------|
+|--------|--------|----------|
 | Auth | `/api/auth/*` | NextAuth |
 | Machines | `/api/machines` | รวม images, products, spare-parts ย่อย |
 | Maintenance / Schedules | `/api/maintenance-plans`, `/api/schedules` | |

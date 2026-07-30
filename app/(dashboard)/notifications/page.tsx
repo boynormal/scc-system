@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Bell, CheckCheck, AlertTriangle, Wrench, ClipboardList, Package, Check, RefreshCw } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { formatDateTime } from "@/lib/utils"
 
 type Notification = {
@@ -23,6 +24,8 @@ const typeConfig: Record<string, { icon: React.ReactNode; label: string; bg: str
 }
 
 export default function NotificationsPage() {
+  const t = useTranslations("notifications")
+  const tCommon = useTranslations("common")
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -55,9 +58,9 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">การแจ้งเตือน</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {unreadCount > 0 ? `ยังไม่ได้อ่าน ${unreadCount} รายการ` : "อ่านทั้งหมดแล้ว"}
+            {unreadCount > 0 ? t("unreadCount", { count: unreadCount }) : t("allRead")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -66,7 +69,7 @@ export default function NotificationsPage() {
             className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground border border-border hover:bg-muted/60 rounded-lg transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            รีเฟรช
+            {tCommon("refresh")}
           </button>
           {unreadCount > 0 && (
             <button
@@ -74,7 +77,7 @@ export default function NotificationsPage() {
               className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               <CheckCheck className="w-4 h-4" />
-              อ่านทั้งหมด
+              {t("markAllRead")}
             </button>
           )}
         </div>
@@ -90,7 +93,7 @@ export default function NotificationsPage() {
               filter === f ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {f === "all" ? "ทั้งหมด" : `ยังไม่อ่าน${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+            {f === "all" ? tCommon("all") : `${t("filterUnread")}${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
           </button>
         ))}
       </div>
@@ -104,7 +107,7 @@ export default function NotificationsPage() {
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Bell className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-medium">ไม่มีการแจ้งเตือน</p>
+            <p className="font-medium">{t("empty")}</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -142,7 +145,7 @@ export default function NotificationsPage() {
                               onClick={() => markRead(n.id)}
                               className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
                             >
-                              ทำเครื่องหมายอ่านแล้ว
+                              {t("markRead")}
                             </button>
                           </>
                         )}

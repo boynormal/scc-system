@@ -5,8 +5,12 @@ import type { UserRole } from "@/lib/permissions"
 import { isAdminInAnyBranch, getBranchIds } from "@/lib/permissions"
 import Link from "next/link"
 import { Truck, Users, ClipboardList, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 
-export const metadata = { title: "ภาพรวมขนส่ง | Transport Dashboard" }
+export async function generateMetadata() {
+  const t = await getTranslations("transport")
+  return { title: t("overviewTitle") }
+}
 
 async function getStats(companyId: string, branchIds: string[]) {
   const where = { companyId, branchId: { in: branchIds } }
@@ -90,6 +94,8 @@ export default async function TransportDashboardPage() {
   const session = await auth()
   if (!session) redirect("/login")
 
+  const t = await getTranslations("transport")
+
   const roles = session.user.roles as UserRole[]
   const companyId = session.user.companyId as string
   const branchIds = isAdminInAnyBranch(roles)
@@ -104,8 +110,8 @@ export default async function TransportDashboardPage() {
   return (
     <div className="space-y-8 p-4 md:p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">ภาพรวมขนส่ง</h1>
-        <p className="mt-1 text-sm text-muted-foreground">สถิติรถ คนขับ และใบงานขนส่ง</p>
+        <h1 className="text-2xl font-semibold text-foreground">{t("overviewTitle")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("overviewDesc")}</p>
       </div>
 
       {/* Vehicle stats */}
@@ -161,7 +167,7 @@ export default async function TransportDashboardPage() {
             <tbody className="divide-y divide-border">
               {recentJobs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">ยังไม่มีใบงาน</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{t("jobsEmpty")}</td>
                 </tr>
               ) : (
                 recentJobs.map((job) => (

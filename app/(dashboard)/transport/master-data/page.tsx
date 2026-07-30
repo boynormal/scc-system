@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { LookupTypesTab } from "@/components/transport/master-data/LookupTypesTab"
 import { VehicleTypesTab } from "@/components/transport/master-data/VehicleTypesTab"
 import { CustomersTab } from "@/components/transport/master-data/CustomersTab"
@@ -24,15 +25,16 @@ function classNames(...classes: (string | undefined | null | false)[]) {
 }
 
 function MasterDataContent() {
+  const t = useTranslations("transport")
   const searchParams = useSearchParams()
   const router = useRouter()
   const tabParam = searchParams.get("tab") as TabId | null
   const [activeTab, setActiveTab] = useState<TabId>(
-    TABS.some((t) => t.id === tabParam) ? (tabParam as TabId) : "job-types"
+    TABS.some((tab) => tab.id === tabParam) ? (tabParam as TabId) : "job-types"
   )
 
   useEffect(() => {
-    if (tabParam && TABS.some((t) => t.id === tabParam)) {
+    if (tabParam && TABS.some((tab) => tab.id === tabParam)) {
       setActiveTab(tabParam as TabId)
     }
   }, [tabParam])
@@ -45,9 +47,9 @@ function MasterDataContent() {
   return (
     <div className="-m-6 space-y-6 p-4 md:p-6 w-auto min-w-0">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">ข้อมูลพื้นฐาน (Master Data)</h1>
+        <h1 className="text-xl font-semibold text-foreground">{t("masterDataTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          จัดการประเภทงาน ประเภทสินค้า ลูกค้า/ปลายทาง รถ และคนขับ
+          {t("masterDataDesc")}
         </p>
       </div>
 

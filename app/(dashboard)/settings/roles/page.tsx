@@ -1,10 +1,14 @@
 import { Metadata } from "next"
 import { ShieldCheck, Plus, Users, Lock } from "lucide-react"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
-export const metadata: Metadata = { title: "จัดการสิทธิ์" }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("settings")
+  return { title: t("rolesTitle") }
+}
 
 const roleColors: Record<string, string> = {
   Admin: "bg-red-100 text-red-700",
@@ -23,13 +27,14 @@ async function getRoles(companyId: string) {
 
 export default async function RolesSettingsPage() {
   const session = await auth()
+  const t = await getTranslations("settings")
   const roles = await getRoles(session!.user.companyId as string)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">สิทธิ์การใช้งาน (Roles)</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("rolesTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">ทั้งหมด {roles.length} Roles</p>
         </div>
         <Link

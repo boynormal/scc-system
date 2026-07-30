@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { Users, Plus, Search, CheckCircle2, XCircle } from "lucide-react"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -10,7 +11,10 @@ import { formatDate } from "@/lib/utils"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
 import type { Prisma } from "@prisma/client"
 
-export const metadata: Metadata = { title: "จัดการผู้ใช้งาน" }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("settings")
+  return { title: t("usersTitle") }
+}
 
 async function getUsersPage(companyId: string, page: number, search?: string) {
   const where: Prisma.UserWhereInput = {
@@ -66,6 +70,8 @@ export default async function UsersPage(
   const searchParams = await props.searchParams
   const page = parsePage(searchParams.page)
   const session = await auth()
+  const t = await getTranslations("settings")
+  const tCommon = await getTranslations("common")
   const { users, total } = await getUsersPage(
     session!.user.companyId as string,
     page,
@@ -77,7 +83,7 @@ export default async function UsersPage(
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">ผู้ใช้งาน</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("usersTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">ทั้งหมด {total} บัญชี</p>
         </div>
         <Link
@@ -101,7 +107,7 @@ export default async function UsersPage(
             />
           </div>
           <button type="submit" className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-800 transition-colors">
-            ค้นหา
+            {tCommon("search")}
           </button>
           {searchParams.search && (
             <Link href="/settings/users" className="px-4 py-2 border border-border text-muted-foreground text-sm rounded-lg hover:bg-muted/60">
@@ -115,7 +121,7 @@ export default async function UsersPage(
         {users.length === 0 ? (
           <EmptyState
             icon={Users}
-            title="ยังไม่มีผู้ใช้งาน"
+            title={t("usersEmpty")}
             description="เพิ่มผู้ใช้งานคนแรกในระบบ"
             action={
               <Link href="/settings/users/new" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg">

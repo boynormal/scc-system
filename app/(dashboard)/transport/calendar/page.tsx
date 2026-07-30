@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { ChevronLeft, ChevronRight, CalendarDays, LayoutList, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MonthCalendar } from "@/components/transport/calendar/MonthCalendar"
@@ -44,6 +45,7 @@ type Vehicle = {
 }
 
 function TransportCalendarContent() {
+  const t = useTranslations("transport")
   const searchParams = useSearchParams()
   const [view, setView] = useState<View>("month")
   const [currentDate, setCurrentDate] = useState(() => {
@@ -134,7 +136,7 @@ function TransportCalendarContent() {
       if (vehicleFilter !== "all") params.set("vehicleId", vehicleFilter)
       const res = await fetch(`/api/transport/calendar?${params}`)
       const json = await res.json()
-      if (!res.ok) { setError(json.error ?? "โหลดข้อมูลไม่ได้"); return }
+      if (!res.ok) { setError(json.error ?? t("loadFailed")); return }
       setJobs(json.data ?? [])
 
       setVehicles((prev) => {
@@ -146,11 +148,11 @@ function TransportCalendarContent() {
         return [...vMap.values()].sort((a, b) => a.plateNumber.localeCompare(b.plateNumber))
       })
     } catch {
-      setError("เกิดข้อผิดพลาดในการโหลดข้อมูล")
+      setError(t("loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [from, to, vehicleFilter])
+  }, [from, to, vehicleFilter, t])
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
 
@@ -177,6 +179,11 @@ function TransportCalendarContent() {
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 p-4 md:p-6">
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">{t("calendarTitle")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("calendarDesc")}</p>
+      </div>
+
       {/* Toolbar */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         {/* Navigation */}
@@ -227,7 +234,7 @@ function TransportCalendarContent() {
           <button
             onClick={fetchJobs}
             className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
-            title="รีเฟรช"
+            title={t("refresh")}
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -293,7 +300,7 @@ function TransportCalendarContent() {
           </div>
         ) : loading ? (
           <div className="flex h-full items-center justify-center rounded-xl border border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground shadow-sm">
-            กำลังโหลดข้อมูลปฏิทิน...
+            {t("calendarLoading")}
           </div>
         ) : view === "month" ? (
           <MonthCalendar
@@ -315,8 +322,9 @@ function TransportCalendarContent() {
 }
 
 export default function TransportCalendarPage() {
+  const t = useTranslations("transport")
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">กำลังโหลดปฏิทิน...</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">{t("calendarLoading")}</div>}>
       <TransportCalendarContent />
     </Suspense>
   )

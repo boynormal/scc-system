@@ -1,0 +1,22 @@
+---
+description: Prisma schema and migration discipline
+globs: "prisma/**"
+alwaysApply: false
+---
+
+# Prisma Rules
+
+Policy: [docs/DATABASE.md](docs/DATABASE.md), backup: [docs/ops/BACKUP.md](docs/ops/BACKUP.md)
+
+- Source of truth is `prisma/schema.prisma` only — never introduce schema drift outside Prisma.
+- Every schema change needs a migration plus rollback / risk notes.
+- Before production `prisma migrate deploy`, require a DB backup (see BACKUP.md).
+- Respect existing conventions: UUID PKs, tenant via `company` / `branch`, soft delete fields as defined per model.
+- Prefer Prisma enums for important statuses/types; avoid ad-hoc string columns when an enum already fits.
+- Split ORM/schema upgrades from framework/runtime upgrades when possible.
+
+# Verification
+
+- `npx prisma generate` succeeds after schema edits.
+- Migration applies cleanly in the intended environment (`migrate dev` local / `migrate deploy` staging-prod).
+- Record known caveats or temporary exceptions in DATABASE.md or db-blueprint — do not leave silent drift.

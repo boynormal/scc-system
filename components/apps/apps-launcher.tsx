@@ -14,6 +14,7 @@ import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
 import { APP_BRAND } from "@/shared/branding"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 function resolveLineIcon(line: ProductLineDef, overrides: Record<string, NavIconKey>) {
   const key = overrides[line.id] ?? line.iconKey
@@ -172,6 +173,7 @@ export function AppsLauncher({
   appearance?: AppAppearance
 }) {
   const isDark = appearance === "dark"
+  const t = useTranslations("apps")
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
   const [favorites, setFavorites] = useState<string[]>([])
@@ -291,7 +293,7 @@ export function AppsLauncher({
               href="/apps"
               className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm transition hover:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-muted-foreground dark:hover:bg-slate-700"
             >
-              กลับหน้าหลัก →
+              {t("home")} →
             </Link>
           </div>
 
@@ -301,9 +303,9 @@ export function AppsLauncher({
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="ค้นหาโมดูล เช่น งานซ่อม, อะไหล่, ผู้ใช้..."
+                placeholder={t("searchPlaceholder")}
                 className="h-14 w-full rounded-2xl border border-white/80 bg-white/85 pl-12 pr-4 text-sm text-foreground shadow-lg shadow-slate-200/50 outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-200/35 dark:border-slate-600 dark:bg-slate-800 dark:shadow-none"
-                aria-label="ค้นหาโมดูล"
+                aria-label={t("searchPlaceholder")}
               />
             </label>
           </div>
@@ -319,8 +321,8 @@ export function AppsLauncher({
 
       {searchEmpty && (
         <div className="rounded-[1.75rem] border border-dashed border-border bg-white/70 px-6 py-14 text-center shadow-sm dark:border-slate-600 dark:bg-slate-800/60">
-          <p className="font-semibold text-foreground">ไม่พบโมดูลที่ตรงกับ “{deferredSearch.trim()}”</p>
-          <p className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหาเพื่อดูทุกโมดูล</p>
+          <p className="font-semibold text-foreground">{t("noResults")}</p>
+          <p className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">{t("noResultsHint")}</p>
         </div>
       )}
 

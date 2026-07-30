@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch"
 import { APP_BRAND } from "@/shared/branding"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 type HubAccess = {
   users: boolean
@@ -58,6 +59,7 @@ export function SettingsHub({
   customIconCount: number
   appVersion: string
 }) {
+  const t = useTranslations("settings")
   const router = useRouter()
   const pathname = usePathname()
   const [search, setSearch] = useState("")
@@ -94,7 +96,7 @@ export function SettingsHub({
       accessEntries.push({
         id: "users",
         href: "/settings/users",
-        label: "ผู้ใช้งาน",
+        label: t("usersTitle"),
         description: "จัดการบัญชีผู้ใช้และสิทธิ์การเข้าถึงระบบ",
         icon: Users,
         keywords: ["users", "ผู้ใช้", "account", "บัญชี"],
@@ -104,7 +106,7 @@ export function SettingsHub({
       accessEntries.push({
         id: "roles",
         href: "/settings/roles",
-        label: "สิทธิ์การใช้งาน",
+        label: t("rolesTitle"),
         description: "กำหนดบทบาทและสิทธิ์การเข้าถึงแต่ละโมดูล",
         icon: ShieldCheck,
         keywords: ["roles", "สิทธิ์", "rbac", "permission"],
@@ -114,7 +116,7 @@ export function SettingsHub({
       accessEntries.push({
         id: "branches",
         href: "/settings/branches",
-        label: "สาขา",
+        label: t("branchesTitle"),
         description: "จัดการรายชื่อสาขาและที่ตั้งขององค์กร",
         icon: Building2,
         keywords: ["branches", "สาขา", "location"],
@@ -127,12 +129,12 @@ export function SettingsHub({
     if (access.masterData) {
       list.push({
         id: "master-data",
-        label: "ข้อมูลพื้นฐาน",
+        label: t("masterDataTitle"),
         entries: [
           {
             id: "master-data",
             href: "/settings/master-data",
-            label: "ข้อมูลพื้นฐาน (Master Data)",
+            label: t("masterDataTitle"),
             description: "หมวดหมู่ แผนก ประเภทงานซ่อม และซัพพลายเออร์",
             icon: Database,
             keywords: ["master data", "ข้อมูลพื้นฐาน", "categories", "suppliers"],
@@ -144,12 +146,12 @@ export function SettingsHub({
     if (access.homeScreen) {
       list.push({
         id: "home-screen",
-        label: "หน้าจอหลัก",
+        label: t("homeScreenTitle"),
         entries: [
           {
             id: "home-screen",
             href: "/settings/home-screen",
-            label: "ไอคอนหมวดหมู่",
+            label: t("appIconsTitle"),
             description: "อัปโหลดภาพกลุ่มงานและโมดูลย่อย — เก็บที่ public/home-screen เพื่อ commit ขึ้น git",
             icon: LayoutGrid,
             keywords: ["icon", "ไอคอน", "รูปภาพ", "apps", "หน้าหลัก", "โมดูล"],
@@ -184,7 +186,7 @@ export function SettingsHub({
     })
 
     return list
-  }, [access, currentAppearance, customIconCount, appVersion])
+  }, [access, currentAppearance, customIconCount, appVersion, t])
 
   const query = search.trim().toLowerCase()
   const isSearching = query.length > 0
@@ -206,8 +208,8 @@ export function SettingsHub({
   return (
     <div className="w-full space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">ตั้งค่า</h1>
-        <p className="mt-1 text-sm text-muted-foreground">ภาพรวม — เลือกรายการเพื่อเปิดทางขวา</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("hubTitle")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("hubDesc")}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">

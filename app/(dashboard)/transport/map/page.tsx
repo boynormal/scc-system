@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { useTranslations } from "next-intl"
 import { TransportMap } from "@/components/transport/gps/TransportMap"
 import { MapVehicleListItem } from "@/components/transport/gps/MapVehicleListItem"
 import { UnmatchedMapVehicleListItem } from "@/components/transport/gps/UnmatchedMapVehicleListItem"
@@ -14,6 +15,7 @@ const POLL_INTERVAL = 45_000
 type AvailabilityFilter = "all" | "available" | "busy" | "maintenance" | "unmatched"
 
 export default function TransportMapPage() {
+  const t = useTranslations("transport")
   const [vehicles, setVehicles] = useState<GpsVehicleData[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -31,7 +33,7 @@ export default function TransportMapPage() {
       const res = await fetch("/api/transport/gps")
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error ?? "ไม่สามารถดึงข้อมูล GPS ได้")
+        setError(json.error ?? t("loadFailed"))
         return
       }
       setVehicles(json.data ?? [])
@@ -39,11 +41,11 @@ export default function TransportMapPage() {
       setError(null)
       setCountdown(POLL_INTERVAL / 1000)
     } catch {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ GPS")
+      setError(t("loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchGps()
@@ -87,14 +89,19 @@ export default function TransportMapPage() {
   const movingCount = vehicles.filter((v) => v.speed > 0).length
 
   return (
-    <div className="flex h-[calc(100vh-120px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-120px)] flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-border px-4 py-3">
+        <h1 className="text-lg font-semibold text-foreground">{t("mapTitle")}</h1>
+        <p className="text-xs text-muted-foreground">{t("mapDesc")}</p>
+      </div>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* Sidebar */}
       <aside className="flex w-[340px] shrink-0 flex-col border-r border-border bg-card">
         {/* Header */}
         <div className="border-b border-border px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">ยานพาหนะ</h2>
+              <h2 className="text-sm font-semibold text-foreground">{t("vehiclesTitle")}</h2>
               <p className="text-xs text-muted-foreground">
                 {vehicles.length} คัน · กำลังวิ่ง {movingCount} คัน
               </p>
@@ -102,7 +109,7 @@ export default function TransportMapPage() {
             <button
               onClick={() => { fetchGps(); setCountdown(POLL_INTERVAL / 1000) }}
               className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              title="รีเฟรช"
+              title={t("refresh")}
             >
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -116,7 +123,7 @@ export default function TransportMapPage() {
           <div className="mt-2 flex flex-wrap gap-1 rounded-lg bg-muted p-1">
             {(
               [
-                { key: "all" as const, label: "ทั้งหมด", count: vehicles.length },
+                { key: "all" as const, label: t("filterAll"), count: vehicles.length },
                 { key: "available" as const, label: "ว่าง", count: availableCount },
                 { key: "busy" as const, label: "ไม่ว่าง", count: busyCount },
                 { key: "maintenance" as const, label: "ซ่อม", count: maintenanceCount },
@@ -254,6 +261,7 @@ export default function TransportMapPage() {
         }}
         onCancel={() => setLinkModalGps(null)}
       />
+      </div>
     </div>
   )
 }

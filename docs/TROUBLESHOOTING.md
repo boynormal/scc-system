@@ -81,6 +81,7 @@ Machines / spare-parts / plans / users เป็น SSR แบบ **pageSize 50*
 |--------|--------|
 | Deploy / smoke | [ops/DEPLOYMENT.md](./ops/DEPLOYMENT.md) |
 | Backup | [ops/BACKUP.md](./ops/BACKUP.md) |
+| Monitoring checklist | [ops/MONITORING.md](./ops/MONITORING.md) |
 | Security | [SECURITY.md](./SECURITY.md) |
 | Rollout ใหญ่ | [architecture/rollout-runbook.md](./architecture/rollout-runbook.md) |
 | ประวัติฟีเจอร์ | [CHANGELOG.md](./CHANGELOG.md) |

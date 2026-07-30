@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getTranslations } from "next-intl/server"
 import { IpadLauncher } from "@/components/apps/ipad-launcher"
 import { buildDashboardNav, flattenNavForLauncher } from "@/shared/navigation"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
+import { translateNavTree } from "@/shared/navigation/translateNav"
 import { decimalToNumber } from "@/shared/transport/coordinates"
 import { redirect } from "next/navigation"
 
@@ -26,7 +28,11 @@ export default async function AppsPage() {
   ])
 
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
-  const navItems = buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess)
+  const tNav = await getTranslations("nav")
+  const navItems = translateNavTree(
+    buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess),
+    (key) => tNav(key)
+  )
   const apps = flattenNavForLauncher(navItems)
 
   const weatherBranches = branches.map((b) => ({

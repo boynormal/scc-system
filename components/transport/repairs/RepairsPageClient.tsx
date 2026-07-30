@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useTranslations } from "next-intl"
 import {
   Loader2,
   RefreshCw,
@@ -16,7 +17,10 @@ import { GlassButton, GlassCard } from "@/components/glass"
 import { RepairStatusBadge, type RepairStatus } from "@/components/transport/repairs/RepairStatusBadge"
 import { ReportRepairModal } from "@/components/transport/repairs/ReportRepairModal"
 import { EditRepairModal } from "@/components/transport/repairs/EditRepairModal"
+import { ErrorState } from "@/components/ui/error-state"
+import { LoadingState } from "@/components/ui/loading-state"
 import { TRANSPORT_PAYMENT_METHOD_LABELS } from "@/modules/transport/application/payment-options"
+import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 
 type RepairRow = {
@@ -92,6 +96,7 @@ function formatCostDisplay(value: string | number | null | undefined): string {
 }
 
 export function RepairsPageClient() {
+  const t = useTranslations("transport")
   const [items, setItems] = useState<RepairRow[]>([])
   const [meta, setMeta] = useState<ListMeta | null>(null)
   const [loading, setLoading] = useState(true)
@@ -129,20 +134,19 @@ export function RepairsPageClient() {
       if (effectiveFrom) qs.set("from", effectiveFrom)
       if (effectiveTo) qs.set("to", effectiveTo)
 
-      const res = await fetch(`/api/transport/repairs?${qs.toString()}`)
-      const json = await res.json()
-      if (!res.ok) {
-        setError(json.error ?? "โหลดใบแจ้งซ่อมไม่สำเร็จ")
-        return
-      }
+      const json = await fetchJson<{ data?: RepairRow[]; meta?: ListMeta | null }>(
+        `/api/transport/repairs?${qs.toString()}`
+      )
       setItems(json.data ?? [])
       setMeta(json.meta ?? null)
-    } catch {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
+    } catch (err) {
+      setItems([])
+      setMeta(null)
+      setError(err instanceof ClientFetchError ? err.message : t("loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [filter, vehicleFilter, effectiveFrom, effectiveTo])
+  }, [filter, vehicleFilter, effectiveFrom, effectiveTo, t])
 
   const loadVehicles = useCallback(async () => {
     try {
@@ -258,21 +262,21 @@ export function RepairsPageClient() {
   })()
 
   const FILTERS: { key: StatusFilter; label: string }[] = [
-    { key: "open", label: "เปิดอยู่" },
+    { key: "open", label: t("filterOpen") },
     { key: "reported", label: "แจ้งซ่อม" },
     { key: "in_repair", label: "กำลังซ่อม" },
     { key: "closed", label: "ปิดงาน" },
     { key: "cancelled", label: "ยกเลิก" },
-    { key: "all", label: "ทั้งหมด" },
+    { key: "all", label: t("filterAll") },
   ]
 
   return (
     <div className="space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">ใบแจ้งซ่อมรถ</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t("repairsTitle")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            แจ้งซ่อม → เข้าซ่อม (รถเป็นซ่อมบำรุง) → ปิดงาน (รถกลับพร้อมใช้งาน)
+            {t("repairsDesc")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -280,14 +284,14 @@ export function RepairsPageClient() {
             type="button"
             onClick={() => load()}
             disabled={loading}
-            title="รีเฟรช"
-            aria-label="รีเฟรช"
+            title={t("refresh")}
+            aria-label={t("refresh")}
             className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </button>
           <GlassButton onClick={() => setReportOpen(true)} icon={<Plus className="h-4 w-4" />}>
-            แจ้งซ่อม
+            {t("repairsReport")}
           </GlassButton>
         </div>
       </div>
@@ -392,22 +396,19 @@ export function RepairsPageClient() {
       {actionError && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</div>
       )}
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-      )}
-      {meta?.truncated && (
+      {meta?.truncated && !error && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           แสดง {items.length} จากทั้งหมด {meta.total} รายการ — จำกัดช่วงเวลาหรือกรองรถเพื่อดูครบ
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
-        </div>
+        <LoadingState title={t("repairsLoading")} />
+      ) : error ? (
+        <ErrorState title={t("loadFailed")} description={error} onRetry={() => void load()} />
       ) : items.length === 0 ? (
         <GlassCard className="p-8 text-center text-sm text-muted-foreground">
-          ไม่มีใบแจ้งซ่อมในตัวกรองนี้ — กด &quot;แจ้งซ่อม&quot; เพื่อสร้างใบใหม่ หรือปรับช่วงเวลา
+          {t("repairsEmpty")}
         </GlassCard>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">

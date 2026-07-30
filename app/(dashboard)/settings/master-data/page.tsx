@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { SupplierLinkedPartsDialog } from "@/components/settings/supplier-linked-parts-dialog"
 import { CategoryLinkedMachinesDialog } from "@/components/settings/category-linked-machines-dialog"
@@ -766,6 +767,7 @@ function SuppliersTab() {
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function MasterDataPage() {
+  const t = useTranslations("settings")
   const [activeTab, setActiveTab] = useState<
     "categories" | "departments" | "maintenance-types" | "suppliers"
   >("categories")
@@ -778,7 +780,7 @@ export default function MasterDataPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">ข้อมูลพื้นฐาน (Master Data)</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("masterDataTitle")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
           จัดการหมวดหมู่ แผนก ประเภทการซ่อมบำรุง และซัพพลายเออร์ในระบบ
         </p>

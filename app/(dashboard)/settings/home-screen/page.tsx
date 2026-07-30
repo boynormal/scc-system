@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import {
   Check,
   Layers,
@@ -50,6 +51,7 @@ function groupModulesByProductLine(apps: LauncherAppItem[]) {
 }
 
 export default function HomeScreenSettingsPage() {
+  const t = useTranslations("settings")
   const router = useRouter()
   const [segment, setSegment] = useState<Segment>("product-lines")
   const [loading, setLoading] = useState(true)
@@ -150,7 +152,7 @@ export default function HomeScreenSettingsPage() {
               <Palette className="h-6 w-6" />
             </span>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground dark:text-white">หน้าจอหลัก</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground dark:text-white">{t("homeScreenTitle")}</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
                 อัปโหลดไอคอนกลุ่มงานและโมดูลย่อยสำหรับ Sidebar /apps /app2 — ไฟล์ถูกเก็บที่{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground dark:bg-slate-700">

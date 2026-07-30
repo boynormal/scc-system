@@ -10,6 +10,9 @@ alwaysApply: false
 - Preserve accessibility basics: semantic controls, keyboard, labels, focus states.
 - Do not break existing routes/navigation while redesigning UI.
 - Prefer explicit loading/empty/error states over silent failures.
+- Client pages that load data: use `LoadingState` / `ErrorState` (with Retry) / `EmptyState` from `components/ui` according to state.
+- When adding or changing browser API calls, prefer `fetchJson` from `lib/client-fetch.ts` (timeout + readable errors).
+- User-visible UI strings for new work belong in `messages/*.json` and are read via `useTranslations` / `getTranslations` (see `docs/I18N.md`). Do not introduce `/[locale]` URL prefixes unless explicitly requested.
 
 # Image/Media Handling
 

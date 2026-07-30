@@ -3,9 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { useTranslations } from "next-intl"
 import { Grid3X3, LogOut, User } from "lucide-react"
 import NotificationBell from "@/components/layout/notification-bell"
 import NavCommandPalette from "@/components/layout/nav-command-palette"
+import { LocaleSwitcher } from "@/components/layout/locale-switcher"
 import { GlassNavbar } from "@/components/glass"
 import type { ModuleNavNode } from "@/shared/navigation/moduleRegistry"
 
@@ -19,6 +21,7 @@ interface HeaderProps {
 }
 
 export default function Header({ user, navItems }: HeaderProps) {
+  const t = useTranslations("header")
   const pathname = usePathname()
   const isAppsPage = pathname === "/apps" || pathname.startsWith("/apps/")
   const isApp2Page = pathname === "/app2" || pathname.startsWith("/app2/")
@@ -34,9 +37,10 @@ export default function Header({ user, navItems }: HeaderProps) {
             className="inline-flex items-center gap-2 rounded-lg border border-glass bg-glass px-3 py-1.5 text-sm font-medium text-foreground backdrop-blur-glass transition hover:bg-glass-strong"
           >
             <Grid3X3 className="h-4 w-4" />
-            {isApp2Page ? "หน้าหลัก" : "Apps"}
+            {isApp2Page ? t("home") : t("apps")}
           </Link>
         )}
+        <LocaleSwitcher />
         <NotificationBell />
 
         <div className="flex items-center gap-2.5 border-l border-glass pl-3">
@@ -50,7 +54,8 @@ export default function Header({ user, navItems }: HeaderProps) {
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="ml-1 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40"
-            title="ออกจากระบบ"
+            title={t("signOut")}
+            aria-label={t("signOut")}
           >
             <LogOut className="h-4 w-4" />
           </button>

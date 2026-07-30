@@ -1,11 +1,15 @@
 import { Metadata } from "next"
 import { Building2, Plus, MapPin, Users, Wrench, CheckCircle2, XCircle, Pencil } from "lucide-react"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
 
-export const metadata: Metadata = { title: "จัดการสาขา" }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("settings")
+  return { title: t("branchesTitle") }
+}
 
 async function getBranches(companyId: string) {
   return prisma.branch.findMany({
@@ -19,13 +23,14 @@ async function getBranches(companyId: string) {
 
 export default async function BranchesSettingsPage() {
   const session = await auth()
+  const t = await getTranslations("settings")
   const branches = await getBranches(session!.user.companyId as string)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">สาขา</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("branchesTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             ทั้งหมด {branches.length} สาขา — สาขาที่ไม่ใช้แล้วให้ปิดใช้งาน
           </p>

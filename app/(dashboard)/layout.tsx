@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import Sidebar from "@/components/layout/sidebar"
 import Header from "@/components/layout/header"
 import { buildDashboardNav } from "@/shared/navigation/buildDashboardNav"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
+import { translateNavTree } from "@/shared/navigation/translateNav"
 import { cn } from "@/lib/utils"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -16,7 +18,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     select: { settings: true },
   })
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
-  const navItems = buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess)
+  const tNav = await getTranslations("nav")
+  const navItems = translateNavTree(
+    buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess),
+    (key) => tNav(key)
+  )
   const isDark = navPreferences.appearance === "dark"
 
   return (

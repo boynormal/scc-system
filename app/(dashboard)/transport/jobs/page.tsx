@@ -26,9 +26,14 @@ import type { TransportJobPriority } from "@prisma/client"
 
 import { Plus } from "lucide-react"
 
+import { getTranslations } from "next-intl/server"
 
 
-export const metadata = { title: "ใบงานขนส่ง" }
+
+export async function generateMetadata() {
+  const t = await getTranslations("transport")
+  return { title: t("jobsTitle") }
+}
 
 
 
@@ -79,6 +84,8 @@ export default async function TransportJobsPage({
   const session = await auth()
 
   if (!session) redirect("/login")
+
+  const t = await getTranslations("transport")
 
 
 
@@ -150,11 +157,11 @@ export default async function TransportJobsPage({
 
         <div>
 
-          <h1 className="text-xl font-semibold text-foreground">ใบงานขนส่ง</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t("jobsTitle")}</h1>
 
           <p className="text-sm text-muted-foreground">
 
-            {activeGroup.label} {result.total} รายการ
+            {t("jobsDesc")} · {activeGroup.label} {result.total}
 
           </p>
 
@@ -170,7 +177,7 @@ export default async function TransportJobsPage({
 
           <Plus className="h-4 w-4" />
 
-          สร้างใบงาน
+          {t("jobsNew")}
 
         </Link>
 

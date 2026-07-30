@@ -1,0 +1,22 @@
+---
+description: Security boundaries for API, lib, and middleware
+globs: "app/api/**/*.ts,lib/**/*.ts,middleware.ts"
+alwaysApply: false
+---
+
+# Security Rules
+
+Policy: [docs/SECURITY.md](docs/SECURITY.md)
+
+- User-facing API routes require session auth (prefer `withAuth`); cron under `/api/cron/*` uses `Authorization: Bearer <CRON_SECRET>` — never user session for cron.
+- Enforce RBAC and branch/company scope — do not leak or mutate cross-tenant data.
+- Secrets (`DATABASE_URL`, `NEXTAUTH_SECRET`, `CRON_SECRET`, GPS, storage) stay server-only — never expose credentials via `NEXT_PUBLIC_*`.
+- Uploads require auth; follow existing type/size/profile limits; do not assume object storage is live if code still writes under `public/`.
+- Validate inputs at boundaries; return actionable client errors; never leak stack traces or secrets to the client.
+- GPS and other third-party credentials stay behind server proxies — never embed auth in client bundles.
+
+# Verification
+
+- Changed routes have the correct auth model (session vs cron secret).
+- Permission checks exist for sensitive mutations (settings, upload profiles, IAM, etc.).
+- Env/docs updated when new secrets or trust boundaries are introduced.

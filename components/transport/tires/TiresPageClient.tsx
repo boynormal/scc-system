@@ -1,9 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useTranslations } from "next-intl"
 import { Filter, Loader2, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { WheelLayoutDiagram } from "@/components/transport/WheelLayoutDiagram"
+import { ErrorState } from "@/components/ui/error-state"
+import { LoadingState } from "@/components/ui/loading-state"
 import {
   TIRE_WORK_TYPE_LABELS,
   TIRE_WORK_TYPES,
@@ -15,6 +18,7 @@ import {
 } from "@/modules/transport/application/payment-options"
 import type { WheelLayout } from "@/modules/transport/application/vehicle-wheel-layouts"
 import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
+import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 
 type TireRow = {
@@ -65,6 +69,7 @@ function formatYmdShort(ymd: string) {
 }
 
 export function TiresPageClient() {
+  const t = useTranslations("transport")
   const [items, setItems] = useState<TireRow[]>([])
   const [vehicles, setVehicles] = useState<VehicleOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,21 +116,15 @@ export function TiresPageClient() {
       if (vehicleFilter) qs.set("vehicleId", vehicleFilter)
       if (fromDate) qs.set("from", fromDate)
       if (toDate) qs.set("to", toDate)
-      const res = await fetch(`/api/transport/tires?${qs}`)
-      const json = await res.json()
-      if (!res.ok) {
-        setError(typeof json.error === "string" ? json.error : json.error?.message ?? "โหลดไม่สำเร็จ")
-        setItems([])
-      } else {
-        setItems(json.data ?? [])
-      }
-    } catch {
-      setError("โหลดไม่สำเร็จ")
+      const json = await fetchJson<{ data?: TireRow[] }>(`/api/transport/tires?${qs}`)
+      setItems(json.data ?? [])
+    } catch (err) {
       setItems([])
+      setError(err instanceof ClientFetchError ? err.message : t("loadFailed"))
     } finally {
       setLoading(false)
     }
-  }, [vehicleFilter, fromDate, toDate])
+  }, [vehicleFilter, fromDate, toDate, t])
 
   useEffect(() => {
     loadVehicles()
@@ -298,7 +297,7 @@ export function TiresPageClient() {
   return (
     <div className="-m-6 space-y-6 p-4 md:p-6 w-auto min-w-0">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">จัดการยาง</h1>
+        <h1 className="text-xl font-semibold text-foreground">{t("tiresTitle")}</h1>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <p className="text-sm text-muted-foreground">
             บันทึกเปลี่ยนยาง / ปะยาง / ซ่อมยาง ตามตำแหน่งล้อของแต่ละคัน
@@ -379,8 +378,8 @@ export function TiresPageClient() {
               type="button"
               onClick={() => loadItems()}
               disabled={loading}
-              title="รีเฟรช"
-              aria-label="รีเฟรช"
+              title={t("refresh")}
+              aria-label={t("refresh")}
               className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
             >
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
@@ -522,22 +521,27 @@ export function TiresPageClient() {
                 <tbody className="divide-y divide-border">
                   {loading && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center">
-                        <Loader2 className="inline h-5 w-5 animate-spin text-cyan-500" />
+                      <td colSpan={7} className="px-2 py-4">
+                        <LoadingState title={t("tiresLoading")} className="py-10" />
                       </td>
                     </tr>
                   )}
                   {!loading && error && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center text-red-600">
-                        {error}
+                      <td colSpan={7} className="px-2 py-4">
+                        <ErrorState
+                          title={t("loadFailed")}
+                          description={error}
+                          onRetry={() => void loadItems()}
+                          className="py-10"
+                        />
                       </td>
                     </tr>
                   )}
                   {!loading && !error && items.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
-                        ยังไม่มีข้อมูล
+                        {t("tiresEmpty")}
                       </td>
                     </tr>
                   )}

@@ -9,6 +9,9 @@ const RECENT_KEY = "apps.launcher.recent"
 const USAGE_KEY = "apps.launcher.usageCounts"
 const MAX_RECENT = 8
 
+/** Max icons shown in the /apps bottom dock (company pins + user favorites). */
+export const LAUNCHER_DOCK_MAX = 8
+
 export function getFavoriteIds(): string[] {
   if (typeof window === "undefined") return []
   try {
@@ -44,7 +47,7 @@ export function pushRecent(moduleId: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(next))
 }
 
-/** จำนวนครั้งที่แต่ละโมดูลถูกเปิด — ใช้เติม Dock ของ /app2 อัตโนมัติเมื่อปักหมุด/รายการโปรดมีไม่ครบช่อง */
+/** จำนวนครั้งที่แต่ละโมดูลถูกเปิด — ใช้วิเคราะห์ความถี่การใช้งานฝั่ง client */
 export function getUsageCounts(): Record<string, number> {
   if (typeof window === "undefined") return {}
   try {
@@ -77,37 +80,37 @@ export function recordAppOpen(moduleId: string) {
 
 export type TileSkin = { tile: string; icon: string; blob: string }
 
-/** ชุดสีไอคอนแบบ deterministic ต่อ moduleId — โมดูลเดียวกันได้สีเดิมเสมอในทุกหน้า launcher */
+/** ชุดสีไอคอนแบบ deterministic ต่อ moduleId — สีทึบ อ่านชัดทั้งธีมสว่าง/มืด */
 export const TILE_SKINS: TileSkin[] = [
   {
-    tile: "from-orange-50 to-amber-100 ring-orange-200/70",
-    icon: "from-orange-500 to-amber-400 text-white",
-    blob: "bg-orange-300/45",
+    tile: "from-orange-500 to-amber-600 ring-orange-700/40",
+    icon: "from-orange-600 to-amber-500 text-white",
+    blob: "bg-orange-500",
   },
   {
-    tile: "from-teal-50 to-cyan-100 ring-teal-200/70",
-    icon: "from-teal-500 to-cyan-500 text-white",
-    blob: "bg-teal-300/45",
+    tile: "from-teal-500 to-cyan-600 ring-teal-700/40",
+    icon: "from-teal-600 to-cyan-500 text-white",
+    blob: "bg-teal-500",
   },
   {
-    tile: "from-rose-50 to-pink-100 ring-rose-200/70",
-    icon: "from-rose-500 to-pink-500 text-white",
-    blob: "bg-rose-300/45",
+    tile: "from-rose-500 to-pink-600 ring-rose-700/40",
+    icon: "from-rose-600 to-pink-500 text-white",
+    blob: "bg-rose-500",
   },
   {
-    tile: "from-sky-50 to-blue-100 ring-sky-200/70",
-    icon: "from-sky-500 to-blue-600 text-white",
-    blob: "bg-sky-300/45",
+    tile: "from-sky-500 to-blue-600 ring-sky-700/40",
+    icon: "from-sky-600 to-blue-500 text-white",
+    blob: "bg-sky-500",
   },
   {
-    tile: "from-emerald-50 to-green-100 ring-emerald-200/70",
-    icon: "from-emerald-500 to-green-500 text-white",
-    blob: "bg-emerald-300/45",
+    tile: "from-emerald-500 to-green-600 ring-emerald-700/40",
+    icon: "from-emerald-600 to-green-500 text-white",
+    blob: "bg-emerald-500",
   },
   {
-    tile: "from-violet-50 to-fuchsia-100 ring-violet-200/70",
-    icon: "from-violet-500 to-fuchsia-500 text-white",
-    blob: "bg-violet-300/45",
+    tile: "from-violet-500 to-fuchsia-600 ring-violet-700/40",
+    icon: "from-violet-600 to-fuchsia-500 text-white",
+    blob: "bg-violet-500",
   },
 ]
 

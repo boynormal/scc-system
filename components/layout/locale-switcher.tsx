@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
-import { LOCALE_COOKIE, locales, type AppLocale } from "@/i18n/config"
+import { LOCALE_COOKIE, type AppLocale } from "@/i18n/config"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -18,8 +18,11 @@ export function LocaleSwitcher({ className, variant = "default" }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
-  function onChange(next: AppLocale) {
-    if (next === locale) return
+  const next: AppLocale = locale === "th" ? "en" : "th"
+  const label = next === "en" ? t("switchToEn") : t("switchToTh")
+  const badge = next.toUpperCase()
+
+  function toggle() {
     document.cookie = `${LOCALE_COOKIE}=${next};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`
     startTransition(() => {
       router.refresh()
@@ -27,32 +30,21 @@ export function LocaleSwitcher({ className, variant = "default" }: Props) {
   }
 
   return (
-    <label
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={pending}
+      title={label}
+      aria-label={label}
       className={cn(
-        "inline-flex items-center gap-1.5 text-xs",
-        variant === "onDark" ? "text-white/70" : "text-muted-foreground",
+        "inline-flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold tracking-wide transition disabled:opacity-50",
+        variant === "onDark"
+          ? "border-white/20 bg-white/10 text-white hover:bg-white/15"
+          : "border-glass bg-glass text-muted-foreground backdrop-blur-glass hover:bg-glass-strong hover:text-foreground",
         className
       )}
     >
-      <span className="sr-only">{t("label")}</span>
-      <select
-        aria-label={t("label")}
-        value={locale}
-        disabled={pending}
-        onChange={(e) => onChange(e.target.value as AppLocale)}
-        className={cn(
-          "rounded-lg border px-2 py-1.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50",
-          variant === "onDark"
-            ? "border-white/20 bg-white/10 text-white"
-            : "border-border bg-background text-foreground"
-        )}
-      >
-        {locales.map((code) => (
-          <option key={code} value={code} className="text-foreground">
-            {t(code)}
-          </option>
-        ))}
-      </select>
-    </label>
+      {badge}
+    </button>
   )
 }

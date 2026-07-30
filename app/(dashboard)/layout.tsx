@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { getTranslations } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import Sidebar from "@/components/layout/sidebar"
 import Header from "@/components/layout/header"
+import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { buildDashboardNav } from "@/shared/navigation/buildDashboardNav"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
 import { translateNavTree } from "@/shared/navigation/translateNav"
@@ -23,7 +25,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     buildDashboardNav(session.user.roles, navPreferences, session.user.moduleAccess),
     (key) => tNav(key)
   )
-  const isDark = navPreferences.appearance === "dark"
+  const cookieStore = await cookies()
+  const appearance = resolveAppearance(
+    cookieStore.get(APPEARANCE_COOKIE)?.value,
+    navPreferences.appearance
+  )
+  const isDark = appearance === "dark"
 
   return (
     <div className={cn("relative flex h-screen bg-glass-ambient", isDark && "dark")}>
@@ -33,7 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         moduleImageOverrides={navPreferences.moduleImageOverrides}
       />
       <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Header user={session.user} navItems={navItems} />
+        <Header user={session.user} navItems={navItems} appearance={appearance} />
         <main className="flex-1 overflow-y-auto p-6 text-foreground">{children}</main>
       </div>
     </div>

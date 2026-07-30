@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -19,7 +19,7 @@ import {
 import { GlassCard, GlassInput, GlassStatCard } from "@/components/glass"
 import { Switch } from "@/components/ui/switch"
 import { APP_BRAND } from "@/shared/branding"
-import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
+import { setAppearanceCookie, type AppAppearance } from "@/shared/appearance"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "next-intl"
 
@@ -66,21 +66,17 @@ export function SettingsHub({
   const [currentAppearance, setCurrentAppearance] = useState<AppAppearance>(appearance)
   const [savingAppearance, setSavingAppearance] = useState(false)
 
+  useEffect(() => {
+    setCurrentAppearance(appearance)
+  }, [appearance])
+
   const toggleAppearance = async () => {
     const next: AppAppearance = currentAppearance === "dark" ? "light" : "dark"
     setCurrentAppearance(next)
     setSavingAppearance(true)
     try {
-      const res = await fetch("/api/settings/nav-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appearance: next }),
-      })
-      if (res.ok) {
-        router.refresh()
-      } else {
-        setCurrentAppearance(currentAppearance)
-      }
+      setAppearanceCookie(next)
+      router.refresh()
     } catch {
       setCurrentAppearance(currentAppearance)
     } finally {

@@ -615,25 +615,27 @@ function AppTile({
     <>
       <span
         className={cn(
-          "relative mb-2.5 flex h-[4.25rem] w-[4.25rem] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-md ring-1 transition group-hover:shadow-lg",
+          "relative mb-2.5 flex h-[4.25rem] w-[4.25rem] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-md ring-1 ring-black/10 transition group-hover:shadow-lg dark:ring-white/15",
           skin.tile
         )}
       >
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt=""
-            width={68}
-            height={68}
-            className="h-full w-full object-cover"
-            unoptimized
-          />
+          <span className="relative z-[1] flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/10">
+            <Image
+              src={imageUrl}
+              alt=""
+              width={44}
+              height={44}
+              className="h-full w-full object-contain p-1"
+              unoptimized
+            />
+          </span>
         ) : (
           <>
-            <span className={cn("absolute -right-3 -top-3 h-10 w-10 rounded-full blur-sm", skin.blob)} />
-            <span className={cn("absolute -bottom-4 left-1 h-12 w-12 rotate-12 rounded-2xl blur-[1px]", skin.blob)} />
-            <span className={cn("relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
-              <Icon className="h-5 w-5" strokeWidth={2.1} />
+            <span className={cn("absolute -right-3 -top-3 h-10 w-10 rounded-full opacity-40 blur-sm", skin.blob)} />
+            <span className={cn("absolute -bottom-4 left-1 h-12 w-12 rotate-12 rounded-2xl opacity-30 blur-[1px]", skin.blob)} />
+            <span className={cn("relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ring-1 ring-black/10", skin.icon)}>
+              <Icon className="h-5 w-5 text-white" strokeWidth={2.1} />
             </span>
           </>
         )}

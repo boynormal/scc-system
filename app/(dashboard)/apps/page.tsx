@@ -1,7 +1,9 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { cookies } from "next/headers"
 import { getTranslations } from "next-intl/server"
 import { IpadLauncher } from "@/components/apps/ipad-launcher"
+import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { buildDashboardNav, flattenNavForLauncher } from "@/shared/navigation"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
 import { translateNavTree } from "@/shared/navigation/translateNav"
@@ -34,6 +36,11 @@ export default async function AppsPage() {
     (key) => tNav(key)
   )
   const apps = flattenNavForLauncher(navItems)
+  const cookieStore = await cookies()
+  const appearance = resolveAppearance(
+    cookieStore.get(APPEARANCE_COOKIE)?.value,
+    navPreferences.appearance
+  )
 
   const weatherBranches = branches.map((b) => ({
     id: b.id,
@@ -51,7 +58,7 @@ export default async function AppsPage() {
         departmentOrderOverrides={navPreferences.departmentOrderOverrides}
         productLineImageOverrides={navPreferences.productLineImageOverrides}
         moduleImageOverrides={navPreferences.moduleImageOverrides}
-        appearance={navPreferences.appearance}
+        appearance={appearance}
         weatherBranches={weatherBranches}
       />
     </div>

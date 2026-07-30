@@ -11,7 +11,8 @@ import { PRODUCT_LINE_REGISTRY, type ProductLineDef } from "@/shared/navigation/
 import { isExternalHref } from "@/shared/navigation/isExternalHref"
 import {
   getFavoriteIds,
-  getUsageCounts,
+  getRecentIds,
+  LAUNCHER_DOCK_MAX,
   recordAppOpen,
   setFavoriteIds,
   skinFor,
@@ -61,7 +62,31 @@ function buildLineSections(
   return sections
 }
 
-const DOCK_MAX = 8
+const DOCK_MAX = LAUNCHER_DOCK_MAX
+
+/** Build ordered dock ids: company pins first, then user favorites. */
+function buildDockOrderedIds(
+  companyPinnedIds: string[],
+  favoriteIds: string[],
+  availableIds: Set<string>
+): string[] {
+  const seen = new Set<string>()
+  const ids: string[] = []
+
+  for (const id of companyPinnedIds) {
+    if (ids.length >= DOCK_MAX) break
+    if (!availableIds.has(id) || seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+  }
+  for (const id of favoriteIds) {
+    if (ids.length >= DOCK_MAX) break
+    if (!availableIds.has(id) || seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+  }
+  return ids
+}
 
 export function IpadLauncher({
   apps,
@@ -89,22 +114,52 @@ export function IpadLauncher({
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
   const [favorites, setFavorites] = useState<string[]>([])
-  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({})
+  const [lastRecentId, setLastRecentId] = useState<string | null>(null)
+  const [dockNotice, setDockNotice] = useState<string | null>(null)
   const [openLineId, setOpenLineId] = useState<string | null>(null)
 
   useEffect(() => {
     setFavorites(getFavoriteIds())
-    setUsageCounts(getUsageCounts())
+    setLastRecentId(getRecentIds()[0] ?? null)
   }, [])
 
-  const combinedPinned = useMemo(() => new Set<string>([...pinnedModuleIds, ...favorites]), [favorites, pinnedModuleIds])
+  useEffect(() => {
+    if (!dockNotice) return
+    const timer = window.setTimeout(() => setDockNotice(null), 3200)
+    return () => window.clearTimeout(timer)
+  }, [dockNotice])
+
+  const availableIds = useMemo(() => new Set(apps.map((a) => a.moduleId)), [apps])
+  const appsById = useMemo(() => new Map(apps.map((a) => [a.moduleId, a])), [apps])
+
+  const combinedPinned = useMemo(
+    () => new Set<string>([...pinnedModuleIds, ...favorites]),
+    [favorites, pinnedModuleIds]
+  )
 
   const toggleFavorite = (moduleId: string) => {
     setFavorites((prev) => {
-      const next = prev.includes(moduleId) ? prev.filter((x) => x !== moduleId) : [...prev, moduleId]
+      if (prev.includes(moduleId)) {
+        const next = prev.filter((x) => x !== moduleId)
+        setFavoriteIds(next)
+        return next
+      }
+
+      const currentDock = buildDockOrderedIds(pinnedModuleIds, prev, availableIds)
+      if (!currentDock.includes(moduleId) && currentDock.length >= DOCK_MAX) {
+        setDockNotice(t("dockFull"))
+        return prev
+      }
+
+      const next = [...prev, moduleId]
       setFavoriteIds(next)
       return next
     })
+  }
+
+  const markOpen = (moduleId: string) => {
+    recordAppOpen(moduleId)
+    setLastRecentId(moduleId)
   }
 
   const hiddenDepartments = useMemo(() => new Set(hiddenDepartmentIds), [hiddenDepartmentIds])
@@ -142,27 +197,13 @@ export function IpadLauncher({
       .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
   }, [apps, deferredQuery, hiddenDepartments, isSearching])
 
-  /**
-   * Dock: ปักหมุด/รายการโปรดมาก่อนเสมอ — ถ้ายังไม่ครบ DOCK_MAX ให้เติมด้วยโมดูลที่ถูกเปิดบ่อยที่สุด
-   * (นับจาก usageCounts) ที่ยังไม่ถูกปักหมุดและไม่อยู่ในแผนกที่ถูกซ่อน
-   */
+  /** Dock: company pins then user favorites only (stable order, no usage fill). */
   const dockApps = useMemo(() => {
-    const pinnedList = apps.filter((app) => combinedPinned.has(app.moduleId)).slice(0, DOCK_MAX)
-    const remainingSlots = DOCK_MAX - pinnedList.length
-    if (remainingSlots <= 0) return pinnedList
-
-    const frequentFill = apps
-      .filter(
-        (app) =>
-          !combinedPinned.has(app.moduleId) &&
-          !hiddenDepartments.has(app.departmentId) &&
-          (usageCounts[app.moduleId] ?? 0) > 0
-      )
-      .sort((a, b) => (usageCounts[b.moduleId] ?? 0) - (usageCounts[a.moduleId] ?? 0))
-      .slice(0, remainingSlots)
-
-    return [...pinnedList, ...frequentFill]
-  }, [apps, combinedPinned, hiddenDepartments, usageCounts])
+    const ids = buildDockOrderedIds(pinnedModuleIds, favorites, availableIds)
+    return ids
+      .map((id) => appsById.get(id))
+      .filter((item): item is LauncherAppItem => Boolean(item))
+  }, [appsById, availableIds, favorites, pinnedModuleIds])
 
   const openLine = lines.find((x) => x.line.id === openLineId) ?? null
 
@@ -183,7 +224,7 @@ export function IpadLauncher({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(100,116,139,0.12)_100%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(2,6,23,0.35)_100%)]" />
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 pb-40 pt-6 sm:px-8 sm:pt-8">
+      <div className="relative z-10 mx-auto h-full max-w-6xl overflow-y-auto px-4 pb-40 pt-6 sm:px-8 sm:pt-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground dark:text-white/55">{APP_BRAND.launcherBadge}</p>
@@ -229,9 +270,11 @@ export function IpadLauncher({
                     app={app}
                     isPinned={combinedPinned.has(app.moduleId)}
                     onToggleFavorite={toggleFavorite}
-                    onOpen={() => recordAppOpen(app.moduleId)}
+                    onOpen={() => markOpen(app.moduleId)}
                     dark={!isDark}
                     imageUrl={moduleImageOverrides[app.moduleId]}
+                    pinLabel={t("pin")}
+                    unpinLabel={t("unpin")}
                   />
                 ))}
               </div>
@@ -259,20 +302,40 @@ export function IpadLauncher({
         )}
       </div>
 
-      {dockApps.length > 0 && (
-        <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
-          <div className="flex max-w-[96vw] items-end gap-2 overflow-x-auto rounded-[2rem] border border-white/70 bg-white/75 px-3 py-2.5 shadow-2xl backdrop-blur-2xl sm:gap-3 sm:px-4 sm:py-3 dark:border-white/20 dark:bg-slate-950/40">
-            {dockApps.map((app) => (
+      {dockNotice && (
+        <div className="absolute inset-x-0 bottom-[5.75rem] z-40 flex justify-center px-4 sm:bottom-[6.5rem]">
+          <p
+            role="status"
+            className="rounded-full border border-amber-200/80 bg-amber-50/95 px-4 py-2 text-center text-xs font-medium text-amber-900 shadow-lg backdrop-blur-md dark:border-amber-500/30 dark:bg-amber-950/90 dark:text-amber-100"
+          >
+            {dockNotice}
+          </p>
+        </div>
+      )}
+
+      <div className="absolute inset-x-0 bottom-3 z-30 flex justify-center px-3 sm:bottom-4 sm:px-4">
+        <div
+          className="flex min-h-[4.75rem] max-w-[96vw] items-end gap-2 overflow-x-auto rounded-[2rem] border border-white/70 bg-white/80 px-3 py-2.5 shadow-2xl backdrop-blur-2xl sm:min-h-[5.25rem] sm:gap-3 sm:px-4 sm:py-3 dark:border-white/20 dark:bg-slate-950/55"
+          role="toolbar"
+          aria-label={t("dockEmpty")}
+        >
+          {dockApps.length === 0 ? (
+            <p className="px-3 py-2 text-center text-xs font-medium text-muted-foreground sm:text-sm dark:text-white/65">
+              {t("dockEmpty")}
+            </p>
+          ) : (
+            dockApps.map((app) => (
               <DockIcon
                 key={app.moduleId}
                 app={app}
-                onOpen={() => recordAppOpen(app.moduleId)}
+                emphasized={app.moduleId === lastRecentId}
+                onOpen={() => markOpen(app.moduleId)}
                 imageUrl={moduleImageOverrides[app.moduleId]}
               />
-            ))}
-          </div>
+            ))
+          )}
         </div>
-      )}
+      </div>
 
       {openLine && (
         <FolderOverlay
@@ -280,6 +343,7 @@ export function IpadLauncher({
           sections={openLine.sections}
           combinedPinned={combinedPinned}
           onToggleFavorite={toggleFavorite}
+          onOpenApp={markOpen}
           iconOverrides={productLineIconOverrides}
           imageOverrides={productLineImageOverrides}
           moduleImageOverrides={moduleImageOverrides}
@@ -314,7 +378,7 @@ function FolderIcon({
     >
       <span
         className={cn(
-          "relative flex aspect-square w-[4.75rem] items-center justify-center rounded-[1.4rem] bg-gradient-to-br shadow-lg ring-1 ring-white/25 transition group-hover:scale-[1.05] group-hover:shadow-xl sm:w-20",
+          "relative flex aspect-square w-[4.75rem] items-center justify-center rounded-[1.4rem] bg-gradient-to-br text-white shadow-lg ring-1 ring-black/10 transition group-hover:scale-[1.05] group-hover:shadow-xl sm:w-20 dark:ring-white/20",
           line.accent
         )}
       >
@@ -330,7 +394,7 @@ function FolderIcon({
         ) : (
           <Icon className="h-8 w-8 text-white sm:h-9 sm:w-9" strokeWidth={1.9} />
         )}
-        <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-white/70 bg-card px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground shadow-sm">
+        <span className="absolute -bottom-1.5 -right-1.5 rounded-full border border-border bg-card px-1.5 py-0.5 text-[9px] font-bold text-foreground shadow-sm">
           {totalApps}
         </span>
       </span>
@@ -346,6 +410,7 @@ function FolderOverlay({
   sections,
   combinedPinned,
   onToggleFavorite,
+  onOpenApp,
   iconOverrides,
   imageOverrides,
   moduleImageOverrides,
@@ -355,11 +420,13 @@ function FolderOverlay({
   sections: LineSection[]
   combinedPinned: Set<string>
   onToggleFavorite: (moduleId: string) => void
+  onOpenApp: (moduleId: string) => void
   iconOverrides: Record<string, NavIconKey>
   imageOverrides: Record<string, string>
   moduleImageOverrides: Record<string, string>
   onClose: () => void
 }) {
+  const t = useTranslations("apps")
   const HeroIcon = resolveLineIcon(line, iconOverrides)
   const imageUrl = imageOverrides[line.id]
 
@@ -430,11 +497,13 @@ function FolderOverlay({
                     isPinned={combinedPinned.has(app.moduleId)}
                     onToggleFavorite={onToggleFavorite}
                     onOpen={() => {
-                      recordAppOpen(app.moduleId)
+                      onOpenApp(app.moduleId)
                       onClose()
                     }}
                     dark
                     imageUrl={moduleImageOverrides[app.moduleId]}
+                    pinLabel={t("pin")}
+                    unpinLabel={t("unpin")}
                   />
                 ))}
               </div>
@@ -453,6 +522,8 @@ function IosIcon({
   onOpen,
   dark = false,
   imageUrl,
+  pinLabel,
+  unpinLabel,
 }: {
   app: LauncherAppItem
   isPinned: boolean
@@ -460,6 +531,8 @@ function IosIcon({
   onOpen: () => void
   dark?: boolean
   imageUrl?: string
+  pinLabel: string
+  unpinLabel: string
 }) {
   const Icon: LucideIcon = NAV_ICON_MAP[app.icon] ?? LayoutGrid
   const skin = skinFor(app.moduleId)
@@ -468,22 +541,24 @@ function IosIcon({
   const iconTile = (
     <span
       className={cn(
-        "relative flex aspect-square w-[4.25rem] items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br shadow-md ring-1 transition group-hover:scale-[1.05] group-hover:shadow-lg sm:w-[4.5rem]",
+        "relative flex aspect-square w-[4.25rem] items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br shadow-md ring-1 ring-black/10 transition group-hover:scale-[1.05] group-hover:shadow-lg sm:w-[4.5rem] dark:ring-white/15",
         skin.tile
       )}
     >
       {imageUrl ? (
-        <Image
-          src={imageUrl}
-          alt=""
-          width={72}
-          height={72}
-          className="h-full w-full object-cover"
-          unoptimized
-        />
+        <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/10 sm:h-11 sm:w-11">
+          <Image
+            src={imageUrl}
+            alt=""
+            width={44}
+            height={44}
+            className="h-full w-full object-contain p-1"
+            unoptimized
+          />
+        </span>
       ) : (
-        <span className={cn("relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
-          <Icon className="h-5 w-5" strokeWidth={2.1} />
+        <span className={cn("relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ring-1 ring-black/10", skin.icon)}>
+          <Icon className="h-5 w-5 text-white" strokeWidth={2.1} />
         </span>
       )}
     </span>
@@ -491,23 +566,30 @@ function IosIcon({
 
   const labelClass = dark
     ? "max-w-[5.5rem] text-[11.5px] font-semibold leading-snug text-foreground"
-    : "max-w-[5.5rem] text-[12px] font-semibold leading-snug text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]"
+    : "max-w-[5.5rem] text-[12px] font-semibold leading-snug text-foreground drop-shadow-sm dark:text-white"
 
-  const wrapperClass = "group relative flex flex-col items-center gap-2 text-center outline-none"
+  const wrapperClass = "flex flex-col items-center gap-2 text-center outline-none"
 
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="group relative flex flex-col items-center">
       <button
         type="button"
-        onClick={() => onToggleFavorite(app.moduleId)}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onToggleFavorite(app.moduleId)
+        }}
         className={cn(
-          "absolute right-2 top-0 z-10 rounded-full bg-white/95 p-1 shadow-sm ring-1 ring-slate-200/80 transition sm:opacity-0 sm:group-hover:opacity-100",
-          isPinned ? "text-amber-500 sm:opacity-100" : "text-muted-foreground hover:text-amber-500"
+          "absolute -right-1 -top-1 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border shadow-md transition",
+          isPinned
+            ? "border-amber-400 bg-amber-100 text-amber-600 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-300"
+            : "border-border bg-card text-muted-foreground hover:border-amber-400 hover:text-amber-500 dark:hover:text-amber-300"
         )}
-        title={isPinned ? "เอาออกจากปักหมุด" : "ปักหมุด"}
+        title={isPinned ? unpinLabel : pinLabel}
+        aria-label={isPinned ? unpinLabel : pinLabel}
         aria-pressed={isPinned}
       >
-        <Star className={cn("h-3 w-3", isPinned && "fill-amber-400")} />
+        <Star className={cn("h-3.5 w-3.5", isPinned && "fill-amber-400")} />
       </button>
 
       {external ? (
@@ -529,10 +611,12 @@ function DockIcon({
   app,
   onOpen,
   imageUrl,
+  emphasized = false,
 }: {
   app: LauncherAppItem
   onOpen: () => void
   imageUrl?: string
+  emphasized?: boolean
 }) {
   const Icon: LucideIcon = NAV_ICON_MAP[app.icon] ?? LayoutGrid
   const skin = skinFor(app.moduleId)
@@ -542,33 +626,49 @@ function DockIcon({
     <>
       <span
         className={cn(
-          "flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-md ring-1 transition hover:scale-105 sm:h-12 sm:w-12",
-          skin.tile
+          "flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br shadow-md ring-1 ring-black/10 transition hover:scale-105 sm:h-12 sm:w-12 dark:ring-white/15",
+          emphasized
+            ? "from-rose-500 to-pink-600 text-white shadow-rose-600/40 ring-rose-700/50 scale-105"
+            : skin.tile
         )}
       >
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt=""
-            width={48}
-            height={48}
-            className="h-full w-full object-cover"
-            unoptimized
-          />
+          <span className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/10 sm:h-9 sm:w-9">
+            <Image
+              src={imageUrl}
+              alt=""
+              width={36}
+              height={36}
+              className="h-full w-full object-contain p-0.5"
+              unoptimized
+            />
+          </span>
         ) : (
-          <span className={cn("flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
-            <Icon className="h-4 w-4" strokeWidth={2.1} />
+          <span
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ring-1 ring-black/10",
+              emphasized ? "from-rose-600 to-pink-500 text-white" : skin.icon
+            )}
+          >
+            <Icon className="h-4 w-4 text-white" strokeWidth={2.1} />
           </span>
         )}
       </span>
-      <span className="line-clamp-2 max-w-[4.5rem] text-center text-[10px] font-semibold leading-snug text-foreground sm:max-w-[5rem] sm:text-[11px]">
+      <span
+        className={cn(
+          "line-clamp-2 max-w-[4.5rem] text-center text-[10px] font-semibold leading-snug sm:max-w-[5rem] sm:text-[11px]",
+          emphasized ? "text-rose-700 dark:text-rose-300" : "text-foreground dark:text-white"
+        )}
+      >
         {app.label}
       </span>
     </>
   )
 
-  const wrapperClass =
-    "flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 rounded-xl px-0.5 py-0.5 text-center outline-none transition hover:bg-white/40 dark:hover:bg-white/10 sm:w-[5rem]"
+  const wrapperClass = cn(
+    "flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 rounded-xl px-0.5 py-0.5 text-center outline-none transition hover:bg-white/40 dark:hover:bg-white/10 sm:w-[5rem]",
+    emphasized && "bg-rose-500/10 dark:bg-rose-400/10"
+  )
 
   if (external) {
     return (
@@ -579,6 +679,7 @@ function DockIcon({
         onClick={onOpen}
         className={wrapperClass}
         title={app.label}
+        aria-current={emphasized ? "true" : undefined}
       >
         {content}
       </a>
@@ -586,7 +687,13 @@ function DockIcon({
   }
 
   return (
-    <Link href={app.href} onClick={onOpen} className={wrapperClass} title={app.label}>
+    <Link
+      href={app.href}
+      onClick={onOpen}
+      className={wrapperClass}
+      title={app.label}
+      aria-current={emphasized ? "true" : undefined}
+    >
       {content}
     </Link>
   )

@@ -26,7 +26,8 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     description: "เครื่องจักร · แผน PM · ตาราง · ปฏิทิน · ใบสั่งงาน · รายงาน · แจ้งเตือน",
     departmentIds: ["asset_management", "work_management"],
     order: 1,
-    accent: "from-blue-500 to-indigo-600 shadow-blue-500/20",
+    accent: "from-blue-500 to-indigo-600 shadow-blue-600/30",
+
     iconKey: "Wrench",
   },
   {
@@ -36,7 +37,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     description: "ข้อมูลคน · บันทึกเวลา · นำเข้า Excel",
     departmentIds: ["people"],
     order: 2,
-    accent: "from-rose-500 to-orange-600 shadow-rose-500/20",
+    accent: "from-rose-500 to-orange-600 shadow-rose-600/30",
     iconKey: "Users",
   },
   {
@@ -46,7 +47,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     description: "อะไหล่ · สต็อก (ขยายคลัง/คลังสินค้าได้ในอนาคต)",
     departmentIds: ["inventory"],
     order: 3,
-    accent: "from-emerald-500 to-teal-600 shadow-emerald-500/20",
+    accent: "from-emerald-500 to-teal-600 shadow-emerald-600/30",
     iconKey: "Package",
   },
   {
@@ -56,7 +57,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     description: "รถ · คนขับ · ใบงานขนส่ง · Multi-stop · รูปภาพหลักฐาน",
     departmentIds: ["transport"],
     order: 5,
-    accent: "from-cyan-500 to-blue-600 shadow-cyan-500/20",
+    accent: "from-cyan-500 to-blue-600 shadow-cyan-600/30",
     iconKey: "Truck",
   },
   {
@@ -66,7 +67,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     description: "บัตรคิว · ไม้กั้น · ประตูสแกนโลหะ — ลิงก์ไปหน้าควบคุมอุปกรณ์ IoT บนเครือข่ายไซต์งาน",
     departmentIds: ["iot_control"],
     order: 6,
-    accent: "from-fuchsia-500 to-purple-600 shadow-fuchsia-500/20",
+    accent: "from-fuchsia-500 to-purple-600 shadow-fuchsia-600/30",
     iconKey: "Cpu",
   },
   {
@@ -76,7 +77,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     description: "ผู้ใช้ · สาขา · สิทธิ์ · ข้อมูลพื้นฐาน — ชั้น Core Platform ที่ทุกสายงานใช้ร่วมกัน",
     departmentIds: ["configuration"],
     order: 4,
-    accent: "from-slate-500 to-slate-700 shadow-slate-500/15",
+    accent: "from-slate-600 to-slate-800 shadow-slate-700/30",
     iconKey: "Settings",
   },
 ]

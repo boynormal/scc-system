@@ -23,7 +23,9 @@
   "locale": {
     "label": "ภาษา",
     "th": "ไทย",
-    "en": "English"
+    "en": "English",
+    "switchToEn": "สลับเป็นภาษาอังกฤษ",
+    "switchToTh": "สลับเป็นภาษาไทย"
   },
   "auth": {
     "identifierLabel": "ชื่อผู้ใช้หรืออีเมล",
@@ -38,7 +40,12 @@
   "header": {
     "apps": "Apps",
     "home": "หน้าหลัก",
-    "signOut": "ออกจากระบบ"
+    "signOut": "ออกจากระบบ",
+    "themeToLight": "สลับเป็นธีมสว่าง",
+    "themeToDark": "สลับเป็นธีมมืด",
+    "preferencesGroup": "การแสดงผล",
+    "accountGroup": "บัญชีผู้ใช้",
+    "accountMenu": "เมนูบัญชีผู้ใช้"
   },
   "nav": {
     "sec_overview": "การจัดการซ่อมบำรุง",
@@ -128,7 +135,11 @@
     "searchPlaceholder": "ค้นหาโมดูล",
     "noResults": "ไม่พบโมดูล",
     "noResultsHint": "ลองค้นด้วยคำอื่น หรือเคลียร์ช่องค้นหา",
-    "home": "หน้าหลัก"
+    "home": "หน้าหลัก",
+    "dockFull": "Dock เต็มแล้ว (สูงสุด 8) — ถอดปักหมุดโมดูลอื่นก่อน",
+    "dockEmpty": "กดดาวบนโมดูลเพื่อปักหมุดที่นี่",
+    "pin": "ปักหมุดที่ Dock",
+    "unpin": "ถอดออกจาก Dock"
   },
   "dashboard": {
     "title": "แดชบอร์ด",

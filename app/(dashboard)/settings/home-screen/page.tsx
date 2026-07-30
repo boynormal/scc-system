@@ -22,7 +22,18 @@ import { MODULE_NAV_REGISTRY } from "@/shared/navigation/moduleRegistry"
 import { PRODUCT_LINE_REGISTRY } from "@/shared/navigation/productLineRegistry"
 import { flattenNavForLauncher, type LauncherAppItem } from "@/shared/navigation/flattenNav"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
+import {
+  APPEARANCE_COOKIE,
+  parseAppearanceCookie,
+  setAppearanceCookie,
+} from "@/shared/appearance"
 import { cn } from "@/lib/utils"
+
+function readBrowserAppearance(): AppAppearance | null {
+  if (typeof document === "undefined") return null
+  const match = document.cookie.match(new RegExp(`(?:^|; )${APPEARANCE_COOKIE}=([^;]*)`))
+  return parseAppearanceCookie(match?.[1] ? decodeURIComponent(match[1]) : null)
+}
 
 function resolveIcon(key: NavIconKey): LucideIcon {
   return NAV_ICON_MAP[key]
@@ -73,7 +84,7 @@ export default function HomeScreenSettingsPage() {
         if (cancelled) return
         setLineImages(json.data?.productLineImageOverrides ?? {})
         setModuleImages(json.data?.moduleImageOverrides ?? {})
-        setAppearance(json.data?.appearance ?? "light")
+        setAppearance(readBrowserAppearance() ?? json.data?.appearance ?? "light")
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -130,8 +141,12 @@ export default function HomeScreenSettingsPage() {
     if (next === appearance) return
     const prev = appearance
     setAppearance(next)
-    const ok = await patchPreferences({ appearance: next })
-    if (!ok) setAppearance(prev)
+    try {
+      setAppearanceCookie(next)
+      router.refresh()
+    } catch {
+      setAppearance(prev)
+    }
   }
 
   if (loading) {

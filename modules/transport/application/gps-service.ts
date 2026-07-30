@@ -201,8 +201,11 @@ function resolveByImeiOrPlate<T>(
   return fallback
 }
 
-/** โหลด lookup maps ทั้งหมดที่ต้องใช้ normalize ข้อมูล GPS ต่อบริษัท (แต่ละ query ล้ม fallback เป็นค่าว่างแยกกัน) */
-export async function fetchGpsLookupMaps(db: PrismaClient, companyId: string): Promise<GpsLookupMaps> {
+/** In-process TTL cache (single instance). Multi-instance ต้องใช้ shared cache ภายหลัง */
+const GPS_LOOKUP_CACHE_TTL_MS = 15_000
+const gpsLookupCache = new Map<string, { expiresAt: number; maps: GpsLookupMaps }>()
+
+async function loadGpsLookupMaps(db: PrismaClient, companyId: string): Promise<GpsLookupMaps> {
   const emptyActive: ActiveJobMaps = { imeiMap: new Map(), plateMap: new Map() }
   const emptyVehicle: VehicleLookupMaps = {
     imeiToId: new Map(),
@@ -218,6 +221,18 @@ export async function fetchGpsLookupMaps(db: PrismaClient, companyId: string): P
   ])
 
   return { activeMaps, vehicleMaps, todayMaps }
+}
+
+/** โหลด lookup maps ทั้งหมดที่ต้องใช้ normalize ข้อมูล GPS ต่อบริษัท (แต่ละ query ล้ม fallback เป็นค่าว่างแยกกัน) */
+export async function fetchGpsLookupMaps(db: PrismaClient, companyId: string): Promise<GpsLookupMaps> {
+  const cached = gpsLookupCache.get(companyId)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.maps
+  }
+
+  const maps = await loadGpsLookupMaps(db, companyId)
+  gpsLookupCache.set(companyId, { expiresAt: Date.now() + GPS_LOOKUP_CACHE_TTL_MS, maps })
+  return maps
 }
 
 /** แปลงข้อมูลดิบจาก GPS API ให้เป็น `GpsVehicleData[]` พร้อม match กับใบงาน/รถในระบบ */

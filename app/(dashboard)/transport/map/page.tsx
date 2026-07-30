@@ -9,7 +9,7 @@ import { hasAnyAlert } from "@/components/transport/gps/GpsAlertBadge"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { RefreshCw, AlertTriangle, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
-const POLL_INTERVAL = 30_000
+const POLL_INTERVAL = 45_000
 
 type AvailabilityFilter = "all" | "available" | "busy" | "maintenance" | "unmatched"
 

@@ -32,9 +32,9 @@
 Authorization: Bearer <CRON_SECRET>
 ```
 
-ตัวอย่าง: [`app/api/cron/generate-schedules/route.ts`](../app/api/cron/generate-schedules/route.ts)
+ตัวอย่าง: [`app/api/cron/generate-schedules/route.ts`](../app/api/cron/generate-schedules/route.ts), [`app/api/cron/notify/route.ts`](../app/api/cron/notify/route.ts)
 
-ตั้งค่า `CRON_SECRET` ใน environment ของเซิร์ฟเวอร์ (ยังไม่มีใน `.env.example` — ต้องเพิ่มเองบน production)
+ตั้งค่า `CRON_SECRET` ใน environment (มีใน [`.env.example`](../.env.example)) — บังคับบน production ถ้าเปิด cron
 
 ## Secrets และ environment
 

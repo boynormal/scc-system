@@ -31,7 +31,24 @@
 ### `401` จาก `/api/cron/*`
 
 - ตั้ง `CRON_SECRET` ให้ตรงกับ header: `Authorization: Bearer <secret>`
+- ครอบคลุมทั้ง `generate-schedules` และ `notify`
 - อย่าเรียก cron จากเบราว์เซอร์โดยไม่มี secret
+
+## Performance
+
+### GPS map/monitor ช้าหรือโหลด DB หนัก
+
+- Client โพลทุก **45s** (รีเฟรชมือได้)
+- Lookup maps ในเซิร์ฟเวอร์มี **TTL cache 15s ต่อ company** (in-process) — multi-instance ต้องใช้ shared cache ทีหลัง
+- ตรวจ index `gps_device_id` และ `(company_id, scheduled_date)` หลัง migrate
+
+### หน้ารายการยาวมาก
+
+Machines / spare-parts / plans / users เป็น SSR แบบ **pageSize 50** — ใช้ query `?page=`
+
+### อัปโหลดได้ `400` ไฟล์ใหญ่เกิน 5MB
+
+จำกัดฝั่งเซิร์ฟเวอร์ตรงกับ client — ย่อรูปก่อนอัปโหลด
 
 ## Database / migrate
 

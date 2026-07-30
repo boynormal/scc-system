@@ -1048,6 +1048,7 @@ model TransportVehicle {
 
   @@index([companyId])
   @@index([branchId])
+  @@index([gpsDeviceId])
   @@map("transport_vehicles")
 }
 
@@ -1179,6 +1180,7 @@ model TransportJob {
   @@index([branchId, status])
   @@index([createdAt])
   @@index([scheduledDate])
+  @@index([companyId, scheduledDate])
   @@index([jobNumber])
   @@map("transport_jobs")
 }

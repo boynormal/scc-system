@@ -8,7 +8,7 @@ import { VehicleGpsCard } from "@/components/transport/gps/VehicleGpsCard"
 import { RefreshCw, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const POLL_INTERVAL = 30_000
+const POLL_INTERVAL = 45_000
 
 type Filter = "all" | "alert" | "available" | "busy" | "maintenance"
 

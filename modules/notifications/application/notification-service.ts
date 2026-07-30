@@ -154,15 +154,16 @@ export async function generateOverdueNotifications(db: PrismaClient, companyId: 
 }
 
 export async function generateLowStockNotifications(db: PrismaClient, companyId: string) {
-  const inventory = await db.sparePartInventory.findMany({
-    where: { branch: { companyId } },
-    include: {
-      part: { select: { name: true, minStock: true } },
-      branch: { select: { id: true } },
-    },
-  })
-
-  const lowStock = inventory.filter((i) => i.currentStock <= i.part.minStock)
+  const lowStock = await db.$queryRaw<
+    { id: string; name: string; current_stock: number; min_stock: number }[]
+  >`
+    SELECT spi.id, sp.name, spi.current_stock, sp.min_stock
+    FROM spare_part_inventory spi
+    INNER JOIN spare_parts sp ON sp.id = spi.part_id
+    INNER JOIN branches b ON b.id = spi.branch_id
+    WHERE b.company_id = ${companyId}::uuid
+      AND spi.current_stock <= sp.min_stock
+  `
   if (lowStock.length === 0) return 0
 
   const admins = await db.userBranchRole.findMany({
@@ -180,8 +181,8 @@ export async function generateLowStockNotifications(db: PrismaClient, companyId:
     admins.map((admin) => ({
       userId: admin.userId,
       type: "low_stock" as NotificationType,
-      title: `อะไหล่ใกล้หมด: ${item.part.name}`,
-      message: `คงเหลือ ${item.currentStock} ${item.currentStock <= 0 ? "(หมด!)" : `(ต่ำกว่า min ${item.part.minStock})`}`,
+      title: `อะไหล่ใกล้หมด: ${item.name}`,
+      message: `คงเหลือ ${item.current_stock} ${item.current_stock <= 0 ? "(หมด!)" : `(ต่ำกว่า min ${item.min_stock})`}`,
       link: "/spare-parts",
       refId: item.id,
       refType: "SparePartInventory",

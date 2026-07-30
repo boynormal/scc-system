@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DeleteButton } from "@/components/ui/delete-button"
 import { GlassCard } from "@/components/glass"
+import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
+import type { Prisma } from "@prisma/client"
 
 export const metadata: Metadata = { title: "แผนซ่อมบำรุง" }
 
@@ -16,40 +18,54 @@ const freqLabel: Record<string, string> = {
   quarter: "ไตรมาส", year: "ปี", runtime_hour: "ชั่วโมงรัน",
 }
 
-async function getPlans(companyId: string, machineId?: string) {
-  return prisma.maintenancePlan.findMany({
-    where: {
-      machine: { branch: { companyId } },
-      ...(machineId && { machineId }),
-    },
-    include: {
-      machine: { 
-        select: { 
-          id: true, 
-          name: true, 
-          code: true, 
-          branch: { select: { name: true } },
-          images: { where: { isPrimary: true }, take: 1, select: { fileUrl: true } }
-        } 
+async function getPlansPage(companyId: string, page: number, machineId?: string) {
+  const where: Prisma.MaintenancePlanWhereInput = {
+    machine: { branch: { companyId } },
+    ...(machineId && { machineId }),
+  }
+  const skip = (page - 1) * SSR_PAGE_SIZE
+
+  const [plans, total, active] = await Promise.all([
+    prisma.maintenancePlan.findMany({
+      where,
+      include: {
+        machine: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            branch: { select: { name: true } },
+            images: { where: { isPrimary: true }, take: 1, select: { fileUrl: true } },
+          },
+        },
+        type: { select: { id: true, name: true, code: true, color: true } },
+        _count: { select: { schedules: true } },
       },
-      type: { select: { id: true, name: true, code: true, color: true } },
-      _count: { select: { schedules: true } },
-    },
-    orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
-  })
+      orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
+      skip,
+      take: SSR_PAGE_SIZE,
+    }),
+    prisma.maintenancePlan.count({ where }),
+    prisma.maintenancePlan.count({ where: { ...where, isActive: true } }),
+  ])
+
+  return { plans, total, active }
 }
 
 export default async function MaintenancePlansPage(
   props: {
-    searchParams: Promise<{ machineId?: string }>
+    searchParams: Promise<{ machineId?: string; page?: string }>
   }
 ) {
-  const searchParams = await props.searchParams;
+  const searchParams = await props.searchParams
+  const page = parsePage(searchParams.page)
   const session = await auth()
-  const plans = await getPlans(session!.user.companyId as string, searchParams.machineId)
-
-  type Plan = Awaited<ReturnType<typeof getPlans>>[number]
-  const active = plans.filter((p: Plan) => p.isActive).length
+  const { plans, total, active } = await getPlansPage(
+    session!.user.companyId as string,
+    page,
+    searchParams.machineId
+  )
+  const totalPages = Math.max(1, Math.ceil(total / SSR_PAGE_SIZE))
 
   return (
     <div className="space-y-6">
@@ -57,7 +73,7 @@ export default async function MaintenancePlansPage(
         <div>
           <h1 className="text-2xl font-bold text-foreground">แผนซ่อมบำรุง</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            ทั้งหมด {plans.length} แผน · ใช้งาน {active} แผน
+            ทั้งหมด {total} แผน · ใช้งาน {active} แผน
           </p>
         </div>
         <Link
@@ -82,90 +98,99 @@ export default async function MaintenancePlansPage(
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted">
-                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide w-16"></th>
-                  <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">เครื่องจักร</th>
-                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ชื่อแผน</th>
-                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ประเภท</th>
-                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ความถี่</th>
-                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">กำหนดการ</th>
-                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">สถานะ</th>
-                  <th className="px-5 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {plans.map((plan: Plan) => (
-                  <tr key={plan.id} className="hover:bg-muted/60 transition-colors">
-                    <td className="px-5 py-3.5">
-                      {plan.machine.images?.[0] ? (
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border">
-                          <Image
-                            src={plan.machine.images[0].fileUrl}
-                            alt={plan.machine.name}
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg border border-border bg-muted flex items-center justify-center">
-                          <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-3.5">
-                      <Link href={`/machines/${plan.machine.id}`} className="hover:text-blue-600 transition-colors">
-                        <p className="font-semibold text-foreground">{plan.machine.code}</p>
-                        <p className="text-muted-foreground text-xs mt-0.5">{plan.machine.name} · {plan.machine.branch.name}</p>
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <p className="font-semibold text-foreground">{plan.name}</p>
-                      {plan.estimatedDurationMin && (
-                        <p className="text-muted-foreground text-xs mt-0.5">~{plan.estimatedDurationMin} นาที</p>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border"
-                        style={{
-                          backgroundColor: `${plan.type.color || "#94a3b8"}18`,
-                          color: plan.type.color || "#475569",
-                          borderColor: `${plan.type.color || "#94a3b8"}40`,
-                        }}
-                      >
-                        {plan.type.code}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
-                      ทุก {plan.frequencyValue} {freqLabel[plan.frequencyUnit] ?? plan.frequencyUnit}
-                    </td>
-                    <td className="px-5 py-3.5 text-muted-foreground text-xs">
-                      {plan._count.schedules} กำหนดการ
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Badge variant={plan.isActive ? "success" : "default"}>
-                        {plan.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-3.5 flex items-center justify-end gap-3">
-                      <Link
-                        href={`/maintenance/plans/${plan.id}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        ดูรายละเอียด
-                      </Link>
-                      <DeleteButton url={`/api/maintenance-plans/${plan.id}`} confirmMessage={`คุณต้องการลบแผน '${plan.name}' ใช่หรือไม่?`} />
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted">
+                    <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide w-16"></th>
+                    <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">เครื่องจักร</th>
+                    <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ชื่อแผน</th>
+                    <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ประเภท</th>
+                    <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ความถี่</th>
+                    <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">กำหนดการ</th>
+                    <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">สถานะ</th>
+                    <th className="px-5 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {plans.map((plan) => (
+                    <tr key={plan.id} className="hover:bg-muted/60 transition-colors">
+                      <td className="px-5 py-3.5">
+                        {plan.machine.images?.[0] ? (
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border">
+                            <Image
+                              src={plan.machine.images[0].fileUrl}
+                              alt={plan.machine.name}
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg border border-border bg-muted flex items-center justify-center">
+                            <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-3.5">
+                        <Link href={`/machines/${plan.machine.id}`} className="hover:text-blue-600 transition-colors">
+                          <p className="font-semibold text-foreground">{plan.machine.code}</p>
+                          <p className="text-muted-foreground text-xs mt-0.5">{plan.machine.name} · {plan.machine.branch.name}</p>
+                        </Link>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="font-semibold text-foreground">{plan.name}</p>
+                        {plan.estimatedDurationMin && (
+                          <p className="text-muted-foreground text-xs mt-0.5">~{plan.estimatedDurationMin} นาที</p>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border"
+                          style={{
+                            backgroundColor: `${plan.type.color || "#94a3b8"}18`,
+                            color: plan.type.color || "#475569",
+                            borderColor: `${plan.type.color || "#94a3b8"}40`,
+                          }}
+                        >
+                          {plan.type.code}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-muted-foreground">
+                        ทุก {plan.frequencyValue} {freqLabel[plan.frequencyUnit] ?? plan.frequencyUnit}
+                      </td>
+                      <td className="px-5 py-3.5 text-muted-foreground text-xs">
+                        {plan._count.schedules} กำหนดการ
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <Badge variant={plan.isActive ? "success" : "default"}>
+                          {plan.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3.5 flex items-center justify-end gap-3">
+                        <Link
+                          href={`/maintenance/plans/${plan.id}`}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          ดูรายละเอียด
+                        </Link>
+                        <DeleteButton url={`/api/maintenance-plans/${plan.id}`} confirmMessage={`คุณต้องการลบแผน '${plan.name}' ใช่หรือไม่?`} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ListPagination
+              pathname="/maintenance/plans"
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              query={{ machineId: searchParams.machineId }}
+            />
+          </>
         )}
       </GlassCard>
     </div>

@@ -4,7 +4,9 @@
 
 ## [Unreleased]
 
--
+### Changed
+
+- Performance เฟส A: GPS lookup TTL cache 15s + poll 45s; SSR pagination (50) บน machines/spare-parts/plans/users; upload max 5MB ฝั่งเซิร์ฟเวอร์; index GPS/calendar; cron `notify` ใช้ `CRON_SECRET` + low-stock กรองใน SQL
 
 ## 2026-07-30
 

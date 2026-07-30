@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
 
+    const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: { message: "ไฟล์ใหญ่เกิน 5MB" } },
+        { status: 400 }
+      )
+    }
+
     const rawProfile = formData.get("profile")
     const profile = isUploadProfile(rawProfile) ? rawProfile : "default"
 

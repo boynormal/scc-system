@@ -119,6 +119,7 @@ model Company {
   transportVehicles       TransportVehicle[]
   drivers                 Driver[]
   transportJobs           TransportJob[]
+  transportRepairLogs     TransportRepairLog[]
 
   @@map("companies")
 }
@@ -151,6 +152,7 @@ model Branch {
   transportVehicles       TransportVehicle[]
   drivers                 Driver[]
   transportJobs           TransportJob[]
+  transportRepairLogs     TransportRepairLog[]
 
   @@index([companyId])
   @@index([code])
@@ -222,6 +224,9 @@ model User {
   transportJobsCreated    TransportJob[]          @relation("TransportJobCreator")
   jobAssignmentsBy        JobAssignment[]         @relation("JobAssignedBy")
   jobAttachmentsUploaded  JobAttachment[]         @relation("JobAttachmentUploader")
+  repairsReported         TransportRepairLog[]    @relation("RepairReportedBy")
+  repairsStarted          TransportRepairLog[]    @relation("RepairStartedBy")
+  repairsClosed           TransportRepairLog[]    @relation("RepairClosedBy")
 
   // Phase B decision (2026-07-23): email stays globally @unique permanently — login
   // may use email or username; both are globally unique (no company picker).
@@ -911,6 +916,13 @@ enum TransportJobPriority {
   urgent
 }
 
+enum TransportRepairStatus {
+  reported
+  in_repair
+  closed
+  cancelled
+}
+
 enum AttachmentStage {
   before_trip
   at_pickup
@@ -1010,15 +1022,50 @@ model TransportVehicle {
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  company     Company         @relation(fields: [companyId], references: [id])
-  branch      Branch          @relation(fields: [branchId], references: [id])
+  company     Company              @relation(fields: [companyId], references: [id])
+  branch      Branch               @relation(fields: [branchId], references: [id])
   assignments JobAssignment[]
   attachments JobAttachment[]
   drivers     Driver[]
+  repairLogs  TransportRepairLog[]
 
   @@index([companyId])
   @@index([branchId])
   @@map("transport_vehicles")
+}
+
+model TransportRepairLog {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String                @map("company_id") @db.Uuid
+  branchId        String                @map("branch_id") @db.Uuid
+  vehicleId       String                @map("vehicle_id") @db.Uuid
+  symptom         String
+  notes           String?
+  status          TransportRepairStatus @default(reported)
+  reportedById    String                @map("reported_by_id") @db.Uuid
+  reportedAt      DateTime              @default(now()) @map("reported_at") @db.Timestamptz
+  startedById     String?               @map("started_by_id") @db.Uuid
+  startedAt       DateTime?             @map("started_at") @db.Timestamptz
+  closedById      String?               @map("closed_by_id") @db.Uuid
+  closedAt        DateTime?             @map("closed_at") @db.Timestamptz
+  mileageAtReport Decimal?              @map("mileage_at_report") @db.Decimal(12, 2)
+  repairCost      Decimal?              @map("repair_cost") @db.Decimal(12, 2)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  company    Company         @relation(fields: [companyId], references: [id])
+  branch     Branch          @relation(fields: [branchId], references: [id])
+  vehicle    TransportVehicle @relation(fields: [vehicleId], references: [id])
+  reportedBy User            @relation("RepairReportedBy", fields: [reportedById], references: [id])
+  startedBy  User?           @relation("RepairStartedBy", fields: [startedById], references: [id])
+  closedBy   User?           @relation("RepairClosedBy", fields: [closedById], references: [id])
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([vehicleId])
+  @@index([status])
+  @@index([vehicleId, status])
+  @@map("transport_repair_logs")
 }
 
 model Driver {

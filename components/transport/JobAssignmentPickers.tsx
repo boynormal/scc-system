@@ -11,6 +11,7 @@ export type AssignmentVehicle = {
   name: string
   vehicleType: string
   gpsDeviceId?: string | null
+  currentStatus?: string
   branch?: { name: string }
 }
 
@@ -98,7 +99,13 @@ export function JobAssignmentPickers({
   const mergedVehicles = (() => {
     const map = new Map<string, AssignmentVehicle>()
     for (const v of [...extraVehicles, ...vehicles]) map.set(v.id, v)
-    return [...map.values()].sort((a, b) => a.plateNumber.localeCompare(b.plateNumber))
+    return [...map.values()]
+      .filter((v) => {
+        if (v.id === vehicleId) return true
+        const status = v.currentStatus
+        return status !== "maintenance" && status !== "inactive"
+      })
+      .sort((a, b) => a.plateNumber.localeCompare(b.plateNumber))
   })()
 
   const mergedDrivers = (() => {
@@ -155,6 +162,8 @@ export function JobAssignmentPickers({
               {v.plateNumber} — {v.name}
               {vehiclesScope === "all" && v.branch?.name ? ` [${v.branch.name}]` : ""}
               {" "}({v.vehicleType})
+              {v.currentStatus === "maintenance" ? " [ซ่อมบำรุง]" : ""}
+              {v.currentStatus === "inactive" ? " [ไม่ใช้งาน]" : ""}
             </option>
           ))}
         </select>

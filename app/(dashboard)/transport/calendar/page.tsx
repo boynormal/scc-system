@@ -176,9 +176,9 @@ function TransportCalendarContent() {
   const weekStart = startOfWeek(currentDate)
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 p-4 md:p-6">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         {/* Navigation */}
         <div className="flex items-center gap-2">
           <button
@@ -207,11 +207,19 @@ function TransportCalendarContent() {
           <select
             value={vehicleFilter}
             onChange={(e) => setVehicleFilter(e.target.value)}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-400"
           >
-            <option value="all">รถทุกคัน</option>
+            <option value="all" style={{ backgroundColor: "#fff", color: "#0f172a" }}>
+              รถทุกคัน
+            </option>
             {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>{v.plateNumber} — {v.name}</option>
+              <option
+                key={v.id}
+                value={v.id}
+                style={{ backgroundColor: "#fff", color: "#0f172a" }}
+              >
+                {v.plateNumber} — {v.name}
+              </option>
             ))}
           </select>
 
@@ -251,7 +259,7 @@ function TransportCalendarContent() {
       </div>
 
       {/* Summary stats */}
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="flex shrink-0 flex-wrap gap-3 text-xs text-muted-foreground">
         <span className="rounded-full border border-border bg-card px-3 py-1">
           ใบงานทั้งหมด <strong className="text-foreground">{jobs.length}</strong> ใบ
         </span>
@@ -264,7 +272,7 @@ function TransportCalendarContent() {
       </div>
 
       {/* Priority legend */}
-      <div className="flex flex-wrap gap-3 text-xs">
+      <div className="flex shrink-0 flex-wrap gap-3 text-xs">
         {[
           { label: "ด่วนมาก", cls: "bg-red-500 text-white" },
           { label: "สูง", cls: "bg-orange-400 text-white" },
@@ -278,28 +286,30 @@ function TransportCalendarContent() {
       </div>
 
       {/* Content */}
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center text-sm text-red-600">
-          {error}
-        </div>
-      ) : loading ? (
-        <div className="rounded-xl border border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground shadow-sm">
-          กำลังโหลดข้อมูลปฏิทิน...
-        </div>
-      ) : view === "month" ? (
-        <MonthCalendar
-          year={currentDate.getFullYear()}
-          month={currentDate.getMonth()}
-          jobs={jobs}
-        />
-      ) : (
-        <GanttTimeline
-          weekStart={weekStart}
-          jobs={jobs}
-          vehicles={vehicles}
-          onAssigned={fetchJobs}
-        />
-      )}
+      <div className="min-h-0 flex-1">
+        {error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center text-sm text-red-600">
+            {error}
+          </div>
+        ) : loading ? (
+          <div className="flex h-full items-center justify-center rounded-xl border border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground shadow-sm">
+            กำลังโหลดข้อมูลปฏิทิน...
+          </div>
+        ) : view === "month" ? (
+          <MonthCalendar
+            year={currentDate.getFullYear()}
+            month={currentDate.getMonth()}
+            jobs={jobs}
+          />
+        ) : (
+          <GanttTimeline
+            weekStart={weekStart}
+            jobs={jobs}
+            vehicles={vehicles}
+            onAssigned={fetchJobs}
+          />
+        )}
+      </div>
     </div>
   )
 }

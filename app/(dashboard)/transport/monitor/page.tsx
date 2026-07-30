@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 
 const POLL_INTERVAL = 30_000
 
-type Filter = "all" | "alert" | "available" | "busy"
+type Filter = "all" | "alert" | "available" | "busy" | "maintenance"
 
 export default function TransportMonitorPage() {
   const [vehicles, setVehicles] = useState<GpsVehicleData[]>([])
@@ -59,7 +59,8 @@ export default function TransportMonitorPage() {
   const filtered = vehicles.filter((v) => {
     if (filter === "alert" && !hasAnyAlert(v.alerts)) return false
     if (filter === "available" && !v.available) return false
-    if (filter === "busy" && v.available) return false
+    if (filter === "busy" && (v.available || v.vehicleDbStatus === "maintenance")) return false
+    if (filter === "maintenance" && v.vehicleDbStatus !== "maintenance") return false
     if (search && !v.plateNumber.toLowerCase().includes(search.toLowerCase()) &&
       !v.driverName.toLowerCase().includes(search.toLowerCase()) &&
       !(v.activeJob?.jobNumber ?? "").toLowerCase().includes(search.toLowerCase())) return false
@@ -71,13 +72,15 @@ export default function TransportMonitorPage() {
     alert: vehicles.filter((v) => hasAnyAlert(v.alerts)).length,
     moving: vehicles.filter((v) => v.speed > 0).length,
     available: vehicles.filter((v) => v.available).length,
-    busy: vehicles.filter((v) => !v.available).length,
+    busy: vehicles.filter((v) => !v.available && v.vehicleDbStatus !== "maintenance").length,
+    maintenance: vehicles.filter((v) => v.vehicleDbStatus === "maintenance").length,
   }
 
   const FILTERS: { key: Filter; label: string; count: number; icon?: React.ReactNode }[] = [
     { key: "all", label: "ทั้งหมด", count: stats.total },
     { key: "available", label: "ว่าง", count: stats.available },
     { key: "busy", label: "ไม่ว่าง", count: stats.busy },
+    { key: "maintenance", label: "ซ่อมบำรุง", count: stats.maintenance },
     { key: "alert", label: "มี Alert", count: stats.alert, icon: <AlertTriangle className="h-3.5 w-3.5" /> },
   ]
 

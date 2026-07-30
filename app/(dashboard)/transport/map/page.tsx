@@ -11,7 +11,7 @@ import { RefreshCw, AlertTriangle, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 const POLL_INTERVAL = 30_000
 
-type AvailabilityFilter = "all" | "available" | "busy" | "unmatched"
+type AvailabilityFilter = "all" | "available" | "busy" | "maintenance" | "unmatched"
 
 export default function TransportMapPage() {
   const [vehicles, setVehicles] = useState<GpsVehicleData[]>([])
@@ -62,7 +62,8 @@ export default function TransportMapPage() {
     return vehicles.filter((v) => {
       if (availabilityFilter === "unmatched" && v.matchedInDb) return false
       if (availabilityFilter === "available" && (!v.available || !v.matchedInDb)) return false
-      if (availabilityFilter === "busy" && (v.available || !v.matchedInDb)) return false
+      if (availabilityFilter === "busy" && (v.available || !v.matchedInDb || v.vehicleDbStatus === "maintenance")) return false
+      if (availabilityFilter === "maintenance" && v.vehicleDbStatus !== "maintenance") return false
       const q = search.trim().toLowerCase()
       if (!q) return true
       return (
@@ -79,7 +80,8 @@ export default function TransportMapPage() {
   const matchedVehicles = vehicles.filter((v) => v.matchedInDb)
   const unmatchedCount = vehicles.filter((v) => !v.matchedInDb).length
   const availableCount = matchedVehicles.filter((v) => v.available).length
-  const busyCount = matchedVehicles.filter((v) => !v.available).length
+  const maintenanceCount = matchedVehicles.filter((v) => v.vehicleDbStatus === "maintenance").length
+  const busyCount = matchedVehicles.filter((v) => !v.available && v.vehicleDbStatus !== "maintenance").length
 
   const alertCount = vehicles.filter((v) => hasAnyAlert(v.alerts)).length
   const movingCount = vehicles.filter((v) => v.speed > 0).length
@@ -117,6 +119,7 @@ export default function TransportMapPage() {
                 { key: "all" as const, label: "ทั้งหมด", count: vehicles.length },
                 { key: "available" as const, label: "ว่าง", count: availableCount },
                 { key: "busy" as const, label: "ไม่ว่าง", count: busyCount },
+                { key: "maintenance" as const, label: "ซ่อม", count: maintenanceCount },
                 { key: "unmatched" as const, label: "ไม่ match", count: unmatchedCount },
               ] as const
             ).map((f) => (

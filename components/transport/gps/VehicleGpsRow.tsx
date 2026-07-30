@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { GpsAlertBadge, GpsStatusDot, hasAnyAlert } from "./GpsAlertBadge"
 import { parseSignalPercent, formatBatteryLabel, formatMileageLabel, getMovementStatus, buildCalendarTodayHref } from "./gps-display-utils"
+import { getAvailabilityLabel } from "./availability-label"
 
 type Props = {
   vehicle: GpsVehicleData
@@ -17,6 +18,7 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
   const batteryLabel = formatBatteryLabel(v.battery)
   const mileageLabel = formatMileageLabel(v.mileage)
   const calendarHref = buildCalendarTodayHref(v.vehicleDbId)
+  const avail = getAvailabilityLabel(v)
 
   return (
     <tr
@@ -36,13 +38,8 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
       </td>
 
       <td className="px-4 py-3">
-        <span
-          className={cn(
-            "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
-            v.available ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"
-          )}
-        >
-          {v.available ? "ว่าง" : "ไม่ว่าง"}
+        <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold", avail.className)}>
+          {avail.label}
         </span>
       </td>
 

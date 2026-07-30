@@ -11,6 +11,7 @@ import {
   getMovementStatus,
   getGpsStatusColors,
 } from "./gps-display-utils"
+import { getAvailabilityLabel } from "./availability-label"
 
 type Props = {
   vehicles: GpsVehicleData[]
@@ -21,6 +22,7 @@ type Props = {
 
 function getMarkerColor(v: GpsVehicleData): string {
   if (!v.matchedInDb) return "#f97316"   // orange — not in DB
+  if (v.vehicleDbStatus === "maintenance") return "#d97706" // amber — repair
   if (hasAnyAlert(v.alerts)) return "#ef4444"   // red
   if (!v.online) return "#94a3b8"               // gray
   if (v.speed > 0) return "#22c55e"             // green
@@ -146,9 +148,8 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
         const statusColors = getGpsStatusColors(movement.label, vehicle)
         const batteryLabel = formatBatteryLabel(vehicle.battery, { short: true })
         const mileageLabel = formatMileageLabel(vehicle.mileage)
-        const availBadge = vehicle.available
-          ? `<span style="font-size:11px;background:#d1fae5;color:#047857;padding:2px 8px;border-radius:99px;font-weight:600">ว่าง</span>`
-          : `<span style="font-size:11px;background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:99px;font-weight:600">ไม่ว่าง</span>`
+        const avail = getAvailabilityLabel(vehicle)
+        const availBadge = `<span style="${avail.popupStyle}">${avail.label}</span>`
 
         const alertLines = [
           vehicle.alerts.overSpeed ? "⚠ ความเร็วเกิน" : "",
@@ -158,7 +159,9 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
 
         const activeJobLine = !vehicle.available && vehicle.activeJob
           ? `<div style="margin-top:6px;font-size:11px"><a href="/transport/jobs/${vehicle.activeJob.jobId}" style="color:#2563eb;font-weight:600;text-decoration:none">งานปัจจุบัน: ${vehicle.activeJob.jobNumber}</a></div>`
-          : ""
+          : vehicle.vehicleDbStatus === "maintenance"
+            ? `<div style="margin-top:6px;font-size:11px;color:#92400e">กำลังซ่อมบำรุง</div>`
+            : ""
 
         const popupContent = `
           <div style="font-family:sans-serif;min-width:240px;max-width:300px">

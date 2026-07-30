@@ -12,6 +12,7 @@ import {
   formatMileageLabel,
   getMovementStatus,
 } from "./gps-display-utils"
+import { getAvailabilityLabel } from "./availability-label"
 
 type Props = {
   vehicle: GpsVehicleData
@@ -27,6 +28,7 @@ export function VehicleGpsCard({ vehicle: v, compact = false, batteryShort = fal
   const mileageLabel = formatMileageLabel(v.mileage)
   const calendarHref = buildCalendarTodayHref(v.vehicleDbId)
   const VehicleIcon = v.plateNumber.length > 8 ? Truck : Car
+  const avail = getAvailabilityLabel(v)
 
   return (
     <div className={cn(compact ? "space-y-1.5" : "space-y-2")}>
@@ -38,13 +40,8 @@ export function VehicleGpsCard({ vehicle: v, compact = false, batteryShort = fal
             {v.plateNumber || "—"}
           </span>
         </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-            v.available ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"
-          )}
-        >
-          {v.available ? "ว่าง" : "ไม่ว่าง"}
+        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", avail.className)}>
+          {avail.label}
         </span>
       </div>
 

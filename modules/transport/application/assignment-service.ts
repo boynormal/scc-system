@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { isScheduledTodayBangkok } from "./transport-date-utils"
+import { vehicleHasOpenInRepair } from "./repair-service"
 
 export const assignJobSchema = z.object({
   vehicleId: z.string().uuid(),
@@ -20,6 +21,15 @@ type PerformAssignmentParams = {
   input: AssignJobInput
 }
 
+function assertVehicleAssignable(status: string, plateNumber: string) {
+  if (status === "maintenance") {
+    throw new ValidationError(`รถ ${plateNumber} กำลังซ่อมบำรุง — ไม่สามารถมอบหมายใบงานได้`)
+  }
+  if (status === "inactive") {
+    throw new ValidationError(`รถ ${plateNumber} ไม่ใช้งาน — ไม่สามารถมอบหมายใบงานได้`)
+  }
+}
+
 export async function performAssignment(
   db: PrismaClient,
   params: PerformAssignmentParams
@@ -28,6 +38,7 @@ export async function performAssignment(
     where: { id: params.input.vehicleId, companyId: params.companyId },
   })
   if (!vehicle) throw new NotFoundError("Vehicle not found")
+  assertVehicleAssignable(vehicle.currentStatus, vehicle.plateNumber)
 
   const driver = await db.driver.findFirst({
     where: { id: params.input.driverId, companyId: params.companyId },
@@ -171,6 +182,10 @@ export async function completeJob(
   if (job.assignment) {
     const markAvailable = isScheduledTodayBangkok(job.scheduledDate)
     if (markAvailable) {
+      const inRepair = await vehicleHasOpenInRepair(db, {
+        companyId: params.companyId,
+        vehicleId: job.assignment.vehicleId,
+      })
       await db.$transaction([
         db.transportJob.update({
           where: { id: params.jobId },
@@ -180,10 +195,14 @@ export async function completeJob(
           where: { jobId: params.jobId },
           data: { endTime: new Date() },
         }),
-        db.transportVehicle.update({
-          where: { id: job.assignment.vehicleId },
-          data: { currentStatus: "available" },
-        }),
+        ...(inRepair
+          ? []
+          : [
+              db.transportVehicle.update({
+                where: { id: job.assignment.vehicleId },
+                data: { currentStatus: "available" as const },
+              }),
+            ]),
         db.driver.update({
           where: { id: job.assignment.driverId },
           data: { currentStatus: "available" },
@@ -228,13 +247,21 @@ export async function unassignJob(
 
   const markAvailable = isScheduledTodayBangkok(job.scheduledDate)
   if (markAvailable) {
+    const inRepair = await vehicleHasOpenInRepair(db, {
+      companyId: params.companyId,
+      vehicleId: job.assignment.vehicleId,
+    })
     await db.$transaction([
       db.jobAssignment.delete({ where: { jobId: params.jobId } }),
       db.transportJob.update({ where: { id: params.jobId }, data: { status: "pending_assignment" } }),
-      db.transportVehicle.update({
-        where: { id: job.assignment.vehicleId },
-        data: { currentStatus: "available" },
-      }),
+      ...(inRepair
+        ? []
+        : [
+            db.transportVehicle.update({
+              where: { id: job.assignment.vehicleId },
+              data: { currentStatus: "available" as const },
+            }),
+          ]),
       db.driver.update({
         where: { id: job.assignment.driverId },
         data: { currentStatus: "available" },

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client"
+import type { PrismaClient, VehicleStatus } from "@prisma/client"
 import { getBangkokTodayRange } from "./transport-date-utils"
 
 export type ActiveJobInfo = {
@@ -42,6 +42,8 @@ export type GpsVehicleData = {
   vehicleDbId: string | null
   matchedInDb: boolean
   todayJobCount: number
+  /** สถานะจาก DB เมื่อ match ได้ — เช่น maintenance */
+  vehicleDbStatus: VehicleStatus | null
 }
 
 function boolAlert(val: unknown): boolean {
@@ -69,6 +71,7 @@ type ActiveJobMaps = {
 type VehicleLookupMaps = {
   imeiToId: Map<string, string>
   plateToId: Map<string, string>
+  idToStatus: Map<string, VehicleStatus>
 }
 
 type TodayJobCountMaps = {
@@ -133,20 +136,22 @@ async function fetchActiveAssignments(db: PrismaClient, companyId: string): Prom
 async function fetchVehicleLookups(db: PrismaClient, companyId: string): Promise<VehicleLookupMaps> {
   const vehicles = await db.transportVehicle.findMany({
     where: { companyId, isActive: true },
-    select: { id: true, plateNumber: true, gpsDeviceId: true },
+    select: { id: true, plateNumber: true, gpsDeviceId: true, currentStatus: true },
   })
 
   const imeiToId = new Map<string, string>()
   const plateToId = new Map<string, string>()
+  const idToStatus = new Map<string, VehicleStatus>()
 
   for (const v of vehicles) {
     plateToId.set(normPlate(v.plateNumber), v.id)
+    idToStatus.set(v.id, v.currentStatus)
     if (v.gpsDeviceId) {
       imeiToId.set(v.gpsDeviceId.trim(), v.id)
     }
   }
 
-  return { imeiToId, plateToId }
+  return { imeiToId, plateToId, idToStatus }
 }
 
 async function fetchTodayJobCounts(db: PrismaClient, companyId: string): Promise<TodayJobCountMaps> {
@@ -199,7 +204,11 @@ function resolveByImeiOrPlate<T>(
 /** โหลด lookup maps ทั้งหมดที่ต้องใช้ normalize ข้อมูล GPS ต่อบริษัท (แต่ละ query ล้ม fallback เป็นค่าว่างแยกกัน) */
 export async function fetchGpsLookupMaps(db: PrismaClient, companyId: string): Promise<GpsLookupMaps> {
   const emptyActive: ActiveJobMaps = { imeiMap: new Map(), plateMap: new Map() }
-  const emptyVehicle: VehicleLookupMaps = { imeiToId: new Map(), plateToId: new Map() }
+  const emptyVehicle: VehicleLookupMaps = {
+    imeiToId: new Map(),
+    plateToId: new Map(),
+    idToStatus: new Map(),
+  }
   const emptyToday: TodayJobCountMaps = { imeiMap: new Map(), plateMap: new Map() }
 
   const [activeMaps, vehicleMaps, todayMaps] = await Promise.all([
@@ -232,6 +241,11 @@ export function normalizeGpsData(rawData: Record<string, unknown>[], maps: GpsLo
       vehicleMaps.plateToId,
       null as string | null
     )
+    const vehicleDbStatus = vehicleDbId
+      ? (vehicleMaps.idToStatus.get(vehicleDbId) ?? null)
+      : null
+    const offlineForJobs =
+      vehicleDbStatus === "maintenance" || vehicleDbStatus === "inactive"
     const todayJobCount = resolveByImeiOrPlate(carImei, carPlate, todayMaps.imeiMap, todayMaps.plateMap, 0)
 
     return {
@@ -261,11 +275,12 @@ export function normalizeGpsData(rawData: Record<string, unknown>[], maps: GpsLo
         overEngine: boolAlert(car.object_over_engine_alert),
         checkZone: boolAlert(car.object_check_zone),
       },
-      available: activeJob === null,
+      available: activeJob === null && !offlineForJobs,
       activeJob,
       vehicleDbId,
       matchedInDb: vehicleDbId !== null,
       todayJobCount,
+      vehicleDbStatus,
     }
   })
 }

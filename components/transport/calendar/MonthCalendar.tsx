@@ -18,6 +18,7 @@ function isSameDay(a: Date, b: Date) {
 }
 
 const DAY_LABELS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]
+const MAX_VISIBLE_JOBS = 5
 
 export function MonthCalendar({ year, month, jobs }: Props) {
   const [selectedJob, setSelectedJob] = useState<{ job: CalendarJob; cellKey: string } | null>(null)
@@ -28,6 +29,7 @@ export function MonthCalendar({ year, month, jobs }: Props) {
 
   // Build grid cells (may include prev/next month padding days)
   const totalCells = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7
+  const weekRows = totalCells / 7
   const cells: (Date | null)[] = Array.from({ length: totalCells }, (_, i) => {
     const dayNum = i - startOffset + 1
     if (dayNum < 1 || dayNum > lastDay.getDate()) return null
@@ -40,9 +42,9 @@ export function MonthCalendar({ year, month, jobs }: Props) {
     jobs.filter((j) => isSameDay(new Date(j.scheduledDate), day))
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-border bg-muted">
+      <div className="grid shrink-0 grid-cols-7 border-b border-border bg-muted">
         {DAY_LABELS.map((d, i) => (
           <div
             key={d}
@@ -56,22 +58,32 @@ export function MonthCalendar({ year, month, jobs }: Props) {
         ))}
       </div>
 
-      {/* Day cells */}
-      <div className="grid grid-cols-7 divide-x divide-y divide-border">
+      {/* Day cells — equal-height rows fill remaining space */}
+      <div
+        className="grid min-h-0 flex-1 grid-cols-7 divide-x divide-y divide-border"
+        style={{ gridTemplateRows: `repeat(${weekRows}, minmax(0, 1fr))` }}
+      >
         {cells.map((day, i) => {
           if (!day) {
-            return <div key={`empty-${i}`} className="min-h-[90px] bg-muted/50" />
+            return <div key={`empty-${i}`} className="min-h-[100px] bg-muted/50" />
           }
 
           const dayJobs = jobsOnDay(day)
           const isToday = isSameDay(day, today)
           const isWeekend = day.getDay() === 0 || day.getDay() === 6
           const cellKey = day.toISOString()
+          const plate = (job: CalendarJob) => job.vehicle?.plateNumber ?? "ไม่ระบุรถ"
 
           return (
-            <div key={cellKey} className={cn("relative min-h-[90px] p-1", isWeekend && "bg-muted/40")}>
+            <div
+              key={cellKey}
+              className={cn(
+                "relative flex min-h-[100px] flex-col p-1",
+                isWeekend && "bg-muted/40"
+              )}
+            >
               {/* Day number */}
-              <div className="mb-1 flex justify-end">
+              <div className="mb-1 flex shrink-0 justify-end">
                 <span
                   className={cn(
                     "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
@@ -83,13 +95,15 @@ export function MonthCalendar({ year, month, jobs }: Props) {
               </div>
 
               {/* Job bars */}
-              <div className="space-y-0.5">
-                {dayJobs.slice(0, 3).map((job) => {
+              <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+                {dayJobs.slice(0, MAX_VISIBLE_JOBS).map((job) => {
                   const p = PRIORITY_CONFIG[job.priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG.normal
                   const isSelected = selectedJob?.job.id === job.id && selectedJob?.cellKey === cellKey
                   return (
                     <div key={job.id} className="relative">
                       <button
+                        type="button"
+                        title={`${plate(job)} · ${job.jobNumber}`}
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedJob(isSelected ? null : { job, cellKey })
@@ -100,7 +114,7 @@ export function MonthCalendar({ year, month, jobs }: Props) {
                           "hover:opacity-90"
                         )}
                       >
-                        {job.vehicle?.plateNumber ?? "ไม่ระบุรถ"} · {job.jobNumber}
+                        {plate(job)}
                       </button>
                       {isSelected && (
                         <JobPopover job={job} onClose={() => setSelectedJob(null)} />
@@ -108,8 +122,10 @@ export function MonthCalendar({ year, month, jobs }: Props) {
                     </div>
                   )
                 })}
-                {dayJobs.length > 3 && (
-                  <p className="px-1 text-[10px] text-muted-foreground">+{dayJobs.length - 3} อีก</p>
+                {dayJobs.length > MAX_VISIBLE_JOBS && (
+                  <p className="px-1 text-[10px] text-muted-foreground">
+                    +{dayJobs.length - MAX_VISIBLE_JOBS} อีก
+                  </p>
                 )}
               </div>
             </div>

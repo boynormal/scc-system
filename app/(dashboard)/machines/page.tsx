@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { Metadata } from "next"
+import Image from "next/image"
 import { Plus, Wrench, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
@@ -140,12 +141,13 @@ export default async function MachinesPage(
                     <td className="px-5 py-3.5">
                       {machine.images?.[0]?.fileUrl ? (
                         <div className="relative w-10 h-10 rounded-md overflow-hidden border border-border flex-shrink-0">
-                          <img
+                          <Image
                             src={machine.images[0].fileUrl}
                             alt={machine.name}
                             width={40}
                             height={40}
                             className="w-10 h-10 object-cover"
+                            unoptimized
                           />
                         </div>
                       ) : (

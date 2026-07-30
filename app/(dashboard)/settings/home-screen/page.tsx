@@ -12,6 +12,7 @@ import {
   SunMoon,
   type LucideIcon,
 } from "lucide-react"
+import Image from "next/image"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { GlassCard } from "@/components/glass"
 import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
@@ -216,7 +217,14 @@ export default function HomeScreenSettingsPage() {
                       )}
                     >
                       {imageUrl ? (
-                        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                        <Image
+                          src={imageUrl}
+                          alt=""
+                          width={48}
+                          height={48}
+                          className="h-full w-full object-cover"
+                          unoptimized
+                        />
                       ) : (
                         <DefaultIcon className="h-6 w-6" strokeWidth={1.9} />
                       )}
@@ -270,7 +278,14 @@ export default function HomeScreenSettingsPage() {
                       <div className="flex items-center gap-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted text-foreground dark:bg-slate-700">
                           {imageUrl ? (
-                            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                            <Image
+                              src={imageUrl}
+                              alt=""
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-cover"
+                              unoptimized
+                            />
                           ) : (
                             <DefaultIcon className="h-5 w-5" strokeWidth={1.9} />
                           )}

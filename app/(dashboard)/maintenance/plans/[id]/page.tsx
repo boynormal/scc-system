@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { ArrowLeft, Edit, Calendar, CheckCircle2, Clock } from "lucide-react"
+import { ArrowLeft, Edit, Calendar } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"

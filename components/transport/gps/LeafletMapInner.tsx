@@ -31,7 +31,6 @@ function getMarkerColor(v: GpsVehicleData): string {
 }
 
 function createCarSvg(color: string, rotation: number, size = 28): string {
-  const half = size / 2
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 28 28">
     <g transform="rotate(${rotation} 14 14)">
       <rect x="9" y="5" width="10" height="18" rx="3" fill="${color}" stroke="white" stroke-width="1.5"/>
@@ -73,6 +72,7 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
 
   useEffect(() => {
     if (typeof window === "undefined") return
+    const markers = markersRef.current
     let L: typeof import("leaflet")
 
     async function initMap() {
@@ -105,11 +105,12 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
     initMap()
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove()
+      const map = mapRef.current
+      if (map) {
+        map.remove()
         mapRef.current = null
-        markersRef.current.clear()
       }
+      markers.clear()
     }
   }, [])
 

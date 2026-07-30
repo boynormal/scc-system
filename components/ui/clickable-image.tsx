@@ -45,6 +45,8 @@ export function ClickableImage({ src, alt = "Image", fill, width, height, classN
 
         <div className="relative w-full h-[80vh] flex items-center justify-center">
           {overlayFailed ? (
+            // Image onError fallback — raw img when next/image fails
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={src} alt={alt} className="max-h-[80vh] max-w-full object-contain drop-shadow-2xl" />
           ) : (
             <Image
@@ -66,6 +68,8 @@ export function ClickableImage({ src, alt = "Image", fill, width, height, classN
   return (
     <>
       {thumbFailed ? (
+        // Image onError fallback — raw img when next/image fails
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}

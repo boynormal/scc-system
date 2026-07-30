@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { ChevronDown, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -20,7 +21,16 @@ function ModuleIcon({
   className?: string
 }) {
   if (imageUrl) {
-    return <img src={imageUrl} alt="" className={cn("h-4 w-4 shrink-0 rounded object-cover", className)} />
+    return (
+      <Image
+        src={imageUrl}
+        alt=""
+        width={16}
+        height={16}
+        className={cn("h-4 w-4 shrink-0 rounded object-cover", className)}
+        unoptimized
+      />
+    )
   }
   const Icon: LucideIcon = NAV_ICON_MAP[iconKey]
   return <Icon className={cn("h-4 w-4 shrink-0", className)} />

@@ -1,7 +1,6 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
 import { ArrowLeft, Edit, Calendar, Wrench, ClipboardList, Package } from "lucide-react"
 import { ClickableImage } from "@/components/ui/clickable-image"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import { ChevronDown, LayoutDashboard, Search, Sparkles, Star } from "lucide-react"
 import type { LauncherAppItem } from "@/shared/navigation/flattenNav"
@@ -421,7 +422,14 @@ function ProductLineCard({
             )}
           >
             {imageUrl ? (
-              <img src={imageUrl} alt="" className="h-full w-full rounded-2xl object-cover" />
+              <Image
+                src={imageUrl}
+                alt=""
+                width={72}
+                height={72}
+                className="h-full w-full rounded-2xl object-cover"
+                unoptimized
+              />
             ) : (
               <HeroIcon className="h-8 w-8" strokeWidth={1.75} />
             )}
@@ -486,7 +494,14 @@ function ProductLineExpandedPanel({
       >
         <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md", theme.icon)}>
           {imageUrl ? (
-            <img src={imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
+            <Image
+              src={imageUrl}
+              alt=""
+              width={48}
+              height={48}
+              className="h-full w-full rounded-xl object-cover"
+              unoptimized
+            />
           ) : (
             <HeroIcon className="h-6 w-6" strokeWidth={1.75} />
           )}
@@ -603,7 +618,14 @@ function AppTile({
         )}
       >
         {imageUrl ? (
-          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+          <Image
+            src={imageUrl}
+            alt=""
+            width={68}
+            height={68}
+            className="h-full w-full object-cover"
+            unoptimized
+          />
         ) : (
           <>
             <span className={cn("absolute -right-3 -top-3 h-10 w-10 rounded-full blur-sm", skin.blob)} />

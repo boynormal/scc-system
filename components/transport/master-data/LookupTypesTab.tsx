@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
@@ -25,16 +25,16 @@ export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps)
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState(emptyForm)
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     const res = await fetch(apiPath)
     const json = await res.json()
     setData(json.data ?? [])
     setLoading(false)
-  }
+  }, [apiPath])
   useEffect(() => {
     loadData()
-  }, [apiPath])
+  }, [loadData])
   const handleSave = async (id?: string) => {
     if (!editForm.name.trim()) return alert(`กรุณากรอก${nameLabel}`)
     const payload = {

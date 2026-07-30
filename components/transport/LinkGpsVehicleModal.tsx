@@ -46,7 +46,6 @@ export function LinkGpsVehicleModal({
   open,
   gpsVehicle: gpsVehicleProp,
   gpsVehicles: gpsVehiclesProp,
-  unmatchedOptions = [],
   preselectedVehicleId,
   masterVehicles: masterVehiclesProp,
   branches: branchesProp,

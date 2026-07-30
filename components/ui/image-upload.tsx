@@ -122,6 +122,8 @@ export function ImageUpload({
               isIconProfile ? "aspect-square w-28 sm:w-32" : `w-full ${previewHeightClass}`
             )}
           >
+            {/* blob / local preview URL — next/image not suitable */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={preview}
               alt="Preview"

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import { LayoutGrid, Search, Star, X, type LucideIcon } from "lucide-react"
 import type { LauncherAppItem } from "@/shared/navigation/flattenNav"
@@ -316,7 +317,14 @@ function FolderIcon({
         )}
       >
         {imageUrl ? (
-          <img src={imageUrl} alt="" className="h-full w-full rounded-[1.4rem] object-cover" />
+          <Image
+            src={imageUrl}
+            alt=""
+            width={80}
+            height={80}
+            className="h-full w-full rounded-[1.4rem] object-cover"
+            unoptimized
+          />
         ) : (
           <Icon className="h-8 w-8 text-white sm:h-9 sm:w-9" strokeWidth={1.9} />
         )}
@@ -376,7 +384,14 @@ function FolderOverlay({
         <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-white/95 px-5 py-4 backdrop-blur sm:px-7 dark:border-slate-700 dark:bg-slate-900/95">
           <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md", line.accent)}>
             {imageUrl ? (
-              <img src={imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
+              <Image
+                src={imageUrl}
+                alt=""
+                width={44}
+                height={44}
+                className="h-full w-full rounded-xl object-cover"
+                unoptimized
+              />
             ) : (
               <HeroIcon className="h-5 w-5" strokeWidth={1.9} />
             )}
@@ -456,7 +471,14 @@ function IosIcon({
       )}
     >
       {imageUrl ? (
-        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        <Image
+          src={imageUrl}
+          alt=""
+          width={72}
+          height={72}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
       ) : (
         <span className={cn("relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
           <Icon className="h-5 w-5" strokeWidth={2.1} />
@@ -523,7 +545,14 @@ function DockIcon({
         )}
       >
         {imageUrl ? (
-          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+          <Image
+            src={imageUrl}
+            alt=""
+            width={48}
+            height={48}
+            className="h-full w-full object-cover"
+            unoptimized
+          />
         ) : (
           <span className={cn("flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", skin.icon)}>
             <Icon className="h-4 w-4" strokeWidth={2.1} />

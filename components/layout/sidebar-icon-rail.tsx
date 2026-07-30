@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Grid3X3, Wrench } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -89,7 +90,14 @@ export function SidebarIconRail({
               )}
             >
               {imageUrl ? (
-                <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                <Image
+                  src={imageUrl}
+                  alt=""
+                  width={40}
+                  height={40}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
               ) : (
                 <Icon className="w-5 h-5" />
               )}

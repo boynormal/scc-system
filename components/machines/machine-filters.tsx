@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Search } from "lucide-react"
 import Link from "next/link"
-import { useTransition, useState, useEffect, useRef } from "react"
+import { useTransition, useState, useEffect, useRef, useCallback } from "react"
 
 interface MachineFiltersProps {
   branches: { id: string; name: string }[]
@@ -19,18 +19,18 @@ export function MachineFilters({ branches, categories }: MachineFiltersProps) {
   const [search, setSearch] = useState(searchParams.get("search") || "")
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const handleFilter = (key: string, value: string) => {
+  const handleFilter = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
     if (value) {
       params.set(key, value)
     } else {
       params.delete(key)
     }
-    
+
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`)
     })
-  }
+  }, [searchParams, pathname, router])
 
   // Auto search typed text with debounce
   useEffect(() => {
@@ -43,7 +43,7 @@ export function MachineFilters({ branches, categories }: MachineFiltersProps) {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [search])
+  }, [search, searchParams, handleFilter])
 
   const hasFilters = searchParams.get("search") || searchParams.get("categoryId") || searchParams.get("status") || searchParams.get("branchId")
 

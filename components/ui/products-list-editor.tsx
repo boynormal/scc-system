@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Trash2, GripVertical, Loader2, Image as ImageIcon, Upload, X } from "lucide-react"
+import { Plus, Trash2, GripVertical, Loader2, Image as ImageIcon, X } from "lucide-react"
 import Image from "next/image"
 
 interface Product {
@@ -120,7 +120,7 @@ export function ProductsListEditor({
           body: JSON.stringify({ imageUrl }),
         })
       }
-    } catch (err) {
+    } catch {
       alert("อัปโหลดไม่สำเร็จ")
     } finally {
       setUploadingIdx(null)

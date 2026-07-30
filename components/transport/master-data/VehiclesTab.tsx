@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2, Link2 } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { VehicleStatusBadge } from "@/components/transport/vehicle-status-badge"
@@ -90,7 +90,7 @@ export function VehiclesTab() {
   const selectedGpsOption = linkableGps.find((g) => g.id === linkGpsId)
   const editSelectedGps = linkableGps.find((g) => g.id === editForm.linkGpsId)
 
-  const loadGps = async () => {
+  const loadGps = useCallback(async () => {
     setGpsLoading(true)
     setGpsError(null)
     try {
@@ -102,9 +102,9 @@ export function VehiclesTab() {
     } finally {
       setGpsLoading(false)
     }
-  }
+  }, [])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     const [vehiclesRes, branchesRes, typesRes] = await Promise.all([
       fetch("/api/transport/vehicles?includeInactive=true"),
@@ -121,11 +121,11 @@ export function VehiclesTab() {
     setVehicleTypes(typesJson.data ?? [])
     setLoading(false)
     loadGps()
-  }
+  }, [loadGps])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   const handleSave = async (id?: string) => {
     if (!editForm.branchId || !editForm.plateNumber || !editForm.name || !editForm.vehicleType) {

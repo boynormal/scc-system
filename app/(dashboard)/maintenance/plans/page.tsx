@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import Image from "next/image"
 import { Factory, Plus, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
@@ -101,12 +102,13 @@ export default async function MaintenancePlansPage(
                     <td className="px-5 py-3.5">
                       {plan.machine.images?.[0] ? (
                         <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border">
-                          <img
+                          <Image
                             src={plan.machine.images[0].fileUrl}
                             alt={plan.machine.name}
+                            width={48}
+                            height={48}
                             className="w-full h-full object-cover"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
+                            unoptimized
                           />
                         </div>
                       ) : (

@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { ArrowLeft, Edit, Calendar, Clock, User, FileText, CheckCircle2, XCircle } from "lucide-react"
+import { ArrowLeft, Edit, CheckCircle2, XCircle } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"

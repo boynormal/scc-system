@@ -76,7 +76,13 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     moduleId: "iot",
     label: "ควบคุม IoT",
     anyOfResources: ["iot_devices"],
-    navModuleIds: ["iot_control", "iot_queue_ticket", "iot_barrier_gate", "iot_metal_detector"],
+    navModuleIds: [
+      "iot_control",
+      "iot_queue_ticket",
+      "iot_queue_issue",
+      "iot_barrier_gate",
+      "iot_metal_detector",
+    ],
   },
   {
     moduleId: "settings",

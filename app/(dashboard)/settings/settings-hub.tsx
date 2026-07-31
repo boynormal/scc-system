@@ -9,14 +9,13 @@ import {
   Info,
   LayoutGrid,
   Moon,
-  Palette,
   Search,
   ShieldCheck,
   Sun,
   Users,
   type LucideIcon,
 } from "lucide-react"
-import { GlassCard, GlassInput, GlassStatCard } from "@/components/glass"
+import { GlassCard, GlassInput } from "@/components/glass"
 import { Switch } from "@/components/ui/switch"
 import { APP_BRAND } from "@/shared/branding"
 import { setAppearanceCookie, type AppAppearance } from "@/shared/appearance"
@@ -206,17 +205,6 @@ export function SettingsHub({
       <div>
         <h1 className="text-2xl font-bold text-foreground">{t("hubTitle")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("hubDesc")}</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        <GlassStatCard
-          label="ธีม"
-          value={currentAppearance === "dark" ? "มืด" : "สว่าง"}
-          icon={currentAppearance === "dark" ? Moon : Sun}
-          className="p-3"
-        />
-        <GlassStatCard label="ไอคอน" value={customIconCount} icon={Palette} className="p-3" />
-        <GlassStatCard label="เวอร์ชัน" value={appVersion} icon={Info} className="p-3" />
       </div>
 
       <GlassInput

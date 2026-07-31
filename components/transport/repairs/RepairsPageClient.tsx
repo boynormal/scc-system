@@ -44,7 +44,7 @@ type RepairRow = {
   reportedBy?: { firstName: string; lastName: string } | null
 }
 
-type StatusFilter = "open" | "all" | RepairStatus
+type StatusFilter = RepairStatus
 
 type VehicleOption = {
   id: string
@@ -58,7 +58,7 @@ type ListMeta = {
   truncated: boolean
 }
 
-const NEEDS_DATE_DEFAULT = new Set<StatusFilter>(["closed", "cancelled", "all"])
+const NEEDS_DATE_DEFAULT = new Set<StatusFilter>(["closed", "cancelled"])
 
 function formatBangkokYmd(date: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -101,7 +101,7 @@ export function RepairsPageClient() {
   const [meta, setMeta] = useState<ListMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<StatusFilter>("open")
+  const [filter, setFilter] = useState<StatusFilter>("reported")
 
   const defaultRange = useMemo(() => lastNDaysRange(30), [])
   const [fromDate, setFromDate] = useState("")
@@ -128,8 +128,7 @@ export function RepairsPageClient() {
     setError(null)
     try {
       const qs = new URLSearchParams()
-      if (filter === "open") qs.set("statusGroup", "open")
-      else if (filter !== "all") qs.set("status", filter)
+      qs.set("status", filter)
       if (vehicleFilter) qs.set("vehicleId", vehicleFilter)
       if (effectiveFrom) qs.set("from", effectiveFrom)
       if (effectiveTo) qs.set("to", effectiveTo)
@@ -262,12 +261,10 @@ export function RepairsPageClient() {
   })()
 
   const FILTERS: { key: StatusFilter; label: string }[] = [
-    { key: "open", label: t("filterOpen") },
     { key: "reported", label: "แจ้งซ่อม" },
     { key: "in_repair", label: "กำลังซ่อม" },
     { key: "closed", label: "ปิดงาน" },
     { key: "cancelled", label: "ยกเลิก" },
-    { key: "all", label: t("filterAll") },
   ]
 
   return (
@@ -439,35 +436,48 @@ export function RepairsPageClient() {
                 )}
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-                <div>
-                  <p className="mb-0.5 text-[11px] font-medium text-muted-foreground">ทะเบียน</p>
-                  <p className="font-mono text-base font-bold tracking-wide text-foreground">
-                    {plate}
-                  </p>
-                  {vehicleName ? (
-                    <p className="mt-0.5 text-sm text-muted-foreground">{vehicleName}</p>
-                  ) : null}
-                </div>
-
-                <div>
-                  <p className="mb-0.5 text-[11px] font-medium text-muted-foreground">อาการ</p>
-                  <p className="text-sm leading-snug text-foreground">{item.symptom}</p>
-                  {item.notes ? (
-                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                      <span className="font-medium text-foreground/80">หมายเหตุ:</span> {item.notes}
-                    </p>
-                  ) : null}
-                </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
+                <dl className="space-y-1 text-sm">
+                  <div className="flex items-baseline gap-2">
+                    <dt className="w-14 shrink-0 text-[11px] font-medium text-muted-foreground">ทะเบียน</dt>
+                    <dd className="min-w-0">
+                      <p className="font-mono text-sm font-bold tracking-wide text-foreground">{plate}</p>
+                      {vehicleName ? (
+                        <p className="truncate text-xs text-muted-foreground">{vehicleName}</p>
+                      ) : null}
+                    </dd>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <dt className="w-14 shrink-0 pt-0.5 text-[11px] font-medium text-muted-foreground">อาการ</dt>
+                    <dd
+                      className="h-[2.75rem] min-w-0 line-clamp-2 text-sm leading-snug text-foreground"
+                      title={item.symptom}
+                    >
+                      {item.symptom}
+                    </dd>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <dt className="w-14 shrink-0 pt-0.5 text-[11px] font-medium text-muted-foreground">หมายเหตุ</dt>
+                    <dd
+                      className={cn(
+                        "h-[2.75rem] min-w-0 line-clamp-2 text-sm leading-snug",
+                        item.notes?.trim() ? "text-foreground" : "text-muted-foreground"
+                      )}
+                      title={item.notes ?? undefined}
+                    >
+                      {item.notes?.trim() ? item.notes : "—"}
+                    </dd>
+                  </div>
+                </dl>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+                  <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-1.5">
                     <p className="text-[11px] font-medium text-muted-foreground">ค่าใช้จ่าย</p>
                     <p className="text-sm font-semibold text-foreground">
                       {formatCostDisplay(item.repairCost)} บาท
                     </p>
                   </div>
-                  <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+                  <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-1.5">
                     <p className="text-[11px] font-medium text-muted-foreground">วิธีจ่าย</p>
                     {paymentLabel ? (
                       <span
@@ -582,10 +592,10 @@ export function RepairsPageClient() {
         open={reportOpen}
         onSuccess={() => {
           setReportOpen(false)
-          if (filter === "open") {
+          if (filter === "reported") {
             load()
           } else {
-            setFilter("open")
+            setFilter("reported")
           }
         }}
         onCancel={() => setReportOpen(false)}

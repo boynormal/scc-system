@@ -7,7 +7,20 @@ const config: Config = {
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
+    "./shared/**/*.{ts,tsx}",
+    "./modules/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
+  ],
+  safelist: [
+    // Launcher tile skins (shared/navigation/launcherClientState.ts)
+    {
+      pattern:
+        /(from|to|bg)-(orange|amber|teal|cyan|rose|pink|blue|indigo|emerald|green|slate)-(600|700|800)/,
+    },
+    {
+      pattern:
+        /ring-(orange|amber|teal|cyan|rose|pink|blue|indigo|emerald|green|slate)-(700|800)\/40/,
+    },
   ],
   prefix: "",
   theme: {

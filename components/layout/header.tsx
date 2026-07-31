@@ -36,6 +36,7 @@ export default function Header({ user, navItems, appearance }: HeaderProps) {
         >
           <ThemeSwitcher appearance={appearance} className="h-8 w-8" />
           <LocaleSwitcher className="h-8 w-8" />
+          <NotificationBell />
         </div>
 
         <div className="h-5 w-px bg-border" aria-hidden />
@@ -45,7 +46,6 @@ export default function Header({ user, navItems, appearance }: HeaderProps) {
           role="group"
           aria-label={t("accountGroup")}
         >
-          <NotificationBell />
           <UserMenu user={user} />
         </div>
       </div>

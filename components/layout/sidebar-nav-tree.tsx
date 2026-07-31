@@ -49,29 +49,33 @@ function NavGroup({
   onNavigate?: () => void
   moduleImageOverrides: Record<string, string>
 }) {
-  const [open, setOpen] = useState(false)
   const isActive = subtreeContainsActiveHref(node, activeHref)
+  // เปิดค้างเป็นค่าเริ่มต้น — และเปิดอัตโนมัติเมื่อ path อยู่ในกลุ่มนี้
+  const [open, setOpen] = useState(true)
   const imageUrl = moduleImageOverrides[node.moduleId]
+  const expanded = open || isActive
 
   return (
-    <div className={cn(depth > 0 && "ml-1 border-l border-border pl-2")}>
+    <div className="space-y-0.5">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open || isActive}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={expanded}
         className={cn(
-          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+          "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
           isActive
             ? "bg-blue-50 text-blue-700"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
         <ModuleIcon iconKey={node.icon} imageUrl={imageUrl} />
-        <span className="flex-1 text-left">{node.label}</span>
-        <ChevronDown className={cn("w-3.5 h-3.5 shrink-0 transition-transform", (open || isActive) && "rotate-180")} />
+        <span className="min-w-0 flex-1 truncate text-left leading-none">{node.label}</span>
+        <ChevronDown
+          className={cn("h-3.5 w-3.5 shrink-0 transition-transform", expanded && "rotate-180")}
+        />
       </button>
-      {(open || isActive) && (
-        <div className="ml-2 mt-0.5 space-y-0.5 border-l border-border pl-2">
+      {expanded && (
+        <div className="space-y-0.5 pl-3">
           <SidebarNavTree
             nodes={node.children}
             depth={depth + 1}
@@ -147,8 +151,7 @@ export function SidebarNavTree({
         const imageUrl = moduleImageOverrides[node.moduleId]
         const isActive = node.href === activeHref
         const linkClassName = cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
-          depth > 0 && "ml-1 pl-2 border-l border-transparent hover:border-border",
+          "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
           isActive
             ? "bg-blue-600 text-white shadow-sm"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -165,7 +168,7 @@ export function SidebarNavTree({
               className={linkClassName}
             >
               <ModuleIcon iconKey={node.icon} imageUrl={imageUrl} />
-              {node.label}
+              <span className="min-w-0 truncate">{node.label}</span>
             </a>
           )
         }
@@ -173,7 +176,7 @@ export function SidebarNavTree({
         return (
           <Link key={node.key} href={node.href} onClick={onNavigate} className={linkClassName}>
             <ModuleIcon iconKey={node.icon} imageUrl={imageUrl} />
-            {node.label}
+            <span className="min-w-0 truncate">{node.label}</span>
           </Link>
         )
       })}

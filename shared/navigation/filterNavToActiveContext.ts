@@ -96,8 +96,10 @@ function navForHrRoutes(navItems: ModuleNavNode[], pathname: string): ModuleNavN
 /** ใต้ /settings ให้เห็นเมนูตั้งค่าครบชุดที่ผ่าน RBAC */
 function navForSettingsRoutes(navItems: ModuleNavNode[], pathname: string): ModuleNavNode[] | null {
   if (!pathname.startsWith("/settings")) return null
-  const settings = navItems.find((n) => n.type === "group" && n.key === "settings")
-  if (!settings || settings.type !== "group") return null
+  const settings = navItems.find(
+    (n) => n.type === "section" && (n.key === "sec_settings" || n.key === "settings")
+  )
+  if (!settings || settings.type !== "section") return null
   return [settings]
 }
 

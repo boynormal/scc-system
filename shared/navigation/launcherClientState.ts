@@ -80,37 +80,40 @@ export function recordAppOpen(moduleId: string) {
 
 export type TileSkin = { tile: string; icon: string; blob: string }
 
-/** ชุดสีไอคอนแบบ deterministic ต่อ moduleId — สีทึบ อ่านชัดทั้งธีมสว่าง/มืด */
+/**
+ * ชุดสีไอคอนทึบ อ่านชัดบนธีมสว่าง/มืด
+ * หลีกเลี่ยงพาสเทลจาง (เช่น *-50 / *-100) และโทนม่วงอ่อนที่กลืนพื้นขาว
+ */
 export const TILE_SKINS: TileSkin[] = [
   {
-    tile: "from-orange-500 to-amber-600 ring-orange-700/40",
-    icon: "from-orange-600 to-amber-500 text-white",
-    blob: "bg-orange-500",
+    tile: "from-orange-600 to-amber-700 ring-orange-800/40",
+    icon: "from-orange-700 to-amber-600 text-white",
+    blob: "bg-orange-600",
   },
   {
-    tile: "from-teal-500 to-cyan-600 ring-teal-700/40",
-    icon: "from-teal-600 to-cyan-500 text-white",
-    blob: "bg-teal-500",
+    tile: "from-teal-600 to-cyan-700 ring-teal-800/40",
+    icon: "from-teal-700 to-cyan-600 text-white",
+    blob: "bg-teal-600",
   },
   {
-    tile: "from-rose-500 to-pink-600 ring-rose-700/40",
-    icon: "from-rose-600 to-pink-500 text-white",
-    blob: "bg-rose-500",
+    tile: "from-rose-600 to-pink-700 ring-rose-800/40",
+    icon: "from-rose-700 to-pink-600 text-white",
+    blob: "bg-rose-600",
   },
   {
-    tile: "from-sky-500 to-blue-600 ring-sky-700/40",
-    icon: "from-sky-600 to-blue-500 text-white",
-    blob: "bg-sky-500",
+    tile: "from-blue-600 to-indigo-700 ring-blue-800/40",
+    icon: "from-blue-700 to-indigo-600 text-white",
+    blob: "bg-blue-600",
   },
   {
-    tile: "from-emerald-500 to-green-600 ring-emerald-700/40",
-    icon: "from-emerald-600 to-green-500 text-white",
-    blob: "bg-emerald-500",
+    tile: "from-emerald-600 to-green-700 ring-emerald-800/40",
+    icon: "from-emerald-700 to-green-600 text-white",
+    blob: "bg-emerald-600",
   },
   {
-    tile: "from-violet-500 to-fuchsia-600 ring-violet-700/40",
-    icon: "from-violet-600 to-fuchsia-500 text-white",
-    blob: "bg-violet-500",
+    tile: "from-indigo-600 to-blue-700 ring-indigo-800/40",
+    icon: "from-indigo-700 to-blue-600 text-white",
+    blob: "bg-indigo-600",
   },
 ]
 

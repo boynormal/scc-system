@@ -64,7 +64,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     id: "iot_control",
     labelTh: "ควบคุม IoT",
     labelEn: "IoT Control",
-    description: "บัตรคิว · ไม้กั้น · ประตูสแกนโลหะ — ลิงก์ไปหน้าควบคุมอุปกรณ์ IoT บนเครือข่ายไซต์งาน",
+    description: "ควบคุมบัตรคิว · ออกบัตรคิว · ไม้กั้น · ประตูสแกนโลหะ — ลิงก์ไปหน้าควบคุมอุปกรณ์ IoT บนเครือข่ายไซต์งาน",
     departmentIds: ["iot_control"],
     order: 6,
     accent: "from-fuchsia-500 to-purple-600 shadow-fuchsia-600/30",

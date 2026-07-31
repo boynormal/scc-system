@@ -19,6 +19,7 @@ const schema = z.object({
     .toLowerCase()
     .regex(/^[a-z0-9._]{3,50}$/, "Username ต้องเป็น a-z, 0-9, . หรือ _ ความยาว 3–50 ตัว"),
   email: z.string().email("อีเมลไม่ถูกต้อง"),
+  employeeCode: z.string().optional(),
   firstName: z.string().min(1, "กรุณากรอกชื่อ"),
   lastName: z.string().min(1, "กรุณากรอกนามสกุล"),
   phone: z.string().optional(),
@@ -76,6 +77,7 @@ export default function EditUserPage() {
         reset({
           username: data.username,
           email: data.email,
+          employeeCode: data.employeeCode ?? "",
           firstName: data.firstName,
           lastName: data.lastName,
           phone: data.phone ?? "",
@@ -150,8 +152,13 @@ export default function EditUserPage() {
               error={errors.email?.message}
               {...register("email")}
             />
+            <GlassInput
+              label="รหัสพนักงาน"
+              placeholder="เช่น EMP002"
+              autoComplete="off"
+              {...register("employeeCode")}
+            />
             <GlassInput label="เบอร์โทรศัพท์" type="tel" autoComplete="off" {...register("phone")} />
-            <div className="hidden sm:block" />
             <GlassInput label="ชื่อ" required error={errors.firstName?.message} {...register("firstName")} />
             <GlassInput label="นามสกุล" required error={errors.lastName?.message} {...register("lastName")} />
           </div>

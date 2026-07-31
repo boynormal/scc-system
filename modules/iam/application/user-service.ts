@@ -39,6 +39,7 @@ export const updateUserSchema = z
     email: z.string().email().optional(),
     firstName: z.string().min(1).optional(),
     lastName: z.string().min(1).optional(),
+    employeeCode: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
     isActive: z.boolean().optional(),
     password: z.string().min(8).optional(),
@@ -213,8 +214,24 @@ export async function updateUser(
   })
   if (!user) return { error: "Not found" as const, status: 404 as const }
 
-  const { password, branchId, roleId, userBranchRoleId, moduleAccess, email, username, ...rest } =
-    params.input
+  const {
+    password,
+    branchId,
+    roleId,
+    userBranchRoleId,
+    moduleAccess,
+    email,
+    username,
+    employeeCode: employeeCodeRaw,
+    ...rest
+  } = params.input
+
+  const employeeCode =
+    employeeCodeRaw === undefined
+      ? undefined
+      : employeeCodeRaw === null || employeeCodeRaw.trim() === ""
+        ? null
+        : employeeCodeRaw.trim()
 
   if (username && username !== user.username) {
     const dupUsername = await db.user.findFirst({
@@ -233,6 +250,23 @@ export async function updateUser(
     })
     if (dupEmail) {
       return { error: { message: "อีเมลนี้ถูกใช้งานแล้ว" }, status: 409 as const }
+    }
+  }
+
+  if (employeeCode !== undefined && employeeCode !== user.employeeCode) {
+    if (employeeCode) {
+      const dupCode = await db.user.findFirst({
+        where: {
+          companyId: params.companyId,
+          employeeCode,
+          deletedAt: null,
+          id: { not: params.id },
+        },
+        select: { id: true },
+      })
+      if (dupCode) {
+        return { error: { message: "รหัสพนักงานนี้ถูกใช้แล้วในบริษัทนี้" }, status: 409 as const }
+      }
     }
   }
 
@@ -287,6 +321,7 @@ export async function updateUser(
       ...rest,
       ...(username && { username }),
       ...(email && { email }),
+      ...(employeeCode !== undefined && { employeeCode }),
       ...(moduleAccess !== undefined && { moduleAccess: toModuleAccessJson(moduleAccess) }),
       ...(password && { passwordHash: await bcrypt.hash(password, 12) }),
     },

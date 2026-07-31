@@ -34,15 +34,13 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
             {...props}
             className={cn(
               "w-full rounded-lg border text-sm text-foreground placeholder:text-muted-foreground/80 transition-colors",
-              // Light: solid field on white cards — glass white borders disappear on bg-white
-              "bg-background border-input",
-              // Dark: keep glass fill + rim
-              "dark:bg-glass-strong dark:backdrop-blur-glass dark:border-glass",
+              // Solid field + input rim — avoid border-glass (maps to glass fill, invisible on cards)
+              "border-input bg-background dark:border-slate-500 dark:bg-slate-950/55",
               "focus:border-transparent focus:outline-none focus:ring-2 focus:ring-glass-ring",
               icon ? "py-2 pl-9 pr-3" : "px-3 py-2",
               error
-                ? "border-red-400 bg-red-50/80 focus:ring-red-400 dark:bg-red-950/40"
-                : "hover:border-slate-400 dark:hover:border-white/25",
+                ? "border-red-400 bg-red-50/80 focus:ring-red-400 dark:border-red-400 dark:bg-red-950/40"
+                : "hover:border-slate-400 dark:hover:border-slate-400",
               props.disabled &&
                 "cursor-not-allowed bg-muted/80 text-muted-foreground dark:bg-slate-900/60",
               className

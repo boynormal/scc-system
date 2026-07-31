@@ -321,7 +321,7 @@ export function IpadLauncher({
 
       <div className="absolute inset-x-0 bottom-3 z-30 flex justify-center px-3 sm:bottom-4 sm:px-4">
         <div
-          className="flex min-h-[4.75rem] max-w-[96vw] items-end gap-2 overflow-x-auto rounded-[2rem] border border-white/70 bg-white/80 px-3 py-2.5 shadow-2xl backdrop-blur-2xl sm:min-h-[5.25rem] sm:gap-3 sm:px-4 sm:py-3 dark:border-white/20 dark:bg-slate-950/55"
+          className="flex min-h-[4.75rem] max-w-[96vw] items-end gap-2 overflow-x-auto rounded-[2rem] border border-white/40 bg-white/25 px-3 py-2.5 shadow-xl shadow-black/10 backdrop-blur-2xl sm:min-h-[5.25rem] sm:gap-3 sm:px-4 sm:py-3 dark:border-white/15 dark:bg-slate-950/30"
           role="toolbar"
           aria-label={t("dockEmpty")}
         >
@@ -662,7 +662,7 @@ function DockIcon({
       </span>
       <span
         className={cn(
-          "line-clamp-2 max-w-[4.5rem] text-center text-[10px] font-semibold leading-snug sm:max-w-[5rem] sm:text-[11px]",
+          "line-clamp-1 w-full max-w-[4.5rem] truncate text-center text-[10px] font-semibold leading-snug sm:max-w-[5rem] sm:text-[11px]",
           emphasized ? "text-rose-700 dark:text-rose-300" : "text-foreground dark:text-white"
         )}
       >

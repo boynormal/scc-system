@@ -22,7 +22,8 @@ export function DetailsField({
       placeholder={placeholder}
       rows={rows}
       className={cn(
-        "w-full min-w-[120px] rounded-lg border border-cyan-300 px-2 py-1.5 text-sm resize-y",
+        "w-full min-w-[120px] resize-y rounded-lg border border-input bg-background px-2 py-1.5 text-sm text-foreground",
+        "placeholder:text-muted-foreground dark:border-slate-500 dark:bg-slate-950/55",
         "focus:outline-none focus:ring-2 focus:ring-cyan-500",
         className
       )}

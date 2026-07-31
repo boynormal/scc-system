@@ -173,7 +173,8 @@ export function DriversTab() {
     }
   }
 
-  const fieldClass = "h-8 w-full rounded-lg border border-border px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+  const fieldClass =
+    "h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground dark:border-slate-500 dark:bg-slate-950/55 focus:outline-none focus:ring-2 focus:ring-cyan-500"
   const branchVehicles = vehicles.filter(
     (v) => !editForm.branchId || v.branchId === editForm.branchId
   )

@@ -242,7 +242,7 @@ export function LinkGpsVehicleModal({
   }
 
   const selectClass =
-    "w-full rounded-lg border border-border px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-cyan-500"
+    "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground dark:border-slate-500 dark:bg-slate-950/55 focus:outline-none focus:ring-2 focus:ring-cyan-500"
 
   return createPortal(
     <div

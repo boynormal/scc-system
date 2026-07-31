@@ -3,13 +3,14 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Grid3X3, Wrench } from "lucide-react"
+import { Grid3X3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ProductLineDef } from "@/shared/navigation/productLineRegistry"
 import type { NavIconKey } from "@/shared/navigation/moduleRegistry"
 import { pathMatchesHref } from "@/shared/navigation/groupNavByProductLine"
 import { NAV_ICON_MAP } from "./nav-icon-map"
 import { APP_BRAND } from "@/shared/branding"
+import { CompanyBrandMark } from "@/components/brand/company-brand-mark"
 
 type Props = {
   productLines: ProductLineDef[]
@@ -18,6 +19,7 @@ type Props = {
   onProductLineClick: (productLineId: string) => void
   productLineIconOverrides?: Record<string, NavIconKey>
   productLineImageOverrides?: Record<string, string>
+  logoUrl?: string | null
 }
 
 export function SidebarIconRail({
@@ -27,6 +29,7 @@ export function SidebarIconRail({
   onProductLineClick,
   productLineIconOverrides = {},
   productLineImageOverrides = {},
+  logoUrl,
 }: Props) {
   const pathname = usePathname()
   const isAppsPage = pathMatchesHref(pathname, "/apps")
@@ -36,10 +39,10 @@ export function SidebarIconRail({
       <div className="py-4 flex flex-col items-center border-b border-border shrink-0">
         <Link
           href="/apps"
-          className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700 transition-colors"
+          className="transition-opacity hover:opacity-90"
           title={`${APP_BRAND.shortName} — Applications`}
         >
-          <Wrench className="w-5 h-5 text-white" />
+          <CompanyBrandMark logoUrl={logoUrl} size="sm" alt={APP_BRAND.name} />
         </Link>
       </div>
 

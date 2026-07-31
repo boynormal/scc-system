@@ -74,7 +74,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     id: "settings_admin",
     labelTh: "ตั้งค่าและผู้ดูแลระบบ",
     labelEn: "Core Platform · Settings & Administration",
-    description: "ผู้ใช้ · สาขา · สิทธิ์ · ข้อมูลพื้นฐาน — ชั้น Core Platform ที่ทุกสายงานใช้ร่วมกัน",
+    description: "ผู้ใช้ · สาขา · สิทธิ์ · ข้อมูลพื้นฐาน",
     departmentIds: ["configuration"],
     order: 4,
     accent: "from-slate-600 to-slate-800 shadow-slate-700/30",

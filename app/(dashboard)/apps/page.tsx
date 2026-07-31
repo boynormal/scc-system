@@ -20,7 +20,7 @@ export default async function AppsPage() {
   const [company, branches] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
-      select: { settings: true },
+      select: { settings: true, logoUrl: true },
     }),
     prisma.branch.findMany({
       where: { companyId, deletedAt: null, isActive: true },
@@ -60,6 +60,7 @@ export default async function AppsPage() {
         moduleImageOverrides={navPreferences.moduleImageOverrides}
         appearance={appearance}
         weatherBranches={weatherBranches}
+        logoUrl={company?.logoUrl}
       />
     </div>
   )

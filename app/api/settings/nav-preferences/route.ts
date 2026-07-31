@@ -39,6 +39,7 @@ export async function PATCH(req: NextRequest) {
   revalidatePath("/app2")
   revalidatePath("/apps")
   revalidatePath("/settings")
+  revalidatePath("/login")
   revalidatePath("/", "layout")
 
   return NextResponse.json(result)

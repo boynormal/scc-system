@@ -29,7 +29,7 @@
   },
   "auth": {
     "identifierLabel": "Username or email",
-    "identifierPlaceholder": "admin or admin@demo.com",
+    "identifierPlaceholder": "username or name@company.com",
     "identifierRequired": "Please enter your username or email",
     "passwordLabel": "Password",
     "passwordMin": "Password must be at least 6 characters",
@@ -79,8 +79,10 @@
     "sec_settings": "Settings",
     "settings_users": "Users",
     "settings_branches": "Branches",
-    "settings_roles": "Roles & permissions",
-    "settings_master_data": "Master data"
+    "settings_roles": "Roles",
+    "settings_master_data": "Master data",
+    "settings_home_screen": "Home screen",
+    "settings_company_logo": "Company logo"
   },
   "transport": {
     "overviewTitle": "Transport overview",
@@ -113,15 +115,37 @@
     "refresh": "Refresh"
   },
   "settings": {
-    "hubTitle": "Settings",
-    "hubDesc": "Manage users, branches, roles, and master data",
+    "hubTitle": "Settings center",
+    "hubDesc": "Search and switch settings pages — admin items are also available from the Sidebar",
+    "hubSectionAdmin": "Administration",
+    "hubSectionPlatform": "Platform",
+    "hubSectionAbout": "About",
     "usersTitle": "Users",
+    "usersDesc": "User accounts and system access",
     "usersEmpty": "No users yet",
     "branchesTitle": "Branches",
-    "rolesTitle": "Roles & permissions",
+    "branchesDesc": "Branch list and locations",
+    "rolesTitle": "Roles",
+    "rolesDesc": "Roles and per-module permissions",
     "masterDataTitle": "Master data",
+    "masterDataDesc": "Categories, departments, maintenance types, and suppliers",
     "homeScreenTitle": "Home screen",
-    "appIconsTitle": "App icons"
+    "homeScreenDesc": "Upload product-line and module icons for Sidebar, /apps, and /app2 — stored under public/home-screen for git commits",
+    "appearanceTitle": "Theme",
+    "appearanceDesc": "Toggle light/dark mode for Settings, /apps, and /app2",
+    "appearanceDark": "Dark",
+    "appearanceLight": "Light",
+    "companyLogoTitle": "Company logo",
+    "companyLogoDesc": "Shown on the Sidebar, login page, and Apps launchers — falls back to the default wrench icon when empty",
+    "companyLogoRemove": "Remove logo",
+    "companyLogoUsing": "Using uploaded logo",
+    "companyLogoDefault": "Using default icon",
+    "appIconsTitle": "App icons",
+    "searchPlaceholder": "Search settings...",
+    "searchEmpty": "No settings match “{query}”",
+    "iconsCustomized": "{count} customized",
+    "iconsDefault": "Default icons",
+    "versionLabel": "Version {version}"
   },
   "notifications": {
     "title": "Notifications",

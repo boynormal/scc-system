@@ -88,7 +88,13 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     moduleId: "settings",
     label: "ตั้งค่า",
     anyOfResources: ["settings", "users", "roles", "branches"],
-    navModuleIds: ["settings"],
+    navModuleIds: [
+      "settings", // legacy override key
+      "settings_users",
+      "settings_branches",
+      "settings_roles",
+      "settings_master_data",
+    ],
   },
 ]
 

@@ -12,6 +12,7 @@ import { isExternalHref } from "@/shared/navigation/isExternalHref"
 import { getFavoriteIds, getRecentIds, recordAppOpen, setFavoriteIds, skinFor } from "@/shared/navigation/launcherClientState"
 import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
 import { APP_BRAND } from "@/shared/branding"
+import { CompanyBrandMark } from "@/components/brand/company-brand-mark"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "next-intl"
@@ -162,6 +163,7 @@ export function AppsLauncher({
   productLineImageOverrides = {},
   moduleImageOverrides = {},
   appearance = "light",
+  logoUrl,
 }: {
   apps: LauncherAppItem[]
   pinnedModuleIds: string[]
@@ -171,6 +173,7 @@ export function AppsLauncher({
   productLineImageOverrides?: Record<string, string>
   moduleImageOverrides?: Record<string, string>
   appearance?: AppAppearance
+  logoUrl?: string | null
 }) {
   const isDark = appearance === "dark"
   const t = useTranslations("apps")
@@ -279,9 +282,12 @@ export function AppsLauncher({
       <section className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/35 px-5 py-6 shadow-xl shadow-slate-200/60 backdrop-blur md:px-8 md:py-8 dark:border-slate-700/60 dark:bg-slate-900/40 dark:shadow-none">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              {APP_BRAND.launcherBadge}
+            <div className="mb-4 flex items-center gap-3">
+              <CompanyBrandMark logoUrl={logoUrl} size="md" alt={APP_BRAND.name} />
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                {APP_BRAND.launcherBadge}
+              </div>
             </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-5xl dark:text-white">
               {APP_BRAND.name}

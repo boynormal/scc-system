@@ -17,11 +17,13 @@ export default function Sidebar({
   productLineIconOverrides = {},
   productLineImageOverrides = {},
   moduleImageOverrides = {},
+  logoUrl,
 }: {
   navItems: ModuleNavNode[]
   productLineIconOverrides?: Record<string, NavIconKey>
   productLineImageOverrides?: Record<string, string>
   moduleImageOverrides?: Record<string, string>
+  logoUrl?: string | null
 }) {
   const pathname = usePathname()
   const [openProductLineId, setOpenProductLineId] = useState<string | null>(null)
@@ -53,6 +55,7 @@ export default function Sidebar({
         onProductLineClick={handleProductLineClick}
         productLineIconOverrides={productLineIconOverrides}
         productLineImageOverrides={productLineImageOverrides}
+        logoUrl={logoUrl}
       />
       <SidebarOffCanvasPanel
         open={openProductLineId !== null}

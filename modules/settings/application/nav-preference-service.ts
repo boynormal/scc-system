@@ -16,6 +16,8 @@ export const updateNavPreferencesSchema = z.object({
   productLineImageOverrides: z.record(z.string().max(500)).optional(),
   moduleImageOverrides: z.record(z.string().max(500)).optional(),
   appearance: z.enum(["light", "dark"]).optional(),
+  /** โลโก้บริษัท — string URL หรือ null เพื่อลบ */
+  logoUrl: z.union([z.string().max(500), z.null()]).optional(),
 })
 
 function mergeImageOverrides(
@@ -34,10 +36,13 @@ function mergeImageOverrides(
 export async function getNavPreferences(db: PrismaClient, companyId: string) {
   const company = await db.company.findUnique({
     where: { id: companyId },
-    select: { settings: true },
+    select: { settings: true, logoUrl: true },
   })
 
-  return parseCompanyNavPreferences(company?.settings ?? null)
+  return {
+    ...parseCompanyNavPreferences(company?.settings ?? null),
+    logoUrl: company?.logoUrl ?? null,
+  }
 }
 
 export async function updateNavPreferences(
@@ -134,12 +139,39 @@ export async function updateNavPreferences(
   if (params.input.appearance !== undefined) {
     nextNav.appearance = params.input.appearance
   }
+
+  let nextLogoUrl: string | null | undefined
+  if (params.input.logoUrl !== undefined) {
+    if (params.input.logoUrl === null) {
+      nextLogoUrl = null
+      delete nextNav.logoUrl
+    } else if (isHomeScreenImageUrl(params.input.logoUrl)) {
+      nextLogoUrl = params.input.logoUrl
+      nextNav.logoUrl = params.input.logoUrl
+    } else {
+      return { error: "Invalid logoUrl" as const, status: 400 as const }
+    }
+  }
+
   const newSettings = { ...existing, nav: nextNav }
 
   await db.company.update({
     where: { id: params.companyId },
-    data: { settings: newSettings as object },
+    data: {
+      settings: newSettings as object,
+      ...(nextLogoUrl !== undefined ? { logoUrl: nextLogoUrl } : {}),
+    },
   })
 
-  return { data: parseCompanyNavPreferences(newSettings) }
+  const updated = await db.company.findUnique({
+    where: { id: params.companyId },
+    select: { logoUrl: true },
+  })
+
+  return {
+    data: {
+      ...parseCompanyNavPreferences(newSettings),
+      logoUrl: updated?.logoUrl ?? null,
+    },
+  }
 }

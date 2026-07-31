@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const company = await prisma.company.findUnique({
     where: { id: session.user.companyId },
-    select: { settings: true },
+    select: { settings: true, logoUrl: true },
   })
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
   const tNav = await getTranslations("nav")
@@ -38,6 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         navItems={navItems}
         productLineImageOverrides={navPreferences.productLineImageOverrides}
         moduleImageOverrides={navPreferences.moduleImageOverrides}
+        logoUrl={company?.logoUrl}
       />
       <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header user={session.user} navItems={navItems} appearance={appearance} />

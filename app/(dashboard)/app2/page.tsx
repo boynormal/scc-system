@@ -17,7 +17,7 @@ export default async function App2Page() {
 
   const company = await prisma.company.findUnique({
     where: { id: session.user.companyId },
-    select: { settings: true },
+    select: { settings: true, logoUrl: true },
   })
 
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
@@ -50,6 +50,7 @@ export default async function App2Page() {
         productLineImageOverrides={navPreferences.productLineImageOverrides}
         moduleImageOverrides={navPreferences.moduleImageOverrides}
         appearance={appearance}
+        logoUrl={company?.logoUrl}
       />
     </div>
   )

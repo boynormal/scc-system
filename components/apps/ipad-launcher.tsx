@@ -19,6 +19,7 @@ import {
 } from "@/shared/navigation/launcherClientState"
 import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
 import { APP_BRAND } from "@/shared/branding"
+import { CompanyBrandMark } from "@/components/brand/company-brand-mark"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "next-intl"
@@ -98,6 +99,7 @@ export function IpadLauncher({
   moduleImageOverrides = {},
   appearance = "light",
   weatherBranches = [],
+  logoUrl,
 }: {
   apps: LauncherAppItem[]
   pinnedModuleIds: string[]
@@ -108,6 +110,7 @@ export function IpadLauncher({
   moduleImageOverrides?: Record<string, string>
   appearance?: AppAppearance
   weatherBranches?: WeatherBranchOption[]
+  logoUrl?: string | null
 }) {
   const isDark = appearance === "dark"
   const t = useTranslations("apps")
@@ -226,9 +229,12 @@ export function IpadLauncher({
 
       <div className="relative z-10 mx-auto h-full max-w-6xl overflow-y-auto px-4 pb-40 pt-6 sm:px-8 sm:pt-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground dark:text-white/55">{APP_BRAND.launcherBadge}</p>
-            <h1 className="text-2xl font-black text-foreground drop-shadow-sm sm:text-3xl dark:text-white">{APP_BRAND.name}</h1>
+          <div className="flex items-center gap-3">
+            <CompanyBrandMark logoUrl={logoUrl} size="md" alt={APP_BRAND.name} />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground dark:text-white/55">{APP_BRAND.launcherBadge}</p>
+              <h1 className="text-2xl font-black text-foreground drop-shadow-sm sm:text-3xl dark:text-white">{APP_BRAND.name}</h1>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

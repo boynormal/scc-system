@@ -5,7 +5,7 @@ const NAV_ICON_KEY_SET = new Set<string>(NAV_ICON_KEYS)
 
 /** URL ไอคอนหน้าจอหลักที่ commit ได้ + legacy uploads */
 export const HOME_SCREEN_IMAGE_URL_RE =
-  /^\/(?:home-screen\/(?:product-lines|modules)\/[\w.-]+\.webp(?:\?v=\d+)?|uploads\/[\w.-]+)$/
+  /^\/(?:home-screen\/(?:product-lines|modules|brand)\/[\w.-]+\.webp(?:\?v=\d+)?|uploads\/[\w.-]+)$/
 
 export function isHomeScreenImageUrl(value: string): boolean {
   return HOME_SCREEN_IMAGE_URL_RE.test(value)

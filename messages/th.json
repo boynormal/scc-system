@@ -29,7 +29,7 @@
   },
   "auth": {
     "identifierLabel": "ชื่อผู้ใช้หรืออีเมล",
-    "identifierPlaceholder": "admin หรือ admin@demo.com",
+    "identifierPlaceholder": "ชื่อผู้ใช้ หรือ name@company.com",
     "identifierRequired": "กรุณากรอกชื่อผู้ใช้หรืออีเมล",
     "passwordLabel": "รหัสผ่าน",
     "passwordMin": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
@@ -79,8 +79,10 @@
     "sec_settings": "ตั้งค่า",
     "settings_users": "ผู้ใช้งาน",
     "settings_branches": "สาขา",
-    "settings_roles": "สิทธิ์การใช้งาน",
-    "settings_master_data": "ข้อมูลพื้นฐาน"
+    "settings_roles": "สิทธิ์",
+    "settings_master_data": "ข้อมูลพื้นฐาน",
+    "settings_home_screen": "หน้าจอหลัก",
+    "settings_company_logo": "โลโก้บริษัท"
   },
   "transport": {
     "overviewTitle": "ภาพรวมขนส่ง",
@@ -113,15 +115,37 @@
     "refresh": "รีเฟรช"
   },
   "settings": {
-    "hubTitle": "ตั้งค่า",
-    "hubDesc": "จัดการผู้ใช้ สาขา สิทธิ์ และข้อมูลพื้นฐาน",
+    "hubTitle": "ศูนย์ตั้งค่า",
+    "hubDesc": "ค้นหาและสลับหน้าตั้งค่า — งานผู้ดูแลเปิดจาก Sidebar ได้เช่นกัน",
+    "hubSectionAdmin": "ผู้ดูแลระบบ",
+    "hubSectionPlatform": "แพลตฟอร์ม",
+    "hubSectionAbout": "เกี่ยวกับ",
     "usersTitle": "ผู้ใช้งาน",
+    "usersDesc": "บัญชีผู้ใช้และการเข้าถึงระบบ",
     "usersEmpty": "ยังไม่มีผู้ใช้งาน",
     "branchesTitle": "สาขา",
-    "rolesTitle": "สิทธิ์การใช้งาน",
+    "branchesDesc": "รายชื่อสาขาและที่ตั้งองค์กร",
+    "rolesTitle": "สิทธิ์",
+    "rolesDesc": "บทบาทและสิทธิ์ต่อโมดูล",
     "masterDataTitle": "ข้อมูลพื้นฐาน",
+    "masterDataDesc": "หมวดหมู่ แผนก ประเภทงานซ่อม และซัพพลายเออร์",
     "homeScreenTitle": "หน้าจอหลัก",
-    "appIconsTitle": "ไอคอนแอป"
+    "homeScreenDesc": "อัปโหลดไอคอนกลุ่มงานและโมดูลสำหรับ Sidebar, /apps และ /app2 — เก็บที่ public/home-screen เพื่อ commit ขึ้น git",
+    "appearanceTitle": "ธีม",
+    "appearanceDesc": "สลับโหมดสว่าง/มืดสำหรับ Settings, /apps และ /app2",
+    "appearanceDark": "มืด",
+    "appearanceLight": "สว่าง",
+    "companyLogoTitle": "โลโก้บริษัท",
+    "companyLogoDesc": "แสดงที่ Sidebar, หน้าเข้าสู่ระบบ และหน้า Apps — หากไม่อัปโหลดจะใช้ไอคอนประแจเริ่มต้น",
+    "companyLogoRemove": "ลบโลโก้",
+    "companyLogoUsing": "กำลังใช้โลโก้ที่อัปโหลด",
+    "companyLogoDefault": "กำลังใช้ไอคอนเริ่มต้น",
+    "appIconsTitle": "ไอคอนแอป",
+    "searchPlaceholder": "ค้นหาการตั้งค่า...",
+    "searchEmpty": "ไม่พบการตั้งค่าที่ตรงกับ “{query}”",
+    "iconsCustomized": "ปรับแล้ว {count} รายการ",
+    "iconsDefault": "ไอคอนเริ่มต้น",
+    "versionLabel": "เวอร์ชัน {version}"
   },
   "notifications": {
     "title": "การแจ้งเตือน",

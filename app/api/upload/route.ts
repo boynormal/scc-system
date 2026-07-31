@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error: {
-              message: "ต้องระบุ assetKind (product-line|module) และ assetId ที่ถูกต้อง",
+              message: "ต้องระบุ assetKind (product-line|module|brand) และ assetId ที่ถูกต้อง",
             },
           },
           { status: 400 }

@@ -1,10 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { X } from "lucide-react"
+import { useEffect, useMemo, useRef } from "react"
+import Link from "next/link"
+import { ImageIcon, LayoutGrid, X } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 import type { ModuleNavNode } from "@/shared/navigation/moduleRegistry"
 import type { ProductLineDef } from "@/shared/navigation/productLineRegistry"
+import { NAV_ICON_MAP } from "./nav-icon-map"
 import { SidebarNavTree } from "./sidebar-nav-tree"
 
 type Props = {
@@ -16,6 +19,14 @@ type Props = {
   moduleImageOverrides?: Record<string, string>
 }
 
+/** section เดียวใต้ product line → แสดง children โดยตรง ลดป้ายหัวข้อซ้ำกับ header */
+function unwrapSingletonSection(nodes: ModuleNavNode[]): ModuleNavNode[] {
+  if (nodes.length === 1 && nodes[0].type === "section") {
+    return nodes[0].children
+  }
+  return nodes
+}
+
 export function SidebarOffCanvasPanel({
   open,
   productLine,
@@ -25,6 +36,10 @@ export function SidebarOffCanvasPanel({
   moduleImageOverrides = {},
 }: Props) {
   const panelRef = useRef<HTMLElement>(null)
+  const t = useTranslations("nav")
+  const LineIcon = productLine ? NAV_ICON_MAP[productLine.iconKey] : null
+  const treeNodes = useMemo(() => unwrapSingletonSection(navNodes), [navNodes])
+  const showPlatformFooter = productLine?.id === "settings_admin"
 
   useEffect(() => {
     if (!open) return
@@ -68,12 +83,23 @@ export function SidebarOffCanvasPanel({
           open ? "left-16 translate-x-0" : "left-0 -translate-x-full pointer-events-none invisible"
         )}
       >
-        <div className="flex items-center justify-between gap-2 px-4 py-4 border-b border-border shrink-0">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-foreground truncate">{productLine?.labelTh ?? ""}</p>
-            {productLine?.description && (
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{productLine.description}</p>
+        <div className="flex items-start justify-between gap-2 px-4 py-4 border-b border-border shrink-0">
+          <div className="flex min-w-0 items-start gap-3">
+            {LineIcon && productLine && (
+              <span
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md",
+                  productLine.accent
+                )}
+              >
+                <LineIcon className="h-5 w-5" strokeWidth={1.9} />
+              </span>
             )}
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-snug text-foreground">
+                {productLine?.labelTh ?? ""}
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -86,9 +112,9 @@ export function SidebarOffCanvasPanel({
         </div>
 
         <nav className="flex-1 min-h-0 px-3 py-4 overflow-y-auto overscroll-contain">
-          {navNodes.length > 0 ? (
+          {treeNodes.length > 0 ? (
             <SidebarNavTree
-              nodes={navNodes}
+              nodes={treeNodes}
               onNavigate={handleClose}
               moduleImageOverrides={moduleImageOverrides}
             />
@@ -96,6 +122,27 @@ export function SidebarOffCanvasPanel({
             <p className="px-3 text-sm text-muted-foreground">ไม่มีเมนูในกลุ่มนี้</p>
           )}
         </nav>
+
+        {showPlatformFooter && (
+          <div className="shrink-0 space-y-0.5 border-t border-border px-3 py-3">
+            <Link
+              href="/settings/company-logo"
+              onClick={handleClose}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ImageIcon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">{t("settings_company_logo")}</span>
+            </Link>
+            <Link
+              href="/settings/home-screen"
+              onClick={handleClose}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LayoutGrid className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">{t("settings_home_screen")}</span>
+            </Link>
+          </div>
+        )}
       </aside>
     </>
   )

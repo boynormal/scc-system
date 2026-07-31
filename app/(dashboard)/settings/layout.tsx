@@ -35,7 +35,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
 
   const company = await prisma.company.findUnique({
     where: { id: session.user.companyId },
-    select: { settings: true },
+    select: { settings: true, logoUrl: true },
   })
   const navPreferences = parseCompanyNavPreferences(company?.settings ?? null)
   const cookieStore = await cookies()
@@ -58,6 +58,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
               appearance={appearance}
               customIconCount={customIconCount}
               appVersion={packageJson.version}
+              logoUrl={company?.logoUrl}
             />
           </div>
 

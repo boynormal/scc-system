@@ -24,9 +24,9 @@ import Link from "next/link"
 
 import type { TransportJobPriority } from "@prisma/client"
 
-import { Plus } from "lucide-react"
-
 import { getTranslations } from "next-intl/server"
+
+import { CreateJobButton } from "@/components/transport/CreateJobButton"
 
 
 
@@ -151,7 +151,7 @@ export default async function TransportJobsPage({
 
   return (
 
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
 
       <div className="flex items-center justify-between">
 
@@ -167,19 +167,7 @@ export default async function TransportJobsPage({
 
         </div>
 
-        <Link
-
-          href="/transport/jobs/new"
-
-          className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-cyan-700"
-
-        >
-
-          <Plus className="h-4 w-4" />
-
-          {t("jobsNew")}
-
-        </Link>
+        <CreateJobButton label={t("jobsNew")} />
 
       </div>
 

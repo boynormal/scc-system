@@ -45,7 +45,7 @@ function MasterDataContent() {
   }
 
   return (
-    <div className="-m-6 space-y-6 p-4 md:p-6 w-auto min-w-0">
+    <div className="-m-6 w-auto min-w-0 space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground">{t("masterDataTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -97,8 +97,10 @@ function MasterDataContent() {
 
 export default function TransportMasterDataPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">กำลังโหลด...</div>}>
-      <MasterDataContent />
-    </Suspense>
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">กำลังโหลด...</div>}>
+        <MasterDataContent />
+      </Suspense>
+    </div>
   )
 }

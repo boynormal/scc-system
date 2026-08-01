@@ -17,6 +17,11 @@ type Props = {
   items: JobListItem[]
 }
 
+function formatScheduledDate(value: Date | string | null | undefined) {
+  if (!value) return "—"
+  return new Date(value).toLocaleDateString("th-TH", { dateStyle: "medium" })
+}
+
 export function JobsListTable({ items }: Props) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -25,6 +30,8 @@ export function JobsListTable({ items }: Props) {
           <tr>
             <th className="px-4 py-3 text-left">เลขใบงาน</th>
             <th className="px-4 py-3 text-left">ลูกค้า / ประเภทงาน</th>
+            <th className="px-4 py-3 text-left">ประเภทสินค้า</th>
+            <th className="px-4 py-3 text-left">วันที่นัดวิ่งงาน</th>
             <th className="px-4 py-3 text-left">สาขา</th>
             <th className="px-4 py-3 text-left">รถ / คนขับ</th>
             <th className="px-4 py-3 text-left">Stop</th>
@@ -36,7 +43,7 @@ export function JobsListTable({ items }: Props) {
         <tbody className="divide-y divide-border">
           {items.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+              <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
                 ไม่พบใบงาน
               </td>
             </tr>
@@ -56,6 +63,10 @@ export function JobsListTable({ items }: Props) {
                     {job.customerName ?? job.customer?.name ?? "—"}
                   </div>
                   <div className="text-xs text-muted-foreground">{job.jobType}</div>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{job.cargoType ?? "—"}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                  {formatScheduledDate(job.scheduledDate)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{job.branch.name}</td>
                 <td className="px-4 py-3 text-muted-foreground">

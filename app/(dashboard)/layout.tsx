@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       />
       <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header user={session.user} navItems={navItems} appearance={appearance} />
-        <main className="flex-1 overflow-y-auto p-6 text-foreground">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 text-foreground">{children}</main>
       </div>
     </div>
   )

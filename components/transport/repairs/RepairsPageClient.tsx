@@ -268,7 +268,7 @@ export function RepairsPageClient() {
   ]
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-foreground">{t("repairsTitle")}</h1>

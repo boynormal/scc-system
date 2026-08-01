@@ -87,7 +87,7 @@ export default function TransportMonitorPage() {
   ]
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

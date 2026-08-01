@@ -295,7 +295,7 @@ export function TiresPageClient() {
   }
 
   return (
-    <div className="-m-6 space-y-6 p-4 md:p-6 w-auto min-w-0">
+    <div className="-m-6 min-h-0 w-auto min-w-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground">{t("tiresTitle")}</h1>
         <div className="mt-1 flex flex-wrap items-center gap-3">

@@ -37,9 +37,13 @@ export default async function TransportLayout({ children }: { children: React.Re
   ].filter(Boolean) as { href: string; label: string; exact: boolean }[]
 
   return (
-    <div>
-      <TransportModuleTabs tabs={tabs} />
-      {children}
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="shrink-0">
+        <TransportModuleTabs tabs={tabs} />
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
     </div>
   )
 }

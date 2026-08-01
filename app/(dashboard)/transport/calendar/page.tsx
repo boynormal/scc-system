@@ -186,7 +186,7 @@ function TransportCalendarContent() {
   const weekStart = startOfWeek(currentDate)
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col gap-2 p-3 md:p-4">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden p-3 md:p-4">
       {/* Title + navigation + toolbar — single compact row */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">

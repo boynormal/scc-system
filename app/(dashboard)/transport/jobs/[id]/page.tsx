@@ -32,7 +32,7 @@ export default async function TransportJobDetailPage({
     })
 
     return (
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>

@@ -108,7 +108,7 @@ export default async function TransportDashboardPage() {
   ])
 
   return (
-    <div className="space-y-8 p-4 md:p-6">
+    <div className="min-h-0 flex-1 space-y-8 overflow-y-auto p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">{t("overviewTitle")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("overviewDesc")}</p>

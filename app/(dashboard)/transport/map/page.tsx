@@ -1,16 +1,18 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { TransportMap } from "@/components/transport/gps/TransportMap"
 import { MapVehicleListItem } from "@/components/transport/gps/MapVehicleListItem"
 import { UnmatchedMapVehicleListItem } from "@/components/transport/gps/UnmatchedMapVehicleListItem"
-import { LinkGpsVehicleModal } from "@/components/transport/LinkGpsVehicleModal"
 import { hasAnyAlert } from "@/components/transport/gps/GpsAlertBadge"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { RefreshCw, AlertTriangle, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
+
 const POLL_INTERVAL = 45_000
+const VEHICLES_MASTER_HREF = "/transport/master-data?tab=vehicles"
 
 type AvailabilityFilter = "all" | "available" | "busy" | "maintenance" | "unmatched"
 
@@ -24,7 +26,6 @@ export default function TransportMapPage() {
   const [countdown, setCountdown] = useState(POLL_INTERVAL / 1000)
   const [search, setSearch] = useState("")
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all")
-  const [linkModalGps, setLinkModalGps] = useState<GpsVehicleData | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -89,11 +90,7 @@ export default function TransportMapPage() {
   const movingCount = vehicles.filter((v) => v.speed > 0).length
 
   return (
-    <div className="flex h-[calc(100vh-120px)] flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-border px-4 py-3">
-        <h1 className="text-lg font-semibold text-foreground">{t("mapTitle")}</h1>
-        <p className="text-xs text-muted-foreground">{t("mapDesc")}</p>
-      </div>
+    <div className="flex h-[calc(100vh-7rem)] flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* Sidebar */}
       <aside className="flex w-[340px] shrink-0 flex-col border-r border-border bg-card">
@@ -170,16 +167,12 @@ export default function TransportMapPage() {
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {unmatchedCount} คันจาก GPS ยังไม่ได้ลงทะเบียนในระบบ
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const first = vehicles.find((v) => !v.matchedInDb)
-                  if (first) setLinkModalGps(first)
-                }}
+              <Link
+                href={VEHICLES_MASTER_HREF}
                 className="shrink-0 text-[11px] font-medium text-amber-800 underline hover:text-amber-950"
               >
-                ผูก GPS
-              </button>
+                ไปเพิ่มที่ข้อมูลพื้นฐาน
+              </Link>
             </div>
           </div>
         )}
@@ -223,7 +216,6 @@ export default function TransportMapPage() {
                     vehicle={v}
                     selected={v.id === selectedId}
                     onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}
-                    onLinkClick={(vehicle) => setLinkModalGps(vehicle)}
                   />
                 )
               )}
@@ -246,21 +238,6 @@ export default function TransportMapPage() {
           height="100%"
         />
       </div>
-
-      <LinkGpsVehicleModal
-        open={!!linkModalGps}
-        gpsVehicle={
-          linkModalGps
-            ? { plateNumber: linkModalGps.plateNumber, imei: linkModalGps.imei }
-            : null
-        }
-        gpsVehicles={vehicles}
-        onSuccess={() => {
-          setLinkModalGps(null)
-          fetchGps()
-        }}
-        onCancel={() => setLinkModalGps(null)}
-      />
       </div>
     </div>
   )

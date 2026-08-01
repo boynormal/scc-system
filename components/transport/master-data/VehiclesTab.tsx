@@ -1,15 +1,12 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, Edit2, Trash2, Save, X, Loader2, Link2 } from "lucide-react"
+import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { VehicleStatusBadge } from "@/components/transport/vehicle-status-badge"
-import { LinkGpsVehicleModal, type GpsVehicleInput } from "@/components/transport/LinkGpsVehicleModal"
 import {
   fetchGpsVehicles,
   filterLinkableGps,
-  filterUnlinkedMasterVehicles,
-  linkGpsToVehicle,
 } from "@/components/transport/gps/gps-link-utils"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
@@ -68,27 +65,27 @@ export function VehiclesTab() {
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [gpsVehicles, setGpsVehicles] = useState<GpsVehicleData[]>([])
 
-  const [linkMasterId, setLinkMasterId] = useState("")
-  const [linkGpsId, setLinkGpsId] = useState("")
-  const [linkSaving, setLinkSaving] = useState(false)
-  const [linkCardError, setLinkCardError] = useState<string | null>(null)
-
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalGps, setModalGps] = useState<GpsVehicleInput | null>(null)
-  const [modalPreselectVehicleId, setModalPreselectVehicleId] = useState<string | null>(null)
-
-  const unlinkedVehicles = useMemo(
-    () => filterUnlinkedMasterVehicles(data),
-    [data]
-  )
-
   const linkableGps = useMemo(
     () => filterLinkableGps(gpsVehicles, data),
     [gpsVehicles, data]
   )
 
-  const selectedGpsOption = linkableGps.find((g) => g.id === linkGpsId)
   const editSelectedGps = linkableGps.find((g) => g.id === editForm.linkGpsId)
+
+  const startEditVehicle = (item: Vehicle, preselectGpsId = "") => {
+    setEditingId(item.id)
+    setEditForm({
+      branchId: item.branchId,
+      plateNumber: item.plateNumber,
+      name: item.name,
+      vehicleType: item.vehicleType,
+      maxWeightKg: item.maxWeightKg ?? "",
+      loadCapacityKg: item.loadCapacityKg ?? "",
+      volumeM3: item.volumeM3 ?? "",
+      notes: item.notes ?? "",
+      linkGpsId: preselectGpsId,
+    })
+  }
 
   const loadGps = useCallback(async () => {
     setGpsLoading(true)
@@ -158,31 +155,6 @@ export function VehiclesTab() {
     }
   }
 
-  const handleLinkFromCard = async () => {
-    if (!linkMasterId || !linkGpsId || !selectedGpsOption) {
-      setLinkCardError("กรุณาเลือกรถในระบบและทะเบียนจาก GPS")
-      return
-    }
-    setLinkSaving(true)
-    setLinkCardError(null)
-    try {
-      await linkGpsToVehicle(linkMasterId, selectedGpsOption.imei)
-      setLinkMasterId("")
-      setLinkGpsId("")
-      loadData()
-    } catch (e) {
-      setLinkCardError(e instanceof Error ? e.message : "ผูก GPS ไม่สำเร็จ")
-    } finally {
-      setLinkSaving(false)
-    }
-  }
-
-  const openLinkModalForVehicle = (vehicleId: string, gps?: GpsVehicleInput | null) => {
-    setModalPreselectVehicleId(vehicleId)
-    setModalGps(gps ?? null)
-    setModalOpen(true)
-  }
-
   const handleDeactivate = async (id: string) => {
     if (!confirm("ปิดใช้งานรถคันนี้?")) return
     const res = await fetch(`/api/transport/vehicles/${id}`, { method: "DELETE" })
@@ -242,15 +214,6 @@ export function VehiclesTab() {
             {editSelectedGps && (
               <p className="text-[10px] text-muted-foreground font-mono">IMEI: {editSelectedGps.imei}</p>
             )}
-            {id !== "new" && linkableGps.length > 0 && (
-              <button
-                type="button"
-                onClick={() => openLinkModalForVehicle(id)}
-                className="inline-flex items-center gap-1 text-[10px] text-cyan-700 underline hover:text-cyan-900"
-              >
-                <Link2 className="h-3 w-3" /> เปิด modal ผูก...
-              </button>
-            )}
           </div>
         )}
       </td>
@@ -275,75 +238,49 @@ export function VehiclesTab() {
 
   return (
     <div className="space-y-4">
-      {/* GPS link card */}
+      {/* Unlinked GPS plates (IMEI not assigned to any master vehicle) */}
       <GlassCard className="p-4">
-        <h3 className="text-sm font-semibold text-foreground mb-1">ผูก GPS กับรถ</h3>
-        <p className="text-xs text-muted-foreground mb-3">เลือกทะเบียนจาก GPS — ระบบจะบันทึก IMEI ให้อัตโนมัติ</p>
-
-        {gpsError && (
-          <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-            {gpsError}
-          </div>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">รถในระบบ (ยังไม่ผูก GPS)</label>
-            <select
-              value={linkMasterId}
-              onChange={(e) => setLinkMasterId(e.target.value)}
-              disabled={gpsLoading}
-              className={fieldClass}
-            >
-              <option value="">-- เลือกรถ --</option>
-              {unlinkedVehicles.map((v) => (
-                <option key={v.id} value={v.id}>{v.plateNumber} — {v.name}</option>
-              ))}
-            </select>
+            <h3 className="text-sm font-semibold text-foreground">ทะเบียน GPS ที่ยังไม่ถูกผูก</h3>
+            <p className="text-xs text-muted-foreground">
+              {gpsLoading
+                ? "กำลังโหลดข้อมูล GPS..."
+                : linkableGps.length === 0
+                  ? "ไม่มีทะเบียน GPS ที่รอผูก"
+                  : `${linkableGps.length} รายการ — ผูกได้จากคอลัมน์ GPS ในตารางด้านล่าง`}
+            </p>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">ทะเบียนจาก GPS (ยังไม่ผูก IMEI)</label>
-            <select
-              value={linkGpsId}
-              onChange={(e) => setLinkGpsId(e.target.value)}
-              disabled={gpsLoading || linkableGps.length === 0}
-              className={fieldClass}
-            >
-              <option value="">-- เลือกทะเบียน GPS --</option>
-              {linkableGps.map((g) => (
-                <option key={g.id} value={g.id}>{g.plateNumber} · IMEI {g.imei}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {selectedGpsOption && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            IMEI ที่จะบันทึก: <span className="font-mono font-medium">{selectedGpsOption.imei}</span>
-          </p>
-        )}
-
-        {linkCardError && (
-          <p className="mt-2 text-xs text-red-600">{linkCardError}</p>
-        )}
-
-        <div className="mt-3 flex items-center gap-2">
-          <GlassButton
-            onClick={handleLinkFromCard}
-            disabled={linkSaving || gpsLoading || !linkMasterId || !linkGpsId}
-            icon={linkSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
-          >
-            {linkSaving ? "กำลังผูก..." : "ผูก GPS"}
-          </GlassButton>
           <button
             type="button"
             onClick={loadGps}
             disabled={gpsLoading}
-            className="text-xs text-muted-foreground hover:text-foreground underline"
+            className="text-xs text-muted-foreground underline hover:text-foreground disabled:opacity-50"
           >
-            รีเฟรชรายการ GPS
+            รีเฟรช GPS
           </button>
         </div>
+
+        {gpsError && (
+          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {gpsError}
+          </div>
+        )}
+
+        {linkableGps.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {linkableGps.map((g) => (
+              <div
+                key={g.id}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-sm font-medium text-amber-800"
+                title={`IMEI ${g.imei}`}
+              >
+                <span className="font-mono">{g.plateNumber}</span>
+                <span className="font-mono text-xs font-normal text-amber-700/80">{g.imei}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </GlassCard>
 
       <div className="flex justify-end">
@@ -399,16 +336,14 @@ export function VehiclesTab() {
                               alert("ไม่มี IMEI จาก GPS ที่ยังไม่ถูกผูก — ตรวจสอบการตั้งค่า GPS API")
                               return
                             }
-                            openLinkModalForVehicle(
-                              item.id,
-                              linkableGps.length === 1
-                                ? { plateNumber: linkableGps[0].plateNumber, imei: linkableGps[0].imei }
-                                : null
+                            startEditVehicle(
+                              item,
+                              linkableGps.length === 1 ? linkableGps[0].id : ""
                             )
                           }}
                           className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-200"
                         >
-                          ยังไม่ผูก — คลิกผูก
+                          ยังไม่ผูก — คลิกแก้ไขเพื่อผูก
                         </button>
                       )}
                     </td>
@@ -419,20 +354,7 @@ export function VehiclesTab() {
                         <>
                           <button
                             type="button"
-                            onClick={() => {
-                              setEditingId(item.id)
-                              setEditForm({
-                                branchId: item.branchId,
-                                plateNumber: item.plateNumber,
-                                name: item.name,
-                                vehicleType: item.vehicleType,
-                                maxWeightKg: item.maxWeightKg ?? "",
-                                loadCapacityKg: item.loadCapacityKg ?? "",
-                                volumeM3: item.volumeM3 ?? "",
-                                notes: item.notes ?? "",
-                                linkGpsId: "",
-                              })
-                            }}
+                            onClick={() => startEditVehicle(item)}
                             className="p-1.5 text-muted-foreground hover:text-cyan-600"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -454,27 +376,6 @@ export function VehiclesTab() {
           </table>
         </div>
       </GlassCard>
-
-      <LinkGpsVehicleModal
-        open={modalOpen}
-        gpsVehicle={modalGps}
-        gpsVehicles={gpsVehicles}
-        preselectedVehicleId={modalPreselectVehicleId}
-        masterVehicles={data}
-        branches={branches}
-        vehicleTypes={vehicleTypes}
-        onSuccess={() => {
-          setModalOpen(false)
-          setModalGps(null)
-          setModalPreselectVehicleId(null)
-          loadData()
-        }}
-        onCancel={() => {
-          setModalOpen(false)
-          setModalGps(null)
-          setModalPreselectVehicleId(null)
-        }}
-      />
     </div>
   )
 }

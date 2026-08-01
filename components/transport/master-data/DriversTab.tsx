@@ -66,7 +66,14 @@ export function DriversTab() {
   const [migrating, setMigrating] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
 
-  const MAIN_COL_COUNT = 8
+  const MAIN_COL_COUNT = 7
+
+  // Data columns share width 10 parts: branch 2, firstName 1, lastName 3, phone 2, vehicle 2
+  const colBranch = "w-[20%] min-w-0 px-3 py-3"
+  const colFirstName = "w-[10%] min-w-0 px-3 py-3"
+  const colLastName = "w-[30%] min-w-0 px-3 py-3"
+  const colPhone = "w-[20%] min-w-0 px-3 py-3"
+  const colVehicle = "w-[20%] min-w-0 px-3 py-3"
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
@@ -192,8 +199,8 @@ export function DriversTab() {
 
   const renderFormMain = (id: string) => (
     <>
-      <td className="px-2 py-3 align-top w-10" />
-      <td className="px-4 py-3 align-top">
+      <td className="w-10 px-2 py-3 align-top" />
+      <td className={`${colBranch} align-top`}>
         <select value={editForm.branchId} onChange={(e) => setEditForm((f) => ({ ...f, branchId: e.target.value, assignedVehicleId: "" }))} className={fieldClass}>
           <option value="">-- สาขา --</option>
           {branches.map((b) => (
@@ -201,10 +208,10 @@ export function DriversTab() {
           ))}
         </select>
       </td>
-      <td className="px-4 py-3 align-top"><GlassInput value={editForm.firstName} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} className="h-8 border-cyan-300" /></td>
-      <td className="px-4 py-3 align-top"><GlassInput value={editForm.lastName} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} className="h-8 border-cyan-300" /></td>
-      <td className="px-4 py-3 align-top"><GlassInput value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-8 border-cyan-300" /></td>
-      <td className="px-4 py-3 align-top">
+      <td className={`${colFirstName} align-top`}><GlassInput value={editForm.firstName} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className={`${colLastName} align-top`}><GlassInput value={editForm.lastName} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className={`${colPhone} align-top`}><GlassInput value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-8 border-cyan-300" /></td>
+      <td className={`${colVehicle} align-top`}>
         <select value={editForm.assignedVehicleId} onChange={(e) => setEditForm((f) => ({ ...f, assignedVehicleId: e.target.value }))} className={fieldClass}>
           <option value="">-- ไม่ระบุรถประจำ --</option>
           {branchVehicles.map((v) => (
@@ -212,14 +219,7 @@ export function DriversTab() {
           ))}
         </select>
       </td>
-      <td className="px-4 py-3 align-top">
-        <MultiSelectCheckbox
-          options={DRIVER_LICENSE_TYPES}
-          value={editForm.licenseTypes}
-          onChange={(licenseTypes) => setEditForm((f) => ({ ...f, licenseTypes }))}
-        />
-      </td>
-      <td className="px-4 py-3 text-right space-x-2 align-top">
+      <td className="w-24 px-3 py-3 text-right align-top space-x-2">
         <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background"><X className="w-4 h-4" /></button>
         <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded"><Save className="w-4 h-4" /></button>
       </td>
@@ -227,10 +227,19 @@ export function DriversTab() {
   )
 
   const renderFormSubRow = () => (
-    <td colSpan={MAIN_COL_COUNT} className="px-4 py-3 bg-cyan-50/30 border-t border-cyan-100">
-      <div className="grid sm:grid-cols-2 gap-4 pl-8">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">ประเภทรถที่ขับได้</p>
+    <td colSpan={MAIN_COL_COUNT} className="border-t border-cyan-100 bg-cyan-50/30 px-4 py-3">
+      <div className="grid gap-4 pl-8 sm:grid-cols-3">
+        <div className="min-w-0">
+          <p className="mb-2 text-sm font-semibold text-foreground">ใบขับขี่</p>
+          <MultiSelectCheckbox
+            options={DRIVER_LICENSE_TYPES}
+            value={editForm.licenseTypes}
+            onChange={(licenseTypes) => setEditForm((f) => ({ ...f, licenseTypes }))}
+            className="min-w-0 w-full"
+          />
+        </div>
+        <div className="min-w-0">
+          <p className="mb-2 text-sm font-semibold text-foreground">ประเภทรถที่ขับได้</p>
           <MultiSelectCheckbox
             options={DRIVER_DRIVABLE_VEHICLE_TYPES}
             value={editForm.drivableVehicleTypes}
@@ -238,23 +247,31 @@ export function DriversTab() {
             className="min-w-0 w-full"
           />
         </div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">รายละเอียด</p>
-          <DetailsField value={editForm.notes} onChange={(notes) => setEditForm((f) => ({ ...f, notes }))} />
+        <div className="min-w-0">
+          <p className="mb-2 text-sm font-semibold text-foreground">รายละเอียด</p>
+          <DetailsField
+            value={editForm.notes}
+            onChange={(notes) => setEditForm((f) => ({ ...f, notes }))}
+            className="h-44 min-h-44 resize-y"
+          />
         </div>
       </div>
     </td>
   )
 
   const renderViewSubRow = (item: Driver) => (
-    <td colSpan={MAIN_COL_COUNT} className="px-4 py-3 bg-muted/80 border-t border-border">
-      <div className="grid sm:grid-cols-2 gap-4 pl-8">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-1.5">ประเภทรถที่ขับได้</p>
+    <td colSpan={MAIN_COL_COUNT} className="border-t border-border bg-muted/80 px-4 py-3">
+      <div className="grid gap-4 pl-8 sm:grid-cols-3">
+        <div className="min-w-0">
+          <p className="mb-1.5 text-sm font-semibold text-foreground">ใบขับขี่</p>
+          <MultiSelectDisplay value={parseStringArray(item.licenseTypes)} />
+        </div>
+        <div className="min-w-0">
+          <p className="mb-1.5 text-sm font-semibold text-foreground">ประเภทรถที่ขับได้</p>
           <MultiSelectDisplay value={parseStringArray(item.drivableVehicleTypes)} />
         </div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-1.5">รายละเอียด</p>
+        <div className="min-w-0">
+          <p className="mb-1.5 text-sm font-semibold text-foreground">รายละเอียด</p>
           <DetailsDisplay value={item.notes} expanded />
         </div>
       </div>
@@ -299,17 +316,25 @@ export function DriversTab() {
       </div>
       <GlassCard padding="none">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full table-fixed text-left text-sm">
+            <colgroup>
+              <col className="w-10" />
+              <col className="w-[20%]" />
+              <col className="w-[10%]" />
+              <col className="w-[30%]" />
+              <col className="w-[20%]" />
+              <col className="w-[20%]" />
+              <col className="w-24" />
+            </colgroup>
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-2 py-3 w-10"></th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">สาขา</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">นามสกุล</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">โทรศัพท์</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-36" title="รถที่ใช้งานประจำของคนขับ">รถประจำ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">ใบขับขี่</th>
-                <th className="px-4 py-3 w-24"></th>
+                <th className="w-10 px-2 py-3"></th>
+                <th className={`${colBranch} font-semibold text-muted-foreground`}>สาขา</th>
+                <th className={`${colFirstName} font-semibold text-muted-foreground`}>ชื่อ</th>
+                <th className={`${colLastName} font-semibold text-muted-foreground`}>นามสกุล</th>
+                <th className={`${colPhone} font-semibold text-muted-foreground`}>โทรศัพท์</th>
+                <th className={`${colVehicle} font-semibold text-muted-foreground`} title="รถที่ใช้งานประจำของคนขับ">รถประจำ</th>
+                <th className="w-24 px-3 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -331,7 +356,7 @@ export function DriversTab() {
                       key={item.id}
                       className={`border-t border-border hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}
                     >
-                      <td className="px-2 py-3 align-top w-10">
+                      <td className="w-10 px-2 py-3 align-top">
                         <button
                           type="button"
                           onClick={() => toggleExpanded(item.id)}
@@ -345,15 +370,12 @@ export function DriversTab() {
                           )}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground align-top">{item.branch.name}</td>
-                      <td className="px-4 py-3 align-top">{item.firstName}</td>
-                      <td className="px-4 py-3 align-top">{item.lastName}</td>
-                      <td className="px-4 py-3 text-muted-foreground align-top">{item.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground align-top">{item.assignedVehicle?.plateNumber ?? "—"}</td>
-                      <td className="px-4 py-3 align-top">
-                        <MultiSelectDisplay value={parseStringArray(item.licenseTypes)} />
-                      </td>
-                      <td className="px-4 py-3 text-right space-x-2 align-top">
+                      <td className={`${colBranch} truncate align-top text-muted-foreground`} title={item.branch.name}>{item.branch.name}</td>
+                      <td className={`${colFirstName} truncate align-top`}>{item.firstName}</td>
+                      <td className={`${colLastName} truncate align-top`}>{item.lastName}</td>
+                      <td className={`${colPhone} whitespace-nowrap align-top text-muted-foreground`}>{item.phone ?? "—"}</td>
+                      <td className={`${colVehicle} truncate align-top text-muted-foreground`} title={item.assignedVehicle?.plateNumber ?? undefined}>{item.assignedVehicle?.plateNumber ?? "—"}</td>
+                      <td className="w-24 space-x-2 px-3 py-3 text-right align-top">
                         {item.isActive ? (
                           <>
                             <button

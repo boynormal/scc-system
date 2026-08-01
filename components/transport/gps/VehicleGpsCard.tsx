@@ -1,9 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { Car, Truck, MapPin, Clock } from "lucide-react"
+import { Car, Truck, MapPin, Clock, View } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
+import { googleStreetViewUrl } from "@/shared/transport/coordinates"
 import { GpsAlertBadge, hasAnyAlert } from "./GpsAlertBadge"
 import { GsmSignalBar } from "./GsmSignalBar"
 import {
@@ -86,6 +87,22 @@ export function VehicleGpsCard({ vehicle: v, compact = false, batteryShort = fal
       {v.near && (
         <div className={cn("text-xs text-muted-foreground", !compact && "pl-7")}>
           อยู่ที่ {v.near}
+        </div>
+      )}
+
+      {/* Street View */}
+      {!!v.lat && !!v.lng && (
+        <div className={cn(!compact && "pl-7")}>
+          <a
+            href={googleStreetViewUrl(v.lat, v.lng)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-md border border-cyan-200 bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100"
+          >
+            <View className="h-3 w-3" />
+            Street View
+          </a>
         </div>
       )}
 

@@ -19,14 +19,14 @@ export function MultiSelectCheckbox({ options, value, onChange, className }: Mul
   }
 
   return (
-    <div className={cn("max-h-36 overflow-y-auto rounded-lg border border-cyan-200 bg-card p-2 space-y-1.5 min-w-[180px]", className)}>
+    <div className={cn("h-44 overflow-y-auto rounded-lg border border-cyan-200 bg-card p-2.5 space-y-1.5 min-w-[180px]", className)}>
       {options.map((option) => (
-        <label key={option} className="flex items-start gap-2 text-xs text-foreground cursor-pointer hover:bg-muted/60 rounded px-1 py-0.5">
+        <label key={option} className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-sm text-foreground hover:bg-muted/60">
           <input
             type="checkbox"
             checked={value.includes(option)}
             onChange={() => toggle(option)}
-            className="mt-0.5 rounded border-border text-cyan-600 focus:ring-cyan-500"
+            className="mt-0.5 size-4 rounded border-border text-cyan-600 focus:ring-cyan-500"
           />
           <span className="leading-snug">{option}</span>
         </label>
@@ -36,11 +36,11 @@ export function MultiSelectCheckbox({ options, value, onChange, className }: Mul
 }
 
 export function MultiSelectDisplay({ value }: { value: string[] | null | undefined }) {
-  if (!value?.length) return <span className="text-muted-foreground">—</span>
+  if (!value?.length) return <span className="text-sm text-muted-foreground">—</span>
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1.5">
       {value.map((item) => (
-        <span key={item} className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-muted text-foreground leading-tight">
+        <span key={item} className="inline-block rounded-md bg-muted px-2 py-1 text-sm leading-snug text-foreground">
           {item}
         </span>
       ))}

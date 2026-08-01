@@ -13,7 +13,7 @@ type Props = {
 }
 
 const DAY_LABELS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]
-const MAX_VISIBLE_JOBS = 5
+const MAX_VISIBLE_JOBS = 6 // 2 rows × 3 chips
 
 export function MonthCalendar({ year, month, jobs }: Props) {
   const [selectedJob, setSelectedJob] = useState<{
@@ -50,7 +50,7 @@ export function MonthCalendar({ year, month, jobs }: Props) {
           <div
             key={d}
             className={cn(
-              "py-2 text-center text-xs font-semibold",
+              "py-1 text-center text-xs font-semibold",
               i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"
             )}
           >
@@ -66,7 +66,7 @@ export function MonthCalendar({ year, month, jobs }: Props) {
       >
         {cells.map((day, i) => {
           if (!day) {
-            return <div key={`empty-${i}`} className="min-h-[100px] bg-muted/50" />
+            return <div key={`empty-${i}`} className="min-h-[72px] bg-muted/50" />
           }
 
           const dayJobs = jobsOnDay(day)
@@ -80,15 +80,15 @@ export function MonthCalendar({ year, month, jobs }: Props) {
             <div
               key={cellKey}
               className={cn(
-                "relative flex min-h-[100px] flex-col p-1",
+                "relative flex min-h-[72px] flex-col p-0.5",
                 isWeekend && "bg-muted/40"
               )}
             >
               {/* Day number */}
-              <div className="mb-1 flex shrink-0 justify-end">
+              <div className="mb-0.5 flex shrink-0 justify-end">
                 <span
                   className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
+                    "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium",
                     isToday ? "bg-cyan-600 text-white" : isWeekend ? "text-muted-foreground" : "text-foreground"
                   )}
                 >
@@ -96,14 +96,15 @@ export function MonthCalendar({ year, month, jobs }: Props) {
                 </span>
               </div>
 
-              {/* Job bars */}
-              <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
-                {dayJobs.slice(0, MAX_VISIBLE_JOBS).map((job) => {
-                  const p = PRIORITY_CONFIG[job.priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG.normal
-                  const isSelected = selectedJob?.job.id === job.id && selectedJob?.cellKey === cellKey
-                  return (
-                    <div key={job.id} className="relative">
+              {/* Job chips — 3 per row */}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="grid grid-cols-3 gap-0.5">
+                  {dayJobs.slice(0, MAX_VISIBLE_JOBS).map((job) => {
+                    const p = PRIORITY_CONFIG[job.priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG.normal
+                    const isSelected = selectedJob?.job.id === job.id && selectedJob?.cellKey === cellKey
+                    return (
                       <button
+                        key={job.id}
                         type="button"
                         title={`${plate(job)} · ${job.jobNumber}`}
                         onClick={(e) => {
@@ -116,18 +117,18 @@ export function MonthCalendar({ year, month, jobs }: Props) {
                           setSelectedJob({ job, cellKey, anchorRect: rect })
                         }}
                         className={cn(
-                          "w-full rounded px-1.5 py-0.5 text-left text-[10px] font-medium truncate transition-opacity",
+                          "min-w-0 w-full rounded px-1 py-0.5 text-left text-[9px] font-medium truncate transition-opacity",
                           p.bg, p.text,
                           "hover:opacity-90"
                         )}
                       >
                         {plate(job)}
                       </button>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
                 {dayJobs.length > MAX_VISIBLE_JOBS && (
-                  <p className="px-1 text-[10px] text-muted-foreground">
+                  <p className="col-span-3 px-0.5 pt-0.5 text-[9px] text-muted-foreground">
                     +{dayJobs.length - MAX_VISIBLE_JOBS} อีก
                   </p>
                 )}

@@ -29,3 +29,7 @@ export function decimalToNumber(value: unknown): number | null {
 export function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps?q=${lat},${lng}`
 }
+
+export function googleStreetViewUrl(lat: number, lng: number) {
+  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`
+}

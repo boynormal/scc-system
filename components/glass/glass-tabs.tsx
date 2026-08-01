@@ -38,7 +38,7 @@ export function GlassTabs(props: GlassTabsProps) {
   const isControlled = "value" in props && props.value !== undefined && !!props.onChange
 
   return (
-    <div className={cn("-mt-1 mb-6 border-b border-glass", className)}>
+    <div className={cn("-mt-1 mb-6", className)}>
       <nav className="-mb-px flex flex-wrap gap-1" aria-label={ariaLabel}>
         {items.map((tab) => {
           const Icon = tab.icon

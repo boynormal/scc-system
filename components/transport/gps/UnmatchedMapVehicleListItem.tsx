@@ -1,17 +1,19 @@
 "use client"
 
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
-import { MapPin, AlertTriangle } from "lucide-react"
+import { ExternalLink, AlertTriangle } from "lucide-react"
+
+const VEHICLES_MASTER_HREF = "/transport/master-data?tab=vehicles"
 
 type Props = {
   vehicle: GpsVehicleData
   selected?: boolean
   onClick?: () => void
-  onLinkClick?: (vehicle: GpsVehicleData) => void
 }
 
-export function UnmatchedMapVehicleListItem({ vehicle: v, selected, onClick, onLinkClick }: Props) {
+export function UnmatchedMapVehicleListItem({ vehicle: v, selected, onClick }: Props) {
   return (
     <li
       onClick={onClick}
@@ -38,17 +40,14 @@ export function UnmatchedMapVehicleListItem({ vehicle: v, selected, onClick, onL
           <p className="mt-1 text-[11px] text-muted-foreground truncate">
             {v.address || v.near || "ไม่มีที่อยู่"}
           </p>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onLinkClick?.(v)
-            }}
+          <Link
+            href={VEHICLES_MASTER_HREF}
+            onClick={(e) => e.stopPropagation()}
             className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 underline hover:text-amber-950"
           >
-            <MapPin className="h-3 w-3" />
-            ผูกใน Master Data
-          </button>
+            <ExternalLink className="h-3 w-3" />
+            ไปเพิ่ม/ผูกที่ข้อมูลพื้นฐาน
+          </Link>
         </div>
       </div>
     </li>

@@ -201,8 +201,17 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
       selectedJob?.vehicleId === vehicleId
     const draggable = job.status !== "completed" && job.status !== "cancelled"
 
+    const tip = [
+      job.jobNumber,
+      job.customerName,
+      variant === "assigned" ? `${STATUS_LABEL[job.status] ?? job.status} · ${job.stopsCount} จุด` : null,
+      draggable ? "ลากไปวางที่แถวรถเพื่อมอบหมาย" : null,
+    ]
+      .filter(Boolean)
+      .join(" · ")
+
     return (
-      <div key={job.id} className="relative">
+      <div key={job.id} className="min-w-0 max-w-full">
         <button
           type="button"
           draggable={draggable}
@@ -218,19 +227,19 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
             const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
             setSelectedJob({ job, dayIdx, vehicleId, anchorRect: rect })
           }}
-          title={draggable ? "ลากไปวางที่แถวรถเพื่อมอบหมาย" : undefined}
+          title={tip}
           className={cn(
-            "w-full rounded-md px-2 py-1.5 text-left transition-opacity hover:opacity-90",
+            "min-w-0 max-w-full w-full overflow-hidden rounded-md px-1.5 py-1 text-left transition-opacity hover:opacity-90",
             variant === "assigned" ? cn(p.bg, p.text) : cn(p.light, "border border-dashed border-current"),
             draggable && "cursor-grab active:cursor-grabbing"
           )}
         >
-          <div className="text-[11px] font-bold truncate">{job.jobNumber}</div>
+          <div className="truncate text-[11px] font-bold">{job.jobNumber}</div>
           {job.customerName && (
-            <div className="text-[10px] opacity-80 truncate">{job.customerName}</div>
+            <div className="truncate text-[10px] opacity-80">{job.customerName}</div>
           )}
           {variant === "assigned" && (
-            <div className="text-[10px] opacity-70">
+            <div className="truncate text-[10px] opacity-70">
               {STATUS_LABEL[job.status] ?? job.status} · {job.stopsCount} จุด
             </div>
           )}
@@ -248,11 +257,11 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
   }
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col gap-1.5">
       {toast && (
         <div
           className={cn(
-            "mb-3 rounded-lg px-4 py-2 text-sm",
+            "shrink-0 rounded-lg px-3 py-1.5 text-xs",
             toast.type === "success"
               ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
               : "bg-red-50 text-red-700 border border-red-200"
@@ -270,16 +279,22 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
       )}
 
       {unassignedJobs.length > 0 && (
-        <p className="mb-2 text-xs text-muted-foreground">
+        <p className="shrink-0 text-[11px] text-muted-foreground">
           ลากใบงานจากแถว &quot;ยังไม่มอบหมายรถ&quot; ไปวางที่แถวรถ (วันเดียวกับวันนัด)
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-        <table className="min-w-full border-collapse text-sm">
+      <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-card shadow-sm">
+        <table className="w-full table-fixed border-collapse text-sm">
+          <colgroup>
+            <col className="w-36" />
+            {days.map((_, i) => (
+              <col key={i} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="bg-muted">
-              <th className="w-40 border-b border-r border-border px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
+              <th className="w-36 border-b border-r border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground">
                 ทะเบียนรถ
               </th>
               {days.map((day, i) => {
@@ -289,15 +304,16 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                   <th
                     key={i}
                     className={cn(
-                      "min-w-[120px] border-b border-r border-border px-2 py-3 text-center text-xs font-semibold",
-                      isToday ? "bg-cyan-50 text-cyan-700" : isWeekend ? "text-muted-foreground" : "text-muted-foreground"
+                      "border-b border-r border-border px-1 py-2 text-center text-xs font-semibold",
+                      isToday ? "bg-cyan-50 text-cyan-700" : "text-muted-foreground",
+                      isWeekend && !isToday && "text-muted-foreground"
                     )}
                   >
                     <div>{DAY_SHORT[day.getDay()]}</div>
-                    <div className={cn("text-base font-bold", isToday && "text-cyan-600")}>
+                    <div className={cn("text-sm font-bold", isToday && "text-cyan-600")}>
                       {day.getDate()}
                     </div>
-                    <div className="font-normal text-muted-foreground">{MONTH_SHORT[day.getMonth()]}</div>
+                    <div className="text-[10px] font-normal text-muted-foreground">{MONTH_SHORT[day.getMonth()]}</div>
                   </th>
                 )
               })}
@@ -307,9 +323,9 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
           <tbody className="divide-y divide-border">
             {vehicles.map((vehicle) => (
               <tr key={vehicle.id} className="hover:bg-muted/60/50">
-                <td className="border-r border-border px-4 py-3">
-                  <div className="font-semibold text-foreground">{vehicle.plateNumber}</div>
-                  <div className="text-xs text-muted-foreground truncate max-w-[120px]">{vehicle.name}</div>
+                <td className="w-36 border-r border-border px-3 py-2">
+                  <div className="truncate font-semibold text-foreground">{vehicle.plateNumber}</div>
+                  <div className="truncate text-xs text-muted-foreground">{vehicle.name}</div>
                 </td>
                 {days.map((day, dayIdx) => {
                   const dayJobs = jobsForVehicleDay(vehicle.id, day)
@@ -323,12 +339,12 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                       onDragLeave={() => setDropTarget(null)}
                       onDrop={(e) => handleDrop(e, vehicle.id, dayIdx)}
                       className={cn(
-                        "relative border-r border-border px-1.5 py-2 align-top min-h-[48px]",
+                        "relative min-w-0 overflow-hidden border-r border-border px-1 py-1.5 align-top",
                         isToday && "bg-cyan-50/30",
                         isDropTarget && "bg-cyan-100/60 ring-2 ring-inset ring-cyan-400"
                       )}
                     >
-                      <div className="space-y-1">
+                      <div className="min-w-0 space-y-1">
                         {dayJobs.map((job) => {
                           const p =
                             PRIORITY_CONFIG[job.priority as keyof typeof PRIORITY_CONFIG] ??
@@ -344,7 +360,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
 
             {unassignedJobs.length > 0 && (
               <tr className="bg-amber-50/30 hover:bg-amber-50/50">
-                <td className="border-r border-border px-4 py-3">
+                <td className="w-36 border-r border-border px-3 py-2">
                   <div className="text-xs font-semibold text-amber-700">ยังไม่มอบหมายรถ</div>
                   <div className="text-[10px] text-amber-600/80">ลากไปวางที่แถวรถ</div>
                 </td>
@@ -355,11 +371,11 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                     <td
                       key={dayIdx}
                       className={cn(
-                        "relative border-r border-border px-1.5 py-2 align-top",
+                        "relative min-w-0 overflow-hidden border-r border-border px-1 py-1.5 align-top",
                         isToday && "bg-cyan-50/30"
                       )}
                     >
-                      <div className="space-y-1">
+                      <div className="min-w-0 space-y-1">
                         {dayJobs.map((job) => {
                           const p =
                             PRIORITY_CONFIG[job.priority as keyof typeof PRIORITY_CONFIG] ??
@@ -408,6 +424,6 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
           onAssigned?.()
         }}
       />
-    </>
+    </div>
   )
 }

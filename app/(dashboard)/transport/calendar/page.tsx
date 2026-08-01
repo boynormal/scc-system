@@ -186,43 +186,44 @@ function TransportCalendarContent() {
   const weekStart = startOfWeek(currentDate)
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 p-4 md:p-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{t("calendarTitle")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("calendarDesc")}</p>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        {/* Navigation */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={goToday}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/60"
-          >
-            วันนี้
-          </button>
-          <button
-            onClick={() => navigate(1)}
-            className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <h2 className="ml-2 text-lg font-semibold text-foreground">{label}</h2>
+    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col gap-2 p-3 md:p-4">
+      {/* Title + navigation + toolbar — single compact row */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h1 className="shrink-0 text-base font-semibold text-foreground md:text-lg">
+            {t("calendarTitle")}
+          </h1>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted/60"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={goToday}
+              className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/60"
+            >
+              วันนี้
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(1)}
+              className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted/60"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <h2 className="truncate text-sm font-semibold text-foreground md:text-base">{label}</h2>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Vehicle filter */}
+        <div className="flex items-center gap-1.5">
           <select
             value={vehicleFilter}
             onChange={(e) => setVehicleFilter(e.target.value)}
-            className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-400"
           >
             <option value="all" style={{ backgroundColor: "#fff", color: "#0f172a" }}>
               รถทุกคัน
@@ -238,24 +239,24 @@ function TransportCalendarContent() {
             ))}
           </select>
 
-          {/* Refresh */}
           <button
+            type="button"
             onClick={() => {
               fetchVehicles()
               fetchJobs()
             }}
-            className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
+            className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted/60"
             title={t("refresh")}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
 
-          {/* View toggle */}
-          <div className="flex rounded-lg border border-border bg-muted p-1 gap-1">
+          <div className="flex rounded-md border border-border bg-muted p-0.5 gap-0.5">
             <button
+              type="button"
               onClick={() => setView("month")}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
                 view === "month" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -263,9 +264,10 @@ function TransportCalendarContent() {
               เดือน
             </button>
             <button
+              type="button"
               onClick={() => setView("gantt")}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
                 view === "gantt" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -277,7 +279,7 @@ function TransportCalendarContent() {
       </div>
 
       {vehiclesError && (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
           <span>โหลดรายการรถไม่สำเร็จ: {vehiclesError}</span>
           <button
             type="button"
@@ -289,28 +291,25 @@ function TransportCalendarContent() {
         </div>
       )}
 
-      {/* Summary stats */}
-      <div className="flex shrink-0 flex-wrap gap-3 text-xs text-muted-foreground">
-        <span className="rounded-full border border-border bg-card px-3 py-1">
+      {/* Summary + priority legend — single compact row */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="rounded-full border border-border bg-card px-2 py-0.5">
           ใบงานทั้งหมด <strong className="text-foreground">{jobs.length}</strong> ใบ
         </span>
-        <span className="rounded-full border border-border bg-card px-3 py-1">
+        <span className="rounded-full border border-border bg-card px-2 py-0.5">
           มอบหมายแล้ว <strong className="text-foreground">{jobs.filter((j) => j.vehicle).length}</strong> ใบ
         </span>
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
           รอมอบหมายรถ <strong>{jobs.filter((j) => !j.vehicle).length}</strong> ใบ
         </span>
-      </div>
-
-      {/* Priority legend */}
-      <div className="flex shrink-0 flex-wrap gap-3 text-xs">
+        <span className="mx-0.5 hidden h-3 w-px bg-border sm:inline-block" aria-hidden />
         {[
           { label: "ด่วนมาก", cls: "bg-red-500 text-white" },
           { label: "สูง", cls: "bg-orange-400 text-white" },
           { label: "ปกติ", cls: "bg-cyan-500 text-white" },
           { label: "ต่ำ", cls: "bg-slate-400 text-white" },
         ].map((p) => (
-          <span key={p.label} className={cn("rounded-full px-3 py-0.5 font-medium", p.cls)}>
+          <span key={p.label} className={cn("rounded-full px-2 py-0.5 font-medium", p.cls)}>
             {p.label}
           </span>
         ))}

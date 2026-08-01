@@ -10,6 +10,7 @@ export function HrModuleTabs({ tabs }: { tabs: HrTabDef[] }) {
   return (
     <GlassTabs
       aria-label="บุคลากรและเวลา"
+      className="border-b border-border"
       items={tabs.map((tab) => ({
         id: tab.href,
         href: tab.href,

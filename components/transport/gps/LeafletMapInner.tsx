@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
+import { googleStreetViewUrl } from "@/shared/transport/coordinates"
 import { hasAnyAlert } from "./GpsAlertBadge"
 import {
   buildGsmBarHtml,
@@ -71,11 +72,14 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
   const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map())
   /** Fit bounds once on first vehicle data — do not reset zoom/pan on GPS refresh. */
   const hasInitialFitRef = useRef(false)
+  const lastFlownSelectedIdRef = useRef<string | null>(null)
+  const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
     const markers = markersRef.current
     let L: typeof import("leaflet")
+    let cancelled = false
 
     async function initMap() {
       L = await import("leaflet")
@@ -88,7 +92,7 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
-      if (!mapContainerRef.current || mapRef.current) return
+      if (cancelled || !mapContainerRef.current || mapRef.current) return
 
       const map = L.map(mapContainerRef.current, {
         center: [13.736717, 100.523186], // Bangkok
@@ -102,11 +106,13 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
       }).addTo(map)
 
       mapRef.current = map
+      setMapReady(true)
     }
 
     initMap()
 
     return () => {
+      cancelled = true
       const map = mapRef.current
       if (map) {
         map.remove()
@@ -114,12 +120,13 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
       }
       markers.clear()
       hasInitialFitRef.current = false
+      setMapReady(false)
     }
   }, [])
 
-  // Update markers when vehicles change
+  // Update markers when vehicles change or map becomes ready
   useEffect(() => {
-    if (!mapRef.current) return
+    if (!mapReady || !mapRef.current) return
 
     async function updateMarkers() {
       const L = await import("leaflet")
@@ -182,6 +189,12 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
             </div>
             ${vehicle.address ? `<div style="font-size:11px;color:#475569;margin-top:8px;line-height:1.4">📍 ${vehicle.address}</div>` : ""}
             ${vehicle.near ? `<div style="font-size:11px;color:#64748b;margin-top:2px">อยู่ที่ ${vehicle.near}</div>` : ""}
+            <div style="margin-top:8px">
+              <a href="${googleStreetViewUrl(vehicle.lat, vehicle.lng)}" target="_blank" rel="noopener noreferrer"
+                style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#0891b2;text-decoration:none;background:#ecfeff;border:1px solid #a5f3fc;border-radius:6px;padding:4px 10px">
+                Street View
+              </a>
+            </div>
             ${buildTodayJobsBoxHtml(vehicle.todayJobCount, vehicle.vehicleDbId)}
             ${activeJobLine}
             <div style="font-size:10px;color:#94a3b8;margin-top:8px">อัปเดตล่าสุด: ${vehicle.lastUpdate || "—"}</div>
@@ -219,17 +232,22 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
     }
 
     updateMarkers()
-  }, [vehicles, onSelectVehicle, selectedId])
+  }, [mapReady, vehicles, onSelectVehicle, selectedId])
 
-  // Fly to selected vehicle
+  // Fly to selected vehicle once per selection (retry when markers appear after mapReady)
   useEffect(() => {
-    if (!selectedId || !mapRef.current) return
-    const marker = markersRef.current.get(selectedId)
-    if (marker) {
-      mapRef.current.flyTo(marker.getLatLng(), 15, { duration: 1 })
-      marker.openPopup()
+    if (!selectedId) {
+      lastFlownSelectedIdRef.current = null
+      return
     }
-  }, [selectedId])
+    if (!mapReady || !mapRef.current) return
+    if (lastFlownSelectedIdRef.current === selectedId) return
+    const marker = markersRef.current.get(selectedId)
+    if (!marker) return
+    lastFlownSelectedIdRef.current = selectedId
+    mapRef.current.flyTo(marker.getLatLng(), 15, { duration: 1 })
+    marker.openPopup()
+  }, [mapReady, selectedId, vehicles])
 
   return (
     <>

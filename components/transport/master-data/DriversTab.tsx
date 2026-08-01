@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useMemo, Fragment } from "react"
-import { Plus, Edit2, Trash2, Save, X, Loader2, ChevronDown, ChevronRight } from "lucide-react"
+import { useState, useEffect, useMemo, Fragment, useRef } from "react"
+import { Edit2, Trash2, Save, X, Loader2, ChevronDown, ChevronRight } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
-import { isAutoDriverCode } from "@/components/transport/master-data/transport-code-utils"
+import { includesSearch, isAutoDriverCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import {
   MultiSelectCheckbox,
@@ -56,7 +56,12 @@ const emptyForm: FormState = {
   notes: "",
 }
 
-export function DriversTab() {
+type Props = {
+  search?: string
+  addRequest?: number
+}
+
+export function DriversTab({ search = "", addRequest = 0 }: Props) {
   const [data, setData] = useState<Driver[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -67,6 +72,33 @@ export function DriversTab() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
 
   const MAIN_COL_COUNT = 7
+
+  const filtered = useMemo(
+    () =>
+      data.filter((item) =>
+        includesSearch(
+          [
+            item.code,
+            item.firstName,
+            item.lastName,
+            item.phone,
+            item.branch.name,
+            item.assignedVehicle?.plateNumber,
+            item.notes,
+          ],
+          search
+        )
+      ),
+    [data, search]
+  )
+
+  const lastAddRequest = useRef(0)
+  useEffect(() => {
+    if (!addRequest || addRequest === lastAddRequest.current) return
+    lastAddRequest.current = addRequest
+    setEditingId("new")
+    setEditForm({ ...emptyForm, branchId: branches.length === 1 ? branches[0].id : "" })
+  }, [addRequest, branches])
 
   // Data columns share width 10 parts: branch 2, firstName 1, lastName 3, phone 2, vehicle 2
   const colBranch = "w-[20%] min-w-0 px-3 py-3"
@@ -303,17 +335,6 @@ export function DriversTab() {
           </GlassButton>
         </div>
       )}
-      <div className="flex justify-end">
-        <GlassButton
-          onClick={() => {
-            setEditingId("new")
-            setEditForm({ ...emptyForm, branchId: branches.length === 1 ? branches[0].id : "" })
-          }}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          เพิ่มคนขับ
-        </GlassButton>
-      </div>
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-left text-sm">
@@ -344,7 +365,7 @@ export function DriversTab() {
                   <tr className="bg-cyan-50/50">{renderFormSubRow()}</tr>
                 </>
               )}
-              {data.map((item) =>
+              {filtered.map((item) =>
                 editingId === item.id ? (
                   <Fragment key={item.id}>
                     <tr className="bg-cyan-50/50">{renderFormMain(item.id)}</tr>
@@ -406,6 +427,20 @@ export function DriversTab() {
                     )}
                   </Fragment>
                 )
+              )}
+              {data.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={MAIN_COL_COUNT} className="px-4 py-10 text-center text-muted-foreground">
+                    ยังไม่มีข้อมูล
+                  </td>
+                </tr>
+              )}
+              {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={MAIN_COL_COUNT} className="px-4 py-10 text-center text-muted-foreground">
+                    ไม่พบรายการที่ตรงกับคำค้น
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

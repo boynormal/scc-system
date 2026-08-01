@@ -10,44 +10,53 @@ const VEHICLES_MASTER_HREF = "/transport/master-data?tab=vehicles"
 type Props = {
   vehicle: GpsVehicleData
   selected?: boolean
+  /** When true, show compact summary unless this row is selected (auto-expands). */
+  compact?: boolean
   onClick?: () => void
 }
 
-export function UnmatchedMapVehicleListItem({ vehicle: v, selected, onClick }: Props) {
+export function UnmatchedMapVehicleListItem({ vehicle: v, selected, compact = false, onClick }: Props) {
+  const showCompact = compact && !selected
+
   return (
     <li
       onClick={onClick}
       className={cn(
-        "cursor-pointer border-b border-amber-100 px-4 py-3 transition-colors bg-amber-50/40",
-        selected && "bg-amber-100 border-l-4 border-l-amber-500",
-        !selected && "hover:bg-amber-50/70"
+        "cursor-pointer border-b border-amber-100 px-4 py-3 transition-colors dark:border-amber-900/40",
+        selected
+          ? "border-l-4 border-l-amber-500 bg-amber-100 dark:bg-amber-950/50"
+          : "bg-amber-50/40 hover:bg-amber-50/70 dark:bg-amber-950/30 dark:hover:bg-amber-950/40"
       )}
     >
       <div className="flex items-start gap-2">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-bold text-foreground">
               {v.plateNumber || "—"}
             </span>
-            <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+            <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
               ไม่ match DB
             </span>
           </div>
           {v.imei && (
             <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">IMEI: {v.imei}</p>
           )}
-          <p className="mt-1 text-[11px] text-muted-foreground truncate">
-            {v.address || v.near || "ไม่มีที่อยู่"}
-          </p>
-          <Link
-            href={VEHICLES_MASTER_HREF}
-            onClick={(e) => e.stopPropagation()}
-            className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 underline hover:text-amber-950"
-          >
-            <ExternalLink className="h-3 w-3" />
-            ไปเพิ่ม/ผูกที่ข้อมูลพื้นฐาน
-          </Link>
+          {!showCompact && (
+            <>
+              <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                {v.address || v.near || "ไม่มีที่อยู่"}
+              </p>
+              <Link
+                href={VEHICLES_MASTER_HREF}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 underline hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+              >
+                <ExternalLink className="h-3 w-3" />
+                ไปเพิ่ม/ผูกที่ข้อมูลพื้นฐาน
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </li>

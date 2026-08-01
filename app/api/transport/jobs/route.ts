@@ -10,6 +10,8 @@ export const GET = withAuth(async (req, _ctx, session) => {
   const status = searchParams.get("status") as TransportJobStatus | null
   const priority = searchParams.get("priority") as TransportJobPriority | null
   const search = searchParams.get("search")
+  const from = searchParams.get("from")
+  const to = searchParams.get("to")
   const page = Number(searchParams.get("page") ?? "1")
   const pageSize = Number(searchParams.get("pageSize") ?? "20")
 
@@ -20,6 +22,8 @@ export const GET = withAuth(async (req, _ctx, session) => {
     status,
     priority,
     search,
+    from,
+    to,
     page,
     pageSize,
   })

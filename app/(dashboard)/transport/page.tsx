@@ -109,11 +109,6 @@ export default async function TransportDashboardPage() {
 
   return (
     <div className="min-w-0 space-y-8 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">{t("overviewTitle")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("overviewDesc")}</p>
-      </div>
-
       {/* Vehicle stats */}
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">ยานพาหนะ</h2>

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
+import { GlassCard, GlassInput } from "@/components/glass"
 import { VehicleStatusBadge } from "@/components/transport/vehicle-status-badge"
 import {
   fetchGpsVehicles,
@@ -10,6 +10,7 @@ import {
 } from "@/components/transport/gps/gps-link-utils"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 
 type Branch = { id: string; name: string; code: string }
 type VehicleType = { id: string; name: string; isActive: boolean }
@@ -53,7 +54,12 @@ const emptyForm: FormState = {
   linkGpsId: "",
 }
 
-export function VehiclesTab() {
+type Props = {
+  search?: string
+  addRequest?: number
+}
+
+export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
   const [data, setData] = useState<Vehicle[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([])
@@ -69,6 +75,25 @@ export function VehiclesTab() {
     () => filterLinkableGps(gpsVehicles, data),
     [gpsVehicles, data]
   )
+
+  const filtered = useMemo(
+    () =>
+      data.filter((item) =>
+        includesSearch(
+          [item.plateNumber, item.name, item.vehicleType, item.branch.name, item.gpsDeviceId, item.notes],
+          search
+        )
+      ),
+    [data, search]
+  )
+
+  const lastAddRequest = useRef(0)
+  useEffect(() => {
+    if (!addRequest || addRequest === lastAddRequest.current) return
+    lastAddRequest.current = addRequest
+    setEditingId("new")
+    setEditForm({ ...emptyForm, branchId: branches.length === 1 ? branches[0].id : "" })
+  }, [addRequest, branches])
 
   const editSelectedGps = linkableGps.find((g) => g.id === editForm.linkGpsId)
 
@@ -283,18 +308,6 @@ export function VehiclesTab() {
         )}
       </GlassCard>
 
-      <div className="flex justify-end">
-        <GlassButton
-          onClick={() => {
-            setEditingId("new")
-            setEditForm({ ...emptyForm, branchId: branches.length === 1 ? branches[0].id : "" })
-          }}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          เพิ่มรถ
-        </GlassButton>
-      </div>
-
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-left text-sm">
@@ -314,7 +327,7 @@ export function VehiclesTab() {
             </thead>
             <tbody className="divide-y divide-border">
               {editingId === "new" && <tr className="bg-cyan-50/50">{renderForm("new")}</tr>}
-              {data.map((item) =>
+              {filtered.map((item) =>
                 editingId === item.id ? (
                   <tr key={item.id} className="bg-cyan-50/50">{renderForm(item.id, item.gpsDeviceId)}</tr>
                 ) : (
@@ -371,6 +384,20 @@ export function VehiclesTab() {
                     </td>
                   </tr>
                 )
+              )}
+              {data.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
+                    ยังไม่มีข้อมูล
+                  </td>
+                </tr>
+              )}
+              {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
+                    ไม่พบรายการที่ตรงกับคำค้น
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

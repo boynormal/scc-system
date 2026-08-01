@@ -8,8 +8,11 @@ import { MapVehicleListItem } from "@/components/transport/gps/MapVehicleListIte
 import { UnmatchedMapVehicleListItem } from "@/components/transport/gps/UnmatchedMapVehicleListItem"
 import { hasAnyAlert } from "@/components/transport/gps/GpsAlertBadge"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
-import { RefreshCw, AlertTriangle, Search } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { RefreshCw, AlertTriangle, List, ListCollapse } from "lucide-react"
+import {
+  TransportSearchField,
+  TransportSegmentedTabs,
+} from "@/components/transport/toolbar"
 
 const POLL_INTERVAL = 45_000
 const VEHICLES_MASTER_HREF = "/transport/master-data?tab=vehicles"
@@ -26,6 +29,7 @@ export default function TransportMapPage() {
   const [countdown, setCountdown] = useState(POLL_INTERVAL / 1000)
   const [search, setSearch] = useState("")
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all")
+  const [listCompact, setListCompact] = useState(true)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -103,13 +107,26 @@ export default function TransportMapPage() {
                 {vehicles.length} คัน · กำลังวิ่ง {movingCount} คัน
               </p>
             </div>
-            <button
-              onClick={() => { fetchGps(); setCountdown(POLL_INTERVAL / 1000) }}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              title={t("refresh")}
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => setListCompact((c) => !c)}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                title={listCompact ? "ขยายรายการ" : "ย่อรายการ"}
+                aria-label={listCompact ? "ขยายรายการ" : "ย่อรายการ"}
+                aria-pressed={listCompact}
+              >
+                {listCompact ? <List className="h-4 w-4" /> : <ListCollapse className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => { fetchGps(); setCountdown(POLL_INTERVAL / 1000) }}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                title={t("refresh")}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {lastFetch ? `อัปเดต ${lastFetch.toLocaleTimeString("th-TH")}` : "กำลังโหลด..."}
@@ -117,8 +134,12 @@ export default function TransportMapPage() {
           </p>
 
           {/* Availability filter */}
-          <div className="mt-2 flex flex-wrap gap-1 rounded-lg bg-muted p-1">
-            {(
+          <TransportSegmentedTabs
+            size="sm"
+            className="mt-2 flex w-full"
+            activeKey={availabilityFilter}
+            onChange={(key) => setAvailabilityFilter(key as AvailabilityFilter)}
+            items={(
               [
                 { key: "all" as const, label: t("filterAll"), count: vehicles.length },
                 { key: "available" as const, label: "ว่าง", count: availableCount },
@@ -126,50 +147,33 @@ export default function TransportMapPage() {
                 { key: "maintenance" as const, label: "ซ่อม", count: maintenanceCount },
                 { key: "unmatched" as const, label: "ไม่ match", count: unmatchedCount },
               ] as const
-            ).map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setAvailabilityFilter(f.key)}
-                className={cn(
-                  "flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors",
-                  availabilityFilter === f.key
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {f.label}
-                {f.count > 0 && (
-                  <span className="ml-1 text-[10px] opacity-70">({f.count})</span>
-                )}
-              </button>
-            ))}
-          </div>
+            ).map((f) => ({
+              key: f.key,
+              label: f.label,
+              count: f.count > 0 ? f.count : undefined,
+            }))}
+          />
 
-          {/* Search */}
-          <div className="relative mt-2">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="ค้นหาทะเบียน / คนขับ / ที่อยู่..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-400"
-            />
-          </div>
+          <TransportSearchField
+            className="mt-2 w-full max-w-none"
+            inputClassName="text-xs"
+            value={search}
+            onChange={setSearch}
+            placeholder="ค้นหาทะเบียน / คนขับ / ที่อยู่..."
+          />
         </div>
 
         {/* Unmatched GPS banner */}
         {unmatchedCount > 0 && (
-          <div className="border-b border-amber-100 bg-amber-50 px-4 py-2">
+          <div className="border-b border-amber-100 bg-amber-50 px-4 py-2 dark:border-amber-900/40 dark:bg-amber-950/40">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {unmatchedCount} คันจาก GPS ยังไม่ได้ลงทะเบียนในระบบ
               </div>
               <Link
                 href={VEHICLES_MASTER_HREF}
-                className="shrink-0 text-[11px] font-medium text-amber-800 underline hover:text-amber-950"
+                className="shrink-0 text-[11px] font-medium text-amber-800 underline hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
               >
                 ไปเพิ่มที่ข้อมูลพื้นฐาน
               </Link>
@@ -178,8 +182,8 @@ export default function TransportMapPage() {
         )}
         {/* Alert summary */}
         {alertCount > 0 && (
-          <div className="border-b border-red-100 bg-red-50 px-4 py-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700">
+          <div className="border-b border-red-100 bg-red-50 px-4 py-2 dark:border-red-900/40 dark:bg-red-950/40">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-300">
               <AlertTriangle className="h-3.5 w-3.5" />
               {alertCount} คันมี Alert
             </div>
@@ -208,6 +212,7 @@ export default function TransportMapPage() {
                     key={v.id}
                     vehicle={v}
                     selected={v.id === selectedId}
+                    compact={listCompact}
                     onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}
                   />
                 ) : (
@@ -215,6 +220,7 @@ export default function TransportMapPage() {
                     key={v.id}
                     vehicle={v}
                     selected={v.id === selectedId}
+                    compact={listCompact}
                     onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}
                   />
                 )

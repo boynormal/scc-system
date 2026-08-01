@@ -195,12 +195,9 @@ function TransportCalendarContent() {
           : "min-w-0"
       )}
     >
-      {/* Title + navigation + toolbar — single compact row */}
+      {/* Navigation + toolbar — single compact row */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h1 className="shrink-0 text-base font-semibold text-foreground md:text-lg">
-            {t("calendarTitle")}
-          </h1>
           <div className="flex items-center gap-1">
             <button
               type="button"

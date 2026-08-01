@@ -122,6 +122,10 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
       }
       costValue = n
     }
+    if (status === "closed" && costValue == null) {
+      setError("กรุณาระบุค่าใช้จ่ายก่อนปิดงาน")
+      return
+    }
     if (costValue != null && costValue > 0 && !paymentMethod) {
       setError("กรุณาเลือกวิธีจ่าย")
       return

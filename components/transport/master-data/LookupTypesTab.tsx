@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
+import { GlassCard, GlassInput } from "@/components/glass"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 
 type LookupItem = {
   id: string
@@ -15,16 +16,26 @@ type LookupItem = {
 
 type LookupTabProps = {
   apiPath: string
-  addLabel: string
   nameLabel: string
+  search?: string
+  addRequest?: number
 }
 const emptyForm = { name: "", details: "", sortOrder: "0" }
 
-export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps) {
+export function LookupTypesTab({
+  apiPath,
+  nameLabel,
+  search = "",
+  addRequest = 0,
+}: LookupTabProps) {
   const [data, setData] = useState<LookupItem[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState(emptyForm)
+  const filtered = useMemo(
+    () => data.filter((item) => includesSearch([item.name, item.details], search)),
+    [data, search]
+  )
   const loadData = useCallback(async () => {
     setLoading(true)
     const res = await fetch(apiPath)
@@ -35,6 +46,14 @@ export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps)
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const lastAddRequest = useRef(0)
+  useEffect(() => {
+    if (!addRequest || addRequest === lastAddRequest.current) return
+    lastAddRequest.current = addRequest
+    setEditingId("new")
+    setEditForm({ ...emptyForm, sortOrder: String(data.length + 1) })
+  }, [addRequest, data.length])
   const handleSave = async (id?: string) => {
     if (!editForm.name.trim()) return alert(`กรุณากรอก${nameLabel}`)
     const payload = {
@@ -132,17 +151,6 @@ export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps)
   }
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <GlassButton
-          onClick={() => {
-            setEditingId("new")
-            setEditForm({ ...emptyForm, sortOrder: String(data.length + 1) })
-          }}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          {addLabel}
-        </GlassButton>
-      </div>
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-left text-sm">
@@ -159,7 +167,7 @@ export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps)
               {editingId === "new" && (
                 <tr className="bg-cyan-50/50">{renderFormCells("new")}</tr>
               )}
-              {data.map((item) => (
+              {filtered.map((item) => (
                 <tr key={item.id} className={`hover:bg-muted/60 transition-colors ${!item.isActive ? "opacity-50" : ""}`}>
                   {editingId === item.id ? (
                     renderFormCells(item.id)
@@ -208,6 +216,13 @@ export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps)
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
                     ยังไม่มีข้อมูล
+                  </td>
+                </tr>
+              )}
+              {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                    ไม่พบรายการที่ตรงกับคำค้น
                   </td>
                 </tr>
               )}

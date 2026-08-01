@@ -8,3 +8,13 @@ export function isAutoDriverCode(code: string | null | undefined): boolean {
 export function isAutoCustomerCode(code: string | null | undefined): boolean {
   return !!code && AUTO_CUSTOMER_CODE.test(code)
 }
+
+/** Case-insensitive substring match across optional string fields. */
+export function includesSearch(
+  haystacks: Array<string | null | undefined>,
+  query: string
+): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  return haystacks.some((h) => (h ?? "").toLowerCase().includes(q))
+}

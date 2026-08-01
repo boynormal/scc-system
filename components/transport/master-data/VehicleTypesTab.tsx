@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, Fragment } from "react"
-import { Plus, Edit2, Trash2, Save, X, Loader2, RotateCcw } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
+import { useState, useEffect, Fragment, useMemo, useRef } from "react"
+import { Edit2, Trash2, Save, X, Loader2, RotateCcw, Plus } from "lucide-react"
+import { GlassCard, GlassInput } from "@/components/glass"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 import { WheelLayoutDiagram } from "@/components/transport/WheelLayoutDiagram"
 import {
   VEHICLE_WHEEL_COUNTS,
@@ -66,11 +67,28 @@ function renumberLayout(axleSizes: number[]): WheelLayout {
   })
 }
 
-export function VehicleTypesTab() {
+type Props = {
+  search?: string
+  addRequest?: number
+}
+
+export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
   const [data, setData] = useState<VehicleTypeItem[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<FormState>(emptyForm())
+  const filtered = useMemo(
+    () => data.filter((item) => includesSearch([item.name, item.details], search)),
+    [data, search]
+  )
+
+  const lastAddRequest = useRef(0)
+  useEffect(() => {
+    if (!addRequest || addRequest === lastAddRequest.current) return
+    lastAddRequest.current = addRequest
+    setEditingId("new")
+    setEditForm(emptyForm(String(data.length + 1)))
+  }, [addRequest, data.length])
 
   const loadData = async () => {
     setLoading(true)
@@ -331,17 +349,6 @@ export function VehicleTypesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <GlassButton
-          onClick={() => {
-            setEditingId("new")
-            setEditForm(emptyForm(String(data.length + 1)))
-          }}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          เพิ่มประเภทรถ
-        </GlassButton>
-      </div>
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-left text-sm">
@@ -357,7 +364,7 @@ export function VehicleTypesTab() {
             </thead>
             <tbody className="divide-y divide-border">
               {editingId === "new" && renderEditor("new")}
-              {data.map((item) =>
+              {filtered.map((item) =>
                 editingId === item.id ? (
                   <Fragment key={item.id}>{renderEditor(item.id)}</Fragment>
                 ) : (
@@ -417,6 +424,13 @@ export function VehicleTypesTab() {
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
                     ยังไม่มีข้อมูล
+                  </td>
+                </tr>
+              )}
+              {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                    ไม่พบรายการที่ตรงกับคำค้น
                   </td>
                 </tr>
               )}

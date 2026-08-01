@@ -29,11 +29,11 @@ export function JobsListTable({ items }: Props) {
         <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left">เลขใบงาน</th>
+            <th className="px-4 py-3 text-left">รถ / คนขับ</th>
             <th className="px-4 py-3 text-left">ลูกค้า / ประเภทงาน</th>
             <th className="px-4 py-3 text-left">ประเภทสินค้า</th>
             <th className="px-4 py-3 text-left">วันที่นัดวิ่งงาน</th>
             <th className="px-4 py-3 text-left">สาขา</th>
-            <th className="px-4 py-3 text-left">รถ / คนขับ</th>
             <th className="px-4 py-3 text-left">Stop</th>
             <th className="px-4 py-3 text-left">ความสำคัญ</th>
             <th className="px-4 py-3 text-left">สถานะ</th>
@@ -58,17 +58,6 @@ export function JobsListTable({ items }: Props) {
                     {job.jobNumber}
                   </Link>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="font-medium text-foreground">
-                    {job.customerName ?? job.customer?.name ?? "—"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">{job.jobType}</div>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{job.cargoType ?? "—"}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                  {formatScheduledDate(job.scheduledDate)}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{job.branch.name}</td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {job.assignment ? (
                     <div>
@@ -81,6 +70,17 @@ export function JobsListTable({ items }: Props) {
                     <span className="text-muted-foreground">—</span>
                   )}
                 </td>
+                <td className="px-4 py-3">
+                  <div className="font-medium text-foreground">
+                    {job.customerName ?? job.customer?.name ?? "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{job.jobType}</div>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{job.cargoType ?? "—"}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                  {formatScheduledDate(job.scheduledDate)}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{job.branch.name}</td>
                 <td className="px-4 py-3 text-muted-foreground">{job._count.stops}</td>
                 <td className={`px-4 py-3 text-xs ${PRIORITY_COLOR[job.priority] ?? ""}`}>
                   {PRIORITY_LABEL[job.priority] ?? job.priority}

@@ -8,6 +8,10 @@ import { VehicleGpsRow } from "@/components/transport/gps/VehicleGpsRow"
 import { VehicleGpsCard } from "@/components/transport/gps/VehicleGpsCard"
 import { RefreshCw, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  TransportSearchField,
+  TransportSegmentedTabs,
+} from "@/components/transport/toolbar"
 
 const POLL_INTERVAL = 45_000
 
@@ -88,25 +92,6 @@ export default function TransportMonitorPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{t("monitorTitle")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("monitorDesc")}
-            {" · "}
-            {lastFetch ? `อัปเดต ${lastFetch.toLocaleTimeString("th-TH")}` : "กำลังโหลด..."}
-            {" · "}รีเฟรชอัตโนมัติใน {countdown}s
-          </p>
-        </div>
-        <button
-          onClick={() => { fetchGps(); setCountdown(POLL_INTERVAL / 1000) }}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/60"
-        >
-          <RefreshCw className="h-4 w-4" /> {t("refresh")}
-        </button>
-      </div>
-
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="รถทั้งหมด" value={stats.total} color="bg-muted text-foreground" />
@@ -116,41 +101,42 @@ export default function TransportMonitorPage() {
         <StatCard label="มี Alert" value={stats.alert} color={stats.alert > 0 ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300" : "bg-muted text-muted-foreground"} />
       </div>
 
-      {/* Filters + Search */}
+      {/* Filters + Search + Refresh status */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                filter === f.key
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {f.icon}
-              {f.label}
-              {f.count > 0 && (
-                <span className={cn(
-                  "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  f.key === "alert" && f.count > 0 ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" : "bg-muted text-muted-foreground"
-                )}>
-                  {f.count}
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <TransportSegmentedTabs
+            size="sm"
+            activeKey={filter}
+            onChange={(key) => setFilter(key as Filter)}
+            items={FILTERS.map((f) => ({
+              key: f.key,
+              label: f.label,
+              icon: f.icon,
+              count: f.count > 0 ? f.count : undefined,
+              emphasizeCount: f.key === "alert",
+            }))}
+          />
+
+          <TransportSearchField
+            value={search}
+            onChange={setSearch}
+            placeholder="ค้นหาทะเบียน / คนขับ..."
+          />
         </div>
 
-        <input
-          type="text"
-          placeholder="ค้นหาทะเบียน / คนขับ..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-400"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            {lastFetch ? `อัปเดต ${lastFetch.toLocaleTimeString("th-TH")}` : "กำลังโหลด..."}
+            {" · "}รีเฟรชอัตโนมัติใน {countdown}s
+          </p>
+          <button
+            type="button"
+            onClick={() => { fetchGps(); setCountdown(POLL_INTERVAL / 1000) }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/60"
+          >
+            <RefreshCw className="h-4 w-4" /> {t("refresh")}
+          </button>
+        </div>
       </div>
 
       {/* Selected vehicle detail card — อยู่เหนือตาราง */}

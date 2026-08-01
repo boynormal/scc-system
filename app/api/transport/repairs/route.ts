@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api-handler"
 import { ValidationError } from "@/lib/errors"
 import {
   listRepairs,
+  countOpenRepairsByStatus,
   createRepair,
   createRepairSchema,
 } from "@/modules/transport"
@@ -31,17 +32,28 @@ export const GET = withAuth(async (req, _ctx, session) => {
     throw new ValidationError("Invalid status")
   }
 
-  const result = await listRepairs(prisma, {
-    companyId: session.user.companyId as string,
-    roles: session.user.roles as never,
-    vehicleId,
-    branchId,
-    status: statusGroup === "open" ? null : (statusParam as TransportRepairStatus | null),
-    statusGroup: statusGroup === "open" ? "open" : null,
-    from,
-    to,
-  })
-  return Response.json({ data: result.items, meta: result.meta })
+  const companyId = session.user.companyId as string
+  const roles = session.user.roles as never
+
+  const [result, openCounts] = await Promise.all([
+    listRepairs(prisma, {
+      companyId,
+      roles,
+      vehicleId,
+      branchId,
+      status: statusGroup === "open" ? null : (statusParam as TransportRepairStatus | null),
+      statusGroup: statusGroup === "open" ? "open" : null,
+      from,
+      to,
+    }),
+    countOpenRepairsByStatus(prisma, {
+      companyId,
+      roles,
+      vehicleId,
+      branchId,
+    }),
+  ])
+  return Response.json({ data: result.items, meta: result.meta, openCounts })
 })
 
 export const POST = withAuth(async (req, _ctx, session) => {

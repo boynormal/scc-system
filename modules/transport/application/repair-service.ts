@@ -78,6 +78,21 @@ async function assertVehiclePermission(
   if (!ok) throw new ForbiddenError()
 }
 
+function assertCostRequiredToClose(params: {
+  repairCost: number | null
+  paymentMethod: TransportPaymentMethodOption | null
+}) {
+  if (params.repairCost == null || Number.isNaN(params.repairCost)) {
+    throw new ValidationError("กรุณาระบุค่าใช้จ่ายก่อนปิดงาน")
+  }
+  if (params.repairCost < 0) {
+    throw new ValidationError("ราคาซ่อมต้องเป็นตัวเลขที่ไม่ติดลบ")
+  }
+  if (params.repairCost > 0 && !params.paymentMethod) {
+    throw new ValidationError("กรุณาเลือกวิธีจ่ายเมื่อมีราคาซ่อม")
+  }
+}
+
 export async function listRepairs(
   db: PrismaClient,
   params: {
@@ -156,6 +171,52 @@ export async function listRepairs(
       truncated: total > items.length,
     },
   }
+}
+
+/** Counts for open-queue tabs (แจ้งซ่อม / กำลังซ่อม); ignores date range. */
+export async function countOpenRepairsByStatus(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    vehicleId?: string | null
+    branchId?: string | null
+  }
+): Promise<{ reported: number; in_repair: number }> {
+  const accessibleBranchIds = getBranchIds(params.roles).filter((bid) =>
+    hasPermission(params.roles, bid, "transport_vehicles", "read")
+  )
+  const canRead =
+    isAdminInAnyBranch(params.roles) ||
+    (params.branchId
+      ? hasPermission(params.roles, params.branchId, "transport_vehicles", "read")
+      : accessibleBranchIds.length > 0)
+  if (!canRead) throw new ForbiddenError()
+
+  const branchFilter = params.branchId
+    ? { branchId: params.branchId }
+    : isAdminInAnyBranch(params.roles)
+      ? {}
+      : { branchId: { in: accessibleBranchIds } }
+
+  const groups = await db.transportRepairLog.groupBy({
+    by: ["status"],
+    where: {
+      companyId: params.companyId,
+      ...branchFilter,
+      ...(params.vehicleId ? { vehicleId: params.vehicleId } : {}),
+      status: { in: OPEN_STATUSES },
+    },
+    _count: { _all: true },
+  })
+
+  const counts = { reported: 0, in_repair: 0 }
+  for (const g of groups) {
+    if (g.status === "reported" || g.status === "in_repair") {
+      counts[g.status] = g._count._all
+    }
+  }
+  return counts
 }
 
 export async function getRepairById(
@@ -305,6 +366,17 @@ export async function closeRepair(
     throw new ValidationError("ราคาซ่อมต้องเป็นตัวเลขที่ไม่ติดลบ")
   }
 
+  const finalCost =
+    params.repairCost !== undefined
+      ? params.repairCost
+      : repair.repairCost != null
+        ? Number(repair.repairCost)
+        : null
+  assertCostRequiredToClose({
+    repairCost: finalCost,
+    paymentMethod: repair.paymentMethod,
+  })
+
   const now = new Date()
   const [updated] = await db.$transaction([
     db.transportRepairLog.update({
@@ -405,6 +477,21 @@ export async function updateRepair(
   const nextStatus = input.status ?? repair.status
   const vehicleChanged = nextVehicleId !== repair.vehicleId
   const statusChanged = nextStatus !== repair.status
+
+  const nextCost =
+    input.repairCost !== undefined
+      ? input.repairCost
+      : repair.repairCost != null
+        ? Number(repair.repairCost)
+        : null
+  const nextPayment =
+    input.paymentMethod !== undefined ? input.paymentMethod : repair.paymentMethod
+  if (nextStatus === "closed") {
+    assertCostRequiredToClose({
+      repairCost: nextCost,
+      paymentMethod: nextPayment,
+    })
+  }
 
   let nextBranchId = repair.branchId
   if (vehicleChanged) {

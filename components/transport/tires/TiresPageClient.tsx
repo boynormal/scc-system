@@ -20,6 +20,7 @@ import type { WheelLayout } from "@/modules/transport/application/vehicle-wheel-
 import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
+import { transportFilterTriggerClass } from "@/components/transport/toolbar"
 
 type TireRow = {
   id: string
@@ -297,94 +298,83 @@ export function TiresPageClient() {
   return (
     <div className="min-w-0 space-y-6 p-4 md:p-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">{t("tiresTitle")}</h1>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            บันทึกเปลี่ยนยาง / ปะยาง / ซ่อมยาง ตามตำแหน่งล้อของแต่ละคัน
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative" ref={popupRef}>
-              <button
-                type="button"
-                onClick={openFilterPopup}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
-                  filterOpen
-                    ? "border-cyan-500 bg-cyan-50 text-cyan-800"
-                    : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Filter className="h-3.5 w-3.5" />
-                ตัวกรอง
-                <span className="hidden text-xs opacity-80 sm:inline">· {filterSummary}</span>
-              </button>
-
-              {filterOpen && (
-                <div className="absolute left-0 z-30 mt-2 w-[min(100vw-2rem,320px)] rounded-xl border border-border bg-card p-3 shadow-lg">
-                  <p className="mb-2 text-xs font-semibold text-foreground">ตัวกรองเพิ่มเติม</p>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="mb-1 block text-[11px] text-muted-foreground">จากวันที่</label>
-                        <input
-                          type="date"
-                          value={draftFrom}
-                          onChange={(e) => setDraftFrom(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[11px] text-muted-foreground">ถึงวันที่</label>
-                        <input
-                          type="date"
-                          value={draftTo}
-                          onChange={(e) => setDraftTo(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11px] text-muted-foreground">รถ</label>
-                      <select
-                        value={draftVehicle}
-                        onChange={(e) => setDraftVehicle(e.target.value)}
-                        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      >
-                        <option value="">ทุกคัน</option>
-                        {vehicles.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.plateNumber} — {v.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {filterError && <p className="text-xs text-red-600">{filterError}</p>}
-                    <div className="flex justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={clearFilters}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-                      >
-                        ล้าง
-                      </button>
-                      <GlassButton onClick={applyFilters}>ใช้ตัวกรอง</GlassButton>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative" ref={popupRef}>
             <button
               type="button"
-              onClick={() => loadItems()}
-              disabled={loading}
-              title={t("refresh")}
-              aria-label={t("refresh")}
-              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+              onClick={openFilterPopup}
+              className={transportFilterTriggerClass(filterOpen)}
             >
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              <Filter className="h-3.5 w-3.5" />
+              ตัวกรอง
+              <span className="hidden text-xs opacity-80 sm:inline">· {filterSummary}</span>
             </button>
+
+            {filterOpen && (
+              <div className="absolute left-0 z-30 mt-2 w-[min(100vw-2rem,320px)] rounded-xl border border-border bg-card p-3 shadow-lg">
+                <p className="mb-2 text-xs font-semibold text-foreground">ตัวกรองเพิ่มเติม</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-[11px] text-muted-foreground">จากวันที่</label>
+                      <input
+                        type="date"
+                        value={draftFrom}
+                        onChange={(e) => setDraftFrom(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-muted-foreground">ถึงวันที่</label>
+                      <input
+                        type="date"
+                        value={draftTo}
+                        onChange={(e) => setDraftTo(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] text-muted-foreground">รถ</label>
+                    <select
+                      value={draftVehicle}
+                      onChange={(e) => setDraftVehicle(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="">ทุกคัน</option>
+                      {vehicles.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.plateNumber} — {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {filterError && <p className="text-xs text-red-600">{filterError}</p>}
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                    >
+                      ล้าง
+                    </button>
+                    <GlassButton onClick={applyFilters}>ใช้ตัวกรอง</GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => loadItems()}
+            disabled={loading}
+            title={t("refresh")}
+            aria-label={t("refresh")}
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </button>
         </div>
         <p className="mt-1 text-xs text-muted-foreground sm:hidden">{filterSummary}</p>
       </div>

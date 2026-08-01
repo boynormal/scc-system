@@ -27,9 +27,9 @@ export function CreateJobButton({ label }: Props) {
       <CreateJobModal
         open={open}
         onCancel={() => setOpen(false)}
-        onSuccess={(jobId) => {
+        onSuccess={() => {
           setOpen(false)
-          router.push(`/transport/jobs/${jobId}`)
+          router.push("/transport/jobs")
           router.refresh()
         }}
       />

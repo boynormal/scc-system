@@ -18,7 +18,7 @@ export function GsmSignalBar({ gsm, className, indent = true }: Props) {
     <div className={cn("flex items-center gap-2", indent && "pl-7", className)}>
       <Signal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       <div className="flex flex-1 items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
           <div
             className={cn("h-full rounded-full transition-all", signalBarColor(pct))}
             style={{ width: `${pct}%` }}

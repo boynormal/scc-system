@@ -1,14 +1,17 @@
 import { z } from "zod"
 import type { PrismaClient, TransportJobStatus, TransportJobPriority, AttachmentStage } from "@prisma/client"
 import { Prisma } from "@prisma/client"
-import { ForbiddenError, NotFoundError } from "@/lib/errors"
+import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { hasPermission, isAdminInAnyBranch, getBranchIds, type UserRole } from "@/lib/permissions"
 import { performAssignment } from "./assignment-service"
+import { getBangkokDateRange } from "./transport-date-utils"
 import {
   type JobListGroup,
   resolveJobListGroup,
   statusFilterForGroup,
 } from "@/shared/transport/job-status-groups"
+
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export const createJobSchema = z
   .object({
@@ -122,10 +125,25 @@ type JobListFilters = {
   statusGroup?: JobListGroup | null
   priority?: TransportJobPriority | null
   search?: string | null
+  from?: string | null
+  to?: string | null
+}
+
+function parseUpdatedAtRange(from?: string | null, to?: string | null) {
+  const fromYmd = from?.trim() || null
+  const toYmd = to?.trim() || null
+  if (!fromYmd && !toYmd) return null
+  if (fromYmd && !YMD_RE.test(fromYmd)) throw new ValidationError("from must be YYYY-MM-DD")
+  if (toYmd && !YMD_RE.test(toYmd)) throw new ValidationError("to must be YYYY-MM-DD")
+  const rangeFrom = fromYmd ?? toYmd!
+  const rangeTo = toYmd ?? fromYmd!
+  if (rangeFrom > rangeTo) throw new ValidationError("from must be on or before to")
+  return getBangkokDateRange(rangeFrom, rangeTo)
 }
 
 function buildJobListWhere(params: JobListFilters) {
   const group = params.statusGroup ? resolveJobListGroup(params.statusGroup) : null
+  const updatedAtRange = parseUpdatedAtRange(params.from, params.to)
 
   return {
     companyId: params.companyId,
@@ -140,6 +158,9 @@ function buildJobListWhere(params: JobListFilters) {
             { jobType: { contains: params.search, mode: "insensitive" as const } },
           ],
         }
+      : {}),
+    ...(updatedAtRange
+      ? { updatedAt: { gte: updatedAtRange.start, lte: updatedAtRange.end } }
       : {}),
   }
 }
@@ -164,6 +185,9 @@ export async function countJobsByGroup(
     branchId?: string | null
     priority?: TransportJobPriority | null
     search?: string | null
+    /** Applied only to completed / cancelled counts — not active. */
+    from?: string | null
+    to?: string | null
   }
 ): Promise<Record<JobListGroup, number>> {
   const canRead =
@@ -177,16 +201,17 @@ export async function countJobsByGroup(
     priority: params.priority ?? undefined,
     search: params.search ?? undefined,
   }
+  const terminalDates = { from: params.from, to: params.to }
 
   const [active, completed, cancelled] = await Promise.all([
     db.transportJob.count({
       where: buildJobListWhere({ ...base, statusGroup: "active" }),
     }),
     db.transportJob.count({
-      where: buildJobListWhere({ ...base, statusGroup: "completed" }),
+      where: buildJobListWhere({ ...base, statusGroup: "completed", ...terminalDates }),
     }),
     db.transportJob.count({
-      where: buildJobListWhere({ ...base, statusGroup: "cancelled" }),
+      where: buildJobListWhere({ ...base, statusGroup: "cancelled", ...terminalDates }),
     }),
   ])
 
@@ -203,6 +228,8 @@ export async function listJobs(
     statusGroup?: JobListGroup | null
     priority?: TransportJobPriority | null
     search?: string | null
+    from?: string | null
+    to?: string | null
     page: number
     pageSize: number
   }

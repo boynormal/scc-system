@@ -22,6 +22,10 @@ import { LoadingState } from "@/components/ui/loading-state"
 import { TRANSPORT_PAYMENT_METHOD_LABELS } from "@/modules/transport/application/payment-options"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
+import {
+  TransportSegmentedTabs,
+  transportFilterTriggerClass,
+} from "@/components/transport/toolbar"
 
 type RepairRow = {
   id: string
@@ -56,6 +60,11 @@ type ListMeta = {
   total: number
   take: number
   truncated: boolean
+}
+
+type OpenCounts = {
+  reported: number
+  in_repair: number
 }
 
 const NEEDS_DATE_DEFAULT = new Set<StatusFilter>(["closed", "cancelled"])
@@ -99,6 +108,7 @@ export function RepairsPageClient() {
   const t = useTranslations("transport")
   const [items, setItems] = useState<RepairRow[]>([])
   const [meta, setMeta] = useState<ListMeta | null>(null)
+  const [openCounts, setOpenCounts] = useState<OpenCounts>({ reported: 0, in_repair: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<StatusFilter>("reported")
@@ -133,11 +143,19 @@ export function RepairsPageClient() {
       if (effectiveFrom) qs.set("from", effectiveFrom)
       if (effectiveTo) qs.set("to", effectiveTo)
 
-      const json = await fetchJson<{ data?: RepairRow[]; meta?: ListMeta | null }>(
-        `/api/transport/repairs?${qs.toString()}`
-      )
+      const json = await fetchJson<{
+        data?: RepairRow[]
+        meta?: ListMeta | null
+        openCounts?: OpenCounts | null
+      }>(`/api/transport/repairs?${qs.toString()}`)
       setItems(json.data ?? [])
       setMeta(json.meta ?? null)
+      if (json.openCounts) {
+        setOpenCounts({
+          reported: json.openCounts.reported ?? 0,
+          in_repair: json.openCounts.in_repair ?? 0,
+        })
+      }
     } catch (err) {
       setItems([])
       setMeta(null)
@@ -260,68 +278,31 @@ export function RepairsPageClient() {
     return parts.join(" · ")
   })()
 
-  const FILTERS: { key: StatusFilter; label: string }[] = [
-    { key: "reported", label: "แจ้งซ่อม" },
-    { key: "in_repair", label: "กำลังซ่อม" },
+  const FILTERS: { key: StatusFilter; label: string; count?: number }[] = [
+    { key: "reported", label: "แจ้งซ่อม", count: openCounts.reported },
+    { key: "in_repair", label: "กำลังซ่อม", count: openCounts.in_repair },
     { key: "closed", label: "ปิดงาน" },
     { key: "cancelled", label: "ยกเลิก" },
   ]
 
   return (
     <div className="min-w-0 space-y-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{t("repairsTitle")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("repairsDesc")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => load()}
-            disabled={loading}
-            title={t("refresh")}
-            aria-label={t("refresh")}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-          >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </button>
-          <GlassButton onClick={() => setReportOpen(true)} icon={<Plus className="h-4 w-4" />}>
-            {t("repairsReport")}
-          </GlassButton>
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => changeStatus(f.key)}
-              className={cn(
-                "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                filter === f.key
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <TransportSegmentedTabs
+          activeKey={filter}
+          onChange={(key) => changeStatus(key as typeof filter)}
+          items={FILTERS.map((f) => ({
+            key: f.key,
+            label: f.label,
+            count: typeof f.count === "number" ? f.count : undefined,
+          }))}
+        />
 
         <div className="relative" ref={popupRef}>
           <button
             type="button"
             onClick={openFilterPopup}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
-              filterOpen
-                ? "border-cyan-500 bg-cyan-50 text-cyan-800"
-                : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
+            className={transportFilterTriggerClass(filterOpen)}
           >
             <Filter className="h-3.5 w-3.5" />
             ตัวกรอง
@@ -385,6 +366,22 @@ export function RepairsPageClient() {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => load()}
+            disabled={loading}
+            title={t("refresh")}
+            aria-label={t("refresh")}
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </button>
+          <GlassButton onClick={() => setReportOpen(true)} icon={<Plus className="h-4 w-4" />}>
+            {t("repairsReport")}
+          </GlassButton>
         </div>
       </div>
 
@@ -568,7 +565,16 @@ export function RepairsPageClient() {
                     <GlassButton
                       size="sm"
                       onClick={() => runAction(item.id, "close")}
-                      disabled={actionId === item.id}
+                      disabled={
+                        actionId === item.id ||
+                        item.repairCost == null ||
+                        item.repairCost === ""
+                      }
+                      title={
+                        item.repairCost == null || item.repairCost === ""
+                          ? "กรุณาระบุค่าใช้จ่ายก่อนปิดงาน"
+                          : undefined
+                      }
                       icon={
                         actionId === item.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />

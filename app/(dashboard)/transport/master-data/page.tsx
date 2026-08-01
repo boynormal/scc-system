@@ -2,36 +2,68 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { useTranslations } from "next-intl"
+import { Plus } from "lucide-react"
+import { GlassButton } from "@/components/glass"
 import { LookupTypesTab } from "@/components/transport/master-data/LookupTypesTab"
 import { VehicleTypesTab } from "@/components/transport/master-data/VehicleTypesTab"
 import { CustomersTab } from "@/components/transport/master-data/CustomersTab"
 import { VehiclesTab } from "@/components/transport/master-data/VehiclesTab"
 import { DriversTab } from "@/components/transport/master-data/DriversTab"
+import {
+  TransportSearchField,
+  TransportSegmentedTabs,
+} from "@/components/transport/toolbar"
 
 const TABS = [
-  { id: "job-types", label: "ประเภทงาน" },
-  { id: "cargo-types", label: "ประเภทสินค้า" },
-  { id: "vehicle-types", label: "ประเภทรถ" },
-  { id: "customers", label: "ลูกค้า/ปลายทาง" },
-  { id: "vehicles", label: "จัดการรถ" },
-  { id: "drivers", label: "คนขับ" },
+  {
+    id: "job-types",
+    label: "ประเภทงาน",
+    addLabel: "เพิ่มประเภทงาน",
+    searchPlaceholder: "ค้นหาประเภทงาน...",
+  },
+  {
+    id: "cargo-types",
+    label: "ประเภทสินค้า",
+    addLabel: "เพิ่มประเภทสินค้า",
+    searchPlaceholder: "ค้นหาประเภทสินค้า...",
+  },
+  {
+    id: "vehicle-types",
+    label: "ประเภทรถ",
+    addLabel: "เพิ่มประเภทรถ",
+    searchPlaceholder: "ค้นหาประเภทรถ...",
+  },
+  {
+    id: "customers",
+    label: "ลูกค้า/ปลายทาง",
+    addLabel: "เพิ่มลูกค้า/ปลายทาง",
+    searchPlaceholder: "ค้นหาลูกค้า / ที่อยู่ / ผู้ติดต่อ...",
+  },
+  {
+    id: "vehicles",
+    label: "จัดการรถ",
+    addLabel: "เพิ่มรถ",
+    searchPlaceholder: "ค้นหาทะเบียน / ชื่อรถ / IMEI...",
+  },
+  {
+    id: "drivers",
+    label: "คนขับ",
+    addLabel: "เพิ่มคนขับ",
+    searchPlaceholder: "ค้นหาชื่อ / โทรศัพท์ / รหัส...",
+  },
 ] as const
 
 type TabId = (typeof TABS)[number]["id"]
 
-function classNames(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(" ")
-}
-
 function MasterDataContent() {
-  const t = useTranslations("transport")
   const searchParams = useSearchParams()
   const router = useRouter()
   const tabParam = searchParams.get("tab") as TabId | null
   const [activeTab, setActiveTab] = useState<TabId>(
     TABS.some((tab) => tab.id === tabParam) ? (tabParam as TabId) : "job-types"
   )
+  const [search, setSearch] = useState("")
+  const [addRequest, setAddRequest] = useState(0)
 
   useEffect(() => {
     if (tabParam && TABS.some((tab) => tab.id === tabParam)) {
@@ -41,55 +73,66 @@ function MasterDataContent() {
 
   const switchTab = (id: TabId) => {
     setActiveTab(id)
+    setSearch("")
     router.replace(`/transport/master-data?tab=${id}`, { scroll: false })
   }
 
+  const activeMeta = TABS.find((tab) => tab.id === activeTab)!
+
   return (
-    <div className="min-w-0 space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{t("masterDataTitle")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t("masterDataDesc")}
-        </p>
+    <div className="min-w-0 space-y-3 p-4 md:p-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <TransportSegmentedTabs
+            activeKey={activeTab}
+            onChange={(key) => switchTab(key as TabId)}
+            items={TABS.map((tab) => ({ key: tab.id, label: tab.label }))}
+          />
+
+          <TransportSearchField
+            value={search}
+            onChange={setSearch}
+            placeholder={activeMeta.searchPlaceholder}
+          />
+        </div>
+
+        <GlassButton
+          onClick={() => setAddRequest((n) => n + 1)}
+          icon={<Plus className="w-4 h-4" />}
+        >
+          {activeMeta.addLabel}
+        </GlassButton>
       </div>
 
-      <div className="flex flex-wrap border-b border-border gap-x-1 -mb-px">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => switchTab(tab.id)}
-            className={classNames(
-              "whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors",
-              activeTab === tab.id
-                ? "border-cyan-600 text-cyan-700 dark:text-cyan-300"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="min-w-0 pt-2">
+      <div className="min-w-0">
         {activeTab === "job-types" && (
           <LookupTypesTab
             apiPath="/api/transport/master-data/job-types"
-            addLabel="เพิ่มประเภทงาน"
             nameLabel="ประเภทงาน"
+            search={search}
+            addRequest={addRequest}
           />
         )}
         {activeTab === "cargo-types" && (
           <LookupTypesTab
             apiPath="/api/transport/master-data/cargo-types"
-            addLabel="เพิ่มประเภทสินค้า"
             nameLabel="ประเภทสินค้า"
+            search={search}
+            addRequest={addRequest}
           />
         )}
-        {activeTab === "vehicle-types" && <VehicleTypesTab />}
-        {activeTab === "customers" && <CustomersTab />}
-        {activeTab === "vehicles" && <VehiclesTab />}
-        {activeTab === "drivers" && <DriversTab />}
+        {activeTab === "vehicle-types" && (
+          <VehicleTypesTab search={search} addRequest={addRequest} />
+        )}
+        {activeTab === "customers" && (
+          <CustomersTab search={search} addRequest={addRequest} />
+        )}
+        {activeTab === "vehicles" && (
+          <VehiclesTab search={search} addRequest={addRequest} />
+        )}
+        {activeTab === "drivers" && (
+          <DriversTab search={search} addRequest={addRequest} />
+        )}
       </div>
     </div>
   )

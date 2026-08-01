@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
+import { useState, useEffect, useMemo, useRef } from "react"
+import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
-import { isAutoCustomerCode } from "@/components/transport/master-data/transport-code-utils"
+import { includesSearch, isAutoCustomerCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import {
   CustomerLocationDisplay,
@@ -158,7 +158,12 @@ function CustomerFormRows({
   )
 }
 
-export function CustomersTab() {
+type Props = {
+  search?: string
+  addRequest?: number
+}
+
+export function CustomersTab({ search = "", addRequest = 0 }: Props) {
   const [data, setData] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -166,6 +171,24 @@ export function CustomersTab() {
   const [migrating, setMigrating] = useState(false)
 
   const legacyCount = useMemo(() => data.filter((c) => !isAutoCustomerCode(c.code)).length, [data])
+  const filtered = useMemo(
+    () =>
+      data.filter((item) =>
+        includesSearch(
+          [item.code, item.name, item.address, item.contactName, item.phone, item.details],
+          search
+        )
+      ),
+    [data, search]
+  )
+
+  const lastAddRequest = useRef(0)
+  useEffect(() => {
+    if (!addRequest || addRequest === lastAddRequest.current) return
+    lastAddRequest.current = addRequest
+    setEditingId("new")
+    setEditForm(emptyForm)
+  }, [addRequest])
 
   const loadData = async () => {
     setLoading(true)
@@ -275,11 +298,6 @@ export function CustomersTab() {
           </GlassButton>
         </div>
       )}
-      <div className="flex justify-end">
-        <GlassButton onClick={() => { setEditingId("new"); setEditForm(emptyForm) }} icon={<Plus className="w-4 h-4" />}>
-          เพิ่มลูกค้า/ปลายทาง
-        </GlassButton>
-      </div>
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-left text-sm">
@@ -305,7 +323,7 @@ export function CustomersTab() {
                   onSave={() => handleSave("new")}
                 />
               )}
-              {data.map((item) =>
+              {filtered.map((item) =>
                 editingId === item.id ? (
                   <CustomerFormRows
                     key={item.id}
@@ -369,6 +387,20 @@ export function CustomersTab() {
                     </td>
                   </tr>
                 )
+              )}
+              {data.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                    ยังไม่มีข้อมูล
+                  </td>
+                </tr>
+              )}
+              {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                    ไม่พบรายการที่ตรงกับคำค้น
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

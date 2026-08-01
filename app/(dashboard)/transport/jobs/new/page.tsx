@@ -15,7 +15,7 @@ export default function NewTransportJobPage() {
 
       <CreateJobForm
         onCancel={() => router.push("/transport/jobs")}
-        onSuccess={(jobId) => router.push(`/transport/jobs/${jobId}`)}
+        onSuccess={() => router.push("/transport/jobs")}
       />
     </div>
   )

@@ -273,7 +273,6 @@ export async function getJobById(
           assignedByUser: { select: { id: true, firstName: true, lastName: true } },
         },
       },
-      attachments: { orderBy: { takenAt: "asc" } },
     },
   })
   if (!job) throw new NotFoundError("Job not found")

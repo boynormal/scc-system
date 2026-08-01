@@ -5,7 +5,6 @@ import type { UserRole } from "@/lib/permissions"
 import { getJobById } from "@/modules/transport"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { StopTimeline } from "@/components/transport/stop-timeline"
-import { JobAttachmentGallery } from "@/components/transport/job-attachment-gallery"
 import { CompleteJobButton } from "@/components/transport/complete-job-button"
 import { AssignJobForm } from "@/components/transport/assign-job-form"
 import Link from "next/link"
@@ -120,16 +119,11 @@ export default async function TransportJobDetailPage({
             )}
           </div>
 
-          {/* Right: Stops + Gallery */}
+          {/* Right: Stops */}
           <div className="space-y-6 lg:col-span-2">
             <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <h3 className="mb-4 text-sm font-semibold text-foreground">จุดแวะ ({job.stops.length} จุด)</h3>
               <StopTimeline stops={job.stops} />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold text-foreground">ไฟล์แนบ / รูปภาพ</h3>
-              <JobAttachmentGallery attachments={job.attachments} />
             </div>
           </div>
         </div>

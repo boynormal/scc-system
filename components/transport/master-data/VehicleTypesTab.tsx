@@ -343,14 +343,14 @@ export function VehicleTypesTab() {
         </GlassButton>
       </div>
       <GlassCard padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[720px]">
+        <div className="min-w-0 overflow-hidden">
+          <table className="w-full table-fixed text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-20">ลำดับ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">ประเภทรถ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-24">จำนวนล้อ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground min-w-[180px]">รายละเอียด</th>
+                <th className="w-20 px-4 py-3 font-semibold text-muted-foreground">ลำดับ</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ประเภทรถ</th>
+                <th className="w-24 px-4 py-3 font-semibold text-muted-foreground">จำนวนล้อ</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-32"></th>
               </tr>

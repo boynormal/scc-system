@@ -132,7 +132,7 @@ function CustomerFormRows({
             className="h-8 border-cyan-300"
           />
         </td>
-        <td className="px-4 py-3 align-top min-w-[160px]">
+        <td className="min-w-0 px-4 py-3 align-top">
           <DetailsField value={form.details} onChange={(details) => setForm((f) => ({ ...f, details }))} />
         </td>
         <td className="px-4 py-3 align-top">-</td>
@@ -281,16 +281,16 @@ export function CustomersTab() {
         </GlassButton>
       </div>
       <GlassCard padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[960px]">
+        <div className="min-w-0 overflow-hidden">
+          <table className="w-full table-fixed text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อลูกค้า/ปลายทาง</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">ที่อยู่</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-36">พิกัด</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-32">ผู้ติดต่อ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">เบอร์โทร</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground min-w-[160px]">รายละเอียด</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ชื่อลูกค้า/ปลายทาง</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ที่อยู่</th>
+                <th className="w-36 px-4 py-3 font-semibold text-muted-foreground">พิกัด</th>
+                <th className="w-32 px-4 py-3 font-semibold text-muted-foreground">ผู้ติดต่อ</th>
+                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">เบอร์โทร</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground w-20">สถานะ</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>

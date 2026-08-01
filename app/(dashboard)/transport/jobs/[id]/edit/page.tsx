@@ -139,7 +139,7 @@ export default function EditTransportJobPage() {
   if (!form) return <div className="p-6 text-red-500">{error ?? "ไม่พบข้อมูล"}</div>
 
   return (
-    <div className="mx-auto min-h-0 max-w-2xl flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
+    <div className="mx-auto max-w-2xl space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground">แก้ไขใบงาน {form.jobNumber}</h1>
       </div>

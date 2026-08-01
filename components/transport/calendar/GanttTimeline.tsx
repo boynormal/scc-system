@@ -257,11 +257,11 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       {toast && (
         <div
           className={cn(
-            "shrink-0 rounded-lg px-3 py-1.5 text-xs",
+            "rounded-lg px-3 py-1.5 text-xs",
             toast.type === "success"
               ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
               : "bg-red-50 text-red-700 border border-red-200"
@@ -279,12 +279,12 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
       )}
 
       {unassignedJobs.length > 0 && (
-        <p className="shrink-0 text-[11px] text-muted-foreground">
+        <p className="text-[11px] text-muted-foreground">
           ลากใบงานจากแถว &quot;ยังไม่มอบหมายรถ&quot; ไปวางที่แถวรถ (วันเดียวกับวันนัด)
         </p>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-card shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-36" />

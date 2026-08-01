@@ -217,7 +217,7 @@ export function VehiclesTab() {
           </div>
         )}
       </td>
-      <td className="px-4 py-3 align-top min-w-[160px]">
+      <td className="min-w-0 px-4 py-3 align-top">
         <DetailsField value={editForm.notes} onChange={(notes) => setEditForm((f) => ({ ...f, notes }))} />
       </td>
       <td className="px-4 py-3 align-top">-</td>
@@ -296,18 +296,18 @@ export function VehiclesTab() {
       </div>
 
       <GlassCard padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[900px]">
+        <div className="min-w-0 overflow-hidden">
+          <table className="w-full table-fixed text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">สาขา</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">ทะเบียน</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อรถ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">ประเภท</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-28">น้ำหนักรถเปล่า (กก.)</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-32">น้ำหนักรวมสูงสุด (กก.)</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-32">GPS (IMEI)</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground min-w-[160px]">รายละเอียด</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">สาขา</th>
+                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">ทะเบียน</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ชื่อรถ</th>
+                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">ประเภท</th>
+                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">น้ำหนักรถเปล่า (กก.)</th>
+                <th className="w-32 px-4 py-3 font-semibold text-muted-foreground">น้ำหนักรวมสูงสุด (กก.)</th>
+                <th className="w-32 px-4 py-3 font-semibold text-muted-foreground">GPS (IMEI)</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>

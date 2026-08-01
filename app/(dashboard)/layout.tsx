@@ -33,16 +33,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isDark = appearance === "dark"
 
   return (
-    <div className={cn("relative flex h-screen bg-glass-ambient", isDark && "dark")}>
-      <Sidebar
-        navItems={navItems}
-        productLineImageOverrides={navPreferences.productLineImageOverrides}
-        moduleImageOverrides={navPreferences.moduleImageOverrides}
-        logoUrl={company?.logoUrl}
-      />
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
+    <div className={cn("relative flex min-h-screen bg-glass-ambient", isDark && "dark")}>
+      <div className="sticky top-0 z-40 h-screen shrink-0 self-start">
+        <Sidebar
+          navItems={navItems}
+          productLineImageOverrides={navPreferences.productLineImageOverrides}
+          moduleImageOverrides={navPreferences.moduleImageOverrides}
+          logoUrl={company?.logoUrl}
+        />
+      </div>
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Header user={session.user} navItems={navItems} appearance={appearance} />
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 text-foreground">{children}</main>
+        <main className="p-6 text-foreground">{children}</main>
       </div>
     </div>
   )

@@ -315,7 +315,7 @@ export function DriversTab() {
         </GlassButton>
       </div>
       <GlassCard padding="none">
-        <div className="overflow-x-auto">
+        <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-left text-sm">
             <colgroup>
               <col className="w-10" />

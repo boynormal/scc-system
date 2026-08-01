@@ -186,7 +186,7 @@ function TransportCalendarContent() {
   const weekStart = startOfWeek(currentDate)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden p-3 md:p-4">
+    <div className="flex h-[calc(100dvh-9.5rem)] min-h-0 flex-col gap-2 overflow-hidden p-3 md:p-4">
       {/* Title + navigation + toolbar — single compact row */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -315,8 +315,13 @@ function TransportCalendarContent() {
         ))}
       </div>
 
-      {/* Content */}
-      <div className="min-h-0 flex-1">
+      {/* Content — scroll outside Gantt table; month still fills height */}
+      <div
+        className={cn(
+          "min-h-0 flex-1",
+          view === "gantt" ? "overflow-y-auto" : "overflow-hidden"
+        )}
+      >
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center text-sm text-red-600">
             {error}

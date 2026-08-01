@@ -106,7 +106,7 @@ export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps)
           className="h-8 border-cyan-300"
         />
       </td>
-      <td className="px-4 py-3 align-top min-w-[180px]">
+      <td className="min-w-0 px-4 py-3 align-top">
         <DetailsField
           value={editForm.details}
           onChange={(details) => setEditForm((f) => ({ ...f, details }))}
@@ -144,13 +144,13 @@ export function LookupTypesTab({ apiPath, addLabel, nameLabel }: LookupTabProps)
         </GlassButton>
       </div>
       <GlassCard padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[640px]">
+        <div className="min-w-0 overflow-hidden">
+          <table className="w-full table-fixed text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
                 <th className="px-4 py-3 font-semibold text-muted-foreground w-20">ลำดับ</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground">{nameLabel}</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground min-w-[180px]">รายละเอียด</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-32"></th>
               </tr>

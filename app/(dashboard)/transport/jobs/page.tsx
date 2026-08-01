@@ -151,7 +151,7 @@ export default async function TransportJobsPage({
 
   return (
 
-    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
+    <div className="min-w-0 space-y-6 p-4 md:p-6">
 
       <div className="flex items-center justify-between">
 

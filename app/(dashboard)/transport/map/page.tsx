@@ -90,7 +90,7 @@ export default function TransportMapPage() {
   const movingCount = vehicles.filter((v) => v.speed > 0).length
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="flex h-[calc(100dvh-9.5rem)] min-h-0 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* Sidebar */}
       <aside className="flex w-[340px] shrink-0 flex-col border-r border-border bg-card">

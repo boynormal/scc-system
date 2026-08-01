@@ -45,7 +45,7 @@ function MasterDataContent() {
   }
 
   return (
-    <div className="-m-6 w-auto min-w-0 space-y-6 p-4 md:p-6">
+    <div className="min-w-0 space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground">{t("masterDataTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -53,7 +53,7 @@ function MasterDataContent() {
         </p>
       </div>
 
-      <div className="flex flex-wrap border-b border-border gap-x-1 -mb-px overflow-x-auto">
+      <div className="flex flex-wrap border-b border-border gap-x-1 -mb-px">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -71,7 +71,7 @@ function MasterDataContent() {
         ))}
       </div>
 
-      <div className="pt-2">
+      <div className="min-w-0 pt-2">
         {activeTab === "job-types" && (
           <LookupTypesTab
             apiPath="/api/transport/master-data/job-types"
@@ -97,7 +97,7 @@ function MasterDataContent() {
 
 export default function TransportMasterDataPage() {
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="min-w-0 overflow-x-hidden">
       <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">กำลังโหลด...</div>}>
         <MasterDataContent />
       </Suspense>

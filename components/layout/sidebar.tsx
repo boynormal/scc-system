@@ -47,7 +47,7 @@ export default function Sidebar({
   const handleClosePanel = () => setOpenProductLineId(null)
 
   return (
-    <div className="relative shrink-0 h-full">
+    <div className="relative h-full shrink-0">
       <SidebarIconRail
         productLines={visibleProductLines}
         activeProductLineId={activeProductLineId}

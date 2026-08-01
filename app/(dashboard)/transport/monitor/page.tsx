@@ -87,7 +87,7 @@ export default function TransportMonitorPage() {
   ]
 
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
+    <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -173,14 +173,14 @@ export default function TransportMonitorPage() {
         )
       })()}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      {/* Table — page scroll is on transport layout (far right edge) */}
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         {error ? (
           <div className="px-6 py-10 text-center text-sm text-red-500">{error}</div>
         ) : loading ? (
           <div className="px-6 py-10 text-center text-sm text-muted-foreground">กำลังโหลดข้อมูล GPS...</div>
         ) : (
-          <table className="min-w-full text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left">ทะเบียน</th>

@@ -1,9 +1,23 @@
 import { z } from "zod"
 import type { PrismaClient, Prisma } from "@prisma/client"
 import { ForbiddenError, NotFoundError } from "@/lib/errors"
-import { hasPermission, isAdminInAnyBranch, getBranchIds, type UserRole } from "@/lib/permissions"
+import {
+  hasPermission,
+  isAdminInAnyBranch,
+  getBranchIds,
+  type Action,
+  type UserRole,
+} from "@/lib/permissions"
 import { generateDriverCode } from "./generate-entity-code"
 import { DRIVER_DRIVABLE_VEHICLE_TYPES, DRIVER_LICENSE_TYPES } from "./driver-options"
+
+/** Shared fleet: action on any branch (or Admin) grants company-wide access for that action. */
+function hasTransportDriverAction(roles: UserRole[], action: Action): boolean {
+  if (isAdminInAnyBranch(roles)) return true
+  return getBranchIds(roles).some((bid) =>
+    hasPermission(roles, bid, "transport_drivers", action)
+  )
+}
 
 const licenseTypesSchema = z.array(z.enum(DRIVER_LICENSE_TYPES)).optional()
 const drivableVehicleTypesSchema = z.array(z.enum(DRIVER_DRIVABLE_VEHICLE_TYPES)).optional()
@@ -74,21 +88,9 @@ export async function listDrivers(
     includeInactive?: boolean
   }
 ) {
-  const accessibleBranchIds = getBranchIds(params.roles).filter((bid) =>
-    hasPermission(params.roles, bid, "transport_drivers", "read")
-  )
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    (params.branchId
-      ? hasPermission(params.roles, params.branchId, "transport_drivers", "read")
-      : accessibleBranchIds.length > 0)
-  if (!canRead) throw new ForbiddenError()
+  if (!hasTransportDriverAction(params.roles, "read")) throw new ForbiddenError()
 
-  const branchFilter = params.branchId
-    ? { branchId: params.branchId }
-    : isAdminInAnyBranch(params.roles)
-      ? {}
-      : { branchId: { in: accessibleBranchIds } }
+  const branchFilter = params.branchId ? { branchId: params.branchId } : {}
 
   return db.driver.findMany({
     where: {
@@ -132,10 +134,7 @@ export async function getDriverById(
     },
   })
   if (!driver) throw new NotFoundError("Driver not found")
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, driver.branchId, "transport_drivers", "read")
-  if (!canRead) throw new ForbiddenError()
+  if (!hasTransportDriverAction(params.roles, "read")) throw new ForbiddenError()
   return driver
 }
 
@@ -188,10 +187,7 @@ export async function updateDriver(
     where: { id: params.id, companyId: params.companyId },
   })
   if (!driver) throw new NotFoundError("Driver not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, driver.branchId, "transport_drivers", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!hasTransportDriverAction(params.roles, "update")) throw new ForbiddenError()
 
   return db.driver.update({
     where: { id: params.id },
@@ -207,10 +203,7 @@ export async function deleteDriver(
     where: { id: params.id, companyId: params.companyId },
   })
   if (!driver) throw new NotFoundError("Driver not found")
-  const canDelete =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, driver.branchId, "transport_drivers", "delete")
-  if (!canDelete) throw new ForbiddenError()
+  if (!hasTransportDriverAction(params.roles, "delete")) throw new ForbiddenError()
 
   return db.driver.update({ where: { id: params.id }, data: { isActive: false } })
 }

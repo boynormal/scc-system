@@ -1,7 +1,21 @@
 import { z } from "zod"
 import type { PrismaClient, VehicleStatus } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
-import { hasPermission, isAdminInAnyBranch, getBranchIds, type UserRole } from "@/lib/permissions"
+import {
+  hasPermission,
+  isAdminInAnyBranch,
+  getBranchIds,
+  type Action,
+  type UserRole,
+} from "@/lib/permissions"
+
+/** Shared fleet: action on any branch (or Admin) grants company-wide access for that action. */
+function hasTransportVehicleAction(roles: UserRole[], action: Action): boolean {
+  if (isAdminInAnyBranch(roles)) return true
+  return getBranchIds(roles).some((bid) =>
+    hasPermission(roles, bid, "transport_vehicles", action)
+  )
+}
 
 export const createVehicleSchema = z.object({
   branchId: z.string().uuid(),
@@ -57,21 +71,9 @@ export async function listVehicles(
     includeInactive?: boolean
   }
 ) {
-  const accessibleBranchIds = getBranchIds(params.roles).filter((bid) =>
-    hasPermission(params.roles, bid, "transport_vehicles", "read")
-  )
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    (params.branchId
-      ? hasPermission(params.roles, params.branchId, "transport_vehicles", "read")
-      : accessibleBranchIds.length > 0)
-  if (!canRead) throw new ForbiddenError()
+  if (!hasTransportVehicleAction(params.roles, "read")) throw new ForbiddenError()
 
-  const branchFilter = params.branchId
-    ? { branchId: params.branchId }
-    : isAdminInAnyBranch(params.roles)
-      ? {}
-      : { branchId: { in: accessibleBranchIds } }
+  const branchFilter = params.branchId ? { branchId: params.branchId } : {}
 
   return db.transportVehicle.findMany({
     where: {
@@ -105,10 +107,7 @@ export async function getVehicleById(
     },
   })
   if (!vehicle) throw new NotFoundError("Vehicle not found")
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, vehicle.branchId, "transport_vehicles", "read")
-  if (!canRead) throw new ForbiddenError()
+  if (!hasTransportVehicleAction(params.roles, "read")) throw new ForbiddenError()
   return vehicle
 }
 
@@ -141,10 +140,7 @@ export async function updateVehicle(
     where: { id: params.id, companyId: params.companyId },
   })
   if (!vehicle) throw new NotFoundError("Vehicle not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, vehicle.branchId, "transport_vehicles", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!hasTransportVehicleAction(params.roles, "update")) throw new ForbiddenError()
 
   await assertGpsDeviceIdUnique(db, params.companyId, params.input.gpsDeviceId, params.id)
 
@@ -159,10 +155,7 @@ export async function deleteVehicle(
     where: { id: params.id, companyId: params.companyId },
   })
   if (!vehicle) throw new NotFoundError("Vehicle not found")
-  const canDelete =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, vehicle.branchId, "transport_vehicles", "delete")
-  if (!canDelete) throw new ForbiddenError()
+  if (!hasTransportVehicleAction(params.roles, "delete")) throw new ForbiddenError()
 
   return db.transportVehicle.update({ where: { id: params.id }, data: { isActive: false } })
 }

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import type { CalendarJob } from "@/app/api/transport/calendar/route"
+import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
 import { JobPopover, PRIORITY_CONFIG, STATUS_LABEL } from "./JobPopover"
 import { AssignDriverModal, type DriverOption } from "./AssignDriverModal"
 
@@ -43,12 +44,8 @@ function addDays(date: Date, days: number) {
   return d
 }
 
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
+function sameBangkokDay(a: Date, b: Date) {
+  return formatBangkokYmd(a) === formatBangkokYmd(b)
 }
 
 const DAY_SHORT = ["อา", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."]
@@ -56,7 +53,12 @@ const MONTH_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.
 const DRAG_MIME = "application/x-transport-job"
 
 export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssigned }: Props) {
-  const [selectedJob, setSelectedJob] = useState<{ job: CalendarJob; dayIdx: number; vehicleId: string } | null>(null)
+  const [selectedJob, setSelectedJob] = useState<{
+    job: CalendarJob
+    dayIdx: number
+    vehicleId: string
+    anchorRect: DOMRect
+  } | null>(null)
   const [dropTarget, setDropTarget] = useState<{ vehicleId: string; dayIdx: number } | null>(null)
   const [pendingAssign, setPendingAssign] = useState<PendingAssign | null>(null)
   const [assigning, setAssigning] = useState(false)
@@ -80,11 +82,11 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
 
   const jobsForVehicleDay = (vehicleId: string, day: Date) =>
     jobs.filter(
-      (j) => j.vehicle?.id === vehicleId && isSameDay(new Date(j.scheduledDate), day)
+      (j) => j.vehicle?.id === vehicleId && sameBangkokDay(new Date(j.scheduledDate), day)
     )
 
   const jobsUnassignedDay = (day: Date) =>
-    unassignedJobs.filter((j) => isSameDay(new Date(j.scheduledDate), day))
+    unassignedJobs.filter((j) => sameBangkokDay(new Date(j.scheduledDate), day))
 
   const postAssignment = async (jobId: string, vehicleId: string, driverId: string) => {
     const res = await fetch(`/api/transport/jobs/${jobId}/assignment`, {
@@ -117,7 +119,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
     const job = jobs.find((j) => j.id === payload.jobId)
     if (!job) return
 
-    const jobDayIdx = days.findIndex((day) => isSameDay(day, new Date(job.scheduledDate)))
+    const jobDayIdx = days.findIndex((day) => sameBangkokDay(day, new Date(job.scheduledDate)))
     if (jobDayIdx !== targetDayIdx) {
       setToast({ type: "error", message: "วางได้เฉพาะคอลัมน์วันเดียวกับวันนัดของใบงาน" })
       return
@@ -202,14 +204,20 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
     return (
       <div key={job.id} className="relative">
         <button
+          type="button"
           draggable={draggable}
           onDragStart={(e) =>
             draggable &&
             handleDragStart(e, { jobId: job.id, sourceDayIdx: dayIdx, sourceVehicleId: vehicleId })
           }
-          onClick={() =>
-            setSelectedJob(isSelected ? null : { job, dayIdx, vehicleId })
-          }
+          onClick={(e) => {
+            if (isSelected) {
+              setSelectedJob(null)
+              return
+            }
+            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+            setSelectedJob({ job, dayIdx, vehicleId, anchorRect: rect })
+          }}
           title={draggable ? "ลากไปวางที่แถวรถเพื่อมอบหมาย" : undefined}
           className={cn(
             "w-full rounded-md px-2 py-1.5 text-left transition-opacity hover:opacity-90",
@@ -227,11 +235,6 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
             </div>
           )}
         </button>
-        {isSelected && (
-          <div className="relative z-50">
-            <JobPopover job={job} onClose={() => setSelectedJob(null)} />
-          </div>
-        )}
       </div>
     )
   }
@@ -280,7 +283,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                 ทะเบียนรถ
               </th>
               {days.map((day, i) => {
-                const isToday = isSameDay(day, today)
+                const isToday = sameBangkokDay(day, today)
                 const isWeekend = day.getDay() === 0 || day.getDay() === 6
                 return (
                   <th
@@ -310,7 +313,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                 </td>
                 {days.map((day, dayIdx) => {
                   const dayJobs = jobsForVehicleDay(vehicle.id, day)
-                  const isToday = isSameDay(day, today)
+                  const isToday = sameBangkokDay(day, today)
                   const isDropTarget =
                     dropTarget?.vehicleId === vehicle.id && dropTarget?.dayIdx === dayIdx
                   return (
@@ -347,7 +350,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                 </td>
                 {days.map((day, dayIdx) => {
                   const dayJobs = jobsUnassignedDay(day)
-                  const isToday = isSameDay(day, today)
+                  const isToday = sameBangkokDay(day, today)
                   return (
                     <td
                       key={dayIdx}
@@ -372,6 +375,14 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
           </tbody>
         </table>
       </div>
+
+      {selectedJob && (
+        <JobPopover
+          job={selectedJob.job}
+          anchorRect={selectedJob.anchorRect}
+          onClose={() => setSelectedJob(null)}
+        />
+      )}
 
       {assigning && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 text-sm text-white">

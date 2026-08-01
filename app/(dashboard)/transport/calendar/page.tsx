@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { MonthCalendar } from "@/components/transport/calendar/MonthCalendar"
 import { GanttTimeline } from "@/components/transport/calendar/GanttTimeline"
 import type { CalendarJob } from "@/app/api/transport/calendar/route"
+import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
 
 type View = "month" | "gantt"
 
@@ -32,10 +33,6 @@ function addDays(date: Date, days: number): Date {
   return d
 }
 
-function toDateStr(d: Date) {
-  return d.toISOString().substring(0, 10)
-}
-
 type Vehicle = {
   id: string
   plateNumber: string
@@ -58,6 +55,7 @@ function TransportCalendarContent() {
   const [vehicleFilter, setVehicleFilter] = useState<string>("all")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null)
   const [urlParamsApplied, setUrlParamsApplied] = useState(false)
 
   useEffect(() => {
@@ -76,33 +74,43 @@ function TransportCalendarContent() {
     setUrlParamsApplied(true)
   }, [searchParams, urlParamsApplied])
 
-  useEffect(() => {
-    fetch("/api/transport/vehicles")
-      .then((r) => r.json())
-      .then((json) => {
-        const list: Vehicle[] = (json.data ?? []).map(
-          (v: {
-            id: string
-            plateNumber: string
-            name: string
-            gpsDeviceId?: string | null
-            branchId?: string
-          }) => ({
-            id: v.id,
-            plateNumber: v.plateNumber,
-            name: v.name,
-            gpsDeviceId: v.gpsDeviceId ?? null,
-            branchId: v.branchId,
-          })
-        )
-        setVehicles((prev) => {
-          const merged = new Map<string, Vehicle>()
-          for (const v of [...prev, ...list]) merged.set(v.id, v)
-          return [...merged.values()].sort((a, b) => a.plateNumber.localeCompare(b.plateNumber))
+  const fetchVehicles = useCallback(async () => {
+    setVehiclesError(null)
+    try {
+      const res = await fetch("/api/transport/vehicles")
+      const json = await res.json()
+      if (!res.ok) {
+        setVehiclesError(typeof json.error === "string" ? json.error : t("loadFailed"))
+        return
+      }
+      const list: Vehicle[] = (json.data ?? []).map(
+        (v: {
+          id: string
+          plateNumber: string
+          name: string
+          gpsDeviceId?: string | null
+          branchId?: string
+        }) => ({
+          id: v.id,
+          plateNumber: v.plateNumber,
+          name: v.name,
+          gpsDeviceId: v.gpsDeviceId ?? null,
+          branchId: v.branchId,
         })
+      )
+      setVehicles((prev) => {
+        const merged = new Map<string, Vehicle>()
+        for (const v of [...prev, ...list]) merged.set(v.id, v)
+        return [...merged.values()].sort((a, b) => a.plateNumber.localeCompare(b.plateNumber))
       })
-      .catch(() => {})
-  }, [])
+    } catch {
+      setVehiclesError(t("loadFailed"))
+    }
+  }, [t])
+
+  useEffect(() => {
+    fetchVehicles()
+  }, [fetchVehicles])
 
   // Compute range based on view
   const { from, to, label } = (() => {
@@ -110,10 +118,10 @@ function TransportCalendarContent() {
       const y = currentDate.getFullYear()
       const m = currentDate.getMonth()
       const f = new Date(y, m, 1)
-      const t = new Date(y, m + 1, 0)
+      const end = new Date(y, m + 1, 0)
       return {
-        from: toDateStr(f),
-        to: toDateStr(t),
+        from: formatBangkokYmd(f),
+        to: formatBangkokYmd(end),
         label: `${MONTH_TH[m]} ${y + 543}`,
       }
     } else {
@@ -121,8 +129,8 @@ function TransportCalendarContent() {
       const we = addDays(ws, 6)
       const fmtDay = (d: Date) => `${d.getDate()} ${MONTH_TH[d.getMonth()].substring(0, 3)}.`
       return {
-        from: toDateStr(ws),
-        to: toDateStr(we),
+        from: formatBangkokYmd(ws),
+        to: formatBangkokYmd(we),
         label: `${fmtDay(ws)} – ${fmtDay(we)} ${we.getFullYear() + 543}`,
       }
     }
@@ -232,7 +240,10 @@ function TransportCalendarContent() {
 
           {/* Refresh */}
           <button
-            onClick={fetchJobs}
+            onClick={() => {
+              fetchVehicles()
+              fetchJobs()
+            }}
             className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/60"
             title={t("refresh")}
           >
@@ -264,6 +275,19 @@ function TransportCalendarContent() {
           </div>
         </div>
       </div>
+
+      {vehiclesError && (
+        <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <span>โหลดรายการรถไม่สำเร็จ: {vehiclesError}</span>
+          <button
+            type="button"
+            onClick={fetchVehicles}
+            className="rounded border border-amber-300 bg-white px-2 py-0.5 text-xs font-medium hover:bg-amber-100"
+          >
+            ลองใหม่
+          </button>
+        </div>
+      )}
 
       {/* Summary stats */}
       <div className="flex shrink-0 flex-wrap gap-3 text-xs text-muted-foreground">

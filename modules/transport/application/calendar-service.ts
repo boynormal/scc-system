@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client"
 import { ValidationError } from "@/lib/errors"
+import { getBangkokDateRange } from "./transport-date-utils"
 
 export type CalendarJob = {
   id: string
@@ -15,6 +16,8 @@ export type CalendarJob = {
   stopsCount: number
 }
 
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
+
 export async function listCalendarJobs(
   db: PrismaClient,
   params: { companyId: string; from: string | null; to: string | null; vehicleId?: string | null }
@@ -25,9 +28,11 @@ export async function listCalendarJobs(
     throw new ValidationError("from and to query params are required")
   }
 
-  const fromDate = new Date(from)
-  const toDate = new Date(to)
-  toDate.setHours(23, 59, 59, 999)
+  if (!YMD_RE.test(from) || !YMD_RE.test(to)) {
+    throw new ValidationError("Invalid date format")
+  }
+
+  const { start: fromDate, end: toDate } = getBangkokDateRange(from, to)
 
   if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
     throw new ValidationError("Invalid date format")

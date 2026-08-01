@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -26,18 +28,77 @@ export const STATUS_LABEL: Record<string, string> = {
   cancelled: "ยกเลิก",
 }
 
+const POPOVER_WIDTH = 288 // w-72
+const GAP = 4
+const VIEWPORT_PAD = 8
+
 type Props = {
   job: CalendarJob
+  anchorRect: DOMRect
   onClose: () => void
 }
 
-export function JobPopover({ job, onClose }: Props) {
+export function JobPopover({ job, anchorRect, onClose }: Props) {
   const priority = PRIORITY_CONFIG[job.priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG.normal
   const scheduledDate = new Date(job.scheduledDate)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const [mounted, setMounted] = useState(false)
 
-  return (
-    <div className="absolute z-50 w-72 rounded-xl border border-border bg-card shadow-xl"
-      style={{ top: "100%", left: 0, marginTop: 4 }}
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useLayoutEffect(() => {
+    const el = panelRef.current
+    const height = el?.offsetHeight ?? 280
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    let top = anchorRect.bottom + GAP
+    let left = anchorRect.left
+
+    if (top + height > vh - VIEWPORT_PAD) {
+      top = Math.max(VIEWPORT_PAD, anchorRect.top - height - GAP)
+    }
+    if (left + POPOVER_WIDTH > vw - VIEWPORT_PAD) {
+      left = Math.max(VIEWPORT_PAD, vw - POPOVER_WIDTH - VIEWPORT_PAD)
+    }
+    if (left < VIEWPORT_PAD) left = VIEWPORT_PAD
+
+    setPos({ top, left })
+  }, [anchorRect])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    const onPointer = (e: MouseEvent | PointerEvent) => {
+      const target = e.target as Node
+      if (panelRef.current?.contains(target)) return
+      onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    // Defer so the opening click does not immediately close
+    const timer = window.setTimeout(() => {
+      document.addEventListener("pointerdown", onPointer)
+    }, 0)
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      window.clearTimeout(timer)
+      document.removeEventListener("pointerdown", onPointer)
+    }
+  }, [onClose])
+
+  if (!mounted) return null
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      className="fixed z-[100] w-72 rounded-xl border border-border bg-card shadow-xl"
+      style={{ top: pos.top, left: pos.left }}
+      role="dialog"
+      aria-label={job.jobNumber}
     >
       {/* Header */}
       <div className={cn("flex items-start justify-between rounded-t-xl px-4 py-3", priority.bg, priority.text)}>
@@ -45,7 +106,7 @@ export function JobPopover({ job, onClose }: Props) {
           <p className="text-xs font-medium opacity-80">{priority.label}</p>
           <p className="text-base font-bold">{job.jobNumber}</p>
         </div>
-        <button onClick={onClose} className="mt-0.5 rounded-full p-0.5 hover:bg-white/20">
+        <button type="button" onClick={onClose} className="mt-0.5 rounded-full p-0.5 hover:bg-white/20">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -75,7 +136,8 @@ export function JobPopover({ job, onClose }: Props) {
           ดูรายละเอียด →
         </Link>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

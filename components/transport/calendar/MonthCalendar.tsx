@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import type { CalendarJob } from "@/app/api/transport/calendar/route"
+import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
 import { JobPopover, PRIORITY_CONFIG } from "./JobPopover"
 
 type Props = {
@@ -11,17 +12,15 @@ type Props = {
   jobs: CalendarJob[]
 }
 
-function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-}
-
 const DAY_LABELS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]
 const MAX_VISIBLE_JOBS = 5
 
 export function MonthCalendar({ year, month, jobs }: Props) {
-  const [selectedJob, setSelectedJob] = useState<{ job: CalendarJob; cellKey: string } | null>(null)
+  const [selectedJob, setSelectedJob] = useState<{
+    job: CalendarJob
+    cellKey: string
+    anchorRect: DOMRect
+  } | null>(null)
 
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
@@ -36,10 +35,12 @@ export function MonthCalendar({ year, month, jobs }: Props) {
     return new Date(year, month, dayNum)
   })
 
-  const today = new Date()
+  const todayYmd = formatBangkokYmd()
 
-  const jobsOnDay = (day: Date) =>
-    jobs.filter((j) => isSameDay(new Date(j.scheduledDate), day))
+  const jobsOnDay = (day: Date) => {
+    const dayYmd = formatBangkokYmd(day)
+    return jobs.filter((j) => formatBangkokYmd(new Date(j.scheduledDate)) === dayYmd)
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -69,9 +70,10 @@ export function MonthCalendar({ year, month, jobs }: Props) {
           }
 
           const dayJobs = jobsOnDay(day)
-          const isToday = isSameDay(day, today)
+          const dayYmd = formatBangkokYmd(day)
+          const isToday = dayYmd === todayYmd
           const isWeekend = day.getDay() === 0 || day.getDay() === 6
-          const cellKey = day.toISOString()
+          const cellKey = dayYmd
           const plate = (job: CalendarJob) => job.vehicle?.plateNumber ?? "ไม่ระบุรถ"
 
           return (
@@ -106,7 +108,12 @@ export function MonthCalendar({ year, month, jobs }: Props) {
                         title={`${plate(job)} · ${job.jobNumber}`}
                         onClick={(e) => {
                           e.stopPropagation()
-                          setSelectedJob(isSelected ? null : { job, cellKey })
+                          if (isSelected) {
+                            setSelectedJob(null)
+                            return
+                          }
+                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                          setSelectedJob({ job, cellKey, anchorRect: rect })
                         }}
                         className={cn(
                           "w-full rounded px-1.5 py-0.5 text-left text-[10px] font-medium truncate transition-opacity",
@@ -116,9 +123,6 @@ export function MonthCalendar({ year, month, jobs }: Props) {
                       >
                         {plate(job)}
                       </button>
-                      {isSelected && (
-                        <JobPopover job={job} onClose={() => setSelectedJob(null)} />
-                      )}
                     </div>
                   )
                 })}
@@ -132,6 +136,14 @@ export function MonthCalendar({ year, month, jobs }: Props) {
           )
         })}
       </div>
+
+      {selectedJob && (
+        <JobPopover
+          job={selectedJob.job}
+          anchorRect={selectedJob.anchorRect}
+          onClose={() => setSelectedJob(null)}
+        />
+      )}
     </div>
   )
 }

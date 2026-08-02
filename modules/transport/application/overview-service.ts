@@ -93,7 +93,7 @@ export async function getTransportOverview(
       take: 5,
     }),
     db.transportJob.findMany({
-      where: jobBranch,
+      where: { ...jobBranch, status: { in: ACTIVE_JOB_STATUSES } },
       include: {
         assignment: {
           include: {

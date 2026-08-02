@@ -80,9 +80,30 @@ export const createStopSchema = z.object({
 })
 
 export const updateStopSchema = z.object({
+  customerName: z.string().min(1).max(255).optional(),
+  address: z.string().min(1).optional(),
+  contactName: z.string().max(255).nullable().optional(),
+  contactPhone: z.string().max(30).nullable().optional(),
+  weightKg: z.number().positive().nullable().optional(),
+  sequence: z.number().int().min(1).optional(),
   status: z.enum(["pending", "arrived", "loading", "completed", "skipped", "cancelled"]).optional(),
   actualArrival: z.string().datetime({ offset: true }).optional(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
+})
+
+export const syncJobStopsSchema = z.object({
+  stops: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        customerName: z.string().min(1).max(255),
+        address: z.string().min(1),
+        contactName: z.string().max(255).optional().nullable(),
+        contactPhone: z.string().max(30).optional().nullable(),
+        weightKg: z.number().positive().optional().nullable(),
+      })
+    )
+    .min(1, "At least one stop is required"),
 })
 
 export const createAttachmentSchema = z.object({
@@ -442,12 +463,123 @@ export async function updateStop(
   const stop = await db.jobStop.findFirst({ where: { id: params.stopId, jobId: params.jobId } })
   if (!stop) throw new NotFoundError("Stop not found")
 
+  const { actualArrival, weightKg, ...rest } = params.input
   return db.jobStop.update({
     where: { id: params.stopId },
     data: {
-      ...params.input,
-      ...(params.input.actualArrival ? { actualArrival: new Date(params.input.actualArrival) } : {}),
+      ...rest,
+      ...(weightKg !== undefined ? { weightKg } : {}),
+      ...(actualArrival !== undefined
+        ? { actualArrival: actualArrival ? new Date(actualArrival) : null }
+        : {}),
     },
+  })
+}
+
+export async function deleteStop(
+  db: PrismaClient,
+  params: { jobId: string; stopId: string; companyId: string; roles: UserRole[] }
+) {
+  const job = await db.transportJob.findFirst({
+    where: { id: params.jobId, companyId: params.companyId },
+  })
+  if (!job) throw new NotFoundError("Job not found")
+  const canUpdate =
+    isAdminInAnyBranch(params.roles) ||
+    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
+  if (!canUpdate) throw new ForbiddenError()
+
+  if (job.status === "completed" || job.status === "cancelled") {
+    throw new ValidationError("Cannot modify stops on a completed or cancelled job")
+  }
+
+  const stops = await db.jobStop.findMany({
+    where: { jobId: params.jobId },
+    orderBy: { sequence: "asc" },
+  })
+  if (stops.length <= 1) {
+    throw new ValidationError("At least one stop is required")
+  }
+  const target = stops.find((s) => s.id === params.stopId)
+  if (!target) throw new NotFoundError("Stop not found")
+
+  await db.$transaction(async (tx) => {
+    await tx.jobStop.delete({ where: { id: params.stopId } })
+    const remaining = stops.filter((s) => s.id !== params.stopId)
+    for (let i = 0; i < remaining.length; i++) {
+      await tx.jobStop.update({
+        where: { id: remaining[i].id },
+        data: { sequence: i + 1 },
+      })
+    }
+  })
+
+  return { ok: true }
+}
+
+export async function syncJobStops(
+  db: PrismaClient,
+  params: {
+    jobId: string
+    companyId: string
+    roles: UserRole[]
+    input: z.infer<typeof syncJobStopsSchema>
+  }
+) {
+  const job = await db.transportJob.findFirst({
+    where: { id: params.jobId, companyId: params.companyId },
+  })
+  if (!job) throw new NotFoundError("Job not found")
+  const canUpdate =
+    isAdminInAnyBranch(params.roles) ||
+    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
+  if (!canUpdate) throw new ForbiddenError()
+
+  if (job.status === "completed" || job.status === "cancelled") {
+    throw new ValidationError("Cannot modify stops on a completed or cancelled job")
+  }
+
+  const payload = params.input.stops
+  if (payload.length < 1) {
+    throw new ValidationError("At least one stop is required")
+  }
+
+  return db.$transaction(async (tx) => {
+    const existing = await tx.jobStop.findMany({ where: { jobId: params.jobId } })
+    const existingById = new Map(existing.map((s) => [s.id, s]))
+    const keepIds = new Set(payload.map((s) => s.id).filter((id): id is string => Boolean(id)))
+
+    for (const stop of existing) {
+      if (!keepIds.has(stop.id)) {
+        await tx.jobStop.delete({ where: { id: stop.id } })
+      }
+    }
+
+    for (let i = 0; i < payload.length; i++) {
+      const item = payload[i]
+      const sequence = i + 1
+      const data = {
+        sequence,
+        customerName: item.customerName,
+        address: item.address,
+        contactName: item.contactName ?? null,
+        contactPhone: item.contactPhone ?? null,
+        weightKg: item.weightKg ?? null,
+      }
+
+      if (item.id && existingById.has(item.id)) {
+        await tx.jobStop.update({ where: { id: item.id }, data })
+      } else {
+        await tx.jobStop.create({
+          data: { ...data, jobId: params.jobId },
+        })
+      }
+    }
+
+    return tx.jobStop.findMany({
+      where: { jobId: params.jobId },
+      orderBy: { sequence: "asc" },
+    })
   })
 }
 

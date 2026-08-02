@@ -6,13 +6,15 @@ import { useTranslations } from "next-intl"
 import { TransportMap } from "@/components/transport/gps/TransportMap"
 import { MapVehicleListItem } from "@/components/transport/gps/MapVehicleListItem"
 import { UnmatchedMapVehicleListItem } from "@/components/transport/gps/UnmatchedMapVehicleListItem"
+import { MapWeatherPanel } from "@/components/transport/gps/MapWeatherPanel"
 import { hasAnyAlert } from "@/components/transport/gps/GpsAlertBadge"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
-import { RefreshCw, AlertTriangle, List, ListCollapse } from "lucide-react"
+import { RefreshCw, AlertTriangle, CloudSun, List, ListCollapse } from "lucide-react"
 import {
   TransportSearchField,
   TransportSegmentedTabs,
 } from "@/components/transport/toolbar"
+import { WEATHER_DEFAULT_COORDS } from "@/shared/weather/windy-url"
 
 const POLL_INTERVAL = 45_000
 const VEHICLES_MASTER_HREF = "/transport/master-data?tab=vehicles"
@@ -30,6 +32,7 @@ export default function TransportMapPage() {
   const [search, setSearch] = useState("")
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all")
   const [listCompact, setListCompact] = useState(true)
+  const [weatherOpen, setWeatherOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -92,6 +95,19 @@ export default function TransportMapPage() {
 
   const alertCount = vehicles.filter((v) => hasAnyAlert(v.alerts)).length
   const movingCount = vehicles.filter((v) => v.speed > 0).length
+
+  const weatherTarget = useMemo(() => {
+    const selected = selectedId ? vehicles.find((v) => v.id === selectedId) : undefined
+    if (selected && Number.isFinite(selected.lat) && Number.isFinite(selected.lng) && selected.lat !== 0 && selected.lng !== 0) {
+      const plate = selected.plateNumber?.trim() || selected.asset?.trim() || "รถที่เลือก"
+      return { lat: selected.lat, lon: selected.lng, placeLabel: plate }
+    }
+    return {
+      lat: WEATHER_DEFAULT_COORDS.lat,
+      lon: WEATHER_DEFAULT_COORDS.lon,
+      placeLabel: WEATHER_DEFAULT_COORDS.label,
+    }
+  }, [selectedId, vehicles])
 
   return (
     <div className="flex h-[calc(100dvh-9.5rem)] min-h-0 flex-col overflow-hidden">
@@ -237,6 +253,28 @@ export default function TransportMapPage() {
             {error}
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => setWeatherOpen((o) => !o)}
+          className={
+            weatherOpen
+              ? "absolute right-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-cyan-600 bg-cyan-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-md hover:bg-cyan-700"
+              : "absolute right-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-md backdrop-blur-sm hover:bg-slate-50 dark:border-border dark:bg-card/95 dark:text-foreground dark:hover:bg-muted"
+          }
+          aria-pressed={weatherOpen}
+          aria-label={weatherOpen ? "ปิดแผงอากาศ" : "เปิดแผงอากาศและเรดาร์"}
+          title="สภาพอากาศ / เรดาร์"
+        >
+          <CloudSun className="h-4 w-4" />
+          เรดาร์
+        </button>
+        <MapWeatherPanel
+          open={weatherOpen}
+          onClose={() => setWeatherOpen(false)}
+          lat={weatherTarget.lat}
+          lon={weatherTarget.lon}
+          placeLabel={weatherTarget.placeLabel}
+        />
         <TransportMap
           vehicles={filtered}
           selectedId={selectedId}

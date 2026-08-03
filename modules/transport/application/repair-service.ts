@@ -302,7 +302,7 @@ async function assertNoActiveJobToday(db: PrismaClient, companyId: string, vehic
   })
   if (activeJob) {
     throw new ValidationError(
-      `รถมีใบงานที่ยังไม่จบ (${activeJob.jobNumber}) — จบหรือยกเลิกมอบหมายก่อนเข้าซ่อม`
+      `รถมีใบงานที่ยังไม่จบ (${activeJob.jobNumber}) — จบงาน ยกเลิกใบงาน หรือเปลี่ยนมอบหมายไปคันอื่นก่อนเข้าซ่อม`
     )
   }
 }

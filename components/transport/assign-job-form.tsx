@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Truck, User, Pencil, Trash2, Plus } from "lucide-react"
+import { Truck, User, Pencil, Plus } from "lucide-react"
 import { JobAssignmentPickers, type AssignmentDriver, type AssignmentVehicle } from "@/components/transport/JobAssignmentPickers"
 
 type CurrentAssignment = {
@@ -17,11 +17,18 @@ type Props = {
   branchId: string
   currentAssignment: CurrentAssignment
   jobStatus: string
+  onAssignmentChange?: () => void
 }
 
 const LOCKED_STATUSES = ["completed", "cancelled"]
 
-export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }: Props) {
+export function AssignJobForm({
+  jobId,
+  branchId,
+  currentAssignment,
+  jobStatus,
+  onAssignmentChange,
+}: Props) {
   const router = useRouter()
   const isLocked = LOCKED_STATUSES.includes(jobStatus)
 
@@ -29,9 +36,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
   const [vehicleId, setVehicleId] = useState("")
   const [driverId, setDriverId] = useState("")
   const [saving, setSaving] = useState(false)
-  const [removing, setRemoving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [confirmRemove, setConfirmRemove] = useState(false)
 
   useEffect(() => {
     if (mode === "assigning") {
@@ -81,26 +86,11 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
       if (!res.ok) { setError(json.error ?? "เกิดข้อผิดพลาด"); return }
       setMode("view")
       router.refresh()
+      onAssignmentChange?.()
     } catch {
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
     } finally {
       setSaving(false)
-    }
-  }
-
-  const handleUnassign = async () => {
-    setRemoving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/transport/jobs/${jobId}/assignment`, { method: "DELETE" })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? "เกิดข้อผิดพลาด"); return }
-      setConfirmRemove(false)
-      router.refresh()
-    } catch {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-    } finally {
-      setRemoving(false)
     }
   }
 
@@ -110,6 +100,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
         <h3 className="text-sm font-semibold text-foreground">การมอบหมาย</h3>
         {!isLocked && mode === "view" && (
           <button
+            type="button"
             onClick={() => setMode("assigning")}
             className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-cyan-600 hover:bg-cyan-50"
           >
@@ -153,42 +144,13 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
               <div className="text-xs text-muted-foreground">
                 มอบหมายโดย: {currentAssignment.assignedByUser.firstName} {currentAssignment.assignedByUser.lastName}
               </div>
-
-              {!isLocked && (
-                <div className="border-t border-border pt-3">
-                  {!confirmRemove ? (
-                    <button
-                      onClick={() => setConfirmRemove(true)}
-                      className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> ยกเลิกมอบหมาย
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">ยืนยันยกเลิก?</span>
-                      <button
-                        onClick={handleUnassign}
-                        disabled={removing}
-                        className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                      >
-                        {removing ? "กำลังยกเลิก..." : "ยืนยัน"}
-                      </button>
-                      <button
-                        onClick={() => setConfirmRemove(false)}
-                        className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted/60"
-                      >
-                        ไม่
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           ) : (
             <div className="py-2 text-center">
               <p className="text-sm text-muted-foreground">ยังไม่ได้มอบหมาย</p>
               {!isLocked && (
                 <button
+                  type="button"
                   onClick={() => setMode("assigning")}
                   className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700"
                 >
@@ -218,6 +180,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
 
           <div className="flex items-center gap-2 pt-1">
             <button
+              type="button"
               onClick={handleAssign}
               disabled={saving || !vehicleId || !driverId}
               className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-50"
@@ -225,6 +188,7 @@ export function AssignJobForm({ jobId, branchId, currentAssignment, jobStatus }:
               {saving ? "กำลังบันทึก..." : currentAssignment ? "อัปเดตการมอบหมาย" : "ยืนยันมอบหมาย"}
             </button>
             <button
+              type="button"
               onClick={() => { setMode("view"); setError(null) }}
               disabled={saving}
               className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/60"

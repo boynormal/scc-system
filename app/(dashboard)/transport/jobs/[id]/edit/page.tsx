@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { ArrowLeft, Truck } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import {
   CustomerPicker,
   type TmsCustomerOption,
 } from "@/components/transport/CustomerPicker"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
+import { AssignJobForm } from "@/components/transport/assign-job-form"
 import {
   JobStopsEditor,
   applyHeaderCustomerToStops,
@@ -32,6 +33,46 @@ type JobForm = {
   notes: string
 }
 
+type CurrentAssignment = {
+  vehicle: { id: string; plateNumber: string; name: string; vehicleType: string }
+  driver: { id: string; firstName: string; lastName: string; phone: string | null }
+  assignedByUser: { firstName: string; lastName: string }
+  assignedAt: string
+} | null
+
+function mapAssignment(raw: {
+  vehicle?: { id: string; plateNumber: string; name: string; vehicleType: string }
+  driver?: { id: string; firstName: string; lastName: string; phone?: string | null }
+  assignedByUser?: { firstName: string; lastName: string }
+  assignedAt?: string | Date | null
+} | null | undefined): CurrentAssignment {
+  if (!raw?.vehicle || !raw?.driver || !raw?.assignedByUser) return null
+  return {
+    vehicle: {
+      id: raw.vehicle.id,
+      plateNumber: raw.vehicle.plateNumber,
+      name: raw.vehicle.name,
+      vehicleType: raw.vehicle.vehicleType,
+    },
+    driver: {
+      id: raw.driver.id,
+      firstName: raw.driver.firstName,
+      lastName: raw.driver.lastName,
+      phone: raw.driver.phone ?? null,
+    },
+    assignedByUser: {
+      firstName: raw.assignedByUser.firstName,
+      lastName: raw.assignedByUser.lastName,
+    },
+    assignedAt:
+      typeof raw.assignedAt === "string"
+        ? raw.assignedAt
+        : raw.assignedAt
+          ? new Date(raw.assignedAt).toISOString()
+          : "",
+  }
+}
+
 export default function EditTransportJobPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
@@ -41,6 +82,8 @@ export default function EditTransportJobPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<JobForm | null>(null)
+  const [branchId, setBranchId] = useState<string | null>(null)
+  const [assignment, setAssignment] = useState<CurrentAssignment>(null)
   const [stops, setStops] = useState<JobStopForm[]>([emptyJobStop()])
   const [jobTypes, setJobTypes] = useState<LookupOption[]>([])
   const [cargoTypes, setCargoTypes] = useState<LookupOption[]>([])
@@ -76,6 +119,8 @@ export default function EditTransportJobPage() {
         status: j.status,
         notes: j.notes ?? "",
       })
+      setBranchId(j.branchId ?? null)
+      setAssignment(mapAssignment(j.assignment))
 
       const loadedStops: JobStopForm[] = (j.stops ?? []).map(
         (
@@ -222,7 +267,7 @@ export default function EditTransportJobPage() {
           <JobStatusBadge status={form.status} />
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          เปลี่ยนสถานะและมอบหมายรถได้ที่หน้ารายละเอียดใบงาน
+          เปลี่ยนสถานะใบงานได้ที่หน้ารายละเอียด
         </p>
       </div>
 
@@ -312,34 +357,38 @@ export default function EditTransportJobPage() {
             </div>
           </div>
         </div>
+      </form>
 
+      {branchId && (
+        <AssignJobForm
+          jobId={jobId}
+          branchId={branchId}
+          jobStatus={form.status}
+          currentAssignment={assignment}
+          onAssignmentChange={fetchJob}
+        />
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-sm">
           <JobStopsEditor stops={stops} onChange={setStops} disabled={readOnly} />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href={`/transport/jobs/${jobId}`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-700 hover:text-cyan-800 dark:text-cyan-300"
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => router.push(`/transport/jobs/${jobId}`)}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
           >
-            <Truck className="h-4 w-4" /> มอบหมายรถ / คนขับที่หน้ารายละเอียด
-          </Link>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => router.push(`/transport/jobs/${jobId}`)}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="submit"
-              disabled={saving || readOnly}
-              className="rounded-lg bg-cyan-600 px-5 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
-            >
-              {saving ? "กำลังบันทึก..." : "บันทึก"}
-            </button>
-          </div>
+            ยกเลิก
+          </button>
+          <button
+            type="submit"
+            disabled={saving || readOnly}
+            className="rounded-lg bg-cyan-600 px-5 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
+          >
+            {saving ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
         </div>
       </form>
     </div>

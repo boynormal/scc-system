@@ -1,7 +1,7 @@
 import { prisma } from "@/shared/db"
 import { withAuth } from "@/lib/api-handler"
 import { ValidationError } from "@/lib/errors"
-import { getAssignment, assignJob, unassignJob, assignJobSchema } from "@/modules/transport"
+import { getAssignment, assignJob, assignJobSchema } from "@/modules/transport"
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -31,12 +31,8 @@ export const POST = withAuth<Ctx>(async (req, ctx, session) => {
   return Response.json({ data }, { status: 201 })
 })
 
-export const DELETE = withAuth<Ctx>(async (_req, ctx, session) => {
-  const { id } = await ctx.params
-  const data = await unassignJob(prisma, {
-    jobId: id,
-    companyId: session.user.companyId as string,
-    roles: session.user.roles as never,
-  })
-  return Response.json({ data })
+export const DELETE = withAuth<Ctx>(async () => {
+  throw new ValidationError(
+    "ไม่สามารถยกเลิกมอบหมายได้ — ใบงานต้องมีรถและคนขับ (ใช้เปลี่ยนมอบหมายแทน)"
+  )
 })

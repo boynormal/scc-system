@@ -225,7 +225,7 @@ export default function EditTransportJobPage() {
         return
       }
 
-      router.push(`/transport/jobs/${jobId}`)
+      router.push("/transport/jobs")
     } catch {
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
     } finally {
@@ -257,10 +257,10 @@ export default function EditTransportJobPage() {
     <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
       <div>
         <Link
-          href={`/transport/jobs/${jobId}`}
+          href="/transport/jobs"
           className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> กลับรายละเอียด
+          <ArrowLeft className="h-4 w-4" /> กลับ
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-foreground">แก้ไขใบงาน {form.jobNumber}</h1>
@@ -377,7 +377,7 @@ export default function EditTransportJobPage() {
         <div className="flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
-            onClick={() => router.push(`/transport/jobs/${jobId}`)}
+            onClick={() => router.push("/transport/jobs")}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
           >
             ยกเลิก

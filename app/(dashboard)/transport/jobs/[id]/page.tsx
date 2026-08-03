@@ -5,7 +5,6 @@ import type { UserRole } from "@/lib/permissions"
 import { getJobById } from "@/modules/transport"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { StopTimeline } from "@/components/transport/stop-timeline"
-import { CompleteJobButton } from "@/components/transport/complete-job-button"
 import { AssignJobForm } from "@/components/transport/assign-job-form"
 import Link from "next/link"
 import { ArrowLeft, Pencil, Printer } from "lucide-react"
@@ -47,7 +46,6 @@ export default async function TransportJobDetailPage({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <CompleteJobButton jobId={id} jobStatus={job.status} />
             <Link
               href={`/transport/jobs/${id}/print`}
               target="_blank"

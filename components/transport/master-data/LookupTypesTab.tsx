@@ -5,6 +5,7 @@ import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
 import { GlassCard, GlassInput } from "@/components/glass"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 type LookupItem = {
   id: string
@@ -28,6 +29,7 @@ export function LookupTypesTab({
   search = "",
   addRequest = 0,
 }: LookupTabProps) {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<LookupItem[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -90,7 +92,8 @@ export function LookupTypesTab({
     }
   }
   const handleDeactivate = async (id: string) => {
-    if (!confirm("ปิดใช้งานรายการนี้?")) return
+    const ok = await confirmType({ message: "ปิดใช้งานรายการนี้?" })
+    if (!ok) return
     const res = await fetch(`${apiPath}/${id}`, { method: "DELETE" })
     if (res.ok) loadData()
     else {

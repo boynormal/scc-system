@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { SupplierLinkedPartsDialog } from "@/components/settings/supplier-linked-parts-dialog"
 import { CategoryLinkedMachinesDialog } from "@/components/settings/category-linked-machines-dialog"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 function classNames(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(" ")
@@ -14,6 +15,7 @@ function classNames(...classes: (string | undefined | null | false)[]) {
 // ─── 1. CATEGORIES ────────────────────────────────────────────────────────────
 
 function CategoriesTab() {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -69,7 +71,8 @@ function CategoriesTab() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("ต้องการลบหมวดหมู่นี้?")) return
+    const ok = await confirmType({ message: "ต้องการลบหมวดหมู่นี้?" })
+    if (!ok) return
     const res = await fetch(`/api/master-data/categories/${id}`, { method: "DELETE" })
     if (res.ok) {
       loadData()
@@ -180,6 +183,7 @@ function CategoriesTab() {
 // ─── 2. DEPARTMENTS ───────────────────────────────────────────────────────────
 
 function DepartmentsTab({ branches }: { branches: any[] }) {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -215,7 +219,8 @@ function DepartmentsTab({ branches }: { branches: any[] }) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("ต้องการลบแผนกนี้?")) return
+    const ok = await confirmType({ message: "ต้องการลบแผนกนี้?" })
+    if (!ok) return
     const res = await fetch(`/api/master-data/departments/${id}`, { method: "DELETE" })
     if (res.ok) loadData()
     else { const b = await res.json(); alert(b.error?.message || "Error") }
@@ -300,6 +305,7 @@ function DepartmentsTab({ branches }: { branches: any[] }) {
 // ─── 3. MAINTENANCE TYPES ─────────────────────────────────────────────────────
 
 function MaintenanceTypesTab() {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -334,7 +340,8 @@ function MaintenanceTypesTab() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("ต้องการลบประเภทนี้?")) return
+    const ok = await confirmType({ message: "ต้องการลบประเภทนี้?" })
+    if (!ok) return
     const res = await fetch(`/api/master-data/maintenance-types/${id}`, { method: "DELETE" })
     if (res.ok) loadData()
     else { const b = await res.json(); alert(b.error?.message || "Error") }
@@ -435,6 +442,7 @@ const emptySupplierForm = {
 }
 
 function SuppliersTab() {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<SupplierRow[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -512,7 +520,8 @@ function SuppliersTab() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("ต้องการลบซัพพลายเออร์นี้?")) return
+    const ok = await confirmType({ message: "ต้องการลบซัพพลายเออร์นี้?" })
+    if (!ok) return
     const res = await fetch(`/api/master-data/suppliers/${id}`, { method: "DELETE" })
     if (res.ok) loadData()
     else {

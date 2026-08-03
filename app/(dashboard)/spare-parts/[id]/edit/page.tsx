@@ -9,6 +9,7 @@ import { ArrowLeft, Save, Loader2, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 const schema = z.object({
   code: z.string().min(1, "กรุณากรอกรหัสอะไหล่").max(50),
@@ -26,6 +27,7 @@ type FormData = z.infer<typeof schema>
 export default function EditSparePartPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const confirmType = useTypeConfirm()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [partName, setPartName] = useState("")
@@ -151,7 +153,8 @@ export default function EditSparePartPage() {
             variant="danger"
             icon={<Trash2 className="w-4 h-4" />}
             onClick={async () => {
-              if (!confirm("ต้องการปิดใช้งานอะไหล่นี้?")) return
+              const ok = await confirmType({ message: "ต้องการปิดใช้งานอะไหล่นี้?" })
+              if (!ok) return
               await fetch(`/api/spare-parts/${id}`, { method: "DELETE" })
               router.push("/spare-parts")
               router.refresh()

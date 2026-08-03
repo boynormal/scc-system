@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Loader2, Package, Plus, Search, Trash2, X } fro
 import { ImageUpload } from "@/components/ui/image-upload"
 import { ClickableImage } from "@/components/ui/clickable-image"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 type SupplierMini = { id: string; name: string } | null
 
@@ -46,6 +47,7 @@ interface MachineSparePartsCardProps {
 }
 
 export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsCardProps) {
+  const confirmType = useTypeConfirm()
   const [lines, setLines] = useState<MachineSparePartLine[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -129,7 +131,8 @@ export function MachineSparePartsCard({ machineId, canEdit }: MachineSparePartsC
   }
 
   const removeLine = async (lineId: string) => {
-    if (!confirm("ลบอะไหล่นี้ออกจากรายการเครื่อง?")) return
+    const ok = await confirmType({ message: "ลบอะไหล่นี้ออกจากรายการเครื่อง?" })
+    if (!ok) return
     setMutatingId(lineId)
     try {
       const res = await fetch(`/api/machines/${machineId}/spare-parts/${lineId}`, { method: "DELETE" })

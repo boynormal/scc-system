@@ -11,6 +11,7 @@ import {
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 type Branch = { id: string; name: string; code: string }
 type VehicleType = { id: string; name: string; isActive: boolean }
@@ -60,6 +61,7 @@ type Props = {
 }
 
 export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<Vehicle[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([])
@@ -181,7 +183,8 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
   }
 
   const handleDeactivate = async (id: string) => {
-    if (!confirm("ปิดใช้งานรถคันนี้?")) return
+    const ok = await confirmType({ message: "ปิดใช้งานรถคันนี้?" })
+    if (!ok) return
     const res = await fetch(`/api/transport/vehicles/${id}`, { method: "DELETE" })
     if (res.ok) loadData()
   }

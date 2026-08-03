@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Trash2, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 interface DeleteButtonProps {
   url: string
@@ -23,10 +24,14 @@ export function DeleteButton({
 }: DeleteButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
+  const confirmType = useTypeConfirm()
 
   const handleDelete = async () => {
-    const input = window.prompt(`${confirmMessage}\nพิมพ์ "Yes" (ตัวพิมพ์ใหญ่ Y) เพื่อยืนยันการลบ:`)
-    if (input !== "Yes") return
+    const ok = await confirmType({
+      title: "ยืนยันการลบ",
+      message: confirmMessage,
+    })
+    if (!ok) return
 
     setIsDeleting(true)
     try {
@@ -35,7 +40,7 @@ export function DeleteButton({
         const error = await res.json()
         throw new Error(error.error || "เกิดข้อผิดพลาดในการลบ")
       }
-      
+
       if (onSuccess) {
         onSuccess()
       } else if (redirectUrl) {
@@ -44,8 +49,8 @@ export function DeleteButton({
       } else {
         router.refresh()
       }
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการลบ")
     } finally {
       setIsDeleting(false)
     }
@@ -53,6 +58,7 @@ export function DeleteButton({
 
   return (
     <button
+      type="button"
       onClick={handleDelete}
       disabled={isDeleting}
       className={`p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}

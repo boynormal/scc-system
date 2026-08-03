@@ -14,6 +14,7 @@ import {
   formatLatLng,
   parseLatLngInput,
 } from "@/shared/transport/coordinates"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 type Customer = {
   id: string
@@ -164,6 +165,7 @@ type Props = {
 }
 
 export function CustomersTab({ search = "", addRequest = 0 }: Props) {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -227,7 +229,8 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
   }
 
   const handleDeactivate = async (id: string) => {
-    if (!confirm("ปิดใช้งานลูกค้านี้?")) return
+    const ok = await confirmType({ message: "ปิดใช้งานลูกค้านี้?" })
+    if (!ok) return
     const res = await fetch(`${API}/${id}`, { method: "DELETE" })
     if (res.ok) loadData()
   }

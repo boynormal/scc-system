@@ -10,6 +10,7 @@ import Link from "next/link"
 import { Select } from "@/components/ui/select"
 import { BeforeAfterImages } from "@/components/ui/before-after-images"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 const schema = z.object({
   title: z.string().min(1, "กรุณากรอกหัวข้อ"),
@@ -54,6 +55,7 @@ const statusOptions = [
 export default function EditWorkOrderPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const confirmType = useTypeConfirm()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [woTitle, setWoTitle] = useState("")
@@ -225,7 +227,8 @@ export default function EditWorkOrderPage() {
             variant="danger"
             icon={<Trash2 className="w-4 h-4" />}
             onClick={async () => {
-              if (!confirm("ต้องการลบใบสั่งงานนี้?")) return
+              const ok = await confirmType({ message: "ต้องการลบใบสั่งงานนี้?" })
+              if (!ok) return
               await fetch(`/api/work-orders/${id}`, { method: "DELETE" })
               router.push("/work-orders")
               router.refresh()

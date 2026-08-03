@@ -3,6 +3,7 @@ import { Inter } from "next/font/google"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getMessages } from "next-intl/server"
 import { APP_BRAND } from "@/shared/branding"
+import { TypeConfirmProvider } from "@/components/ui/type-confirm"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -23,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale} suppressHydrationWarning>
       <body className={inter.className}>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
+          <TypeConfirmProvider>{children}</TypeConfirmProvider>
         </NextIntlClientProvider>
       </body>
     </html>

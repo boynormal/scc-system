@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select"
 import { MultiImageUpload } from "@/components/ui/multi-image-upload"
 import { ProductsListEditor } from "@/components/ui/products-list-editor"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 const schema = z.object({
   branchId: z.string().uuid(),
@@ -43,6 +44,7 @@ function toDateInput(d: string | Date | null | undefined): string {
 export default function EditMachinePage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const confirmType = useTypeConfirm()
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
@@ -274,7 +276,8 @@ export default function EditMachinePage() {
         <div className="flex gap-3 justify-between">
           <GlassButton type="button" variant="danger" icon={<Trash2 className="w-4 h-4" />}
             onClick={async () => {
-              if (!confirm("ต้องการลบเครื่องจักรนี้?")) return
+              const ok = await confirmType({ message: "ต้องการลบเครื่องจักรนี้?" })
+              if (!ok) return
               await fetch(`/api/machines/${id}`, { method: "DELETE" })
               router.push("/machines")
               router.refresh()

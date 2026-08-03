@@ -5,6 +5,7 @@ import { Edit2, Trash2, Save, X, Loader2, ChevronDown, ChevronRight } from "luci
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { includesSearch, isAutoDriverCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 import {
   MultiSelectCheckbox,
   MultiSelectDisplay,
@@ -62,6 +63,7 @@ type Props = {
 }
 
 export function DriversTab({ search = "", addRequest = 0 }: Props) {
+  const confirmType = useTypeConfirm()
   const [data, setData] = useState<Driver[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -172,7 +174,8 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
   }
 
   const handleDeactivate = async (id: string) => {
-    if (!confirm("ปิดใช้งานคนขับคนนี้?")) return
+    const ok = await confirmType({ message: "ปิดใช้งานคนขับคนนี้?" })
+    if (!ok) return
     const res = await fetch(`/api/transport/drivers/${id}`, { method: "DELETE" })
     if (res.ok) loadData()
   }

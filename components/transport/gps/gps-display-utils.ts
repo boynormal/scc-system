@@ -133,22 +133,31 @@ export function buildGsmBarHtml(gsm: string): string {
 
 export function buildTodayJobsBoxHtml(todayJobCount: number, vehicleDbId: string | null): string {
   const href = buildCalendarTodayHref(vehicleDbId)
-  const inner =
-    todayJobCount > 0
+  const hasJobs = Boolean(vehicleDbId) && todayJobCount > 0
+  const empty = Boolean(vehicleDbId) && todayJobCount <= 0
+  const inner = !vehicleDbId
+    ? "—"
+    : hasJobs
       ? `${todayJobCount} ใบงาน`
       : "ไม่มีใบงานวันนี้"
 
+  const border = hasJobs ? "#67e8f9" : empty ? "#fcd34d" : "#e2e8f0"
+  const bg = hasJobs ? "#ecfeff" : empty ? "#fffbeb" : "#f8fafc"
+  const valueColor = hasJobs ? "#0e7490" : empty ? "#92400e" : "#94a3b8"
+
+  const body = `
+    <div style="font-weight:600;color:#64748b;margin-bottom:2px;font-size:10px">ใบงานภายในวัน</div>
+    <div style="color:${valueColor};font-weight:600;font-size:11px">${inner}</div>`
+
   if (href) {
     return `
-      <a href="${href}" style="display:block;margin-top:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;color:#334155;font-size:12px">
-        <div style="font-weight:600;color:#475569;margin-bottom:2px">ใบงานภายในวัน</div>
-        <div style="color:#0891b2;font-weight:600">${inner}</div>
+      <a href="${href}" style="display:block;margin-top:8px;padding:7px 9px;border:1px solid ${border};border-radius:8px;background:${bg};text-decoration:none;font-size:11px">
+        ${body}
       </a>`
   }
 
   return `
-    <div style="margin-top:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px">
-      <div style="font-weight:600;color:#475569;margin-bottom:2px">ใบงานภายในวัน</div>
-      <div style="color:#94a3b8">${vehicleDbId ? inner : "—"}</div>
+    <div style="margin-top:8px;padding:7px 9px;border:1px solid ${border};border-radius:8px;background:${bg};font-size:11px">
+      ${body}
     </div>`
 }

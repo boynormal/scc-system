@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Car, Truck, MapPin, Clock, View } from "lucide-react"
+import { Briefcase, Car, Truck, MapPin, Clock, View } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { googleStreetViewUrl } from "@/shared/transport/coordinates"
@@ -23,6 +23,24 @@ type Props = {
   onJobLinkClick?: (e: React.MouseEvent) => void
 }
 
+function todayJobsTone(count: number, hasDbId: boolean): "none" | "has" | "empty" {
+  if (!hasDbId) return "none"
+  return count > 0 ? "has" : "empty"
+}
+
+const TODAY_JOBS_PILL: Record<"none" | "has" | "empty", string> = {
+  has: "border-cyan-300 bg-cyan-100 text-cyan-900 dark:border-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-200",
+  empty:
+    "border-amber-300 bg-amber-100 text-amber-950 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100",
+  none: "border-border bg-muted text-muted-foreground",
+}
+
+const TODAY_JOBS_VALUE: Record<"none" | "has" | "empty", string> = {
+  has: "text-cyan-800 dark:text-cyan-200",
+  empty: "text-amber-900 dark:text-amber-100",
+  none: "text-muted-foreground",
+}
+
 export function VehicleGpsCard({ vehicle: v, compact = false, batteryShort = false, showAlerts = true, onJobLinkClick }: Props) {
   const movement = getMovementStatus(v)
   const batteryLabel = formatBatteryLabel(v.battery, { short: batteryShort })
@@ -30,11 +48,24 @@ export function VehicleGpsCard({ vehicle: v, compact = false, batteryShort = fal
   const calendarHref = buildCalendarTodayHref(v.vehicleDbId)
   const VehicleIcon = v.plateNumber.length > 8 ? Truck : Car
   const avail = getAvailabilityLabel(v)
-  const todayJobsLabel = !v.vehicleDbId
-    ? "—"
-    : v.todayJobCount > 0
-      ? `${v.todayJobCount} ใบงานวันนี้`
-      : "ไม่มีใบงานวันนี้"
+  const tone = todayJobsTone(v.todayJobCount, Boolean(v.vehicleDbId))
+  const todayJobsLabel =
+    tone === "none"
+      ? "—"
+      : tone === "has"
+        ? `${v.todayJobCount} ใบงานวันนี้`
+        : "ไม่มีใบงานวันนี้"
+  const todayJobsShortLabel =
+    tone === "none"
+      ? "—"
+      : tone === "has"
+        ? `${v.todayJobCount} ใบงาน`
+        : "ไม่มีใบงานวันนี้"
+
+  const pillClass = cn(
+    "inline-flex w-fit max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+    TODAY_JOBS_PILL[tone]
+  )
 
   return (
     <div className={cn(compact ? "space-y-1.5" : "space-y-2")}>
@@ -82,39 +113,29 @@ export function VehicleGpsCard({ vehicle: v, compact = false, batteryShort = fal
 
       {/* Compact: today jobs status */}
       {compact && (
-        <div className="text-[11px]">
+        <div className="flex flex-wrap items-center gap-2">
           {calendarHref ? (
             <Link
               href={calendarHref}
               onClick={onJobLinkClick}
-              className={cn(
-                "font-semibold hover:underline",
-                v.todayJobCount > 0
-                  ? "text-cyan-700 dark:text-cyan-300"
-                  : "text-muted-foreground"
-              )}
+              className={cn(pillClass, "hover:opacity-90")}
             >
-              {todayJobsLabel}
+              <Briefcase className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="truncate">{todayJobsLabel}</span>
             </Link>
           ) : (
-            <span
-              className={cn(
-                "font-semibold",
-                v.todayJobCount > 0
-                  ? "text-cyan-700 dark:text-cyan-300"
-                  : "text-muted-foreground"
-              )}
-            >
-              {todayJobsLabel}
+            <span className={pillClass}>
+              <Briefcase className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="truncate">{todayJobsLabel}</span>
             </span>
           )}
           {!v.available && v.activeJob && (
             <Link
               href={`/transport/jobs/${v.activeJob.jobId}`}
               onClick={onJobLinkClick}
-              className="ml-2 font-semibold text-blue-600 hover:underline dark:text-blue-400"
+              className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400"
             >
-              · {v.activeJob.jobNumber}
+              {v.activeJob.jobNumber}
             </Link>
           )}
         </div>
@@ -159,22 +180,38 @@ export function VehicleGpsCard({ vehicle: v, compact = false, batteryShort = fal
               <Link
                 href={calendarHref}
                 onClick={onJobLinkClick}
-                className="block rounded-lg border border-border bg-muted/50 px-3 py-2 transition-colors hover:border-cyan-200 hover:bg-cyan-50/40 dark:hover:border-cyan-800 dark:hover:bg-cyan-950/30"
+                className={cn(
+                  "block rounded-lg border px-3 py-2 transition-colors",
+                  tone === "has" &&
+                    "border-cyan-300 bg-cyan-50 hover:bg-cyan-100/80 dark:border-cyan-700 dark:bg-cyan-950/40 dark:hover:bg-cyan-950/60",
+                  tone === "empty" &&
+                    "border-amber-300 bg-amber-50 hover:bg-amber-100/80 dark:border-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-950/60",
+                  tone === "none" && "border-border bg-muted/50 hover:bg-muted"
+                )}
               >
-                <div className="text-[11px] font-semibold text-muted-foreground">ใบงานภายในวัน</div>
-                <div className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">
-                  {v.todayJobCount > 0 ? `${v.todayJobCount} ใบงาน` : "ไม่มีใบงานวันนี้"}
+                <div className="mb-1 flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
+                  <Briefcase className="h-3 w-3" aria-hidden />
+                  ใบงานภายในวัน
+                </div>
+                <div className={cn("text-[11px] font-semibold", TODAY_JOBS_VALUE[tone])}>
+                  {todayJobsShortLabel}
                 </div>
               </Link>
             ) : (
-              <div className="rounded-lg border border-border bg-muted/50 px-3 py-2">
-                <div className="text-[11px] font-semibold text-muted-foreground">ใบงานภายในวัน</div>
-                <div className="text-xs text-muted-foreground">
-                  {v.vehicleDbId
-                    ? v.todayJobCount > 0
-                      ? `${v.todayJobCount} ใบงาน`
-                      : "ไม่มีใบงานวันนี้"
-                    : "—"}
+              <div
+                className={cn(
+                  "rounded-lg border px-3 py-2",
+                  tone === "has" && "border-cyan-300 bg-cyan-50 dark:border-cyan-700 dark:bg-cyan-950/40",
+                  tone === "empty" && "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40",
+                  tone === "none" && "border-border bg-muted/50"
+                )}
+              >
+                <div className="mb-1 flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
+                  <Briefcase className="h-3 w-3" aria-hidden />
+                  ใบงานภายในวัน
+                </div>
+                <div className={cn("text-[11px] font-semibold", TODAY_JOBS_VALUE[tone])}>
+                  {todayJobsShortLabel}
                 </div>
               </div>
             )}

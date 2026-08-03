@@ -23,11 +23,15 @@ import { cn } from "@/lib/utils"
 import { transportFilterTriggerClass } from "@/components/transport/toolbar"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
 
+type TireWheelItem = {
+  position: number
+  workType: TireWorkType
+}
+
 type TireRow = {
   id: string
   workDate: string
-  wheelPosition: number
-  workType: TireWorkType
+  wheels: TireWheelItem[]
   cost: string | number | null
   paymentMethod: TransportPaymentMethodOption | null
   notes: string | null
@@ -70,6 +74,30 @@ function formatYmdShort(ymd: string) {
   return `${d}/${m}/${y.slice(2)}`
 }
 
+function normalizeWheelsList(wheels: TireWheelItem[]): TireWheelItem[] {
+  return [...wheels].sort((a, b) => a.position - b.position)
+}
+
+function summarizeWorkTypes(wheels: TireWheelItem[]): string {
+  const counts = new Map<TireWorkType, number>()
+  for (const w of wheels) {
+    counts.set(w.workType, (counts.get(w.workType) ?? 0) + 1)
+  }
+  return TIRE_WORK_TYPES.filter((t) => counts.has(t))
+    .map((t) => {
+      const n = counts.get(t)!
+      const label = TIRE_WORK_TYPE_LABELS[t]
+      return n > 1 ? `${label}×${n}` : label
+    })
+    .join(", ")
+}
+
+function formatPositions(wheels: TireWheelItem[]): string {
+  return normalizeWheelsList(wheels)
+    .map((w) => w.position)
+    .join(", ")
+}
+
 export function TiresPageClient() {
   const t = useTranslations("transport")
   const confirmType = useTypeConfirm()
@@ -88,18 +116,20 @@ export function TiresPageClient() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const popupRef = useRef<HTMLDivElement>(null)
-  const pendingWheelPositionRef = useRef<number | null>(null)
+  const pendingWheelsRef = useRef<TireWheelItem[] | null>(null)
+  const defaultWorkTypeRef = useRef<TireWorkType>("change")
 
   const [formVehicleId, setFormVehicleId] = useState("")
   const [workDate, setWorkDate] = useState(formatBangkokYmd())
-  const [wheelPosition, setWheelPosition] = useState<number | null>(null)
-  const [workType, setWorkType] = useState<(typeof TIRE_WORK_TYPES)[number]>("change")
+  const [wheels, setWheels] = useState<TireWheelItem[]>([])
   const [cost, setCost] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<TransportPaymentMethodOption>("cash")
   const [notes, setNotes] = useState("")
   const [layoutInfo, setLayoutInfo] = useState<LayoutInfo | null>(null)
   const [layoutLoading, setLayoutLoading] = useState(false)
   const [layoutError, setLayoutError] = useState<string | null>(null)
+
+  const selectedPositions = useMemo(() => wheels.map((w) => w.position), [wheels])
 
   const loadVehicles = useCallback(async () => {
     try {
@@ -154,7 +184,7 @@ export function TiresPageClient() {
     if (!formVehicleId) {
       setLayoutInfo(null)
       setLayoutError(null)
-      setWheelPosition(null)
+      setWheels([])
       return
     }
     let cancelled = false
@@ -173,11 +203,11 @@ export function TiresPageClient() {
           return
         }
         setLayoutInfo(json.data)
-        if (pendingWheelPositionRef.current != null) {
-          setWheelPosition(pendingWheelPositionRef.current)
-          pendingWheelPositionRef.current = null
+        if (pendingWheelsRef.current) {
+          setWheels(normalizeWheelsList(pendingWheelsRef.current))
+          pendingWheelsRef.current = null
         } else {
-          setWheelPosition(null)
+          setWheels([])
         }
       } catch {
         if (!cancelled) {
@@ -195,11 +225,11 @@ export function TiresPageClient() {
 
   const resetForm = () => {
     setEditingId(null)
-    pendingWheelPositionRef.current = null
+    pendingWheelsRef.current = null
+    defaultWorkTypeRef.current = "change"
     setFormVehicleId("")
     setWorkDate(formatBangkokYmd())
-    setWheelPosition(null)
-    setWorkType("change")
+    setWheels([])
     setCost("")
     setPaymentMethod("cash")
     setNotes("")
@@ -208,15 +238,36 @@ export function TiresPageClient() {
   }
 
   const startEdit = (row: TireRow) => {
-    pendingWheelPositionRef.current = row.wheelPosition
+    const nextWheels = normalizeWheelsList(Array.isArray(row.wheels) ? row.wheels : [])
+    pendingWheelsRef.current = nextWheels
+    if (nextWheels[0]) defaultWorkTypeRef.current = nextWheels[0].workType
     setEditingId(row.id)
     setFormVehicleId(row.vehicle.id)
     setWorkDate(formatBangkokYmd(new Date(row.workDate)))
-    setWheelPosition(row.wheelPosition)
-    setWorkType(row.workType)
+    setWheels(nextWheels)
     setCost(row.cost != null && row.cost !== "" ? String(row.cost) : "")
     setPaymentMethod(row.paymentMethod ?? "cash")
     setNotes(row.notes ?? "")
+  }
+
+  const toggleWheel = (position: number) => {
+    setWheels((prev) => {
+      const exists = prev.find((w) => w.position === position)
+      if (exists) {
+        return prev.filter((w) => w.position !== position)
+      }
+      return normalizeWheelsList([
+        ...prev,
+        { position, workType: defaultWorkTypeRef.current },
+      ])
+    })
+  }
+
+  const setWheelWorkType = (position: number, workType: TireWorkType) => {
+    defaultWorkTypeRef.current = workType
+    setWheels((prev) =>
+      prev.map((w) => (w.position === position ? { ...w, workType } : w))
+    )
   }
 
   const openFilterPopup = () => {
@@ -281,8 +332,8 @@ export function TiresPageClient() {
       alert("กรุณาเลือกรถ")
       return null
     }
-    if (!wheelPosition) {
-      alert("กรุณาเลือกตำแหน่งล้อ")
+    if (wheels.length === 0) {
+      alert("กรุณาเลือกตำแหน่งล้ออย่างน้อย 1 ล้อ")
       return null
     }
     if (!workDate) {
@@ -307,8 +358,7 @@ export function TiresPageClient() {
     return {
       vehicleId: formVehicleId,
       workDate,
-      wheelPosition,
-      workType,
+      wheels: normalizeWheelsList(wheels),
       cost: costValue,
       paymentMethod: costValue != null && costValue > 0 ? paymentMethod : null,
       notes: notes.trim() || null,
@@ -333,7 +383,7 @@ export function TiresPageClient() {
       }
       setCost("")
       setNotes("")
-      setWheelPosition(null)
+      setWheels([])
       await loadItems()
     } finally {
       setSaving(false)
@@ -483,7 +533,7 @@ export function TiresPageClient() {
             <select
               value={formVehicleId}
               onChange={(e) => {
-                pendingWheelPositionRef.current = null
+                pendingWheelsRef.current = null
                 setFormVehicleId(e.target.value)
               }}
               className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
@@ -506,21 +556,7 @@ export function TiresPageClient() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">ประเภท *</label>
-            <select
-              value={workType}
-              onChange={(e) => setWorkType(e.target.value as (typeof TIRE_WORK_TYPES)[number])}
-              className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
-            >
-              {TIRE_WORK_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {TIRE_WORK_TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-muted-foreground">ค่าใช้จ่าย</label>
+            <label className="mb-1 block text-xs text-muted-foreground">ค่าใช้จ่าย (รวมรอบ)</label>
             <GlassInput
               value={cost}
               onChange={(e) => setCost(e.target.value)}
@@ -559,9 +595,12 @@ export function TiresPageClient() {
               className="h-9"
             />
           </div>
-          <div className="rounded-lg border border-border p-3">
-            <div className="mb-2 text-xs text-muted-foreground">
-              ตำแหน่งล้อ {wheelPosition ? `(เลือกแล้ว: ${wheelPosition})` : "(คลิกเลือก)"}
+          <div className="rounded-lg border border-border p-3 space-y-3">
+            <div className="text-xs text-muted-foreground">
+              ตำแหน่งล้อ{" "}
+              {wheels.length > 0
+                ? `(เลือกแล้ว: ${formatPositions(wheels)})`
+                : "(คลิกเลือกได้หลายล้อ)"}
             </div>
             {layoutLoading && (
               <div className="flex justify-center py-6">
@@ -574,13 +613,36 @@ export function TiresPageClient() {
             {!layoutLoading && !layoutError && layoutInfo && (
               <WheelLayoutDiagram
                 layout={layoutInfo.wheelLayout}
-                selectedPosition={wheelPosition}
-                onSelectPosition={setWheelPosition}
+                selectedPositions={selectedPositions}
+                onTogglePosition={toggleWheel}
                 compact
               />
             )}
             {!formVehicleId && !layoutLoading && (
               <p className="text-sm text-muted-foreground">เลือกรถเพื่อแสดงแผนผัง</p>
+            )}
+            {wheels.length > 0 && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <div className="text-xs font-medium text-muted-foreground">ประเภทงานต่อล้อ</div>
+                {normalizeWheelsList(wheels).map((w) => (
+                  <div key={w.position} className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-sm font-medium">ล้อ {w.position}</span>
+                    <select
+                      value={w.workType}
+                      onChange={(e) =>
+                        setWheelWorkType(w.position, e.target.value as TireWorkType)
+                      }
+                      className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-sm"
+                    >
+                      {TIRE_WORK_TYPES.map((wt) => (
+                        <option key={wt} value={wt}>
+                          {TIRE_WORK_TYPE_LABELS[wt]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           <GlassButton
@@ -645,55 +707,61 @@ export function TiresPageClient() {
                   )}
                   {!loading &&
                     !error &&
-                    items.map((row) => (
-                      <tr
-                        key={row.id}
-                        className={
-                          editingId === row.id
-                            ? "bg-cyan-50/70 dark:bg-cyan-950/30"
-                            : "hover:bg-muted/60"
-                        }
-                      >
-                        <td className="px-4 py-3">{formatWorkDate(row.workDate)}</td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium">{row.vehicle.plateNumber}</div>
-                          <div className="text-xs text-muted-foreground">{row.vehicle.name}</div>
-                        </td>
-                        <td className="px-4 py-3">{row.wheelPosition}</td>
-                        <td className="px-4 py-3">{TIRE_WORK_TYPE_LABELS[row.workType]}</td>
-                        <td className="px-4 py-3">{formatCost(row.cost)}</td>
-                        <td className="px-4 py-3">
-                          {row.paymentMethod
-                            ? TRANSPORT_PAYMENT_METHOD_LABELS[row.paymentMethod]
-                            : "—"}
-                        </td>
-                        <td className="max-w-[180px] px-4 py-3">
-                          <span className="line-clamp-2 text-muted-foreground" title={row.notes ?? undefined}>
-                            {row.notes?.trim() ? row.notes : "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="inline-flex items-center gap-0.5">
-                            <button
-                              type="button"
-                              onClick={() => startEdit(row)}
-                              className="p-1.5 text-muted-foreground hover:text-cyan-700"
-                              title="แก้ไข"
+                    items.map((row) => {
+                      const rowWheels = Array.isArray(row.wheels) ? row.wheels : []
+                      return (
+                        <tr
+                          key={row.id}
+                          className={
+                            editingId === row.id
+                              ? "bg-cyan-50/70 dark:bg-cyan-950/30"
+                              : "hover:bg-muted/60"
+                          }
+                        >
+                          <td className="px-4 py-3">{formatWorkDate(row.workDate)}</td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{row.vehicle.plateNumber}</div>
+                            <div className="text-xs text-muted-foreground">{row.vehicle.name}</div>
+                          </td>
+                          <td className="px-4 py-3">{formatPositions(rowWheels) || "—"}</td>
+                          <td className="px-4 py-3">{summarizeWorkTypes(rowWheels) || "—"}</td>
+                          <td className="px-4 py-3">{formatCost(row.cost)}</td>
+                          <td className="px-4 py-3">
+                            {row.paymentMethod
+                              ? TRANSPORT_PAYMENT_METHOD_LABELS[row.paymentMethod]
+                              : "—"}
+                          </td>
+                          <td className="max-w-[180px] px-4 py-3">
+                            <span
+                              className="line-clamp-2 text-muted-foreground"
+                              title={row.notes ?? undefined}
                             >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(row.id)}
-                              className="p-1.5 text-muted-foreground hover:text-red-600"
-                              title="ลบ"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {row.notes?.trim() ? row.notes : "—"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="inline-flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => startEdit(row)}
+                                className="p-1.5 text-muted-foreground hover:text-cyan-700"
+                                title="แก้ไข"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(row.id)}
+                                className="p-1.5 text-muted-foreground hover:text-red-600"
+                                title="ลบ"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                 </tbody>
               </table>
             </div>

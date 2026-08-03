@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { PrismaClient } from "@prisma/client"
+import type { Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { hasPermission, isAdminInAnyBranch, getBranchIds, type UserRole } from "@/lib/permissions"
 import { getBangkokDateRange } from "./transport-date-utils"
@@ -12,12 +12,24 @@ import {
   type VehicleWheelConfig,
   type WheelLayout,
 } from "./vehicle-wheel-layouts"
-import { TIRE_WORK_TYPES } from "./tire-options"
+import { TIRE_WORK_TYPES, type TireWorkType } from "./tire-options"
 import { TRANSPORT_PAYMENT_METHODS } from "./payment-options"
 
 export { TIRE_WORK_TYPES, TIRE_WORK_TYPE_LABELS } from "./tire-options"
 
+export type TireWheelItem = {
+  position: number
+  workType: TireWorkType
+}
+
 const paymentMethodSchema = z.enum(TRANSPORT_PAYMENT_METHODS)
+
+const tireWheelItemSchema = z.object({
+  position: z.number().int().positive(),
+  workType: z.enum(TIRE_WORK_TYPES),
+})
+
+const wheelsSchema = z.array(tireWheelItemSchema).min(1)
 
 async function resolveVehicleTypeWheelConfig(
   db: PrismaClient,
@@ -49,12 +61,29 @@ async function resolveVehicleTypeWheelConfig(
   }
 }
 
+function normalizeWheels(wheels: TireWheelItem[]): TireWheelItem[] {
+  const byPosition = new Map<number, TireWorkType>()
+  for (const item of wheels) {
+    byPosition.set(item.position, item.workType)
+  }
+  return [...byPosition.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([position, workType]) => ({ position, workType }))
+}
+
+function assertWheelsInLayout(layout: WheelLayout, wheels: TireWheelItem[]) {
+  for (const item of wheels) {
+    if (!isValidWheelPosition(layout, item.position)) {
+      throw new ValidationError(`ตำแหน่งล้อ ${item.position} ไม่อยู่ในแผนผังของประเภทรถนี้`)
+    }
+  }
+}
+
 export const createTireLogSchema = z
   .object({
     vehicleId: z.string().uuid(),
     workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "workDate must be YYYY-MM-DD"),
-    wheelPosition: z.number().int().positive(),
-    workType: z.enum(TIRE_WORK_TYPES),
+    wheels: wheelsSchema,
     cost: z.number().min(0).nullable().optional(),
     paymentMethod: paymentMethodSchema.nullable().optional(),
     notes: z.string().max(2000).nullable().optional(),
@@ -67,14 +96,21 @@ export const createTireLogSchema = z
         message: "กรุณาเลือกวิธีจ่ายเมื่อมีค่าใช้จ่าย",
       })
     }
+    const positions = data.wheels.map((w) => w.position)
+    if (new Set(positions).size !== positions.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["wheels"],
+        message: "ตำแหน่งล้อซ้ำกันไม่ได้",
+      })
+    }
   })
 
 export const updateTireLogSchema = z
   .object({
     vehicleId: z.string().uuid().optional(),
     workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    wheelPosition: z.number().int().positive().optional(),
-    workType: z.enum(TIRE_WORK_TYPES).optional(),
+    wheels: wheelsSchema.optional(),
     cost: z.number().min(0).nullable().optional(),
     paymentMethod: paymentMethodSchema.nullable().optional(),
     notes: z.string().max(2000).nullable().optional(),
@@ -86,6 +122,16 @@ export const updateTireLogSchema = z
         path: ["paymentMethod"],
         message: "กรุณาเลือกวิธีจ่ายเมื่อมีค่าใช้จ่าย",
       })
+    }
+    if (data.wheels) {
+      const positions = data.wheels.map((w) => w.position)
+      if (new Set(positions).size !== positions.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["wheels"],
+          message: "ตำแหน่งล้อซ้ำกันไม่ได้",
+        })
+      }
     }
   })
 
@@ -137,12 +183,6 @@ async function resolveWheelConfigForVehicle(
     )
   }
   return config
-}
-
-function assertPositionInLayout(layout: WheelLayout, position: number) {
-  if (!isValidWheelPosition(layout, position)) {
-    throw new ValidationError(`ตำแหน่งล้อ ${position} ไม่อยู่ในแผนผังของประเภทรถนี้`)
-  }
 }
 
 export async function listTireLogs(
@@ -246,7 +286,8 @@ export async function createTireLog(
     companyId: params.companyId,
     vehicleTypeName: vehicle.vehicleType,
   })
-  assertPositionInLayout(config.wheelLayout, params.input.wheelPosition)
+  const wheels = normalizeWheels(params.input.wheels)
+  assertWheelsInLayout(config.wheelLayout, wheels)
 
   return db.transportTireLog.create({
     data: {
@@ -254,8 +295,7 @@ export async function createTireLog(
       branchId: vehicle.branchId,
       vehicleId: vehicle.id,
       workDate: workDateToDate(params.input.workDate),
-      wheelPosition: params.input.wheelPosition,
-      workType: params.input.workType,
+      wheels: wheels as Prisma.InputJsonValue,
       cost: params.input.cost ?? null,
       paymentMethod: params.input.paymentMethod ?? null,
       notes: params.input.notes?.trim() || null,
@@ -293,8 +333,18 @@ export async function updateTireLog(
     companyId: params.companyId,
     vehicleTypeName: vehicle.vehicleType,
   })
-  const nextPosition = params.input.wheelPosition ?? existing.wheelPosition
-  assertPositionInLayout(config.wheelLayout, nextPosition)
+
+  let nextWheels: TireWheelItem[] | undefined
+  if (params.input.wheels !== undefined) {
+    nextWheels = normalizeWheels(params.input.wheels)
+  } else {
+    const parsed = wheelsSchema.safeParse(existing.wheels)
+    if (!parsed.success) {
+      throw new ValidationError("ข้อมูลล้อในรายการเดิมไม่ถูกต้อง")
+    }
+    nextWheels = normalizeWheels(parsed.data)
+  }
+  assertWheelsInLayout(config.wheelLayout, nextWheels)
 
   return db.transportTireLog.update({
     where: { id: params.id },
@@ -304,8 +354,7 @@ export async function updateTireLog(
       ...(params.input.workDate !== undefined
         ? { workDate: workDateToDate(params.input.workDate) }
         : {}),
-      wheelPosition: nextPosition,
-      ...(params.input.workType !== undefined ? { workType: params.input.workType } : {}),
+      wheels: nextWheels as Prisma.InputJsonValue,
       ...(params.input.cost !== undefined ? { cost: params.input.cost } : {}),
       ...(params.input.paymentMethod !== undefined
         ? { paymentMethod: params.input.paymentMethod }

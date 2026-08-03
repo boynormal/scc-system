@@ -6,8 +6,12 @@ import type { WheelLayout } from "@/modules/transport/application/vehicle-wheel-
 
 type WheelLayoutDiagramProps = {
   layout: WheelLayout
+  /** Single-select (legacy). Ignored when `onTogglePosition` is provided. */
   selectedPosition?: number | null
   onSelectPosition?: (position: number) => void
+  /** Multi-select: preferred for tire logs. */
+  selectedPositions?: number[]
+  onTogglePosition?: (position: number) => void
   compact?: boolean
   className?: string
 }
@@ -16,11 +20,18 @@ export function WheelLayoutDiagram({
   layout,
   selectedPosition,
   onSelectPosition,
+  selectedPositions,
+  onTogglePosition,
   compact = false,
   className,
 }: WheelLayoutDiagramProps) {
-  const interactive = typeof onSelectPosition === "function"
+  const multi = typeof onTogglePosition === "function"
+  const interactive = multi || typeof onSelectPosition === "function"
   const sizeClass = compact ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm"
+  const selectedSet = useMemo(
+    () => new Set(multi ? (selectedPositions ?? []) : selectedPosition != null ? [selectedPosition] : []),
+    [multi, selectedPositions, selectedPosition]
+  )
 
   const rows = useMemo(() => layout, [layout])
 
@@ -34,7 +45,7 @@ export function WheelLayoutDiagram({
         {rows.map((axle, axleIdx) => (
           <div key={`axle-${axleIdx}`} className="flex items-center justify-center gap-2">
             {axle.map((pos) => {
-              const selected = selectedPosition === pos
+              const selected = selectedSet.has(pos)
               const base =
                 "inline-flex items-center justify-center rounded-md border font-medium transition-colors"
               const tone = selected
@@ -45,7 +56,10 @@ export function WheelLayoutDiagram({
                   <button
                     key={pos}
                     type="button"
-                    onClick={() => onSelectPosition?.(pos)}
+                    onClick={() => {
+                      if (multi) onTogglePosition?.(pos)
+                      else onSelectPosition?.(pos)
+                    }}
                     className={cn(base, sizeClass, tone)}
                     aria-pressed={selected}
                     title={`ตำแหน่ง ${pos}`}

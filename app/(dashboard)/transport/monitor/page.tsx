@@ -91,7 +91,7 @@ export default function TransportMonitorPage() {
   ]
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="min-w-0 space-y-4 p-4 md:p-6">
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="รถทั้งหมด" value={stats.total} color="bg-muted text-foreground" />
@@ -159,46 +159,48 @@ export default function TransportMonitorPage() {
         )
       })()}
 
-      {/* Table — page scroll is on transport layout (far right edge) */}
-      <div className="rounded-xl border border-border bg-card shadow-sm">
+      {/* Table — horizontal scroll inside card when columns exceed viewport */}
+      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         {error ? (
           <div className="px-6 py-10 text-center text-sm text-red-500">{error}</div>
         ) : loading ? (
           <div className="px-6 py-10 text-center text-sm text-muted-foreground">กำลังโหลดข้อมูล GPS...</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 text-left">ทะเบียน</th>
-                <th className="px-4 py-3 text-left">ความพร้อม</th>
-                <th className="px-4 py-3 text-left">GSM</th>
-                <th className="px-4 py-3 text-left">สถานะ</th>
-                <th className="px-4 py-3 text-left">ความเร็ว</th>
-                <th className="px-4 py-3 text-left">ไมล์สะสม</th>
-                <th className="px-4 py-3 text-left">แบตเตอรี่</th>
-                <th className="px-4 py-3 text-left">ใบงานวันนี้</th>
-                <th className="px-4 py-3 text-left">ที่อยู่</th>
-                <th className="px-4 py-3 text-left">อัปเดต</th>
-                <th className="px-4 py-3 text-left">Alert</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px] text-sm">
+              <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">ไม่พบข้อมูล</td>
+                  <th className="px-4 py-3 text-left">ทะเบียน</th>
+                  <th className="px-4 py-3 text-left">ความพร้อม</th>
+                  <th className="px-4 py-3 text-left">GSM</th>
+                  <th className="px-4 py-3 text-left">สถานะ</th>
+                  <th className="px-4 py-3 text-left">ความเร็ว</th>
+                  <th className="px-4 py-3 text-left">ไมล์สะสม</th>
+                  <th className="px-4 py-3 text-left">แบตเตอรี่</th>
+                  <th className="px-4 py-3 text-left">ใบงานวันนี้</th>
+                  <th className="px-4 py-3 text-left">ที่อยู่</th>
+                  <th className="px-4 py-3 text-left">อัปเดต</th>
+                  <th className="px-4 py-3 text-left">Alert</th>
                 </tr>
-              ) : (
-                filtered.map((v) => (
-                  <VehicleGpsRow
-                    key={v.id}
-                    vehicle={v}
-                    selected={v.id === selectedId}
-                    onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">ไม่พบข้อมูล</td>
+                  </tr>
+                ) : (
+                  filtered.map((v) => (
+                    <VehicleGpsRow
+                      key={v.id}
+                      vehicle={v}
+                      selected={v.id === selectedId}
+                      onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}
+                    />
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

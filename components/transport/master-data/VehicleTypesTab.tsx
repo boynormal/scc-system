@@ -351,7 +351,8 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
     <div className="space-y-4">
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
-          <table className="w-full table-fixed text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
                 <th className="w-20 px-4 py-3 font-semibold text-muted-foreground">ลำดับ</th>
@@ -436,6 +437,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </GlassCard>
     </div>

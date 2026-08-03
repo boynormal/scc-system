@@ -300,7 +300,8 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
       )}
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
-          <table className="w-full table-fixed text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[1000px] text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
                 <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ชื่อลูกค้า/ปลายทาง</th>
@@ -404,6 +405,7 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </GlassCard>
     </div>

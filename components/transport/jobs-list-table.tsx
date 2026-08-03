@@ -24,8 +24,9 @@ function formatScheduledDate(value: Date | string | null | undefined) {
 
 export function JobsListTable({ items }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <table className="min-w-full text-sm">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[1100px] text-sm">
         <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left">เลขใบงาน</th>
@@ -96,6 +97,7 @@ export function JobsListTable({ items }: Props) {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

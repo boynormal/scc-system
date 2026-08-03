@@ -337,7 +337,8 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
       )}
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
-          <table className="w-full table-fixed text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left text-sm">
             <colgroup>
               <col className="w-10" />
               <col className="w-[20%]" />
@@ -444,6 +445,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </GlassCard>
     </div>

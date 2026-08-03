@@ -153,7 +153,8 @@ export function LookupTypesTab({
     <div className="space-y-4">
       <GlassCard padding="none">
         <div className="min-w-0 overflow-hidden">
-          <table className="w-full table-fixed text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
                 <th className="px-4 py-3 font-semibold text-muted-foreground w-20">ลำดับ</th>
@@ -228,6 +229,7 @@ export function LookupTypesTab({
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </GlassCard>
     </div>

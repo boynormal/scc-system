@@ -13,7 +13,7 @@ type Props = {
 }
 
 const DAY_LABELS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]
-const MAX_VISIBLE_JOBS = 6 // 2 rows × 3 chips
+const MAX_VISIBLE_JOBS = 12 // 4 rows × 3 chips
 
 export function MonthCalendar({ year, month, jobs }: Props) {
   const [selectedJob, setSelectedJob] = useState<{

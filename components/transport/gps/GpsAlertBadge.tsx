@@ -28,11 +28,14 @@ export function GpsAlertBadge({
   if (active.length === 0) return null
 
   return (
-    <div className={cn("flex flex-wrap gap-1", className)}>
+    <div className={cn("flex flex-wrap", compact ? "gap-0.5" : "gap-1", className)}>
       {active.map((a) => (
         <span
           key={a.key}
-          className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 border border-red-200"
+          className={cn(
+            "inline-flex items-center rounded-full border border-red-200 bg-red-100 font-medium text-red-800",
+            compact ? "px-1.5 py-px text-[9px] leading-tight" : "px-2 py-0.5 text-xs"
+          )}
           title={a.label}
         >
           {compact ? a.short : a.label}

@@ -258,15 +258,15 @@ export default function TransportMapPage() {
           onClick={() => setWeatherOpen((o) => !o)}
           className={
             weatherOpen
-              ? "absolute right-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-cyan-600 bg-cyan-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-md hover:bg-cyan-700"
-              : "absolute right-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-md backdrop-blur-sm hover:bg-slate-50 dark:border-border dark:bg-card/95 dark:text-foreground dark:hover:bg-muted"
+              ? "absolute left-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-cyan-600 bg-cyan-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-md hover:bg-cyan-700"
+              : "absolute left-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-md backdrop-blur-sm hover:bg-slate-50 dark:border-border dark:bg-card/95 dark:text-foreground dark:hover:bg-muted"
           }
           aria-pressed={weatherOpen}
-          aria-label={weatherOpen ? "ปิดแผงอากาศ" : "เปิดแผงอากาศและเรดาร์"}
-          title="สภาพอากาศ / เรดาร์"
+          aria-label={weatherOpen ? "ปิดแผงอากาศ" : "เปิดแผงอากาศและดาวเทียม"}
+          title="สภาพอากาศ / ดาวเทียม"
         >
           <CloudSun className="h-4 w-4" />
-          เรดาร์
+          ดาวเทียม
         </button>
         <MapWeatherPanel
           open={weatherOpen}

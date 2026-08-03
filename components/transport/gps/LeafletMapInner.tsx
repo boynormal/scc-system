@@ -256,8 +256,14 @@ export default function LeafletMapInner({ vehicles, selectedId, onSelectVehicle,
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         crossOrigin=""
       />
+      <style>{`
+        .transport-leaflet-map .leaflet-top.leaflet-left {
+          top: 2.75rem;
+        }
+      `}</style>
       <div
         ref={mapContainerRef}
+        className="transport-leaflet-map"
         style={{ height, width: "100%", background: "#e8f4f8" }}
       />
     </>

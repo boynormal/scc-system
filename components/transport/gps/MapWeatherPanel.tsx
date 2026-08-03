@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { WeatherPayload } from "@/shared/weather"
-import { buildWindyRadarUrl } from "@/shared/weather/windy-url"
+import { buildWindySatelliteUrl } from "@/shared/weather/windy-url"
 
 function weatherIcon(code: number, isDay: boolean): LucideIcon {
   if (code === 0) return isDay ? Sun : Moon
@@ -79,20 +79,20 @@ export function MapWeatherPanel({ open, onClose, lat, lon, placeLabel }: Props) 
 
   if (!open) return null
 
-  const windyHref = buildWindyRadarUrl(lat, lon)
+  const windyHref = buildWindySatelliteUrl(lat, lon)
   const Icon = data ? weatherIcon(data.weatherCode, data.isDay) : Cloud
 
   return (
     <aside
       className={cn(
-        "absolute right-3 top-14 z-[500] flex w-[min(100%-1.5rem,320px)] flex-col rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur-sm",
+        "absolute right-3 top-3 z-[500] flex w-[min(100%-1.5rem,320px)] flex-col rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur-sm",
         "dark:border-border dark:bg-card/95"
       )}
-      aria-label="สภาพอากาศและเรดาร์"
+      aria-label="สภาพอากาศและดาวเทียม"
     >
       <div className="flex items-start justify-between gap-2 border-b border-slate-100 px-3 py-2.5 dark:border-border">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-foreground">สภาพอากาศ / เรดาร์</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-foreground">สภาพอากาศ / ดาวเทียม</h3>
           <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-600 dark:text-muted-foreground">
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{placeLabel}</span>
@@ -139,11 +139,11 @@ export function MapWeatherPanel({ open, onClose, lat, lon, placeLabel }: Props) 
           rel="noopener noreferrer"
           className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-cyan-700"
         >
-          เปิดเรดาร์บน Windy
+          เปิดดาวเทียมบน Windy
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          ดูเรดาร์ฝนนอกแอปเพื่อเตรียมเส้นทาง — ไม่ฝังแผนที่ Windy ในระบบ
+          ดูภาพดาวเทียมนอกแอปเพื่อเตรียมเส้นทาง — ไม่ฝังแผนที่ Windy ในระบบ
         </p>
       </div>
     </aside>

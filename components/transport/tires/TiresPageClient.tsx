@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { Filter, Loader2, Plus, RefreshCw, Trash2 } from "lucide-react"
+import { Filter, Loader2, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { WheelLayoutDiagram } from "@/components/transport/WheelLayoutDiagram"
 import { ErrorState } from "@/components/ui/error-state"
@@ -21,6 +21,7 @@ import { formatBangkokYmd } from "@/modules/transport/application/transport-date
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { transportFilterTriggerClass } from "@/components/transport/toolbar"
+import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 type TireRow = {
   id: string
@@ -71,6 +72,7 @@ function formatYmdShort(ymd: string) {
 
 export function TiresPageClient() {
   const t = useTranslations("transport")
+  const confirmType = useTypeConfirm()
   const [items, setItems] = useState<TireRow[]>([])
   const [vehicles, setVehicles] = useState<VehicleOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,7 +86,9 @@ export function TiresPageClient() {
   const [draftVehicle, setDraftVehicle] = useState("")
   const [filterOpen, setFilterOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const popupRef = useRef<HTMLDivElement>(null)
+  const pendingWheelPositionRef = useRef<number | null>(null)
 
   const [formVehicleId, setFormVehicleId] = useState("")
   const [workDate, setWorkDate] = useState(formatBangkokYmd())
@@ -169,7 +173,12 @@ export function TiresPageClient() {
           return
         }
         setLayoutInfo(json.data)
-        setWheelPosition(null)
+        if (pendingWheelPositionRef.current != null) {
+          setWheelPosition(pendingWheelPositionRef.current)
+          pendingWheelPositionRef.current = null
+        } else {
+          setWheelPosition(null)
+        }
       } catch {
         if (!cancelled) {
           setLayoutInfo(null)
@@ -183,6 +192,32 @@ export function TiresPageClient() {
       cancelled = true
     }
   }, [formVehicleId])
+
+  const resetForm = () => {
+    setEditingId(null)
+    pendingWheelPositionRef.current = null
+    setFormVehicleId("")
+    setWorkDate(formatBangkokYmd())
+    setWheelPosition(null)
+    setWorkType("change")
+    setCost("")
+    setPaymentMethod("cash")
+    setNotes("")
+    setLayoutInfo(null)
+    setLayoutError(null)
+  }
+
+  const startEdit = (row: TireRow) => {
+    pendingWheelPositionRef.current = row.wheelPosition
+    setEditingId(row.id)
+    setFormVehicleId(row.vehicle.id)
+    setWorkDate(formatBangkokYmd(new Date(row.workDate)))
+    setWheelPosition(row.wheelPosition)
+    setWorkType(row.workType)
+    setCost(row.cost != null && row.cost !== "" ? String(row.cost) : "")
+    setPaymentMethod(row.paymentMethod ?? "cash")
+    setNotes(row.notes ?? "")
+  }
 
   const openFilterPopup = () => {
     setDraftFrom(fromDate)
@@ -241,35 +276,55 @@ export function TiresPageClient() {
     [vehicles]
   )
 
-  const handleCreate = async () => {
-    if (!formVehicleId) return alert("กรุณาเลือกรถ")
-    if (!wheelPosition) return alert("กรุณาเลือกตำแหน่งล้อ")
-    if (!workDate) return alert("กรุณาเลือกวันที่")
+  const buildPayload = () => {
+    if (!formVehicleId) {
+      alert("กรุณาเลือกรถ")
+      return null
+    }
+    if (!wheelPosition) {
+      alert("กรุณาเลือกตำแหน่งล้อ")
+      return null
+    }
+    if (!workDate) {
+      alert("กรุณาเลือกวันที่")
+      return null
+    }
 
     const costRaw = cost.trim()
     let costValue: number | null = null
     if (costRaw) {
       costValue = Number(costRaw.replace(/,/g, ""))
-      if (Number.isNaN(costValue) || costValue < 0) return alert("ค่าใช้จ่ายไม่ถูกต้อง")
+      if (Number.isNaN(costValue) || costValue < 0) {
+        alert("ค่าใช้จ่ายไม่ถูกต้อง")
+        return null
+      }
     }
     if (costValue != null && costValue > 0 && !paymentMethod) {
-      return alert("กรุณาเลือกวิธีจ่าย")
+      alert("กรุณาเลือกวิธีจ่าย")
+      return null
     }
+
+    return {
+      vehicleId: formVehicleId,
+      workDate,
+      wheelPosition,
+      workType,
+      cost: costValue,
+      paymentMethod: costValue != null && costValue > 0 ? paymentMethod : null,
+      notes: notes.trim() || null,
+    }
+  }
+
+  const handleCreate = async () => {
+    const payload = buildPayload()
+    if (!payload) return
 
     setSaving(true)
     try {
       const res = await fetch("/api/transport/tires", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vehicleId: formVehicleId,
-          workDate,
-          wheelPosition,
-          workType,
-          cost: costValue,
-          paymentMethod: costValue != null && costValue > 0 ? paymentMethod : null,
-          notes: notes.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -285,11 +340,38 @@ export function TiresPageClient() {
     }
   }
 
+  const handleUpdate = async () => {
+    if (!editingId) return
+    const payload = buildPayload()
+    if (!payload) return
+
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/transport/tires/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        alert(typeof json.error === "string" ? json.error : json.error?.message ?? "บันทึกไม่สำเร็จ")
+        return
+      }
+      resetForm()
+      await loadItems()
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleDelete = async (id: string) => {
-    if (!confirm("ลบรายการนี้?")) return
+    const ok = await confirmType({ message: "ลบรายการนี้?" })
+    if (!ok) return
     const res = await fetch(`/api/transport/tires/${id}`, { method: "DELETE" })
-    if (res.ok) loadItems()
-    else {
+    if (res.ok) {
+      if (editingId === id) resetForm()
+      await loadItems()
+    } else {
       const json = await res.json()
       alert(typeof json.error === "string" ? json.error : json.error?.message ?? "ลบไม่สำเร็จ")
     }
@@ -381,12 +463,29 @@ export function TiresPageClient() {
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <GlassCard className="space-y-4 h-fit">
-          <div className="text-sm font-semibold">บันทึกรายการใหม่</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-semibold">
+              {editingId ? "แก้ไขรายการยาง" : "บันทึกรายการใหม่"}
+            </div>
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+                ยกเลิกแก้ไข
+              </button>
+            )}
+          </div>
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">รถ *</label>
             <select
               value={formVehicleId}
-              onChange={(e) => setFormVehicleId(e.target.value)}
+              onChange={(e) => {
+                pendingWheelPositionRef.current = null
+                setFormVehicleId(e.target.value)
+              }}
               className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
             >
               <option value="">เลือกรถ</option>
@@ -485,18 +584,26 @@ export function TiresPageClient() {
             )}
           </div>
           <GlassButton
-            onClick={handleCreate}
+            onClick={editingId ? handleUpdate : handleCreate}
             disabled={saving}
-            icon={saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            icon={
+              saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : editingId ? (
+                <Pencil className="w-4 h-4" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )
+            }
           >
-            บันทึก
+            {editingId ? "บันทึกการแก้ไข" : "บันทึก"}
           </GlassButton>
         </GlassCard>
 
         <div className="space-y-4 min-w-0">
           <GlassCard padding="none">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left min-w-[640px]">
+              <table className="w-full text-sm text-left min-w-[820px]">
                 <thead className="bg-muted border-b border-border">
                   <tr>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
@@ -505,20 +612,21 @@ export function TiresPageClient() {
                     <th className="px-4 py-3 font-semibold text-muted-foreground">ประเภท</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">ค่าใช้จ่าย</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">วิธีจ่าย</th>
-                    <th className="px-4 py-3 w-16"></th>
+                    <th className="px-4 py-3 font-semibold text-muted-foreground">หมายเหตุ</th>
+                    <th className="px-4 py-3 w-24"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {loading && (
                     <tr>
-                      <td colSpan={7} className="px-2 py-4">
+                      <td colSpan={8} className="px-2 py-4">
                         <LoadingState title={t("tiresLoading")} className="py-10" />
                       </td>
                     </tr>
                   )}
                   {!loading && error && (
                     <tr>
-                      <td colSpan={7} className="px-2 py-4">
+                      <td colSpan={8} className="px-2 py-4">
                         <ErrorState
                           title={t("loadFailed")}
                           description={error}
@@ -530,7 +638,7 @@ export function TiresPageClient() {
                   )}
                   {!loading && !error && items.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                      <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                         {t("tiresEmpty")}
                       </td>
                     </tr>
@@ -538,7 +646,14 @@ export function TiresPageClient() {
                   {!loading &&
                     !error &&
                     items.map((row) => (
-                      <tr key={row.id} className="hover:bg-muted/60">
+                      <tr
+                        key={row.id}
+                        className={
+                          editingId === row.id
+                            ? "bg-cyan-50/70 dark:bg-cyan-950/30"
+                            : "hover:bg-muted/60"
+                        }
+                      >
                         <td className="px-4 py-3">{formatWorkDate(row.workDate)}</td>
                         <td className="px-4 py-3">
                           <div className="font-medium">{row.vehicle.plateNumber}</div>
@@ -552,15 +667,30 @@ export function TiresPageClient() {
                             ? TRANSPORT_PAYMENT_METHOD_LABELS[row.paymentMethod]
                             : "—"}
                         </td>
+                        <td className="max-w-[180px] px-4 py-3">
+                          <span className="line-clamp-2 text-muted-foreground" title={row.notes ?? undefined}>
+                            {row.notes?.trim() ? row.notes : "—"}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(row.id)}
-                            className="p-1.5 text-muted-foreground hover:text-red-600"
-                            title="ลบ"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="inline-flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(row)}
+                              className="p-1.5 text-muted-foreground hover:text-cyan-700"
+                              title="แก้ไข"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(row.id)}
+                              className="p-1.5 text-muted-foreground hover:text-red-600"
+                              title="ลบ"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

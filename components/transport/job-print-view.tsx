@@ -100,9 +100,9 @@ function formatDateTime(value: string) {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex gap-1.5 text-[11px] leading-snug">
-      <span className="shrink-0 text-slate-500">{label}</span>
-      <span className="min-w-0 flex-1 break-words text-right font-medium text-slate-900">{value}</span>
+    <div className="flex gap-1.5 text-[13px] leading-snug">
+      <span className="shrink-0 font-medium text-slate-600">{label}</span>
+      <span className="min-w-0 flex-1 break-words text-right font-semibold text-slate-900">{value}</span>
     </div>
   )
 }
@@ -137,18 +137,18 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
 
       <div className="flex justify-center px-3 pb-8 print:px-0 print:pb-0">
         <article className="job-print-ticket w-[80mm] max-w-[80mm] bg-white px-2 py-3 text-slate-900 shadow-sm ring-1 ring-slate-200 print:shadow-none print:ring-0">
-          <header className="border-b border-dashed border-slate-400 pb-2 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">ใบงานขนส่ง</p>
-            <h1 className="mt-0.5 text-[15px] font-bold leading-tight tracking-tight">{job.jobNumber}</h1>
-            <p className="mt-1 text-[10px] text-slate-600">
+          <header className="border-b border-dashed border-slate-400 pb-2.5 text-center">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-600">ใบงานขนส่ง</p>
+            <h1 className="mt-0.5 text-[18px] font-bold leading-tight tracking-tight">{job.jobNumber}</h1>
+            <p className="mt-1 text-[12px] font-medium text-slate-700">
               {STATUS_LABEL[job.status] ?? job.status}
               {" · "}
               {PRIORITY_LABEL[job.priority] ?? job.priority}
             </p>
-            <p className="mt-0.5 text-[9px] text-slate-500">พิมพ์เมื่อ {formatDateTime(new Date().toISOString())}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">พิมพ์เมื่อ {formatDateTime(new Date().toISOString())}</p>
           </header>
 
-          <section className="mt-2 space-y-1 border-b border-dashed border-slate-300 pb-2">
+          <section className="mt-2.5 space-y-1.5 border-b border-dashed border-slate-300 pb-2.5">
             <Row label="ลูกค้า" value={job.customerName ?? "—"} />
             <Row label="โทร" value={job.customerPhone ?? "—"} />
             <Row label="สาขา" value={job.branchName} />
@@ -158,32 +158,32 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
             <Row label="สร้างเมื่อ" value={formatDate(job.createdAt)} />
           </section>
 
-          <section className="mt-2 space-y-1 border-b border-dashed border-slate-300 pb-2">
-            <p className="text-[10px] font-semibold text-slate-700">มอบหมาย</p>
+          <section className="mt-2.5 space-y-1.5 border-b border-dashed border-slate-300 pb-2.5">
+            <p className="text-[13px] font-bold text-slate-800">มอบหมาย</p>
             <Row label="รถ" value={vehicleLabel} />
             <Row label="คนขับ" value={job.driverName ?? "—"} />
             {job.driverPhone ? <Row label="โทรคนขับ" value={job.driverPhone} /> : null}
           </section>
 
-          <section className="mt-2 border-b border-dashed border-slate-300 pb-2">
-            <p className="mb-1.5 text-[10px] font-semibold text-slate-700">
+          <section className="mt-2.5 border-b border-dashed border-slate-300 pb-2.5">
+            <p className="mb-1.5 text-[13px] font-bold text-slate-800">
               จุดแวะ ({job.stops.length})
             </p>
             {job.stops.length === 0 ? (
-              <p className="text-[11px] text-slate-500">ไม่มีจุดแวะ</p>
+              <p className="text-[13px] text-slate-500">ไม่มีจุดแวะ</p>
             ) : (
-              <ol className="space-y-2">
+              <ol className="space-y-2.5">
                 {job.stops.map((stop) => (
-                  <li key={stop.sequence} className="text-[11px] leading-snug">
-                    <p className="font-semibold">
+                  <li key={stop.sequence} className="text-[13px] leading-snug">
+                    <p className="font-bold">
                       {stop.sequence}. {stop.customerName}
                     </p>
-                    <p className="break-words text-slate-700">{stop.address}</p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="break-words text-slate-800">{stop.address}</p>
+                    <p className="text-[12px] text-slate-600">
                       ติดต่อ: {stop.contactName ?? "—"}
                       {stop.contactPhone ? ` · ${stop.contactPhone}` : ""}
                     </p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[12px] text-slate-600">
                       น้ำหนัก:{" "}
                       {stop.weightKg != null && stop.weightKg !== ""
                         ? `${Number(stop.weightKg).toLocaleString()} กก.`
@@ -195,14 +195,14 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
             )}
           </section>
 
-          <section className="mt-2">
-            <p className="mb-1 text-[10px] font-semibold text-slate-700">หมายเหตุ</p>
+          <section className="mt-2.5">
+            <p className="mb-1 text-[13px] font-bold text-slate-800">หมายเหตุ</p>
             {notesText ? (
-              <p className="whitespace-pre-wrap break-words text-[11px] leading-snug text-slate-900">
+              <p className="whitespace-pre-wrap break-words text-[13px] leading-snug text-slate-900">
                 {notesText}
               </p>
             ) : (
-              <div className="space-y-3 pt-1" aria-hidden="true">
+              <div className="space-y-3.5 pt-1" aria-hidden="true">
                 <div className="w-full border-b border-dotted border-slate-500" />
                 <div className="w-full border-b border-dotted border-slate-500" />
               </div>

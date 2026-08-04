@@ -6,6 +6,7 @@ import { countJobsByGroup, listJobs } from "@/modules/transport"
 import { getBangkokLastNDaysRange } from "@/modules/transport/application/transport-date-utils"
 import { JobsListTable } from "@/components/transport/jobs-list-table"
 import { JobsListFilters } from "@/components/transport/jobs-list-filters"
+import { JobsListSearch } from "@/components/transport/jobs-list-search"
 import {
   JOB_LIST_GROUPS,
   resolveJobListGroup,
@@ -124,6 +125,10 @@ export default async function TransportJobsPage({
               href: buildJobsQuery({ group: tab.id, ...queryBase }),
             }))}
           />
+
+          <Suspense fallback={null}>
+            <JobsListSearch />
+          </Suspense>
 
           <Suspense fallback={null}>
             <JobsListFilters

@@ -5,5 +5,7 @@ export default async function PrintLayout({ children }: { children: React.ReactN
   const session = await auth()
   if (!session) redirect("/login")
 
-  return <div className="min-h-screen bg-slate-100 print:bg-white">{children}</div>
+  return (
+    <div className="min-h-screen bg-slate-100 print:min-h-0 print:bg-white">{children}</div>
+  )
 }

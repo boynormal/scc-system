@@ -8,6 +8,7 @@ import {
   Wrench,
   Play,
   CheckCircle2,
+  ClipboardCheck,
   XCircle,
   Plus,
   Filter,
@@ -65,6 +66,7 @@ type ListMeta = {
 type OpenCounts = {
   reported: number
   in_repair: number
+  inspection: number
 }
 
 const NEEDS_DATE_DEFAULT = new Set<StatusFilter>(["closed", "cancelled"])
@@ -108,7 +110,11 @@ export function RepairsPageClient() {
   const t = useTranslations("transport")
   const [items, setItems] = useState<RepairRow[]>([])
   const [meta, setMeta] = useState<ListMeta | null>(null)
-  const [openCounts, setOpenCounts] = useState<OpenCounts>({ reported: 0, in_repair: 0 })
+  const [openCounts, setOpenCounts] = useState<OpenCounts>({
+    reported: 0,
+    in_repair: 0,
+    inspection: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<StatusFilter>("reported")
@@ -154,6 +160,7 @@ export function RepairsPageClient() {
         setOpenCounts({
           reported: json.openCounts.reported ?? 0,
           in_repair: json.openCounts.in_repair ?? 0,
+          inspection: json.openCounts.inspection ?? 0,
         })
       }
     } catch (err) {
@@ -243,7 +250,7 @@ export function RepairsPageClient() {
     }
   }
 
-  const runAction = async (id: string, action: "start" | "close" | "cancel") => {
+  const runAction = async (id: string, action: "start" | "inspect" | "close" | "cancel") => {
     setActionId(id)
     setActionError(null)
     try {
@@ -281,6 +288,7 @@ export function RepairsPageClient() {
   const FILTERS: { key: StatusFilter; label: string; count?: number }[] = [
     { key: "reported", label: "แจ้งซ่อม", count: openCounts.reported },
     { key: "in_repair", label: "กำลังซ่อม", count: openCounts.in_repair },
+    { key: "inspection", label: "ตรวจสอบ", count: openCounts.inspection },
     { key: "closed", label: "ปิดงาน" },
     { key: "cancelled", label: "ยกเลิก" },
   ]
@@ -562,6 +570,22 @@ export function RepairsPageClient() {
                     </>
                   )}
                   {item.status === "in_repair" && (
+                    <GlassButton
+                      size="sm"
+                      onClick={() => runAction(item.id, "inspect")}
+                      disabled={actionId === item.id}
+                      icon={
+                        actionId === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ClipboardCheck className="h-3.5 w-3.5" />
+                        )
+                      }
+                    >
+                      ส่งตรวจสอบ
+                    </GlassButton>
+                  )}
+                  {item.status === "inspection" && (
                     <GlassButton
                       size="sm"
                       onClick={() => runAction(item.id, "close")}

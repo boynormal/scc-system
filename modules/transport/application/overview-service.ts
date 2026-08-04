@@ -34,6 +34,7 @@ export async function getTransportOverview(
     cancelledToday,
     repairsReported,
     repairsInRepair,
+    repairsInspection,
     pendingJobs,
     openRepairs,
     recentJobs,
@@ -67,6 +68,7 @@ export async function getTransportOverview(
     }),
     db.transportRepairLog.count({ where: { ...jobBranch, status: "reported" } }),
     db.transportRepairLog.count({ where: { ...jobBranch, status: "in_repair" } }),
+    db.transportRepairLog.count({ where: { ...jobBranch, status: "inspection" } }),
     db.transportJob.findMany({
       where: { ...jobBranch, status: "pending_assignment" },
       select: {
@@ -81,7 +83,7 @@ export async function getTransportOverview(
       take: 5,
     }),
     db.transportRepairLog.findMany({
-      where: { ...jobBranch, status: { in: ["reported", "in_repair"] } },
+      where: { ...jobBranch, status: { in: ["reported", "in_repair", "inspection"] } },
       select: {
         id: true,
         symptom: true,
@@ -108,7 +110,7 @@ export async function getTransportOverview(
     }),
   ])
 
-  const openRepairsTotal = repairsReported + repairsInRepair
+  const openRepairsTotal = repairsReported + repairsInRepair + repairsInspection
 
   return {
     attention: {

@@ -2,10 +2,54 @@
 
 import { useEffect } from "react"
 import { Printer } from "lucide-react"
-import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import type { TransportJobStatus } from "@prisma/client"
 
-const PRIORITY_LABEL: Record<string, string> = { low: "ต่ำ", normal: "ปกติ", high: "สูง", urgent: "ด่วน" }
+const PRIORITY_LABEL: Record<string, string> = {
+  low: "ต่ำ",
+  normal: "ปกติ",
+  high: "สูง",
+  urgent: "ด่วน",
+}
+
+const STATUS_LABEL: Record<TransportJobStatus, string> = {
+  pending_assignment: "รอมอบหมาย",
+  assigned: "มอบหมายแล้ว",
+  driver_accepted: "คนขับรับงาน",
+  en_route: "กำลังเดินทาง",
+  at_pickup: "ถึงจุดรับ",
+  loading: "กำลังโหลด",
+  departed: "ออกเดินทาง",
+  at_destination: "ถึงปลายทาง",
+  unloading: "กำลังขนถ่าย",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+}
+
+const PRINT_CSS = `
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+  html,
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .job-print-screen-chrome {
+    display: none !important;
+  }
+  .job-print-ticket {
+    width: 76mm !important;
+    max-width: 76mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+`
 
 type Stop = {
   sequence: number
@@ -39,7 +83,7 @@ function formatDate(value: string | null) {
   if (!value) return "—"
   return new Date(value).toLocaleDateString("th-TH", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   })
 }
@@ -54,6 +98,15 @@ function formatDateTime(value: string) {
   })
 }
 
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-1.5 text-[11px] leading-snug">
+      <span className="shrink-0 text-slate-500">{label}</span>
+      <span className="min-w-0 flex-1 break-words text-right font-medium text-slate-900">{value}</span>
+    </div>
+  )
+}
+
 export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; autoPrint?: boolean }) {
   useEffect(() => {
     if (autoPrint) {
@@ -62,110 +115,101 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
     }
   }, [autoPrint])
 
+  const notesText = job.notes?.trim() ?? ""
+  const vehicleLabel = job.vehiclePlate
+    ? `${job.vehiclePlate}${job.vehicleName ? ` — ${job.vehicleName}` : ""}`
+    : "—"
+
   return (
-    <div className="mx-auto max-w-4xl bg-white p-6 md:p-10 print:max-w-none print:p-0">
-      <div className="mb-6 flex items-center justify-between print:hidden">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
+
+      <div className="job-print-screen-chrome flex justify-center px-3 py-4 print:hidden">
         <button
           type="button"
           onClick={() => window.print()}
           className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700"
         >
           <Printer className="h-4 w-4" />
-          พิมพ์
+          พิมพ์ 80mm
         </button>
       </div>
 
-      <header className="border-b border-slate-300 pb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">ใบงานขนส่ง</p>
-            <h1 className="mt-1 text-2xl font-bold text-foreground">{job.jobNumber}</h1>
-          </div>
-          <JobStatusBadge status={job.status} />
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">พิมพ์เมื่อ {formatDateTime(new Date().toISOString())}</p>
-      </header>
+      <div className="flex justify-center px-3 pb-8 print:px-0 print:pb-0">
+        <article className="job-print-ticket w-[80mm] max-w-[80mm] bg-white px-2 py-3 text-slate-900 shadow-sm ring-1 ring-slate-200 print:shadow-none print:ring-0">
+          <header className="border-b border-dashed border-slate-400 pb-2 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">ใบงานขนส่ง</p>
+            <h1 className="mt-0.5 text-[15px] font-bold leading-tight tracking-tight">{job.jobNumber}</h1>
+            <p className="mt-1 text-[10px] text-slate-600">
+              {STATUS_LABEL[job.status] ?? job.status}
+              {" · "}
+              {PRIORITY_LABEL[job.priority] ?? job.priority}
+            </p>
+            <p className="mt-0.5 text-[9px] text-slate-500">พิมพ์เมื่อ {formatDateTime(new Date().toISOString())}</p>
+          </header>
 
-      <section className="mt-6 grid gap-4 sm:grid-cols-2">
-        <InfoBlock label="ลูกค้า" value={job.customerName ?? "—"} />
-        <InfoBlock label="โทรศัพท์" value={job.customerPhone ?? "—"} />
-        <InfoBlock label="สาขา" value={job.branchName} />
-        <InfoBlock label="ประเภทงาน" value={job.jobType} />
-        <InfoBlock label="ประเภทสินค้า" value={job.cargoType ?? "—"} />
-        <InfoBlock label="ความสำคัญ" value={PRIORITY_LABEL[job.priority] ?? job.priority} />
-        <InfoBlock label="วันที่นัดวิ่งงาน" value={formatDate(job.scheduledDate)} />
-        <InfoBlock label="วันที่สร้าง" value={formatDate(job.createdAt)} />
-      </section>
+          <section className="mt-2 space-y-1 border-b border-dashed border-slate-300 pb-2">
+            <Row label="ลูกค้า" value={job.customerName ?? "—"} />
+            <Row label="โทร" value={job.customerPhone ?? "—"} />
+            <Row label="สาขา" value={job.branchName} />
+            <Row label="ประเภทงาน" value={job.jobType} />
+            <Row label="สินค้า" value={job.cargoType ?? "—"} />
+            <Row label="นัดวิ่ง" value={formatDate(job.scheduledDate)} />
+            <Row label="สร้างเมื่อ" value={formatDate(job.createdAt)} />
+          </section>
 
-      <section className="mt-6 rounded-lg border border-border p-4">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">การมอบหมาย</h2>
-        <div className="grid gap-3 sm:grid-cols-2 text-sm">
-          <InfoBlock label="รถ" value={job.vehiclePlate ? `${job.vehiclePlate} — ${job.vehicleName}` : "—"} />
-          <InfoBlock label="คนขับ" value={job.driverName ?? "—"} sub={job.driverPhone ?? undefined} />
-        </div>
-      </section>
+          <section className="mt-2 space-y-1 border-b border-dashed border-slate-300 pb-2">
+            <p className="text-[10px] font-semibold text-slate-700">มอบหมาย</p>
+            <Row label="รถ" value={vehicleLabel} />
+            <Row label="คนขับ" value={job.driverName ?? "—"} />
+            {job.driverPhone ? <Row label="โทรคนขับ" value={job.driverPhone} /> : null}
+          </section>
 
-      <section className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">จุดแวะ ({job.stops.length} จุด)</h2>
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-300 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="py-2 pr-3">#</th>
-              <th className="py-2 pr-3">ปลายทาง</th>
-              <th className="py-2 pr-3">ที่อยู่</th>
-              <th className="py-2 pr-3">ติดต่อ</th>
-              <th className="py-2">น้ำหนัก (กก.)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {job.stops.map((stop) => (
-              <tr key={stop.sequence} className="border-b border-slate-100 align-top">
-                <td className="py-3 pr-3 font-medium">{stop.sequence}</td>
-                <td className="py-3 pr-3">{stop.customerName}</td>
-                <td className="py-3 pr-3">{stop.address}</td>
-                <td className="py-3 pr-3">
-                  {stop.contactName ?? "—"}
-                  {stop.contactPhone ? <div className="text-xs text-muted-foreground">{stop.contactPhone}</div> : null}
-                </td>
-                <td className="py-3">{stop.weightKg ? Number(stop.weightKg).toLocaleString() : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+          <section className="mt-2 border-b border-dashed border-slate-300 pb-2">
+            <p className="mb-1.5 text-[10px] font-semibold text-slate-700">
+              จุดแวะ ({job.stops.length})
+            </p>
+            {job.stops.length === 0 ? (
+              <p className="text-[11px] text-slate-500">ไม่มีจุดแวะ</p>
+            ) : (
+              <ol className="space-y-2">
+                {job.stops.map((stop) => (
+                  <li key={stop.sequence} className="text-[11px] leading-snug">
+                    <p className="font-semibold">
+                      {stop.sequence}. {stop.customerName}
+                    </p>
+                    <p className="break-words text-slate-700">{stop.address}</p>
+                    <p className="text-[10px] text-slate-500">
+                      ติดต่อ: {stop.contactName ?? "—"}
+                      {stop.contactPhone ? ` · ${stop.contactPhone}` : ""}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      น้ำหนัก:{" "}
+                      {stop.weightKg != null && stop.weightKg !== ""
+                        ? `${Number(stop.weightKg).toLocaleString()} กก.`
+                        : "—"}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
 
-      {job.notes && (
-        <section className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold text-foreground">หมายเหตุ</h2>
-          <p className="text-sm text-foreground whitespace-pre-wrap">{job.notes}</p>
-        </section>
-      )}
-
-      <footer className="mt-10 grid grid-cols-3 gap-8 border-t border-slate-200 pt-6 text-sm text-muted-foreground">
-        <SignatureLine label="ผู้สร้างใบงาน" />
-        <SignatureLine label="คนขับรับทราบ" />
-        <SignatureLine label="ผู้รับสินค้า" />
-      </footer>
-    </div>
-  )
-}
-
-function InfoBlock({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-sm text-foreground">{value}</p>
-      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-    </div>
-  )
-}
-
-function SignatureLine({ label }: { label: string }) {
-  return (
-    <div className="text-center">
-      <div className="mb-10 border-b border-slate-300" />
-      <p>{label}</p>
-      <p className="mt-1 text-xs text-muted-foreground">วันที่ _______/_______/_______</p>
-    </div>
+          <section className="mt-2">
+            <p className="mb-1 text-[10px] font-semibold text-slate-700">หมายเหตุ</p>
+            {notesText ? (
+              <p className="whitespace-pre-wrap break-words text-[11px] leading-snug text-slate-900">
+                {notesText}
+              </p>
+            ) : (
+              <div className="space-y-3 pt-1" aria-hidden="true">
+                <div className="w-full border-b border-dotted border-slate-500" />
+                <div className="w-full border-b border-dotted border-slate-500" />
+              </div>
+            )}
+          </section>
+        </article>
+      </div>
+    </>
   )
 }

@@ -32,6 +32,7 @@ type Props = {
 const STATUS_OPTIONS: { value: RepairStatus; label: string }[] = [
   { value: "reported", label: "แจ้งซ่อม" },
   { value: "in_repair", label: "กำลังซ่อม" },
+  { value: "inspection", label: "ตรวจสอบ" },
   { value: "closed", label: "ปิดงาน" },
   { value: "cancelled", label: "ยกเลิก" },
 ]
@@ -255,7 +256,7 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
               ))}
             </select>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              เปลี่ยนเป็นกำลังซ่อมจะตั้งรถเป็นซ่อมบำรุง · แจ้งซ่อม/ปิด/ยกเลิกจะคืนรถเป็นพร้อมใช้หากกำลังซ่อมอยู่
+              กำลังซ่อม = รถซ่อมบำรุง · ตรวจสอบ/แจ้งซ่อม/ปิด/ยกเลิก = คืนรถพร้อมใช้ · ปิดงานต้องผ่านตรวจสอบเท่านั้น
             </p>
           </div>
 

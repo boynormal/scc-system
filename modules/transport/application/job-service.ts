@@ -165,18 +165,28 @@ function parseUpdatedAtRange(from?: string | null, to?: string | null) {
 function buildJobListWhere(params: JobListFilters) {
   const group = params.statusGroup ? resolveJobListGroup(params.statusGroup) : null
   const updatedAtRange = parseUpdatedAtRange(params.from, params.to)
+  const search = params.search?.trim() || null
+  const contains = search
+    ? { contains: search, mode: "insensitive" as const }
+    : null
 
   return {
     companyId: params.companyId,
     ...(params.branchId ? { branchId: params.branchId } : {}),
     ...(group ? statusFilterForGroup(group) : params.status ? { status: params.status } : {}),
     ...(params.priority ? { priority: params.priority } : {}),
-    ...(params.search
+    ...(contains
       ? {
           OR: [
-            { jobNumber: { contains: params.search, mode: "insensitive" as const } },
-            { customerName: { contains: params.search, mode: "insensitive" as const } },
-            { jobType: { contains: params.search, mode: "insensitive" as const } },
+            { jobNumber: contains },
+            { customerName: contains },
+            { customer: { name: contains } },
+            { jobType: contains },
+            { cargoType: contains },
+            { assignment: { vehicle: { plateNumber: contains } } },
+            { assignment: { vehicle: { name: contains } } },
+            { assignment: { driver: { firstName: contains } } },
+            { assignment: { driver: { lastName: contains } } },
           ],
         }
       : {}),

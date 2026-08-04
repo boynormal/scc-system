@@ -922,6 +922,7 @@ enum TransportJobPriority {
 enum TransportRepairStatus {
   reported
   in_repair
+  inspection
   closed
   cancelled
 }

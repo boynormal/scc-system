@@ -101,6 +101,7 @@ export const syncJobStopsSchema = z.object({
         contactName: z.string().max(255).optional().nullable(),
         contactPhone: z.string().max(30).optional().nullable(),
         weightKg: z.number().positive().optional().nullable(),
+        notes: z.string().max(2000).optional().nullable(),
       })
     )
     .min(1, "At least one stop is required"),
@@ -575,6 +576,7 @@ export async function syncJobStops(
         contactName: item.contactName ?? null,
         contactPhone: item.contactPhone ?? null,
         weightKg: item.weightKg ?? null,
+        notes: item.notes?.trim() || null,
       }
 
       if (item.id && existingById.has(item.id)) {

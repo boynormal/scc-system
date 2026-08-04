@@ -56,6 +56,7 @@ export default async function TransportJobPrintPage({
             contactName: stop.contactName,
             contactPhone: stop.contactPhone,
             weightKg: stop.weightKg,
+            notes: stop.notes,
           })),
         }}
       />

@@ -132,6 +132,7 @@ export default function EditTransportJobPage() {
             contactName: string | null
             contactPhone: string | null
             weightKg: string | number | null
+            notes: string | null
           },
           idx: number
         ) => ({
@@ -143,6 +144,7 @@ export default function EditTransportJobPage() {
           contactName: s.contactName ?? "",
           contactPhone: s.contactPhone ?? "",
           weightKg: s.weightKg != null ? String(s.weightKg) : "",
+          notes: s.notes ?? "",
         })
       )
       setStops(loadedStops.length > 0 ? loadedStops : [emptyJobStop()])
@@ -216,6 +218,7 @@ export default function EditTransportJobPage() {
             contactName: s.contactName || null,
             contactPhone: s.contactPhone || null,
             weightKg: s.weightKg ? Number(s.weightKg) : null,
+            notes: s.notes.trim() || null,
           })),
         }),
       })

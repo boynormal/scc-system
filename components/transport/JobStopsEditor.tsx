@@ -16,6 +16,7 @@ export type JobStopForm = {
   contactName: string
   contactPhone: string
   weightKg: string
+  notes: string
 }
 
 export type DestinationPrefillSnap = {
@@ -35,6 +36,7 @@ export function emptyJobStop(sequence = 1): JobStopForm {
     contactName: "",
     contactPhone: "",
     weightKg: "",
+    notes: "",
   }
 }
 
@@ -242,6 +244,17 @@ export function JobStopsEditor({ stops, onChange, disabled, className }: Props) 
                   value={stop.weightKg}
                   onChange={(e) => updateStop(idx, "weightKg", e.target.value)}
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-60"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">หมายเหตุ</label>
+                <textarea
+                  disabled={disabled}
+                  value={stop.notes}
+                  onChange={(e) => updateStop(idx, "notes", e.target.value)}
+                  rows={2}
+                  placeholder="หมายเหตุสำหรับจุดนี้ (ถ้ามี)"
+                  className="w-full resize-y rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-60"
                 />
               </div>
             </div>

@@ -58,6 +58,7 @@ type Stop = {
   contactName: string | null
   contactPhone: string | null
   weightKg: unknown
+  notes: string | null
 }
 
 type JobPrintData = {
@@ -173,24 +174,36 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
               <p className="text-[13px] text-slate-500">ไม่มีจุดแวะ</p>
             ) : (
               <ol className="space-y-2.5">
-                {job.stops.map((stop) => (
-                  <li key={stop.sequence} className="text-[13px] leading-snug">
-                    <p className="font-bold">
-                      {stop.sequence}. {stop.customerName}
-                    </p>
-                    <p className="break-words text-slate-800">{stop.address}</p>
-                    <p className="text-[12px] text-slate-600">
-                      ติดต่อ: {stop.contactName ?? "—"}
-                      {stop.contactPhone ? ` · ${stop.contactPhone}` : ""}
-                    </p>
-                    <p className="text-[12px] text-slate-600">
-                      น้ำหนัก:{" "}
-                      {stop.weightKg != null && stop.weightKg !== ""
-                        ? `${Number(stop.weightKg).toLocaleString()} กก.`
-                        : "—"}
-                    </p>
-                  </li>
-                ))}
+                {job.stops.map((stop) => {
+                  const contactName = stop.contactName?.trim() || ""
+                  const contactPhone = stop.contactPhone?.trim() || ""
+                  const stopNotes = stop.notes?.trim() || ""
+                  const contactParts = [contactName, contactPhone].filter(Boolean)
+                  return (
+                    <li key={stop.sequence} className="text-[13px] leading-snug">
+                      <p className="font-bold">
+                        {stop.sequence}. {stop.customerName}
+                      </p>
+                      <p className="break-words text-slate-800">{stop.address}</p>
+                      {contactParts.length > 0 ? (
+                        <p className="text-[12px] text-slate-600">
+                          ติดต่อ: {contactParts.join(" · ")}
+                        </p>
+                      ) : null}
+                      <p className="text-[12px] text-slate-600">
+                        น้ำหนัก:{" "}
+                        {stop.weightKg != null && stop.weightKg !== ""
+                          ? `${Number(stop.weightKg).toLocaleString()} กก.`
+                          : "—"}
+                      </p>
+                      {stopNotes ? (
+                        <p className="mt-0.5 whitespace-pre-wrap break-words text-[12px] text-slate-700">
+                          หมายเหตุ: {stopNotes}
+                        </p>
+                      ) : null}
+                    </li>
+                  )
+                })}
               </ol>
             )}
           </section>

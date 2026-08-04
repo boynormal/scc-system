@@ -115,6 +115,7 @@ export function CreateJobForm({ onCancel, onSuccess, compact = false }: Props) {
             contactName: s.contactName || undefined,
             contactPhone: s.contactPhone || undefined,
             weightKg: s.weightKg ? Number(s.weightKg) : undefined,
+            notes: s.notes.trim() || undefined,
           })),
         }),
       })

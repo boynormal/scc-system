@@ -6,6 +6,9 @@ import { getJobById } from "@/modules/transport"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { StopTimeline } from "@/components/transport/stop-timeline"
 import { AssignJobForm } from "@/components/transport/assign-job-form"
+import { CompleteJobButton } from "@/components/transport/complete-job-button"
+import { CancelJobButton } from "@/components/transport/cancel-job-button"
+import { ReopenJobButton } from "@/components/transport/reopen-job-button"
 import Link from "next/link"
 import { ArrowLeft, Pencil, Printer } from "lucide-react"
 
@@ -45,7 +48,7 @@ export default async function TransportJobDetailPage({
               ประเภท: {job.jobType}{job.cargoType ? ` · สินค้า: ${job.cargoType}` : ""} · ความสำคัญ: {PRIORITY_LABEL[job.priority] ?? job.priority}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Link
               href={`/transport/jobs/${id}/print`}
               target="_blank"
@@ -53,13 +56,20 @@ export default async function TransportJobDetailPage({
             >
               <Printer className="h-4 w-4" /> พิมพ์
             </Link>
-            {job.status !== "cancelled" && (
-              <Link
-                href={`/transport/jobs/${id}/edit`}
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/60"
-              >
-                <Pencil className="h-4 w-4" /> แก้ไข
-              </Link>
+            {job.status !== "completed" && job.status !== "cancelled" && (
+              <>
+                <Link
+                  href={`/transport/jobs/${id}/edit`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/60"
+                >
+                  <Pencil className="h-4 w-4" /> แก้ไข
+                </Link>
+                <CompleteJobButton jobId={id} jobStatus={job.status} />
+                <CancelJobButton jobId={id} jobStatus={job.status} />
+              </>
+            )}
+            {(job.status === "completed" || job.status === "cancelled") && (
+              <ReopenJobButton jobId={id} jobStatus={job.status} />
             )}
           </div>
         </div>

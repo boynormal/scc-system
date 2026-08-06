@@ -3,7 +3,7 @@ import type { PrismaClient, TransportJobStatus, TransportJobPriority, Attachment
 import { Prisma } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { hasPermission, isAdminInAnyBranch, getBranchIds, type UserRole } from "@/lib/permissions"
-import { performAssignment } from "./assignment-service"
+import { cancelJob, performAssignment } from "./assignment-service"
 import { getBangkokDateRange } from "./transport-date-utils"
 import {
   type JobListGroup,
@@ -393,22 +393,15 @@ export async function updateJob(
   return db.transportJob.update({ where: { id: params.id }, data: params.input })
 }
 
+/** Soft-cancel — delegates to cancelJob (frees fleet when scheduled today). */
 export async function deleteJob(
   db: PrismaClient,
   params: { id: string; companyId: string; roles: UserRole[] }
 ) {
-  const job = await db.transportJob.findFirst({
-    where: { id: params.id, companyId: params.companyId },
-  })
-  if (!job) throw new NotFoundError("Job not found")
-  const canDelete =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "delete")
-  if (!canDelete) throw new ForbiddenError()
-
-  return db.transportJob.update({
-    where: { id: params.id },
-    data: { status: "cancelled" },
+  return cancelJob(db, {
+    jobId: params.id,
+    companyId: params.companyId,
+    roles: params.roles,
   })
 }
 

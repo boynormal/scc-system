@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { CheckCircle2 } from "lucide-react"
+import { JobActionConfirmModal } from "@/components/transport/job-action-confirm-modal"
 
 type Props = {
   jobId: string
@@ -19,7 +20,7 @@ export function CompleteJobButton({ jobId, jobStatus, compact = false }: Props) 
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showConfirm, setShowConfirm] = useState(false)
+  const [open, setOpen] = useState(false)
 
   const canComplete = COMPLETABLE_STATUSES.includes(jobStatus) || jobStatus === "pending_assignment"
   if (!canComplete) return null
@@ -32,76 +33,55 @@ export function CompleteJobButton({ jobId, jobStatus, compact = false }: Props) 
       const json = await res.json()
       if (!res.ok) {
         setError(json.error ?? "เกิดข้อผิดพลาด")
-        setShowConfirm(false)
         return
       }
+      setOpen(false)
       router.refresh()
     } catch {
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
     } finally {
       setLoading(false)
-      setShowConfirm(false)
     }
-  }
-
-  const startComplete = () => {
-    if (compact) {
-      if (window.confirm("ยืนยันจบงานนี้?")) void handleComplete()
-      return
-    }
-    setShowConfirm(true)
-  }
-
-  if (compact) {
-    return (
-      <div className="relative">
-        <button
-          type="button"
-          onClick={startComplete}
-          disabled={loading}
-          title="จบงาน"
-          className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
-        >
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          {loading ? "..." : "จบงาน"}
-        </button>
-        {error && <p className="absolute top-full right-0 z-10 mt-1 whitespace-nowrap text-xs text-red-600">{error}</p>}
-      </div>
-    )
   }
 
   return (
-    <div className="relative">
-      {!showConfirm ? (
-        <button
-          onClick={startComplete}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          จบงาน
-        </button>
-      ) : (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">ยืนยันจบงานนี้?</span>
-          <button
-            onClick={() => void handleComplete()}
-            disabled={loading}
-            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-          >
-            {loading ? "กำลังบันทึก..." : "ยืนยัน"}
-          </button>
-          <button
-            onClick={() => setShowConfirm(false)}
-            disabled={loading}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/60"
-          >
-            ยกเลิก
-          </button>
-        </div>
-      )}
-      {error && (
-        <p className="absolute top-full mt-1 text-xs text-red-600 whitespace-nowrap">{error}</p>
-      )}
-    </div>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setError(null)
+          setOpen(true)
+        }}
+        disabled={loading}
+        title="จบงาน"
+        className={
+          compact
+            ? "inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+            : "inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+        }
+      >
+        <CheckCircle2 className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+        จบงาน
+      </button>
+
+      <JobActionConfirmModal
+        open={open}
+        title="จบงาน"
+        description="ยืนยันจบงานนี้? ใบงานจะย้ายไปแท็บใบงานเสร็จสิ้น"
+        confirmLabel="จบงาน"
+        cancelLabel="ปิด"
+        tone="success"
+        icon={<CheckCircle2 className="h-5 w-5" />}
+        loading={loading}
+        error={error}
+        onConfirm={() => void handleComplete()}
+        onCancel={() => {
+          if (!loading) {
+            setOpen(false)
+            setError(null)
+          }
+        }}
+      />
+    </>
   )
 }

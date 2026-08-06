@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { Pencil, Printer } from "lucide-react"
 import { CompleteJobButton } from "@/components/transport/complete-job-button"
+import { CancelJobButton } from "@/components/transport/cancel-job-button"
+import { ReopenJobButton } from "@/components/transport/reopen-job-button"
 
 type Props = {
   jobId: string
@@ -10,11 +12,11 @@ type Props = {
 }
 
 export function JobRowActions({ jobId, jobStatus }: Props) {
-  const isCancelled = jobStatus === "cancelled"
+  const isTerminal = jobStatus === "completed" || jobStatus === "cancelled"
 
   return (
     <div className="flex items-center justify-end gap-1.5">
-      {!isCancelled && (
+      {!isTerminal && (
         <Link
           href={`/transport/jobs/${jobId}/edit`}
           title="แก้ไข"
@@ -33,7 +35,14 @@ export function JobRowActions({ jobId, jobStatus }: Props) {
         <Printer className="h-3.5 w-3.5" />
         พิมพ์
       </Link>
-      <CompleteJobButton jobId={jobId} jobStatus={jobStatus} compact />
+      {isTerminal ? (
+        <ReopenJobButton jobId={jobId} jobStatus={jobStatus} compact />
+      ) : (
+        <>
+          <CompleteJobButton jobId={jobId} jobStatus={jobStatus} compact />
+          <CancelJobButton jobId={jobId} jobStatus={jobStatus} compact />
+        </>
+      )}
     </div>
   )
 }

@@ -305,12 +305,14 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                     key={i}
                     className={cn(
                       "border-b border-r border-border px-1 py-2 text-center text-xs font-semibold",
-                      isToday ? "bg-cyan-50 text-cyan-700" : "text-muted-foreground",
+                      isToday
+                        ? "bg-orange-50 text-orange-800 dark:bg-orange-950/40 dark:text-orange-200"
+                        : "text-muted-foreground",
                       isWeekend && !isToday && "text-muted-foreground"
                     )}
                   >
                     <div>{DAY_SHORT[day.getDay()]}</div>
-                    <div className={cn("text-sm font-bold", isToday && "text-cyan-600")}>
+                    <div className={cn("text-sm font-bold", isToday && "text-orange-600 dark:text-orange-300")}>
                       {day.getDate()}
                     </div>
                     <div className="text-[10px] font-normal text-muted-foreground">{MONTH_SHORT[day.getMonth()]}</div>
@@ -340,7 +342,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                       onDrop={(e) => handleDrop(e, vehicle.id, dayIdx)}
                       className={cn(
                         "relative min-w-0 overflow-hidden border-r border-border px-1 py-1.5 align-top",
-                        isToday && "bg-cyan-50/30",
+                        isToday && "bg-orange-50/50 dark:bg-orange-950/25",
                         isDropTarget && "bg-cyan-100/60 ring-2 ring-inset ring-cyan-400"
                       )}
                     >
@@ -372,7 +374,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
                       key={dayIdx}
                       className={cn(
                         "relative min-w-0 overflow-hidden border-r border-border px-1 py-1.5 align-top",
-                        isToday && "bg-cyan-50/30"
+                        isToday && "bg-orange-50/50 dark:bg-orange-950/25"
                       )}
                     >
                       <div className="min-w-0 space-y-1">

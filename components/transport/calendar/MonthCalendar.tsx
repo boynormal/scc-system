@@ -72,7 +72,8 @@ export function MonthCalendar({ year, month, jobs }: Props) {
           const dayJobs = jobsOnDay(day)
           const dayYmd = formatBangkokYmd(day)
           const isToday = dayYmd === todayYmd
-          const isWeekend = day.getDay() === 0 || day.getDay() === 6
+          const isSunday = day.getDay() === 0
+          const isWeekend = isSunday || day.getDay() === 6
           const cellKey = dayYmd
           const plate = (job: CalendarJob) => job.vehicle?.plateNumber ?? "ไม่ระบุรถ"
 
@@ -81,15 +82,23 @@ export function MonthCalendar({ year, month, jobs }: Props) {
               key={cellKey}
               className={cn(
                 "relative flex min-h-[72px] flex-col p-0.5",
-                isWeekend && "bg-muted/40"
+                isToday
+                  ? "bg-orange-50 dark:bg-orange-950/35"
+                  : isWeekend && "bg-muted/40"
               )}
             >
-              {/* Day number */}
+              {/* Day number — today > Sunday red > weekend/normal */}
               <div className="mb-0.5 flex shrink-0 justify-end">
                 <span
                   className={cn(
                     "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium",
-                    isToday ? "bg-cyan-600 text-white" : isWeekend ? "text-muted-foreground" : "text-foreground"
+                    isToday
+                      ? "bg-orange-500 text-white"
+                      : isSunday
+                        ? "text-red-500"
+                        : isWeekend
+                          ? "text-muted-foreground"
+                          : "text-foreground"
                   )}
                 >
                   {day.getDate()}

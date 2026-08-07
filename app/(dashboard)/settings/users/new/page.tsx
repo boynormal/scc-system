@@ -83,7 +83,7 @@ export default function NewUserPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className="space-y-5">
         <GlassCard>
           <GlassCardHeader><GlassCardTitle>ข้อมูลส่วนตัว</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -112,6 +112,7 @@ export default function NewUserPage() {
               type="email"
               placeholder="user@company.com"
               hint="ใช้เข้าสู่ระบบหรือติดต่อได้"
+              autoComplete="off"
               error={errors.email?.message}
               {...register("email")}
             />
@@ -120,6 +121,7 @@ export default function NewUserPage() {
               required
               type="password"
               hint="อย่างน้อย 8 ตัวอักษร"
+              autoComplete="new-password"
               error={errors.password?.message}
               {...register("password")}
             />

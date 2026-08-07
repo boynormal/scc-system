@@ -1,5 +1,6 @@
 import { Metadata } from "next"
-import { Users, Plus, Search, CheckCircle2, XCircle } from "lucide-react"
+import { Suspense } from "react"
+import { Users, Plus, CheckCircle2, XCircle } from "lucide-react"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { GlassCard } from "@/components/glass"
 import { formatDate } from "@/lib/utils"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
+import { UsersListSearch } from "@/components/settings/users-list-search"
 import type { Prisma } from "@prisma/client"
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -71,7 +73,6 @@ export default async function UsersPage(
   const page = parsePage(searchParams.page)
   const session = await auth()
   const t = await getTranslations("settings")
-  const tCommon = await getTranslations("common")
   const { users, total } = await getUsersPage(
     session!.user.companyId as string,
     page,
@@ -96,25 +97,9 @@ export default async function UsersPage(
       </div>
 
       <GlassCard padding="sm">
-        <form className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              name="search"
-              defaultValue={searchParams.search}
-              placeholder="ค้นหาชื่อ, username, อีเมล, รหัสพนักงาน..."
-              className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button type="submit" className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-800 transition-colors">
-            {tCommon("search")}
-          </button>
-          {searchParams.search && (
-            <Link href="/settings/users" className="px-4 py-2 border border-border text-muted-foreground text-sm rounded-lg hover:bg-muted/60">
-              ล้าง
-            </Link>
-          )}
-        </form>
+        <Suspense fallback={<div className="h-10 max-w-xl animate-pulse rounded-lg bg-muted" />}>
+          <UsersListSearch />
+        </Suspense>
       </GlassCard>
 
       <GlassCard padding="none">

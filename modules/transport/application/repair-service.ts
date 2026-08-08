@@ -38,6 +38,8 @@ export const createRepairSchema = z
 export type CreateRepairInput = z.infer<typeof createRepairSchema>
 
 const OPEN_STATUSES: TransportRepairStatus[] = ["reported", "in_repair", "inspection"]
+/** Block new create only while vehicle has an active repair queue — inspection alone is allowed. */
+const BLOCK_CREATE_STATUSES: TransportRepairStatus[] = ["reported", "in_repair"]
 const LIST_TAKE_LIMIT = 300
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -256,7 +258,7 @@ export async function createRepair(
     where: {
       vehicleId: vehicle.id,
       companyId: params.companyId,
-      status: { in: OPEN_STATUSES },
+      status: { in: BLOCK_CREATE_STATUSES },
     },
     select: { id: true, status: true },
   })
@@ -264,9 +266,7 @@ export async function createRepair(
     const msg =
       openExisting.status === "in_repair"
         ? "รถคันนี้กำลังซ่อมอยู่แล้ว — ส่งตรวจสอบหรือจัดการใบเดิมก่อน"
-        : openExisting.status === "inspection"
-          ? "รถคันนี้มีใบซ่อมที่รอตรวจสอบ — ปิดงานหรือย้อนกลับก่อน"
-          : "รถคันนี้มีใบแจ้งซ่อมที่ยังไม่ปิด — เข้าซ่อมหรือยกเลิกใบเดิมก่อน"
+        : "รถคันนี้มีใบแจ้งซ่อมที่ยังไม่ปิด — เข้าซ่อมหรือยกเลิกใบเดิมก่อน"
     throw new ValidationError(msg)
   }
 

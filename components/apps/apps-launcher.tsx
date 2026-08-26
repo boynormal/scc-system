@@ -68,6 +68,13 @@ const LINE_CARD_THEMES: Record<
     ring: "ring-fuchsia-200/70",
     glow: "shadow-fuchsia-500/20",
   },
+  raw_material_news: {
+    tile: "from-amber-50 via-yellow-50 to-orange-100 ring-amber-200/60",
+    icon: "from-amber-500 to-orange-600",
+    blob: "bg-amber-400/30",
+    ring: "ring-amber-200/70",
+    glow: "shadow-amber-500/20",
+  },
 }
 
 function lineTheme(lineId: string) {

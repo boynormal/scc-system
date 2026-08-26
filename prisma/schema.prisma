@@ -79,6 +79,14 @@ enum NotificationType {
   wo_assigned
   low_stock
   wo_completed
+  due_item_upcoming
+  due_item_overdue
+}
+
+enum DueItemStatus {
+  open
+  closed
+  cancelled
 }
 
 enum AuditAction {
@@ -121,6 +129,7 @@ model Company {
   transportJobs           TransportJob[]
   transportRepairLogs     TransportRepairLog[]
   transportTireLogs       TransportTireLog[]
+  dueItems                DueItem[]
 
   @@map("companies")
 }
@@ -155,6 +164,7 @@ model Branch {
   transportJobs           TransportJob[]
   transportRepairLogs     TransportRepairLog[]
   transportTireLogs       TransportTireLog[]
+  dueItems                DueItem[]
 
   @@index([companyId])
   @@index([code])
@@ -230,6 +240,9 @@ model User {
   repairsStarted          TransportRepairLog[]    @relation("RepairStartedBy")
   repairsClosed           TransportRepairLog[]    @relation("RepairClosedBy")
   tireLogsCreated         TransportTireLog[]      @relation("TireLogCreatedBy")
+  dueItemsOwned           DueItem[]               @relation("DueItemOwner")
+  dueItemsCreated         DueItem[]               @relation("DueItemCreatedBy")
+  dueItemRenewals         DueItemRenewal[]        @relation("DueItemRenewedBy")
 
   // Phase B decision (2026-07-23): email stays globally @unique permanently — login
   // may use email or username; both are globally unique (no company picker).
@@ -1260,4 +1273,51 @@ model JobAttachment {
   @@index([jobId])
   @@index([stopId])
   @@map("job_attachments")
+}
+
+// ─── GROUP: DUE DATE MANAGEMENT (standalone — no FK to PM / machines / drivers) ─
+
+model DueItem {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String        @map("company_id") @db.Uuid
+  branchId    String        @map("branch_id") @db.Uuid
+  title       String        @db.VarChar(255)
+  startDate   DateTime      @map("start_date") @db.Date
+  endDate     DateTime      @map("end_date") @db.Date
+  status      DueItemStatus @default(open)
+  ownerUserId String?       @map("owner_user_id") @db.Uuid
+  notes       String?
+  createdById String        @map("created_by_id") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company           @relation(fields: [companyId], references: [id])
+  branch   Branch            @relation(fields: [branchId], references: [id])
+  owner    User?             @relation("DueItemOwner", fields: [ownerUserId], references: [id])
+  creator  User              @relation("DueItemCreatedBy", fields: [createdById], references: [id])
+  renewals DueItemRenewal[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([endDate, status])
+  @@index([ownerUserId])
+  @@map("due_items")
+}
+
+model DueItemRenewal {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId            String   @map("item_id") @db.Uuid
+  previousStartDate DateTime @map("previous_start_date") @db.Date
+  previousEndDate   DateTime @map("previous_end_date") @db.Date
+  newStartDate      DateTime @map("new_start_date") @db.Date
+  newEndDate        DateTime @map("new_end_date") @db.Date
+  renewedById       String   @map("renewed_by_id") @db.Uuid
+  renewedAt         DateTime @default(now()) @map("renewed_at") @db.Timestamptz
+  notes             String?
+
+  item      DueItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  renewedBy User    @relation("DueItemRenewedBy", fields: [renewedById], references: [id])
+
+  @@index([itemId])
+  @@map("due_item_renewals")
 }

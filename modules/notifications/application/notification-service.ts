@@ -6,6 +6,8 @@ export type NotificationType =
   | "wo_assigned"
   | "low_stock"
   | "wo_completed"
+  | "due_item_upcoming"
+  | "due_item_overdue"
 
 export interface CreateNotificationInput {
   userId: string

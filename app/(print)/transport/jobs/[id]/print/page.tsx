@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
-import { getJobById } from "@/modules/transport"
+import { getJobByIdForPrint } from "@/modules/transport"
 import { JobPrintView } from "@/components/transport/job-print-view"
 
 export const metadata = { title: "พิมพ์ใบงานขนส่ง" }
@@ -22,7 +22,7 @@ export default async function TransportJobPrintPage({
   const autoPrint = sp.auto === "1"
 
   try {
-    const job = await getJobById(prisma, {
+    const job = await getJobByIdForPrint(prisma, {
       id,
       companyId: session.user.companyId as string,
       roles: session.user.roles as UserRole[],

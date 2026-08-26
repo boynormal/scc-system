@@ -62,4 +62,30 @@ describe("module-access-catalog", () => {
     expect(canEnterModuleArea(roles, "transport", ["transport"])).toBe(false)
     expect(canEnterModuleArea(roles, "machines", null)).toBe(true)
   })
+
+  it("maps raw_material_news area and fine nav ids", () => {
+    const roles: UserRole[] = [
+      role({
+        roleName: "Custom",
+        permissions: { raw_material_news: ["read"] },
+      }),
+    ]
+    expect(hasModuleAreaResourceRead(roles, "raw_material_news")).toBe(true)
+    expect(canEnterModuleArea(roles, "raw_material_news", null)).toBe(true)
+    expect(canAccessModuleId(roles, "raw_material_news_paper", ["raw_material_news"])).toBe(true)
+    expect(canAccessModuleId(roles, "raw_material_news_ewaste", ["transport"])).toBe(false)
+  })
+
+  it("maps due_dates area and fine nav ids", () => {
+    const roles: UserRole[] = [
+      role({
+        roleName: "Custom",
+        permissions: { due_dates: ["read"] },
+      }),
+    ]
+    expect(hasModuleAreaResourceRead(roles, "due_dates")).toBe(true)
+    expect(canEnterModuleArea(roles, "due_dates", null)).toBe(true)
+    expect(canAccessModuleId(roles, "due_dates", ["due_dates"])).toBe(true)
+    expect(canAccessModuleId(roles, "due_dates", ["transport"])).toBe(false)
+  })
 })

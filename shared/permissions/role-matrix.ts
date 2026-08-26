@@ -70,6 +70,16 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
     rows: [{ resource: "iot_devices", label: "อุปกรณ์ IoT", actions: READ_UPDATE }],
   },
   {
+    id: "raw_material_news",
+    label: "ข่าวสารวัตถุดิบ",
+    rows: [{ resource: "raw_material_news", label: "ข่าวสารวัตถุดิบ", actions: READ_ONLY }],
+  },
+  {
+    id: "due_dates",
+    label: "วันครบกำหนด",
+    rows: [{ resource: "due_dates", label: "ศูนย์ติดตามวันครบกำหนด", actions: CRUD }],
+  },
+  {
     id: "settings",
     label: "ตั้งค่าและสิทธิ์",
     rows: [

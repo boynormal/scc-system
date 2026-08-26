@@ -52,6 +52,20 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Reports, KPI dashboard, analytics",
   },
   {
+    id: "due_dates",
+    label: "Due Date Management",
+    order: 36,
+    icon: "CalendarDays",
+    description: "Track standalone due dates, renewals, and reminders",
+  },
+  {
+    id: "raw_material_news",
+    label: "Raw Material News",
+    order: 38,
+    icon: "Newspaper",
+    description: "Paper, steel, precious metals, e-waste market news",
+  },
+  {
     id: "iot_control",
     label: "IoT Control",
     order: 45,

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Bell, Check, CheckCheck, Wrench, ClipboardList, AlertTriangle, Package, X } from "lucide-react"
+import { Bell, Check, CheckCheck, Wrench, ClipboardList, AlertTriangle, Package, CalendarDays, X } from "lucide-react"
 import { formatDateTime } from "@/lib/utils"
 
 type Notification = {
@@ -20,6 +20,8 @@ const typeIcon: Record<string, React.ReactNode> = {
   wo_assigned: <ClipboardList className="w-4 h-4 text-purple-500" />,
   low_stock: <Package className="w-4 h-4 text-orange-500" />,
   wo_completed: <Check className="w-4 h-4 text-green-500" />,
+  due_item_upcoming: <CalendarDays className="w-4 h-4 text-blue-500" />,
+  due_item_overdue: <CalendarDays className="w-4 h-4 text-red-500" />,
 }
 
 export default function NotificationBell() {

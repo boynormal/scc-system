@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/shared/db"
 import { generateCompanyNotifications } from "@/modules/notifications"
+import { generateAllDueItemNotifications } from "@/modules/due_dates"
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
@@ -9,11 +10,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const generated = await generateCompanyNotifications(prisma)
+    const [generated, dueDates] = await Promise.all([
+      generateCompanyNotifications(prisma),
+      generateAllDueItemNotifications(prisma),
+    ])
 
     return NextResponse.json({
       success: true,
       generated,
+      dueDates,
     })
   } catch (error) {
     console.error("Cron notify error:", error)

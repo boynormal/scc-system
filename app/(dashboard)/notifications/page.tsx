@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Bell, CheckCheck, AlertTriangle, Wrench, ClipboardList, Package, Check, RefreshCw } from "lucide-react"
+import { Bell, CheckCheck, AlertTriangle, Wrench, ClipboardList, Package, Check, RefreshCw, CalendarDays } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { formatDateTime } from "@/lib/utils"
 
@@ -21,6 +21,8 @@ const typeConfig: Record<string, { icon: React.ReactNode; label: string; bg: str
   wo_assigned: { icon: <ClipboardList className="w-4 h-4 text-purple-500" />, label: "มอบหมายงาน", bg: "bg-purple-50" },
   low_stock: { icon: <Package className="w-4 h-4 text-orange-500" />, label: "อะไหล่ใกล้หมด", bg: "bg-orange-50" },
   wo_completed: { icon: <Check className="w-4 h-4 text-green-500" />, label: "งานเสร็จสิ้น", bg: "bg-green-50" },
+  due_item_upcoming: { icon: <CalendarDays className="w-4 h-4 text-blue-500" />, label: "ใกล้ครบกำหนด", bg: "bg-blue-50" },
+  due_item_overdue: { icon: <CalendarDays className="w-4 h-4 text-red-500" />, label: "หมดอายุ", bg: "bg-red-50" },
 }
 
 export default function NotificationsPage() {

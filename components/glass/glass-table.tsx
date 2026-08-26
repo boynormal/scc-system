@@ -49,16 +49,15 @@ export function GlassTableBody({
 export function GlassTableRow({
   children,
   className,
-}: {
-  children: React.ReactNode
-  className?: string
-}) {
+  ...props
+}: React.ComponentProps<"tr">) {
   return (
     <tr
       className={cn(
         "bg-white/40 transition-colors hover:bg-white/70 dark:bg-slate-950/20 dark:hover:bg-slate-950/40",
         className
       )}
+      {...props}
     >
       {children}
     </tr>

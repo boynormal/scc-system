@@ -21,6 +21,16 @@ const nextConfig = {
       allowedOrigins: ["localhost:3000"],
     },
   },
+  async redirects() {
+    return [
+      { source: "/due-dates/calendar", destination: "/due-dates", permanent: false },
+      { source: "/due-dates/items", destination: "/due-dates", permanent: false },
+      { source: "/due-dates/new", destination: "/due-dates", permanent: false },
+      { source: "/due-dates/items/new", destination: "/due-dates", permanent: false },
+      { source: "/due-dates/items/:id/edit", destination: "/due-dates/:id/edit", permanent: false },
+      { source: "/due-dates/items/:id", destination: "/due-dates/:id", permanent: false },
+    ]
+  },
 }
 
 module.exports = withNextIntl(nextConfig)

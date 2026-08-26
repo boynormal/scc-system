@@ -197,6 +197,13 @@ function buildJobListWhere(params: JobListFilters) {
   }
 }
 
+function canReadTransportJobsInAnyBranch(roles: UserRole[]) {
+  return (
+    isAdminInAnyBranch(roles) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "transport_jobs", "read"))
+  )
+}
+
 const jobListInclude = {
   branch: { select: { id: true, name: true } },
   customer: { select: { id: true, name: true } },
@@ -207,6 +214,20 @@ const jobListInclude = {
     },
   },
   _count: { select: { stops: true } },
+} as const
+
+const jobDetailInclude = {
+  branch: { select: { id: true, name: true } },
+  customer: { select: { id: true, name: true, phone: true } },
+  creator: { select: { id: true, firstName: true, lastName: true } },
+  stops: { orderBy: { sequence: "asc" as const } },
+  assignment: {
+    include: {
+      vehicle: { select: { id: true, plateNumber: true, name: true, vehicleType: true } },
+      driver: { select: { id: true, firstName: true, lastName: true, phone: true } },
+      assignedByUser: { select: { id: true, firstName: true, lastName: true } },
+    },
+  },
 } as const
 
 export async function countJobsByGroup(
@@ -222,9 +243,7 @@ export async function countJobsByGroup(
     to?: string | null
   }
 ): Promise<Record<JobListGroup, number>> {
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    getBranchIds(params.roles).some((bid) => hasPermission(params.roles, bid, "transport_jobs", "read"))
+  const canRead = canReadTransportJobsInAnyBranch(params.roles)
   if (!canRead) throw new ForbiddenError()
 
   const base = {
@@ -266,9 +285,7 @@ export async function listJobs(
     pageSize: number
   }
 ) {
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    getBranchIds(params.roles).some((bid) => hasPermission(params.roles, bid, "transport_jobs", "read"))
+  const canRead = canReadTransportJobsInAnyBranch(params.roles)
   if (!canRead) throw new ForbiddenError()
 
   const where = buildJobListWhere(params)
@@ -293,25 +310,26 @@ export async function getJobById(
 ) {
   const job = await db.transportJob.findFirst({
     where: { id: params.id, companyId: params.companyId },
-    include: {
-      branch: { select: { id: true, name: true } },
-      customer: { select: { id: true, name: true, phone: true } },
-      creator: { select: { id: true, firstName: true, lastName: true } },
-      stops: { orderBy: { sequence: "asc" } },
-      assignment: {
-        include: {
-          vehicle: { select: { id: true, plateNumber: true, name: true, vehicleType: true } },
-          driver: { select: { id: true, firstName: true, lastName: true, phone: true } },
-          assignedByUser: { select: { id: true, firstName: true, lastName: true } },
-        },
-      },
-    },
+    include: jobDetailInclude,
   })
   if (!job) throw new NotFoundError("Job not found")
   const canRead =
     isAdminInAnyBranch(params.roles) ||
     hasPermission(params.roles, job.branchId, "transport_jobs", "read")
   if (!canRead) throw new ForbiddenError()
+  return job
+}
+
+export async function getJobByIdForPrint(
+  db: PrismaClient,
+  params: { id: string; companyId: string; roles: UserRole[] }
+) {
+  const job = await db.transportJob.findFirst({
+    where: { id: params.id, companyId: params.companyId },
+    include: jobDetailInclude,
+  })
+  if (!job) throw new NotFoundError("Job not found")
+  if (!canReadTransportJobsInAnyBranch(params.roles)) throw new ForbiddenError()
   return job
 }
 

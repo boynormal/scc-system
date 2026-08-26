@@ -73,6 +73,24 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     ],
   },
   {
+    moduleId: "raw_material_news",
+    label: "ข่าวสารวัตถุดิบ",
+    anyOfResources: ["raw_material_news"],
+    navModuleIds: [
+      "raw_material_news",
+      "raw_material_news_paper",
+      "raw_material_news_steel",
+      "raw_material_news_precious_metals",
+      "raw_material_news_ewaste",
+    ],
+  },
+  {
+    moduleId: "due_dates",
+    label: "ศูนย์ติดตามวันครบกำหนด",
+    anyOfResources: ["due_dates"],
+    navModuleIds: ["due_dates"],
+  },
+  {
     moduleId: "iot",
     label: "ควบคุม IoT",
     anyOfResources: ["iot_devices"],

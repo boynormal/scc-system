@@ -10,14 +10,20 @@ import type { DueItemDto } from "./due-item-types"
 
 type Option = { id: string; name: string }
 
+function todayYmdBangkok() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" })
+}
+
 export function DueItemForm({
   item,
   compact,
+  currentUserId,
   onSaved,
   onCancel,
 }: {
   item?: DueItemDto
   compact?: boolean
+  currentUserId?: string
   onSaved?: () => void
   onCancel?: () => void
 }) {
@@ -30,9 +36,11 @@ export function DueItemForm({
   const [owners, setOwners] = useState<Option[]>([])
   const [branchId, setBranchId] = useState(item?.branchId ?? "")
   const [title, setTitle] = useState(item?.title ?? "")
-  const [startDate, setStartDate] = useState(item?.startDate ?? "")
+  const [startDate, setStartDate] = useState(item?.startDate ?? todayYmdBangkok())
   const [endDate, setEndDate] = useState(item?.endDate ?? "")
-  const [ownerUserId, setOwnerUserId] = useState(item?.ownerUserId ?? "")
+  const [ownerUserId, setOwnerUserId] = useState(
+    item ? (item.ownerUserId ?? "") : (currentUserId ?? "")
+  )
   const [notes, setNotes] = useState(item?.notes ?? "")
 
   useEffect(() => {
@@ -42,10 +50,14 @@ export function DueItemForm({
     ]).then(([b, o]) => {
       const branchRows = (b.data ?? []) as Option[]
       setBranches(branchRows)
-      setOwners((o.data ?? []) as Option[])
+      const ownerRows = (o.data ?? []) as Option[]
+      setOwners(ownerRows)
       if (!item && !branchId && branchRows[0]) setBranchId(branchRows[0].id)
+      if (!item && currentUserId && ownerRows.some((row) => row.id === currentUserId)) {
+        setOwnerUserId((prev) => prev || currentUserId)
+      }
     })
-  }, [item, branchId])
+  }, [item, branchId, currentUserId])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -56,7 +68,7 @@ export function DueItemForm({
       title,
       startDate,
       endDate,
-      ownerUserId: ownerUserId || null,
+      ownerUserId,
       notes: notes || null,
     }
     const res = await fetch(item ? `/api/due-dates/items/${item.id}` : "/api/due-dates/items", {
@@ -94,10 +106,10 @@ export function DueItemForm({
       <GlassInput label={t("title")} required value={title} onChange={(e) => setTitle(e.target.value)} />
       <Select
         label={t("owner")}
+        required
         value={ownerUserId}
         onChange={(e) => setOwnerUserId(e.target.value)}
-        placeholder={t("noOwner")}
-        options={[{ value: "", label: t("noOwner") }, ...owners.map((o) => ({ value: o.id, label: o.name }))]}
+        options={owners.map((o) => ({ value: o.id, label: o.name }))}
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <GlassInput

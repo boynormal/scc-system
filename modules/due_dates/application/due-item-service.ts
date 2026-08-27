@@ -17,7 +17,7 @@ export const createDueItemSchema = z.object({
   title: z.string().trim().min(1).max(255),
   startDate: z.string().min(1),
   endDate: z.string().min(1),
-  ownerUserId: z.string().uuid().nullable().optional(),
+  ownerUserId: z.string().uuid(),
   notes: z.string().max(4000).nullable().optional(),
 })
 
@@ -39,6 +39,12 @@ function canDueDates(roles: UserRole[], action: "create" | "read" | "update" | "
     isAdminInAnyBranch(roles) ||
     getBranchIds(roles).some((bid) => hasPermission(roles, bid, "due_dates", action))
   )
+}
+
+function optionalUuid(value?: string | null): string | null {
+  if (!value?.trim()) return null
+  const parsed = z.string().uuid().safeParse(value.trim())
+  return parsed.success ? parsed.data : null
 }
 
 function parseDateOnly(value: string): Date {
@@ -144,10 +150,13 @@ export async function listDueItems(
     status?: string | null
     alertLevel?: string | null
     search?: string | null
+    ownerUserId?: string | null
   }
 ) {
   if (!canDueDates(params.roles, "read")) throw new ForbiddenError()
   const where: Prisma.DueItemWhereInput = itemWhere(params.companyId, params.roles, params.branchId)
+  const ownerUserId = optionalUuid(params.ownerUserId)
+  if (ownerUserId) where.ownerUserId = ownerUserId
   if (params.status && STATUSES.includes(params.status as (typeof STATUSES)[number])) {
     where.status = params.status as (typeof STATUSES)[number]
   }
@@ -208,7 +217,7 @@ export async function createDueItem(
       title: params.input.title,
       startDate,
       endDate,
-      ownerUserId: params.input.ownerUserId ?? null,
+      ownerUserId: params.input.ownerUserId,
       notes: params.input.notes ?? null,
       createdById: params.userId,
     },
@@ -333,11 +342,16 @@ export async function renewDueItem(
 
 export async function getDueSummary(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; branchId?: string | null }
+  params: { companyId: string; roles: UserRole[]; branchId?: string | null; ownerUserId?: string | null }
 ) {
   if (!canDueDates(params.roles, "read")) throw new ForbiddenError()
+  const ownerUserId = optionalUuid(params.ownerUserId)
   const rows = await db.dueItem.findMany({
-    where: { ...itemWhere(params.companyId, params.roles, params.branchId), status: "open" },
+    where: {
+      ...itemWhere(params.companyId, params.roles, params.branchId),
+      status: "open",
+      ...(ownerUserId ? { ownerUserId } : {}),
+    },
     include: itemInclude,
     orderBy: { endDate: "asc" },
     take: 200,
@@ -356,7 +370,12 @@ export async function listDueItemOwners(
 ) {
   if (!canDueDates(params.roles, "read")) throw new ForbiddenError()
   const users = await db.user.findMany({
-    where: { companyId: params.companyId, deletedAt: null, isActive: true },
+    where: {
+      companyId: params.companyId,
+      deletedAt: null,
+      isActive: true,
+      passwordHash: { not: null },
+    },
     select: { id: true, firstName: true, lastName: true },
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     take: 200,

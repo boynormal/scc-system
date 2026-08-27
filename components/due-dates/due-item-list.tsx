@@ -28,10 +28,12 @@ export type DueSummaryCounts = Record<DueAlertLevel, number>
 
 export function DueItemList({
   counts: initialCounts,
+  currentUserId,
   createOpen,
   onCreateOpenChange,
 }: {
   counts: DueSummaryCounts
+  currentUserId: string
   createOpen: boolean
   onCreateOpenChange: (open: boolean) => void
 }) {
@@ -41,27 +43,35 @@ export function DueItemList({
   const [items, setItems] = useState<DueItemDto[]>([])
   const [counts, setCounts] = useState(initialCounts)
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
+  const [owners, setOwners] = useState<{ id: string; name: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [branchId, setBranchId] = useState("")
+  const [ownerUserId, setOwnerUserId] = useState("")
   const [status, setStatus] = useState("")
   const [alertLevel, setAlertLevel] = useState("")
   const [search, setSearch] = useState("")
   const [renewItem, setRenewItem] = useState<DueItemDto | null>(null)
 
   useEffect(() => {
-    void fetch("/api/due-dates/branches")
-      .then((r) => r.json())
-      .then((json) => setBranches((json.data ?? []) as { id: string; name: string }[]))
+    void Promise.all([
+      fetch("/api/due-dates/branches").then((r) => r.json()),
+      fetch("/api/due-dates/owners").then((r) => r.json()),
+    ]).then(([b, o]) => {
+      setBranches((b.data ?? []) as { id: string; name: string }[])
+      setOwners((o.data ?? []) as { id: string; name: string }[])
+    })
   }, [])
 
   const load = useCallback(async () => {
     const params = new URLSearchParams()
     if (branchId) params.set("branchId", branchId)
+    if (ownerUserId) params.set("ownerUserId", ownerUserId)
     if (status) params.set("status", status)
     if (alertLevel) params.set("alertLevel", alertLevel)
     if (search.trim()) params.set("search", search.trim())
     const summaryParams = new URLSearchParams()
     if (branchId) summaryParams.set("branchId", branchId)
+    if (ownerUserId) summaryParams.set("ownerUserId", ownerUserId)
     const [listRes, summaryRes] = await Promise.all([
       fetch(`/api/due-dates/items?${params}`),
       fetch(`/api/due-dates/summary?${summaryParams}`),
@@ -76,7 +86,7 @@ export function DueItemList({
     setError(null)
     setItems((json.data ?? []) as DueItemDto[])
     if (summaryRes.ok && summaryJson.counts) setCounts(summaryJson.counts as DueSummaryCounts)
-  }, [branchId, status, alertLevel, search, t])
+  }, [branchId, ownerUserId, status, alertLevel, search, t])
 
   useEffect(() => {
     void load()
@@ -111,6 +121,16 @@ export function DueItemList({
           options={[
             { value: "", label: t("filterAll") },
             ...branches.map((b) => ({ value: b.id, label: b.name })),
+          ]}
+        />
+        <Select
+          label={t("owner")}
+          value={ownerUserId}
+          onChange={(e) => setOwnerUserId(e.target.value)}
+          className={cn("min-w-[10rem]", DUE_GLASS_FIELD)}
+          options={[
+            { value: "", label: t("filterAll") },
+            ...owners.map((o) => ({ value: o.id, label: o.name })),
           ]}
         />
         <Select
@@ -262,6 +282,7 @@ export function DueItemList({
         open={createOpen}
         onOpenChange={onCreateOpenChange}
         onCreated={() => void load()}
+        currentUserId={currentUserId}
       />
       <DueRenewDialog
         item={renewItem}

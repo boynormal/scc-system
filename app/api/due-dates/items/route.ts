@@ -17,6 +17,7 @@ export const GET = withAuth(async (req, _ctx, session) => {
     status: searchParams.get("status"),
     alertLevel: searchParams.get("alertLevel"),
     search: searchParams.get("search"),
+    ownerUserId: searchParams.get("ownerUserId"),
   })
   return Response.json(result)
 })

@@ -19,5 +19,5 @@ export default async function DueDatesListPage() {
     roles: session.user.roles as UserRole[],
   })
 
-  return <DueDatesListView counts={summary.counts} />
+  return <DueDatesListView counts={summary.counts} currentUserId={session.user.id} />
 }

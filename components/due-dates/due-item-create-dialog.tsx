@@ -8,16 +8,19 @@ export function DueItemCreateDialog({
   open,
   onOpenChange,
   onCreated,
+  currentUserId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: () => void
+  currentUserId: string
 }) {
   const t = useTranslations("dueDates")
   return (
     <GlassDialog open={open} onOpenChange={onOpenChange} title={t("newItem")} className="max-w-xl">
       <DueItemForm
         compact
+        currentUserId={currentUserId}
         onCancel={() => onOpenChange(false)}
         onSaved={() => {
           onOpenChange(false)

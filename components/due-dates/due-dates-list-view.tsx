@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button"
 import { DuePageHeader } from "./due-page-header"
 import { DueItemList, type DueSummaryCounts } from "./due-item-list"
 
-export function DueDatesListView({ counts }: { counts: DueSummaryCounts }) {
+export function DueDatesListView({
+  counts,
+  currentUserId,
+}: {
+  counts: DueSummaryCounts
+  currentUserId: string
+}) {
   const t = useTranslations("dueDates")
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -27,7 +33,12 @@ export function DueDatesListView({ counts }: { counts: DueSummaryCounts }) {
           </Button>
         }
       />
-      <DueItemList counts={counts} createOpen={createOpen} onCreateOpenChange={setCreateOpen} />
+      <DueItemList
+        counts={counts}
+        currentUserId={currentUserId}
+        createOpen={createOpen}
+        onCreateOpenChange={setCreateOpen}
+      />
     </div>
   )
 }

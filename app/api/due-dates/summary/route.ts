@@ -12,6 +12,7 @@ export const GET = withAuth(async (req, _ctx, session) => {
     companyId: session.user.companyId as string,
     roles: session.user.roles as UserRole[],
     branchId: searchParams.get("branchId"),
+    ownerUserId: searchParams.get("ownerUserId"),
   })
   return Response.json(result)
 })

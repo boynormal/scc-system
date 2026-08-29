@@ -88,4 +88,17 @@ describe("module-access-catalog", () => {
     expect(canAccessModuleId(roles, "due_dates", ["due_dates"])).toBe(true)
     expect(canAccessModuleId(roles, "due_dates", ["transport"])).toBe(false)
   })
+
+  it("maps finance area and fine nav ids", () => {
+    const roles: UserRole[] = [
+      role({
+        roleName: "Custom",
+        permissions: { expenses: ["read"] },
+      }),
+    ]
+    expect(hasModuleAreaResourceRead(roles, "finance")).toBe(true)
+    expect(canEnterModuleArea(roles, "finance", null)).toBe(true)
+    expect(canAccessModuleId(roles, "finance_expenses", ["finance"])).toBe(true)
+    expect(canAccessModuleId(roles, "finance_overview", ["transport"])).toBe(false)
+  })
 })

@@ -91,6 +91,19 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     navModuleIds: ["due_dates"],
   },
   {
+    moduleId: "finance",
+    label: "การเงินและบัญชี",
+    anyOfResources: ["expenses", "expense_masters"],
+    navModuleIds: [
+      "finance",
+      "finance_overview",
+      "finance_expenses",
+      "finance_sources",
+      "finance_reports",
+      "finance_master_data",
+    ],
+  },
+  {
     moduleId: "iot",
     label: "ควบคุม IoT",
     anyOfResources: ["iot_devices"],

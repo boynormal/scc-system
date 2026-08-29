@@ -130,6 +130,12 @@ model Company {
   transportRepairLogs     TransportRepairLog[]
   transportTireLogs       TransportTireLog[]
   dueItems                DueItem[]
+  expenseTypes            ExpenseType[]
+  expenseCategories       ExpenseCategory[]
+  processes               Process[]
+  costCenters             CostCenter[]
+  expenses                Expense[]
+  units                   Unit[]
 
   @@map("companies")
 }
@@ -165,6 +171,8 @@ model Branch {
   transportRepairLogs     TransportRepairLog[]
   transportTireLogs       TransportTireLog[]
   dueItems                DueItem[]
+  costCenters             CostCenter[]
+  expenses                Expense[]
 
   @@index([companyId])
   @@index([code])
@@ -243,6 +251,11 @@ model User {
   dueItemsOwned           DueItem[]               @relation("DueItemOwner")
   dueItemsCreated         DueItem[]               @relation("DueItemCreatedBy")
   dueItemRenewals         DueItemRenewal[]        @relation("DueItemRenewedBy")
+  expensesCreated         Expense[]               @relation("ExpenseCreatedBy")
+  expensesEmployee        Expense[]               @relation("ExpenseEmployee")
+  expensesApproved        Expense[]               @relation("ExpenseApprovedBy")
+  expensesPaid            Expense[]               @relation("ExpensePaidBy")
+  expenseAttachments      ExpenseAttachment[]     @relation("ExpenseAttachmentUploader")
 
   // Phase B decision (2026-07-23): email stays globally @unique permanently — login
   // may use email or username; both are globally unique (no company picker).
@@ -664,6 +677,7 @@ model Supplier {
 
   company    Company     @relation(fields: [companyId], references: [id])
   spareParts SparePart[]
+  expenses   Expense[]
 
   // Phase B: code no longer globally unique — this composite is now the sole
   // enforced constraint (allocateUniqueSupplierCode in master-data-service.ts
@@ -671,6 +685,23 @@ model Supplier {
   @@unique([companyId, code])
   @@index([code])
   @@map("suppliers")
+}
+
+model Unit {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  code      String   @db.VarChar(20)
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  expenseLines ExpenseLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("units")
 }
 
 model SparePart {
@@ -1320,4 +1351,349 @@ model DueItemRenewal {
 
   @@index([itemId])
   @@map("due_item_renewals")
+}
+
+// ─── GROUP 12: FINANCE — EXPENSE & COST MANAGEMENT ───────────────────────────
+
+enum ExpenseTransactionType {
+  EXPENSE
+  COST
+  INCOME
+  ASSET
+  LIABILITY
+}
+
+enum ExpenseStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+  CANCELLED
+}
+
+enum ExpenseSourceModule {
+  TRANSPORT
+  MAINTENANCE
+  INVENTORY
+  HR
+}
+
+enum ExpenseSourceKind {
+  MANUAL
+  MODULE
+  IMPORT
+}
+
+enum ExpenseLinePricingMode {
+  QTY_PRICE
+  AMOUNT
+}
+
+enum ExpenseCostObjectType {
+  VEHICLE
+  MACHINE
+  TIRE
+  JOB
+  CUSTOMER
+  PRODUCT
+  PROJECT
+  LOCATION
+  OTHER
+}
+
+// Cost behavior of an expense item. Metadata/default only (Phase 1-2) — not
+// an immutable accounting truth; transaction-level override is a later phase.
+enum ExpenseCostType {
+  FIXED
+  VARIABLE
+  MIXED
+}
+
+// Whether an expense is a direct or indirect cost. Metadata/default only.
+enum ExpenseDirectness {
+  DIRECT
+  INDIRECT
+}
+
+// Expense category taxonomy (parent-child hierarchy). Groups expense items.
+model ExpenseCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  parentId    String?  @map("parent_id") @db.Uuid
+  code        String   @db.VarChar(30)
+  name        String   @db.VarChar(255)
+  description String?
+  sequence    Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company           @relation(fields: [companyId], references: [id])
+  parent       ExpenseCategory?  @relation("ExpenseCategoryHierarchy", fields: [parentId], references: [id])
+  children     ExpenseCategory[] @relation("ExpenseCategoryHierarchy")
+  expenseTypes ExpenseType[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([parentId])
+  @@map("expense_categories")
+}
+
+// Business process that incurs the expense (e.g. Collection, Delivery,
+// Maintenance). NOT a department — organizational responsibility is CostCenter.
+model Process {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  code      String   @db.VarChar(30)
+  name      String   @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company         Company              @relation(fields: [companyId], references: [id])
+  parent          Process?             @relation("ProcessHierarchy", fields: [parentId], references: [id])
+  children        Process[]            @relation("ProcessHierarchy")
+  expenseTypeMaps ExpenseTypeProcess[]
+  expenseLines    ExpenseLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([parentId])
+  @@map("processes")
+}
+
+model ExpenseType {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String                 @map("company_id") @db.Uuid
+  categoryId        String?                @map("category_id") @db.Uuid
+  code              String                 @db.VarChar(30)
+  name              String                 @db.VarChar(255)
+  subcategory       String?                @db.VarChar(255)
+  description       String?
+  transactionType   ExpenseTransactionType @default(EXPENSE) @map("transaction_type")
+  defaultCostType   ExpenseCostType?       @map("default_cost_type")
+  defaultDirectness ExpenseDirectness?     @map("default_directness")
+  // Temporary free-text GL label only (Phase 1-2). NOT an FK; no posting logic.
+  defaultGlLabel    String?                @map("default_gl_label") @db.VarChar(255)
+  // Required-dimension flags. Enforced on expense create/PATCH (Phase 4); GET never fails on history.
+  requiresVendor     Boolean               @default(false) @map("requires_vendor")
+  requiresVehicle    Boolean               @default(false) @map("requires_vehicle")
+  requiresMachine    Boolean               @default(false) @map("requires_machine")
+  requiresLocation   Boolean               @default(false) @map("requires_location")
+  requiresCostCenter Boolean               @default(false) @map("requires_cost_center")
+  requiresProcess    Boolean               @default(false) @map("requires_process")
+  isActive          Boolean                @default(true) @map("is_active")
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+
+  company        Company                 @relation(fields: [companyId], references: [id])
+  category       ExpenseCategory?        @relation(fields: [categoryId], references: [id])
+  expenses       Expense[]
+  expenseLines   ExpenseLine[]
+  costCenterMaps ExpenseTypeCostCenter[]
+  processMaps    ExpenseTypeProcess[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([categoryId])
+  @@map("expense_types")
+}
+
+// Allowed / default cost centers per expense item. `isDefault` implies
+// `isAllowed`; at most one default per expense item (enforced in service).
+model ExpenseTypeCostCenter {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  expenseTypeId String   @map("expense_type_id") @db.Uuid
+  costCenterId  String   @map("cost_center_id") @db.Uuid
+  isDefault     Boolean  @default(false) @map("is_default")
+  isAllowed     Boolean  @default(true) @map("is_allowed")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  expenseType ExpenseType @relation(fields: [expenseTypeId], references: [id], onDelete: Cascade)
+  costCenter  CostCenter  @relation(fields: [costCenterId], references: [id])
+
+  @@unique([expenseTypeId, costCenterId])
+  @@index([companyId])
+  @@index([expenseTypeId])
+  @@index([costCenterId])
+  @@map("expense_type_cost_centers")
+}
+
+// Allowed / default processes per expense item. Same invariants as above.
+model ExpenseTypeProcess {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  expenseTypeId String   @map("expense_type_id") @db.Uuid
+  processId     String   @map("process_id") @db.Uuid
+  isDefault     Boolean  @default(false) @map("is_default")
+  isAllowed     Boolean  @default(true) @map("is_allowed")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  expenseType ExpenseType @relation(fields: [expenseTypeId], references: [id], onDelete: Cascade)
+  process     Process     @relation(fields: [processId], references: [id])
+
+  @@unique([expenseTypeId, processId])
+  @@index([companyId])
+  @@index([expenseTypeId])
+  @@index([processId])
+  @@map("expense_type_processes")
+}
+
+model CostCenter {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  branchId  String?  @map("branch_id") @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  code      String   @db.VarChar(30)
+  name      String   @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  parent          CostCenter?             @relation("CostCenterHierarchy", fields: [parentId], references: [id])
+  children        CostCenter[]            @relation("CostCenterHierarchy")
+  expenses        Expense[]
+  expenseLines    ExpenseLine[]
+  expenseTypeMaps ExpenseTypeCostCenter[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([branchId])
+  @@index([parentId])
+  @@map("cost_centers")
+}
+
+model Expense {
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String                  @map("company_id") @db.Uuid
+  branchId        String                  @map("branch_id") @db.Uuid
+  expenseNo       String                  @map("expense_no") @db.VarChar(30)
+  expenseDate     DateTime                @map("expense_date") @db.Date
+  postingDate     DateTime?               @map("posting_date") @db.Date
+  expenseTypeId   String                  @map("expense_type_id") @db.Uuid
+  // Header source fields are derived roll-ups kept for list filtering only.
+  // The source-of-truth linking now lives on ExpenseLine.
+  sourceModule    ExpenseSourceModule?    @map("source_module")
+  sourceType      String?                 @map("source_type") @db.VarChar(50)
+  sourceId        String?                 @map("source_id") @db.VarChar(64)
+  costCenterId    String?                 @map("cost_center_id") @db.Uuid
+  costObjectType  ExpenseCostObjectType?  @map("cost_object_type")
+  costObjectId    String?                 @map("cost_object_id") @db.VarChar(64)
+  costObjectLabel String?                 @map("cost_object_label") @db.VarChar(255)
+  vendorId        String?                 @map("vendor_id") @db.Uuid
+  employeeId      String?                 @map("employee_id") @db.Uuid
+  amount          Decimal                 @default(0) @db.Decimal(14, 2)
+  taxAmount       Decimal                 @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  discountAmount  Decimal                 @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  netAmount       Decimal                 @default(0) @map("net_amount") @db.Decimal(14, 2)
+  currency        String                  @default("THB") @db.VarChar(3)
+  description     String?
+  notes           String?
+  status          ExpenseStatus           @default(DRAFT)
+  paymentMethod   TransportPaymentMethod? @map("payment_method")
+  paidAt          DateTime?               @map("paid_at") @db.Timestamptz
+  paidById        String?                 @map("paid_by_id") @db.Uuid
+  approvedById    String?                 @map("approved_by_id") @db.Uuid
+  approvedAt      DateTime?               @map("approved_at") @db.Timestamptz
+  createdById     String                  @map("created_by_id") @db.Uuid
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?               @map("deleted_at") @db.Timestamptz
+
+  company     Company             @relation(fields: [companyId], references: [id])
+  branch      Branch              @relation(fields: [branchId], references: [id])
+  expenseType ExpenseType         @relation(fields: [expenseTypeId], references: [id])
+  costCenter  CostCenter?         @relation(fields: [costCenterId], references: [id])
+  vendor      Supplier?           @relation(fields: [vendorId], references: [id])
+  employee    User?               @relation("ExpenseEmployee", fields: [employeeId], references: [id])
+  approvedBy  User?               @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  paidBy      User?               @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  creator     User                @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  attachments ExpenseAttachment[]
+  lines       ExpenseLine[]
+
+  @@unique([companyId, expenseNo])
+  @@index([companyId])
+  @@index([branchId])
+  @@index([sourceModule, sourceId])
+  @@index([costCenterId])
+  @@index([expenseDate])
+  @@index([status])
+  @@map("expenses")
+}
+
+model ExpenseLine {
+  id               String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String                  @map("company_id") @db.Uuid
+  expenseId        String                  @map("expense_id") @db.Uuid
+  lineNo           Int                     @map("line_no")
+  expenseTypeId    String                  @map("expense_type_id") @db.Uuid
+  description      String?
+  pricingMode      ExpenseLinePricingMode  @default(AMOUNT) @map("pricing_mode")
+  quantity         Decimal                 @default(1) @db.Decimal(14, 3)
+  unitId           String?                 @map("unit_id") @db.Uuid
+  unitCode         String?                 @map("unit_code") @db.VarChar(30)
+  unitPrice        Decimal                 @default(0) @map("unit_price") @db.Decimal(14, 2)
+  amount           Decimal                 @default(0) @db.Decimal(14, 2)
+  taxAmount        Decimal                 @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  discountAmount   Decimal                 @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  netAmount        Decimal                 @default(0) @map("net_amount") @db.Decimal(14, 2)
+  costCenterId     String?                 @map("cost_center_id") @db.Uuid
+  processId        String?                 @map("process_id") @db.Uuid
+  costObjectType   ExpenseCostObjectType?  @map("cost_object_type")
+  costObjectId     String?                 @map("cost_object_id") @db.VarChar(64)
+  costObjectLabel  String?                 @map("cost_object_label") @db.VarChar(255)
+  // Source identity: sourceKind separates manual vs module-linked rows.
+  // Uniqueness for linked rows is enforced by two partial unique indexes
+  // created in SQL (Prisma cannot express partial unique indexes):
+  //   (company_id, source_module, source_type, source_document_id)
+  //     WHERE source_link_active AND source_document_id IS NOT NULL AND source_line_id IS NULL
+  //   (company_id, source_module, source_type, source_document_id, source_line_id)
+  //     WHERE source_link_active AND source_document_id IS NOT NULL AND source_line_id IS NOT NULL
+  sourceKind       ExpenseSourceKind       @default(MANUAL) @map("source_kind")
+  sourceModule     ExpenseSourceModule?    @map("source_module")
+  sourceType       String?                 @map("source_type") @db.VarChar(50)
+  sourceDocumentId String?                 @map("source_document_id") @db.VarChar(64)
+  sourceLineId     String?                 @map("source_line_id") @db.VarChar(64)
+  sourceLinkActive Boolean                 @default(true) @map("source_link_active")
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+
+  expense     Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseType ExpenseType @relation(fields: [expenseTypeId], references: [id])
+  costCenter  CostCenter? @relation(fields: [costCenterId], references: [id])
+  process     Process?    @relation(fields: [processId], references: [id])
+  unit        Unit?       @relation(fields: [unitId], references: [id])
+
+  @@index([expenseId])
+  @@index([companyId])
+  @@index([expenseTypeId])
+  @@index([costCenterId])
+  @@index([processId])
+  @@index([unitId])
+  @@index([sourceModule, sourceDocumentId])
+  @@map("expense_lines")
+}
+
+model ExpenseAttachment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  expenseId  String   @map("expense_id") @db.Uuid
+  fileUrl    String   @map("file_url")
+  fileName   String?  @map("file_name") @db.VarChar(255)
+  fileSize   Int?     @map("file_size")
+  uploadedBy String?  @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  expense  Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  uploader User?   @relation("ExpenseAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([expenseId])
+  @@map("expense_attachments")
 }

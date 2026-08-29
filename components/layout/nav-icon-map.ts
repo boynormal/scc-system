@@ -26,6 +26,8 @@ import {
   Hammer,
   Gem,
   Recycle,
+  Wallet,
+  Receipt,
   type LucideIcon,
 } from "lucide-react"
 import type { NavIconKey } from "@/shared/navigation/moduleRegistry"
@@ -63,4 +65,6 @@ export const NAV_ICON_MAP: Record<NavIconKey, LucideIcon> = {
   Hammer,
   Gem,
   Recycle,
+  Wallet,
+  Receipt,
 }

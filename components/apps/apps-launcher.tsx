@@ -75,6 +75,13 @@ const LINE_CARD_THEMES: Record<
     ring: "ring-amber-200/70",
     glow: "shadow-amber-500/20",
   },
+  finance: {
+    tile: "from-emerald-50 via-teal-50 to-green-100 ring-emerald-200/60",
+    icon: "from-emerald-500 to-teal-600",
+    blob: "bg-emerald-400/30",
+    ring: "ring-emerald-200/70",
+    glow: "shadow-emerald-500/20",
+  },
 }
 
 function lineTheme(lineId: string) {

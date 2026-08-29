@@ -1,0 +1,23 @@
+---
+description: Expense Phase 4 locked business rules (accepted 2026-08-29)
+globs: "modules/finance/**/*,components/finance/**/*,app/**/finance/**/*,prisma/schema.prisma"
+alwaysApply: false
+---
+
+# Expense Phase 4 — locked rules
+
+Acceptance evidence: [modules/finance/EXPENSE-PHASE-4-ACCEPTANCE.md](modules/finance/EXPENSE-PHASE-4-ACCEPTANCE.md)  
+Status: **CLOSED 8/8**. Do not change these rules, error messages, or validation timing unless product explicitly reopens Phase 4.
+
+- Server (`resolveBill` → `assertLineDimensions` / `assertHeaderVendor`) is source of truth. Client is UX only.
+- Enforce on **create / PATCH only**. GET / list must not fail on historical bills.
+- Vendor is **header-only**. If any line `requiresVendor` and `vendorId` is null → reject (`ต้องระบุผู้ขาย`).
+- `requiresCostCenter` → `costCenterId`. `requiresProcess` → `processId`.
+- Vehicle / machine / location: matching `costObjectType` + non-empty label. No Location master. No per-line vendor.
+- Allowlist if the type has any `isAllowed` map; empty input uses `isDefault`. No maps → any **active** company CC / Process.
+- Keep `unitCode`. `QTY_PRICE` requires `unitId` from shared Unit master and copies `Unit.code` into `unitCode`. `AMOUNT` clears unit.
+- Legacy types with `requires_* = false` and no maps stay unrestricted.
+- IMPORT/MODULE: lock amounts only; type / CC / process / cost object stay editable.
+- `defaultGlLabel` is a read-only hint. Chart of Accounts / GL posting stays out of scope.
+
+Keep `expense-phase4-acceptance.test.ts` green. Do not weaken or delete those cases to make a later change pass.

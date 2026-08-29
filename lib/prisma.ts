@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client"
 
 /** Bump when schema changes require a fresh PrismaClient (dev hot-reload keeps old singleton). */
-const PRISMA_SCHEMA_FINGERPRINT = "20260730-transport-payment-method"
+const PRISMA_SCHEMA_FINGERPRINT = "20260829-expense-line-process-unit"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -25,7 +25,9 @@ function isStalePrismaClient(client: PrismaClient | undefined): boolean {
   if (!modelHasField("TmsCustomer", "latitude")) return true
   return (
     typeof (client as unknown as { machineSparePart?: unknown }).machineSparePart === "undefined" ||
-    typeof (client as unknown as { personnel?: unknown }).personnel === "undefined"
+    typeof (client as unknown as { personnel?: unknown }).personnel === "undefined" ||
+    typeof (client as unknown as { expenseCategory?: unknown }).expenseCategory === "undefined" ||
+    typeof (client as unknown as { process?: unknown }).process === "undefined"
   )
 }
 

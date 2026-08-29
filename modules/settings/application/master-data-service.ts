@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 import { Prisma, type PrismaClient } from "@prisma/client"
 import { z } from "zod"
-import { NotFoundError } from "@/lib/errors"
+import { NotFoundError, ValidationError } from "@/lib/errors"
 import {
   matrixFormToStored,
   type StoredPermission,
@@ -635,4 +635,102 @@ function parseLeadTime(value: unknown): number | null {
   const parsed = Number(value)
   if (!Number.isFinite(parsed) || parsed < 0) return null
   return Math.min(32767, Math.floor(parsed))
+}
+
+function normalizeUnitCode(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, "_")
+}
+
+export const createUnitSchema = z.object({
+  code: z.string().trim().min(1).max(20),
+  name: z.string().trim().min(1).max(100),
+  isActive: z.boolean().optional(),
+})
+
+export const updateUnitSchema = z.object({
+  code: z.string().trim().min(1).max(20).optional(),
+  name: z.string().trim().min(1).max(100).optional(),
+  isActive: z.boolean().optional(),
+})
+
+export async function listUnits(
+  db: PrismaClient,
+  params: { companyId: string; includeInactive?: boolean }
+) {
+  return db.unit.findMany({
+    where: {
+      companyId: params.companyId,
+      ...(params.includeInactive ? {} : { isActive: true }),
+    },
+    select: { id: true, code: true, name: true, isActive: true },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+  })
+}
+
+export async function createUnit(
+  db: PrismaClient,
+  params: { companyId: string; input: z.infer<typeof createUnitSchema> }
+) {
+  const code = normalizeUnitCode(params.input.code)
+  const dup = await db.unit.findFirst({
+    where: { companyId: params.companyId, code },
+    select: { id: true },
+  })
+  if (dup) throw new ValidationError("รหัสหน่วยซ้ำ")
+  return db.unit.create({
+    data: {
+      companyId: params.companyId,
+      code,
+      name: params.input.name,
+      isActive: params.input.isActive ?? true,
+    },
+    select: { id: true, code: true, name: true, isActive: true },
+  })
+}
+
+export async function updateUnit(
+  db: PrismaClient,
+  params: { id: string; companyId: string; input: z.infer<typeof updateUnitSchema> }
+) {
+  const existing = await db.unit.findFirst({
+    where: { id: params.id, companyId: params.companyId },
+    select: { id: true },
+  })
+  if (!existing) return null
+  const code = params.input.code ? normalizeUnitCode(params.input.code) : undefined
+  if (code) {
+    const dup = await db.unit.findFirst({
+      where: { companyId: params.companyId, code, id: { not: params.id } },
+      select: { id: true },
+    })
+    if (dup) throw new ValidationError("รหัสหน่วยซ้ำ")
+  }
+  return db.unit.update({
+    where: { id: params.id },
+    data: {
+      ...(code ? { code } : {}),
+      ...(params.input.name ? { name: params.input.name } : {}),
+      ...(params.input.isActive !== undefined ? { isActive: params.input.isActive } : {}),
+    },
+    select: { id: true, code: true, name: true, isActive: true },
+  })
+}
+
+export async function deleteUnit(db: PrismaClient, params: { id: string; companyId: string }) {
+  const existing = await db.unit.findFirst({
+    where: { id: params.id, companyId: params.companyId },
+    select: { id: true, code: true },
+  })
+  if (!existing) return { error: { message: "ไม่พบหน่วยนับ" }, status: 404 as const }
+
+  const inUse = await db.expenseLine.count({
+    where: { companyId: params.companyId, unitCode: existing.code },
+  })
+  if (inUse > 0) {
+    await db.unit.update({ where: { id: params.id }, data: { isActive: false } })
+    return { success: true, deactivated: true }
+  }
+
+  await db.unit.delete({ where: { id: params.id } })
+  return { success: true, deactivated: false }
 }

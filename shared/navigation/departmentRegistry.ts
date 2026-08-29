@@ -66,6 +66,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Paper, steel, precious metals, e-waste market news",
   },
   {
+    id: "finance",
+    label: "Finance & Accounting",
+    order: 37,
+    icon: "Wallet",
+    description: "Expense & cost management, approvals, reports",
+  },
+  {
     id: "iot_control",
     label: "IoT Control",
     order: 45,

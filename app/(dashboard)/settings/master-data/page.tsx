@@ -775,10 +775,225 @@ function SuppliersTab() {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
+// ─── 5. UNITS ─────────────────────────────────────────────────────────────────
+
+type UnitRow = { id: string; code: string; name: string; isActive: boolean }
+
+function UnitsTab() {
+  const confirmType = useTypeConfirm()
+  const [data, setData] = useState<UnitRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ code: "", name: "", isActive: true })
+
+  const loadData = async () => {
+    setLoading(true)
+    const res = await fetch("/api/master-data/units?includeInactive=1")
+    const json = await res.json()
+    setData((json.data || []) as UnitRow[])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    void loadData()
+  }, [])
+
+  const handleSave = async (id?: string) => {
+    if (!editForm.code.trim() || !editForm.name.trim()) {
+      alert("กรุณากรอกรหัสและชื่อหน่วย")
+      return
+    }
+    const payload = { code: editForm.code.trim(), name: editForm.name.trim(), isActive: editForm.isActive }
+    if (id === "new") {
+      const res = await fetch("/api/master-data/units", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        setEditingId(null)
+        void loadData()
+      } else {
+        const b = await res.json()
+        alert(b.error?.message || "บันทึกไม่สำเร็จ")
+      }
+    } else {
+      const res = await fetch(`/api/master-data/units/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        setEditingId(null)
+        void loadData()
+      } else {
+        const b = await res.json()
+        alert(b.error?.message || "บันทึกไม่สำเร็จ")
+      }
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    const ok = await confirmType({ message: "ต้องการลบหน่วยนับนี้?" })
+    if (!ok) return
+    const res = await fetch(`/api/master-data/units/${id}`, { method: "DELETE" })
+    if (res.ok) void loadData()
+    else {
+      const b = await res.json()
+      alert(b.error?.message || "ลบไม่สำเร็จ")
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <GlassButton
+          onClick={() => {
+            setEditingId("new")
+            setEditForm({ code: "", name: "", isActive: true })
+          }}
+          icon={<Plus className="h-4 w-4" />}
+        >
+          เพิ่มหน่วย
+        </GlassButton>
+      </div>
+      <GlassCard padding="none">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-border bg-muted">
+            <tr>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">รหัส</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อ</th>
+              <th className="px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
+              <th className="w-32 px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {editingId === "new" && (
+              <tr className="bg-blue-50/50">
+                <td className="px-4 py-3">
+                  <GlassInput
+                    value={editForm.code}
+                    onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                    placeholder="PCS"
+                    className="h-8 border-blue-300"
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <GlassInput
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    placeholder="ชิ้น"
+                    className="h-8 border-blue-300"
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isActive}
+                      onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                    />
+                    ใช้งาน
+                  </label>
+                </td>
+                <td className="space-x-2 px-4 py-3 text-right">
+                  <button type="button" onClick={() => setEditingId(null)} className="rounded bg-background p-1.5 text-muted-foreground hover:text-foreground">
+                    <X className="h-4 w-4" />
+                  </button>
+                  <button type="button" onClick={() => handleSave("new")} className="rounded bg-blue-50 p-1.5 text-blue-600 hover:text-blue-700">
+                    <Save className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            )}
+            {data.map((item) => (
+              <tr key={item.id} className="transition-colors hover:bg-muted/60">
+                {editingId === item.id ? (
+                  <>
+                    <td className="px-4 py-3">
+                      <GlassInput
+                        value={editForm.code}
+                        onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                        className="h-8 border-blue-300"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <GlassInput
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="h-8 border-blue-300"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <label className="inline-flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={editForm.isActive}
+                          onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                        />
+                        ใช้งาน
+                      </label>
+                    </td>
+                    <td className="space-x-2 px-4 py-3 text-right">
+                      <button type="button" onClick={() => setEditingId(null)} className="rounded bg-background p-1.5 text-muted-foreground hover:text-foreground">
+                        <X className="h-4 w-4" />
+                      </button>
+                      <button type="button" onClick={() => handleSave(item.id)} className="rounded bg-blue-50 p-1.5 text-blue-600 hover:text-blue-700">
+                        <Save className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="px-4 py-3 font-mono text-xs font-medium text-foreground">{item.code}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={item.isActive ? "text-xs text-emerald-600" : "text-xs text-muted-foreground"}>
+                        {item.isActive ? "ใช้งาน" : "ปิด"}
+                      </span>
+                    </td>
+                    <td className="space-x-2 px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(item.id)
+                          setEditForm({ code: item.code, name: item.name, isActive: item.isActive })
+                        }}
+                        className="p-1.5 text-muted-foreground transition-colors hover:text-blue-600"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.id)}
+                        className="p-1.5 text-muted-foreground transition-colors hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </GlassCard>
+    </div>
+  )
+}
+
 export default function MasterDataPage() {
   const t = useTranslations("settings")
   const [activeTab, setActiveTab] = useState<
-    "categories" | "departments" | "maintenance-types" | "suppliers"
+    "categories" | "departments" | "maintenance-types" | "suppliers" | "units"
   >("categories")
   const [branches, setBranches] = useState<any[]>([])
 
@@ -791,7 +1006,7 @@ export default function MasterDataPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">{t("masterDataTitle")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          จัดการหมวดหมู่ แผนก ประเภทการซ่อมบำรุง และซัพพลายเออร์ในระบบ
+          จัดการหมวดหมู่ แผนก ประเภทการซ่อมบำรุง ซัพพลายเออร์ และหน่วยนับในระบบ
         </p>
       </div>
 
@@ -835,6 +1050,18 @@ export default function MasterDataPage() {
         >
           ซัพพลายเออร์ (Suppliers)
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("units")}
+          className={classNames(
+            "px-5 py-3 text-sm font-medium border-b-2 transition-colors",
+            activeTab === "units"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          หน่วยนับ (Units)
+        </button>
       </div>
 
       <div className="pt-2">
@@ -842,6 +1069,7 @@ export default function MasterDataPage() {
         {activeTab === "departments" && <DepartmentsTab branches={branches} />}
         {activeTab === "maintenance-types" && <MaintenanceTypesTab />}
         {activeTab === "suppliers" && <SuppliersTab />}
+        {activeTab === "units" && <UnitsTab />}
       </div>
     </div>
   )

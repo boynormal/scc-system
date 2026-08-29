@@ -81,6 +81,16 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     iconKey: "CalendarDays",
   },
   {
+    id: "finance",
+    labelTh: "การเงินและบัญชี",
+    labelEn: "Finance & Accounting",
+    description: "ค่าใช้จ่าย · ต้นทุน · อนุมัติ · รายงาน",
+    departmentIds: ["finance"],
+    order: 9,
+    accent: "from-emerald-500 to-teal-600 shadow-emerald-600/30",
+    iconKey: "Wallet",
+  },
+  {
     id: "raw_material_news",
     labelTh: "ข่าวสารวัตถุดิบ",
     labelEn: "Raw Material News",

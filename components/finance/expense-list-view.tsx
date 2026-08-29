@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { FinancePageHeader } from "./finance-page-header"
@@ -32,7 +33,9 @@ export function ExpenseListView({
           ) : undefined
         }
       />
-      <ExpenseList perms={perms} initialItems={initialItems} initialSummary={initialSummary} />
+      <Suspense fallback={null}>
+        <ExpenseList perms={perms} initialItems={initialItems} initialSummary={initialSummary} />
+      </Suspense>
     </div>
   )
 }

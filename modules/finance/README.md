@@ -75,3 +75,31 @@ Chart of Accounts / GL FK / journal / posting ยังเลื่อนออ�
 - `expenses` — รายการค่าใช้จ่าย (create/read/update/delete/approve)
 - `expense_masters` — จัดการประเภท/หน่วยงาน (create/read/update/delete)
 - พื้นที่ nav/layout: `finance` (ดู `module-access-catalog.ts`)
+
+## Reporting MVP (`/finance/reports`)
+
+รายงานอ่านอย่างเดียวจากบิลที่มีอยู่ ไม่เปลี่ยนกฎ Phase 4 และยังไม่ทำ GL
+
+### Grain
+- เงิน (`grandTotal`, `byType`, `byProcess`, `byCostCenter`, `byModule`, `byCostObject`, matrix, ยอดตามสาขา/เดือน) = `SUM(ExpenseLine.netAmount)` ของบรรทัดที่ผ่านฟิลเตอร์
+- จำนวนบิล (`count` / Bills) = distinct `Expense.id` ที่เป็นเจ้าของบรรทัดเหล่านั้น
+- จำนวนบรรทัด = จำนวน `ExpenseLine` ที่ผ่านฟิลเตอร์
+- ช่วงเวลา = `Expense.expenseDate` (ไม่ใช้ posting date)
+
+เมื่อกรอง Process / ประเภท / หน่วยงาน / โมดูล จะนับเฉพาะบรรทัดที่ตรง ไม่ดึงยอดทั้งบิลจากหัวเอกสาร
+
+### สถานะที่นับ
+- `deletedAt IS NULL`
+- `status NOT IN (CANCELLED, REJECTED)`
+- ฟิลเตอร์สถานะเพิ่มได้เฉพาะ `DRAFT | PENDING | APPROVED | PAID`
+
+### ค่าว่าง
+- Process เป็น null → `ไม่ระบุ Process`
+- Cost Center เป็น null → `ไม่ระบุหน่วยงาน`
+- Cost Object เป็น null → `ไม่ระบุ`
+- `sourceModule` เป็น null → `บันทึกเอง` (key `MANUAL`)
+
+### รายงานหลัก
+Process × ExpenseType — ตอบว่าแต่ละกระบวนการใช้ค่าใช้จ่ายประเภทใด และเป็นจำนวนเท่าไร
+คลิกแถว/เซลล์ไปที่ `/finance/expenses` พร้อมฟิลเตอร์เดิม รายละเอียดบิลยังอยู่ที่ `/finance/expenses/[id]`
+

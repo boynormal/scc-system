@@ -823,6 +823,8 @@ export async function listExpenses(
     branchId?: string | null
     expenseTypeId?: string | null
     costCenterId?: string | null
+    processId?: string | null
+    vendorId?: string | null
     status?: string | null
     sourceModule?: string | null
     dateFrom?: string | null
@@ -838,6 +840,15 @@ export async function listExpenses(
   if (expenseTypeId) and.push({ lines: { some: { expenseTypeId } } })
   const costCenterId = optionalUuid(params.costCenterId)
   if (costCenterId) and.push({ lines: { some: { costCenterId } } })
+  const processRaw = params.processId?.trim()
+  if (processRaw === "none") {
+    and.push({ lines: { some: { processId: null } } })
+  } else {
+    const processId = optionalUuid(processRaw)
+    if (processId) and.push({ lines: { some: { processId } } })
+  }
+  const vendorId = optionalUuid(params.vendorId)
+  if (vendorId) where.vendorId = vendorId
   if (params.status && (EXPENSE_STATUSES as readonly string[]).includes(params.status)) {
     where.status = params.status as ExpenseStatusValue
   }

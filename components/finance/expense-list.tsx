@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Receipt, Search } from "lucide-react"
 import { Select } from "@/components/ui/select"
 import { cn, formatDate } from "@/lib/utils"
@@ -23,6 +23,7 @@ import type {
   ExpenseTypeOption,
   FinancePerms,
   Option,
+  ProcessRow,
 } from "./expense-types"
 import {
   EXPENSE_STATUS_BADGE,
@@ -52,17 +53,21 @@ export function ExpenseList({
   initialSummary: ExpenseSummary
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [items, setItems] = useState<ExpenseDto[]>(initialItems)
   const [summary, setSummary] = useState<ExpenseSummary>(initialSummary)
   const [branches, setBranches] = useState<Option[]>([])
   const [types, setTypes] = useState<ExpenseTypeOption[]>([])
   const [costCenters, setCostCenters] = useState<CostCenterRow[]>([])
+  const [processes, setProcesses] = useState<ProcessRow[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const [branchId, setBranchId] = useState("")
-  const [expenseTypeId, setExpenseTypeId] = useState("")
-  const [costCenterId, setCostCenterId] = useState("")
-  const [status, setStatus] = useState("")
+  const [branchId, setBranchId] = useState(searchParams.get("branchId") ?? "")
+  const [expenseTypeId, setExpenseTypeId] = useState(searchParams.get("expenseTypeId") ?? "")
+  const [costCenterId, setCostCenterId] = useState(searchParams.get("costCenterId") ?? "")
+  const [processId, setProcessId] = useState(searchParams.get("processId") ?? "")
+  const [vendorId, setVendorId] = useState(searchParams.get("vendorId") ?? "")
+  const [status, setStatus] = useState(searchParams.get("status") ?? "")
   const [search, setSearch] = useState("")
 
   useEffect(() => {
@@ -70,11 +75,13 @@ export function ExpenseList({
       fetch("/api/finance/branches", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/expense-types", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/cost-centers", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/finance/processes", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([b, t, c]) => {
+      .then(([b, t, c, p]) => {
         setBranches((b.data ?? []) as Option[])
         setTypes((t.data ?? []) as ExpenseTypeOption[])
         setCostCenters((c.data ?? []) as CostCenterRow[])
+        setProcesses((p.data ?? []) as ProcessRow[])
       })
       .catch(() => undefined)
   }, [])
@@ -84,6 +91,8 @@ export function ExpenseList({
     if (branchId) params.set("branchId", branchId)
     if (expenseTypeId) params.set("expenseTypeId", expenseTypeId)
     if (costCenterId) params.set("costCenterId", costCenterId)
+    if (processId) params.set("processId", processId)
+    if (vendorId) params.set("vendorId", vendorId)
     if (status) params.set("status", status)
     if (search.trim()) params.set("search", search.trim())
     const summaryParams = new URLSearchParams()
@@ -106,7 +115,7 @@ export function ExpenseList({
     } catch {
       setError("โหลดข้อมูลไม่สำเร็จ")
     }
-  }, [branchId, expenseTypeId, costCenterId, status, search])
+  }, [branchId, expenseTypeId, costCenterId, processId, vendorId, status, search])
 
   useEffect(() => {
     void load()
@@ -176,6 +185,17 @@ export function ExpenseList({
           options={[
             { value: "", label: "ทั้งหมด" },
             ...costCenters.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
+        <Select
+          label="กระบวนการ"
+          value={processId}
+          onChange={(e) => setProcessId(e.target.value)}
+          className={cn("min-w-[10rem]", FIN_GLASS_FIELD)}
+          options={[
+            { value: "", label: "ทั้งหมด" },
+            { value: "none", label: "ไม่ระบุ Process" },
+            ...processes.map((p) => ({ value: p.id, label: p.name })),
           ]}
         />
         <Select

@@ -208,6 +208,7 @@ export type ExpenseSourceRow = {
   sourceDocumentId: string
   sourceLineId: string | null
   branchId: string
+  branchName: string
   date: string
   vehicleId: string
   vehicleLabel: string

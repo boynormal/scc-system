@@ -21,6 +21,7 @@ function createMockDb() {
     transportRepairLog: { findMany: vi.fn().mockResolvedValue([]) },
     transportTireLog: { findMany: vi.fn().mockResolvedValue([]) },
     transportJob: { findMany: vi.fn().mockResolvedValue([]) },
+    branch: { findMany: vi.fn().mockResolvedValue([{ id: BRANCH, name: "HQ" }]) },
     expenseLine: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn().mockResolvedValue(null) },
     expense: { findFirst: vi.fn() },
     financeSourceReview: {
@@ -64,6 +65,12 @@ describe("listUnlinkedExpenseSources — finance-ready queue", () => {
     expect(result.data[0].sourceDocumentId).toBe("r-null")
     expect(result.data[0].documentNo).toBe("RP-2026-00001")
     expect(result.data[0].amount).toBeNull()
+    expect(result.data[0].branchName).toBe("HQ")
+    expect(db.branch.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ companyId: COMPANY, id: { in: [BRANCH] } }),
+      })
+    )
   })
 
   it("2. includes closed repair with 0 and keeps 0 distinct from null", async () => {

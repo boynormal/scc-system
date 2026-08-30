@@ -47,6 +47,7 @@ export type ExpenseSourceDto = TransportCostSource & {
   groupKey: string
   groupLabel: string
   reviewStatus: "PENDING"
+  branchName: string
 }
 
 const GROUP_LABELS: Record<string, string> = {
@@ -57,7 +58,7 @@ function sourceKey(sourceType: string, sourceDocumentId: string): string {
   return `${sourceType}::${sourceDocumentId}`
 }
 
-function toSourceDto(s: TransportCostSource): ExpenseSourceDto {
+function toSourceDto(s: TransportCostSource, branchNames: Map<string, string>): ExpenseSourceDto {
   return {
     ...s,
     sourceKind: "IMPORT",
@@ -68,7 +69,22 @@ function toSourceDto(s: TransportCostSource): ExpenseSourceDto {
     groupKey: "TRANSPORT",
     groupLabel: GROUP_LABELS.TRANSPORT,
     reviewStatus: "PENDING",
+    branchName: branchNames.get(s.branchId) ?? "—",
   }
+}
+
+async function loadBranchNames(
+  db: PrismaClient,
+  companyId: string,
+  branchIds: string[]
+): Promise<Map<string, string>> {
+  const unique = [...new Set(branchIds.filter(Boolean))]
+  if (unique.length === 0) return new Map()
+  const rows = await db.branch.findMany({
+    where: { companyId, id: { in: unique } },
+    select: { id: true, name: true },
+  })
+  return new Map(rows.map((r) => [r.id, r.name]))
 }
 
 /**
@@ -128,15 +144,20 @@ export async function listUnlinkedExpenseSources(
       .map((r) => sourceReviewDocKey({ sourceType: r.sourceType, sourceDocumentId: r.sourceDocumentId }))
   )
 
+  const pending = sources.filter((s) => {
+    if (linkedSet.has(sourceKey(s.sourceType, s.sourceId))) return false
+    return !closedReviewSet.has(
+      sourceReviewDocKey({ sourceType: s.sourceType, sourceDocumentId: s.sourceId })
+    )
+  })
+  const branchNames = await loadBranchNames(
+    db,
+    params.companyId,
+    pending.map((s) => s.branchId)
+  )
+
   return {
-    data: sources
-      .filter((s) => {
-        if (linkedSet.has(sourceKey(s.sourceType, s.sourceId))) return false
-        return !closedReviewSet.has(
-          sourceReviewDocKey({ sourceType: s.sourceType, sourceDocumentId: s.sourceId })
-        )
-      })
-      .map(toSourceDto),
+    data: pending.map((s) => toSourceDto(s, branchNames)),
   }
 }
 

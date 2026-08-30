@@ -31,6 +31,7 @@ import {
 
 type RepairRow = {
   id: string
+  repairNumber: string
   symptom: string
   notes: string | null
   status: RepairStatus
@@ -441,13 +442,18 @@ export function RepairsPageClient() {
               className="flex h-full flex-col overflow-hidden"
             >
               <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
-                <RepairStatusBadge status={item.status} />
-                {(item.status === "closed" || item.status === "cancelled") && (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Wrench className="h-3 w-3 shrink-0" />
-                    {item.status === "closed" ? formatDt(item.closedAt) : "ยกเลิกแล้ว"}
-                  </span>
-                )}
+                <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                  {item.repairNumber}
+                </span>
+                <div className="flex items-center gap-2">
+                  <RepairStatusBadge status={item.status} />
+                  {(item.status === "closed" || item.status === "cancelled") && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Wrench className="h-3 w-3 shrink-0" />
+                      {item.status === "closed" ? formatDt(item.closedAt) : "ยกเลิกแล้ว"}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
@@ -612,7 +618,7 @@ export function RepairsPageClient() {
                   )}
                   {item.status === "closed" && (
                     <Link
-                      href="/finance/expenses/new"
+                      href="/finance/expenses/new?manual=1"
                       className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-emerald-800 hover:bg-muted dark:text-emerald-200"
                     >
                       บันทึกค่าใช้จ่ายใน Finance

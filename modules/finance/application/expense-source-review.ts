@@ -16,6 +16,14 @@ export function sourceReviewKey(identity: {
   return `${identity.sourceType ?? ""}::${identity.sourceDocumentId}::${identity.sourceLineId ?? ""}`
 }
 
+/** Document-level identity for the Transport queue (1 source = 1 document). */
+export function sourceReviewDocKey(identity: {
+  sourceType: string | null
+  sourceDocumentId: string
+}): string {
+  return `${identity.sourceType ?? ""}::${identity.sourceDocumentId}`
+}
+
 /** Queue shows implicit PENDING (no row) and explicit PENDING. */
 export function isOpenInReviewQueue(status: FinanceSourceReviewStatus | null | undefined): boolean {
   return status == null || status === "PENDING"

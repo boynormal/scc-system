@@ -3,6 +3,7 @@ import {
   isOpenInReviewQueue,
   reviewBlocksCreate,
   shouldReopenReviewOnExpenseCancel,
+  sourceReviewDocKey,
   sourceReviewKey,
 } from "@/modules/finance/application/expense-source-review"
 
@@ -11,6 +12,9 @@ describe("sourceReviewKey", () => {
     expect(
       sourceReviewKey({ sourceType: "TRANSPORT_JOB", sourceDocumentId: "job-1", sourceLineId: null })
     ).toBe("TRANSPORT_JOB::job-1::")
+    expect(sourceReviewDocKey({ sourceType: "TRANSPORT_JOB", sourceDocumentId: "job-1" })).toBe(
+      "TRANSPORT_JOB::job-1"
+    )
   })
 })
 

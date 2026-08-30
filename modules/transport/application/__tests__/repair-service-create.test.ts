@@ -54,7 +54,13 @@ describe("createRepair", () => {
         }),
       })
     )
-    expect(db.transportRepairLog.create).toHaveBeenCalled()
+    expect(db.transportRepairLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          repairNumber: expect.stringMatching(/^RP-\d{4}-00001$/),
+        }),
+      })
+    )
     expect(result).toEqual({ id: "repair-new", status: "reported" })
   })
 

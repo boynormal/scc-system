@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select"
 import { cn, formatDate } from "@/lib/utils"
 import {
   GlassCard,
+  GlassInput,
   GlassStatCard,
   GlassTable,
   GlassTableBody,
@@ -66,8 +67,11 @@ export function ExpenseList({
   const [expenseTypeId, setExpenseTypeId] = useState(searchParams.get("expenseTypeId") ?? "")
   const [costCenterId, setCostCenterId] = useState(searchParams.get("costCenterId") ?? "")
   const [processId, setProcessId] = useState(searchParams.get("processId") ?? "")
-  const [vendorId, setVendorId] = useState(searchParams.get("vendorId") ?? "")
+  const [vendorId] = useState(searchParams.get("vendorId") ?? "")
   const [status, setStatus] = useState(searchParams.get("status") ?? "")
+  const [sourceModule] = useState(searchParams.get("sourceModule") ?? "")
+  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "")
+  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "")
   const [search, setSearch] = useState("")
 
   useEffect(() => {
@@ -94,6 +98,9 @@ export function ExpenseList({
     if (processId) params.set("processId", processId)
     if (vendorId) params.set("vendorId", vendorId)
     if (status) params.set("status", status)
+    if (sourceModule) params.set("sourceModule", sourceModule)
+    if (dateFrom) params.set("dateFrom", dateFrom)
+    if (dateTo) params.set("dateTo", dateTo)
     if (search.trim()) params.set("search", search.trim())
     const summaryParams = new URLSearchParams()
     if (branchId) summaryParams.set("branchId", branchId)
@@ -115,7 +122,7 @@ export function ExpenseList({
     } catch {
       setError("โหลดข้อมูลไม่สำเร็จ")
     }
-  }, [branchId, expenseTypeId, costCenterId, processId, vendorId, status, search])
+  }, [branchId, expenseTypeId, costCenterId, processId, vendorId, status, sourceModule, dateFrom, dateTo, search])
 
   useEffect(() => {
     void load()
@@ -163,6 +170,20 @@ export function ExpenseList({
       </div>
 
       <GlassCard className={cn("flex flex-wrap items-end gap-3 rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
+        <GlassInput
+          label="ตั้งแต่วันที่"
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className={FIN_GLASS_FIELD}
+        />
+        <GlassInput
+          label="ถึงวันที่"
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className={FIN_GLASS_FIELD}
+        />
         <Select
           label="สาขา"
           value={branchId}
@@ -237,7 +258,7 @@ export function ExpenseList({
           </p>
           {perms.canCreate && (
             <Link
-              href="/finance/expenses/new"
+              href="/finance/expenses/new?manual=1"
               className="mt-4 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               บันทึกค่าใช้จ่าย

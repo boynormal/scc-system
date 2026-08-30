@@ -862,8 +862,10 @@ export async function listExpenses(
   if (params.status && (EXPENSE_STATUSES as readonly string[]).includes(params.status)) {
     where.status = params.status as ExpenseStatusValue
   }
-  if (isSourceModule(params.sourceModule)) {
-    where.sourceModule = params.sourceModule
+  if (params.sourceModule === "MANUAL") {
+    and.push({ lines: { some: { sourceModule: null } } })
+  } else if (isSourceModule(params.sourceModule)) {
+    and.push({ lines: { some: { sourceModule: params.sourceModule } } })
   }
   if (params.dateFrom?.trim() || params.dateTo?.trim()) {
     const range: Prisma.DateTimeFilter = {}

@@ -13,7 +13,10 @@ export type TransportCostSource = {
   /** Reference amount only. `null` ≠ `0`. Not an Expense. */
   amount: number | null
   paymentMethod: "cash" | "credit" | null
-  description: string
+  /** Human document code when the operational module has one (job / repair / tire number). */
+  documentNo: string | null
+  /** Readable note only — do not prefix with the document number. */
+  description: string | null
 }
 
 export const TAKE_LIMIT = 300
@@ -46,6 +49,7 @@ type RepairRow = {
   repairCost: unknown
   paymentMethod: "cash" | "credit" | null
   symptom: string
+  repairNumber: string
   vehicle: { id: string; plateNumber: string } | null
 }
 
@@ -56,6 +60,7 @@ type TireRow = {
   vehicleId: string
   cost: unknown
   paymentMethod: "cash" | "credit" | null
+  tireNumber: string
   vehicle: { id: string; plateNumber: string } | null
 }
 
@@ -83,7 +88,8 @@ export function mapRepair(r: RepairRow): TransportCostSource {
     vehicleLabel: r.vehicle?.plateNumber ?? "-",
     amount: toReferenceAmount(r.repairCost),
     paymentMethod: r.paymentMethod ?? null,
-    description: `ค่าซ่อม: ${r.symptom}`.slice(0, 255),
+    documentNo: r.repairNumber,
+    description: r.symptom.trim().slice(0, 255) || null,
   }
 }
 
@@ -97,6 +103,7 @@ export function mapTire(t: TireRow): TransportCostSource {
     vehicleLabel: t.vehicle?.plateNumber ?? "-",
     amount: toReferenceAmount(t.cost),
     paymentMethod: t.paymentMethod ?? null,
+    documentNo: t.tireNumber,
     description: "ค่ายาง",
   }
 }
@@ -114,7 +121,8 @@ export function mapJob(j: JobRow): TransportCostSource {
     vehicleLabel: j.assignment?.vehicle?.plateNumber ?? "-",
     amount: null,
     paymentMethod: null,
-    description: `ใบงาน ${j.jobNumber}${customer ? ` — ${customer}` : ""}`.slice(0, 255),
+    documentNo: j.jobNumber,
+    description: customer ? customer.slice(0, 255) : null,
   }
 }
 

@@ -1104,6 +1104,7 @@ model TransportTireLog {
   companyId     String                @map("company_id") @db.Uuid
   branchId      String                @map("branch_id") @db.Uuid
   vehicleId     String                @map("vehicle_id") @db.Uuid
+  tireNumber    String                @map("tire_number") @db.VarChar(30)
   workDate      DateTime              @map("work_date") @db.Timestamptz
   /// [{ position: number, workType: TransportTireWorkType }, ...]
   wheels        Json
@@ -1119,6 +1120,7 @@ model TransportTireLog {
   vehicle   TransportVehicle @relation(fields: [vehicleId], references: [id])
   createdBy User             @relation("TireLogCreatedBy", fields: [createdById], references: [id])
 
+  @@unique([companyId, tireNumber])
   @@index([companyId])
   @@index([branchId])
   @@index([vehicleId])
@@ -1132,6 +1134,7 @@ model TransportRepairLog {
   companyId       String                @map("company_id") @db.Uuid
   branchId        String                @map("branch_id") @db.Uuid
   vehicleId       String                @map("vehicle_id") @db.Uuid
+  repairNumber    String                @map("repair_number") @db.VarChar(30)
   symptom         String
   notes           String?
   status          TransportRepairStatus @default(reported)
@@ -1154,6 +1157,7 @@ model TransportRepairLog {
   startedBy  User?           @relation("RepairStartedBy", fields: [startedById], references: [id])
   closedBy   User?           @relation("RepairClosedBy", fields: [closedById], references: [id])
 
+  @@unique([companyId, repairNumber])
   @@index([companyId])
   @@index([branchId])
   @@index([vehicleId])

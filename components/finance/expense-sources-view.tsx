@@ -1,8 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Link2, Truck } from "lucide-react"
+import { Check, CircleOff, ExternalLink, Link2, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn, formatDate } from "@/lib/utils"
 import {
@@ -19,12 +20,17 @@ import {
 import { FinancePageHeader } from "./finance-page-header"
 import { NEW_EXPENSE_SOURCES_KEY, type PrefillPayload } from "./expense-form-page"
 import type { ExpenseSourceRow, FinancePerms, LineDraft } from "./expense-types"
-import { FIN_GLASS_PANEL, formatBaht } from "./finance-theme"
+import { FIN_GLASS_PANEL, SOURCE_TYPE_LABELS, formatBaht } from "./finance-theme"
 
-const SOURCE_TYPE_LABELS: Record<string, string> = {
-  TRANSPORT_REPAIR: "ค่าซ่อม (ขนส่ง)",
-  TRANSPORT_TIRE: "ค่ายาง (ขนส่ง)",
-  TRANSPORT_JOB: "ใบงานขนส่ง",
+function apiErrorMessage(json: unknown, fallback: string) {
+  if (!json || typeof json !== "object") return fallback
+  const error = (json as { error?: unknown }).error
+  if (typeof error === "string" && error.trim()) return error
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === "string" && message.trim()) return message
+  }
+  return fallback
 }
 
 function rowKey(row: ExpenseSourceRow) {
@@ -36,13 +42,18 @@ function formatReferenceAmount(amount: number | null): string {
   return formatBaht(amount)
 }
 
+const HAS_EXPENSE_BTN =
+  "rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700"
+const NO_EXPENSE_BTN =
+  "rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:bg-transparent dark:text-slate-300 dark:hover:bg-white/10"
+
 function sourceToLine(row: ExpenseSourceRow): LineDraft {
   const locked = row.amount != null && row.amount > 0
   const isJob = row.suggestedCostObjectType === "JOB"
   return {
     key: rowKey(row),
     expenseTypeId: "",
-    description: row.description,
+    description: row.description ?? "",
     pricingMode: "AMOUNT",
     quantity: "1",
     unitId: "",
@@ -56,7 +67,7 @@ function sourceToLine(row: ExpenseSourceRow): LineDraft {
     processId: "",
     costObjectType: row.suggestedCostObjectType,
     costObjectId: isJob ? row.sourceDocumentId : row.vehicleId,
-    costObjectLabel: isJob ? row.description : row.vehicleLabel,
+    costObjectLabel: isJob ? row.documentNo ?? row.description ?? "" : row.vehicleLabel,
     sourceKind: row.sourceKind,
     sourceModule: row.sourceModule,
     sourceType: row.sourceType,
@@ -72,24 +83,32 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [detailRow, setDetailRow] = useState<ExpenseSourceRow | null>(null)
   const [noExpenseRow, setNoExpenseRow] = useState<ExpenseSourceRow | null>(null)
   const [noExpenseReason, setNoExpenseReason] = useState("")
+  const [noExpenseError, setNoExpenseError] = useState<string | null>(null)
   const [savingNoExpense, setSavingNoExpense] = useState(false)
 
   const canReview = perms.canCreate || perms.canUpdate
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch("/api/finance/expenses/sources")
-    const json = await res.json().catch(() => ({}))
-    setLoading(false)
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/finance/expenses/sources", { cache: "no-store" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError("โหลดข้อมูลไม่สำเร็จ")
+        setRows([])
+        return
+      }
+      setError(null)
+      setRows((json.data ?? []) as ExpenseSourceRow[])
+    } catch {
       setError("โหลดข้อมูลไม่สำเร็จ")
       setRows([])
-      return
+    } finally {
+      setLoading(false)
     }
-    setError(null)
-    setRows((json.data ?? []) as ExpenseSourceRow[])
   }, [])
 
   useEffect(() => {
@@ -137,31 +156,41 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
   }
 
   async function confirmNoExpense() {
-    if (!noExpenseRow) return
+    const row = noExpenseRow
+    if (!row) return
     setSavingNoExpense(true)
-    const res = await fetch("/api/finance/expenses/sources/no-expense", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sourceType: noExpenseRow.sourceType,
-        sourceDocumentId: noExpenseRow.sourceDocumentId,
-        reason: noExpenseReason.trim() || null,
-      }),
-    })
-    setSavingNoExpense(false)
-    if (!res.ok) {
+    setNoExpenseError(null)
+    try {
+      const res = await fetch("/api/finance/expenses/sources/no-expense", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          sourceType: row.sourceType,
+          sourceDocumentId: row.sourceDocumentId,
+          reason: noExpenseReason.trim() || null,
+        }),
+      })
       const json = await res.json().catch(() => ({}))
-      setError(json?.error?.message || "ปิดรายการไม่สำเร็จ")
-      return
+      if (!res.ok) {
+        setNoExpenseError(apiErrorMessage(json, "ปิดรายการไม่สำเร็จ"))
+        return
+      }
+      const closedKey = rowKey(row)
+      setRows((prev) => prev.filter((r) => rowKey(r) !== closedKey))
+      setNoExpenseRow(null)
+      setNoExpenseReason("")
+      setSelected((prev) => {
+        const next = new Set(prev)
+        next.delete(closedKey)
+        return next
+      })
+      await load()
+    } catch {
+      setNoExpenseError("ปิดรายการไม่สำเร็จ กรุณาลองอีกครั้ง")
+    } finally {
+      setSavingNoExpense(false)
     }
-    setNoExpenseRow(null)
-    setNoExpenseReason("")
-    setSelected((prev) => {
-      const next = new Set(prev)
-      next.delete(rowKey(noExpenseRow))
-      return next
-    })
-    await load()
   }
 
   const differentBranch = selectedRows.length > 1 && selectedRows.some((r) => r.branchId !== selectedBranch)
@@ -169,8 +198,8 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
   return (
     <div className="space-y-6">
       <FinancePageHeader
-        title="รายการจากโมดูลที่รอตรวจสอบค่าใช้จ่าย"
-        description="ดำเนินการถึงขั้นพร้อมให้ Finance ตรวจว่าเกิดค่าใช้จ่ายหรือไม่"
+        title={`คิวตรวจต้นทาง${loading ? "" : ` (${rows.length})`}`}
+        description="มีค่าใช้จ่ายออกจากคิวเมื่อบันทึกบิลแล้ว"
         actions={
           <Button
             type="button"
@@ -209,13 +238,13 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
               <GlassTableHeader className="border-slate-200/80 bg-white/70 dark:border-white/10 dark:bg-white/5">
                 <tr>
                   <GlassTableHead className="w-[4%]"> </GlassTableHead>
+                  <GlassTableHead className="w-[16%] whitespace-nowrap">เอกสาร</GlassTableHead>
                   <GlassTableHead className="w-[14%] whitespace-nowrap">ประเภท</GlassTableHead>
                   <GlassTableHead className="w-[10%] whitespace-nowrap">วันที่</GlassTableHead>
                   <GlassTableHead className="w-[10%] whitespace-nowrap">รถ</GlassTableHead>
-                  <GlassTableHead className="w-[20%]">รายละเอียด</GlassTableHead>
+                  <GlassTableHead className="w-[22%]">รายละเอียด</GlassTableHead>
                   <GlassTableHead className="w-[12%] whitespace-nowrap text-right">ยอดอ้างอิง</GlassTableHead>
-                  <GlassTableHead className="w-[10%] whitespace-nowrap">สถานะรอตรวจสอบ</GlassTableHead>
-                  <GlassTableHead className="w-[20%] whitespace-nowrap text-right">การกระทำ</GlassTableHead>
+                  <GlassTableHead className="w-[12%] whitespace-nowrap text-right">การกระทำ</GlassTableHead>
                 </tr>
               </GlassTableHeader>
               <GlassTableBody>
@@ -236,6 +265,15 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                           onChange={() => toggle(row)}
                         />
                       </GlassTableCell>
+                      <GlassTableCell className="whitespace-nowrap">
+                        <button
+                          type="button"
+                          className="text-left text-sm font-semibold tabular-nums text-blue-600 hover:underline dark:text-blue-400"
+                          onClick={() => setDetailRow(row)}
+                        >
+                          {row.documentNo ?? "ดูรายละเอียด"}
+                        </button>
+                      </GlassTableCell>
                       <GlassTableCell className="whitespace-nowrap font-medium text-foreground">
                         {SOURCE_TYPE_LABELS[row.sourceType] ?? row.sourceType}
                       </GlassTableCell>
@@ -244,20 +282,20 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                       </GlassTableCell>
                       <GlassTableCell className="whitespace-nowrap">{row.vehicleLabel}</GlassTableCell>
                       <GlassTableCell className="text-muted-foreground">
-                        <span className="line-clamp-1" title={row.description}>
-                          {row.description}
+                        <span className="line-clamp-1" title={row.description ?? undefined}>
+                          {row.description ?? "—"}
                         </span>
                       </GlassTableCell>
                       <GlassTableCell className="whitespace-nowrap text-right tabular-nums text-foreground">
                         {formatReferenceAmount(row.amount)}
                       </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap text-muted-foreground">รอตรวจสอบ</GlassTableCell>
                       <GlassTableCell className="whitespace-nowrap text-right">
-                        <div className="flex flex-wrap justify-end gap-1.5">
+                        <div className="flex flex-wrap justify-end gap-2">
                           <Button
                             type="button"
                             size="sm"
-                            variant="outline"
+                            icon={<Check className="h-3.5 w-3.5" />}
+                            className={HAS_EXPENSE_BTN}
                             disabled={!perms.canCreate}
                             onClick={() => createBillFrom([row])}
                           >
@@ -267,17 +305,17 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                             type="button"
                             size="sm"
                             variant="outline"
+                            icon={<CircleOff className="h-3.5 w-3.5" />}
+                            className={NO_EXPENSE_BTN}
                             disabled={!canReview}
                             onClick={() => {
                               setError(null)
+                              setNoExpenseError(null)
                               setNoExpenseReason("")
                               setNoExpenseRow(row)
                             }}
                           >
                             ไม่มีค่าใช้จ่าย
-                          </Button>
-                          <Button type="button" size="sm" variant="ghost" disabled>
-                            รอตรวจสอบ
                           </Button>
                         </div>
                       </GlassTableCell>
@@ -291,11 +329,99 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
       )}
 
       <GlassDialog
+        open={detailRow != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailRow(null)
+        }}
+        title="รายละเอียดต้นทาง"
+      >
+        {detailRow && (
+          <div className="space-y-4">
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">ประเภท</dt>
+                <dd className="font-medium text-foreground">
+                  {SOURCE_TYPE_LABELS[detailRow.sourceType] ?? detailRow.sourceType}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">เอกสาร</dt>
+                <dd className="font-medium tabular-nums text-foreground">{detailRow.documentNo ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">วันที่</dt>
+                <dd className="tabular-nums text-foreground">{formatDate(detailRow.date)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">รถ</dt>
+                <dd className="text-foreground">{detailRow.vehicleLabel}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">รายละเอียด</dt>
+                <dd className="text-right text-foreground">{detailRow.description ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">ยอดอ้างอิง</dt>
+                <dd className="tabular-nums text-foreground">{formatReferenceAmount(detailRow.amount)}</dd>
+              </div>
+            </dl>
+            {detailRow.sourceType === "TRANSPORT_JOB" && (
+              <Link
+                href={`/transport/jobs/${detailRow.sourceDocumentId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                เปิดใบงาน
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => setDetailRow(null)}>
+                ปิด
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                icon={<CircleOff className="h-3.5 w-3.5" />}
+                className={NO_EXPENSE_BTN}
+                disabled={!canReview}
+                onClick={() => {
+                  setError(null)
+                  setNoExpenseError(null)
+                  setNoExpenseReason("")
+                  setNoExpenseRow(detailRow)
+                  setDetailRow(null)
+                }}
+              >
+                ไม่มีค่าใช้จ่าย
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                icon={<Check className="h-3.5 w-3.5" />}
+                className={HAS_EXPENSE_BTN}
+                disabled={!perms.canCreate}
+                onClick={() => {
+                  setDetailRow(null)
+                  createBillFrom([detailRow])
+                }}
+              >
+                มีค่าใช้จ่าย
+              </Button>
+            </div>
+          </div>
+        )}
+      </GlassDialog>
+
+      <GlassDialog
         open={noExpenseRow != null}
         onOpenChange={(open) => {
           if (!open && !savingNoExpense) {
             setNoExpenseRow(null)
             setNoExpenseReason("")
+            setNoExpenseError(null)
           }
         }}
         title="ปิดว่าไม่มีค่าใช้จ่าย"
@@ -307,8 +433,8 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
           {noExpenseRow && (
             <p className="text-sm text-foreground">
               {SOURCE_TYPE_LABELS[noExpenseRow.sourceType] ?? noExpenseRow.sourceType}
-              {" · "}
-              {noExpenseRow.description}
+              {noExpenseRow.documentNo ? ` · ${noExpenseRow.documentNo}` : ""}
+              {noExpenseRow.description ? ` · ${noExpenseRow.description}` : ""}
             </p>
           )}
           <GlassInput
@@ -317,6 +443,7 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
             onChange={(e) => setNoExpenseReason(e.target.value)}
             placeholder="เช่น รับประกัน / ซ่อมภายใน / ไม่มีค่าใช้จ่าย"
           />
+          {noExpenseError && <p className="text-sm text-red-600">{noExpenseError}</p>}
           <div className="flex justify-end gap-2">
             <Button
               type="button"

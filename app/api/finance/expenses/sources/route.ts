@@ -4,6 +4,8 @@ import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
 import { listUnlinkedExpenseSources } from "@/modules/finance"
 
+export const dynamic = "force-dynamic"
+
 export const GET = withAuth(async (req, _ctx, session) => {
   const denied = forbidUnlessPermission(session.user.roles as UserRole[], "expenses", "read")
   if (denied) return denied

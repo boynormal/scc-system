@@ -7,6 +7,7 @@ import {
   TRANSPORT_PAYMENT_METHODS,
   type TransportPaymentMethodOption,
 } from "./payment-options"
+import { nextTransportDocumentNo } from "./transport-document-no"
 
 const paymentMethodSchema = z.enum(TRANSPORT_PAYMENT_METHODS)
 
@@ -269,11 +270,21 @@ export async function createRepair(
     throw new ValidationError(msg)
   }
 
+  const repairNumber = await nextTransportDocumentNo("RP", async (prefix) => {
+    const latest = await db.transportRepairLog.findFirst({
+      where: { companyId: params.companyId, repairNumber: { startsWith: prefix } },
+      orderBy: { repairNumber: "desc" },
+      select: { repairNumber: true },
+    })
+    return latest?.repairNumber
+  })
+
   return db.transportRepairLog.create({
     data: {
       companyId: params.companyId,
       branchId: vehicle.branchId,
       vehicleId: vehicle.id,
+      repairNumber,
       symptom: params.input.symptom.trim(),
       notes: params.input.notes?.trim() || null,
       status: "reported",

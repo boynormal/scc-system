@@ -213,7 +213,8 @@ export type ExpenseSourceRow = {
   vehicleLabel: string
   amount: number | null
   paymentMethod: "cash" | "credit" | null
-  description: string
+  documentNo: string | null
+  description: string | null
   suggestedCostObjectType: "VEHICLE" | "JOB"
   groupKey: string
   groupLabel: string

@@ -14,6 +14,7 @@ import {
 } from "./vehicle-wheel-layouts"
 import { TIRE_WORK_TYPES, type TireWorkType } from "./tire-options"
 import { TRANSPORT_PAYMENT_METHODS } from "./payment-options"
+import { nextTransportDocumentNo } from "./transport-document-no"
 
 export { TIRE_WORK_TYPES, TIRE_WORK_TYPE_LABELS } from "./tire-options"
 
@@ -289,11 +290,21 @@ export async function createTireLog(
   const wheels = normalizeWheels(params.input.wheels)
   assertWheelsInLayout(config.wheelLayout, wheels)
 
+  const tireNumber = await nextTransportDocumentNo("TY", async (prefix) => {
+    const latest = await db.transportTireLog.findFirst({
+      where: { companyId: params.companyId, tireNumber: { startsWith: prefix } },
+      orderBy: { tireNumber: "desc" },
+      select: { tireNumber: true },
+    })
+    return latest?.tireNumber
+  })
+
   return db.transportTireLog.create({
     data: {
       companyId: params.companyId,
       branchId: vehicle.branchId,
       vehicleId: vehicle.id,
+      tireNumber,
       workDate: workDateToDate(params.input.workDate),
       wheels: wheels as Prisma.InputJsonValue,
       cost: params.input.cost ?? null,

@@ -2,7 +2,8 @@
 
 **สถานะ:** Product Decision + Architecture Rule (2026-08-29)  
 Phase 4 ยัง **LOCKED** — [`EXPENSE-PHASE-4-ACCEPTANCE.md`](./EXPENSE-PHASE-4-ACCEPTANCE.md)  
-กฎเอเจนต์: [`.cursor/rules/finance-expense-ssot.mdc`](../../.cursor/rules/finance-expense-ssot.mdc)
+กฎเอเจนต์: [`.cursor/rules/finance-expense-ssot.mdc`](../../.cursor/rules/finance-expense-ssot.mdc)  
+Shared Master: [`docs/architecture/erp-shared-master.md`](../../docs/architecture/erp-shared-master.md) — **Vendor = `Supplier`** ห้ามสร้าง `FinanceVendor`
 
 > Finance เป็นเจ้าของข้อมูลค่าใช้จ่ายทางการเงินทั้งหมดของบริษัท  
 > โมดูลอื่นเก็บข้อมูลปฏิบัติงานได้ แต่ห้ามสร้าง Financial Expense ซ้ำ
@@ -53,7 +54,7 @@ Finance บันทึกได้แม้ไม่มี Source จากโ�
 | **Expense / ExpenseLine / จำนวนเงินที่ต้องจ่าย** | **Finance** |
 | ExpenseType / Cost Center / Process | Finance |
 | Cost Object | ฟิลด์บนบรรทัด (ไม่ใช่ master) |
-| Vendor | `Supplier` ร่วม (`Expense.vendorId`) |
+| Vendor | `Supplier` ร่วม (`Expense.vendorId`) — ไม่มีตาราง Vendor แยก |
 | Approval / Payment | สถานะหัวบิล Finance |
 | Expense Reporting | Finance — `SUM(ExpenseLine.netAmount)` |
 
@@ -137,7 +138,7 @@ Finance ยังเป็นเจ้าของยอดที่ต้อง
 | Expense core / master / lines / Unit / Phase 4 / Reporting / Transport source | เสร็จ |
 | ล็อกกฎ SSOT + สำนวน sources/แท็บ + UX ฟอร์ม manual | เสร็จ |
 | Transport UI: ยอดอ้างอิง optional ไม่เรียกว่าค่าใช้จ่าย | เสร็จ |
-| Finance Review Queue (`finance_source_reviews`) | สไลซ์นี้ |
+| Finance Review Queue (`finance_source_reviews`) | เสร็จ |
 | ใช้งานจริง / feedback workflow | ถัดไป |
 | Maintenance module แล้วค่อย adapter | แยกงาน |
 | GL / CoA / Journal | รอ Product Decision |

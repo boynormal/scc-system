@@ -6,8 +6,9 @@ alwaysApply: false
 
 # Module Boundary Rules
 
-Policy: [docs/architecture/core-platform-convention.md](docs/architecture/core-platform-convention.md), [docs/architecture/contributing-modules.md](docs/architecture/contributing-modules.md)
+Policy: [docs/architecture/core-platform-convention.md](docs/architecture/core-platform-convention.md), [docs/architecture/contributing-modules.md](docs/architecture/contributing-modules.md), [docs/architecture/erp-shared-master.md](docs/architecture/erp-shared-master.md)
 
+- Reuse Shared Master (`Supplier`, `Branch`, `Unit`) — do not add per-module Vendor/Customer/Branch tables. See [erp-shared-master.mdc](erp-shared-master.mdc).
 - `app/api/**` is a thin adapter only: auth, parse request, call `modules/*/application`, map response — no heavy business logic or ad-hoc Prisma in the route.
 - Do not import `@/lib/prisma` from `app/api/**/route.ts` — use application services or `@/shared/db` where allowed. Exceptions only per convention §4 (e.g. NextAuth adapter, reviewed cron).
 - Do not query another module's domain tables from `modules/A` — call that module's application service instead.

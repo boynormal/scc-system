@@ -30,6 +30,7 @@ type TireWheelItem = {
 
 type TireRow = {
   id: string
+  tireNumber: string
   workDate: string
   wheels: TireWheelItem[]
   cost: string | number | null
@@ -670,6 +671,7 @@ export function TiresPageClient() {
               <table className="w-full text-sm text-left min-w-[820px]">
                 <thead className="bg-muted border-b border-border">
                   <tr>
+                    <th className="px-4 py-3 font-semibold text-muted-foreground">เอกสาร</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">รถ</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">ตำแหน่ง</th>
@@ -683,14 +685,14 @@ export function TiresPageClient() {
                 <tbody className="divide-y divide-border">
                   {loading && (
                     <tr>
-                      <td colSpan={8} className="px-2 py-4">
+                      <td colSpan={9} className="px-2 py-4">
                         <LoadingState title={t("tiresLoading")} className="py-10" />
                       </td>
                     </tr>
                   )}
                   {!loading && error && (
                     <tr>
-                      <td colSpan={8} className="px-2 py-4">
+                      <td colSpan={9} className="px-2 py-4">
                         <ErrorState
                           title={t("loadFailed")}
                           description={error}
@@ -702,7 +704,7 @@ export function TiresPageClient() {
                   )}
                   {!loading && !error && items.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                      <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">
                         {t("tiresEmpty")}
                       </td>
                     </tr>
@@ -720,6 +722,9 @@ export function TiresPageClient() {
                               : "hover:bg-muted/60"
                           }
                         >
+                          <td className="whitespace-nowrap px-4 py-3 font-mono text-sm font-semibold tabular-nums">
+                            {row.tireNumber}
+                          </td>
                           <td className="px-4 py-3">{formatWorkDate(row.workDate)}</td>
                           <td className="px-4 py-3">
                             <div className="font-medium">{row.vehicle.plateNumber}</div>

@@ -45,6 +45,25 @@ export function sourceModuleLabel(module: string | null | undefined): string {
   return SOURCE_MODULE_LABELS[module] ?? module
 }
 
+export const SOURCE_TYPE_LABELS: Record<string, string> = {
+  TRANSPORT_REPAIR: "ค่าซ่อม (ขนส่ง)",
+  TRANSPORT_TIRE: "ค่ายาง (ขนส่ง)",
+  TRANSPORT_JOB: "ใบงานขนส่ง",
+}
+
+export function sourceTypeLabel(sourceType: string | null | undefined): string | null {
+  if (!sourceType) return null
+  return SOURCE_TYPE_LABELS[sourceType] ?? sourceType
+}
+
+export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
+  EXPENSE: "ค่าใช้จ่าย",
+  COST: "ต้นทุน",
+  INCOME: "รายได้",
+  ASSET: "สินทรัพย์",
+  LIABILITY: "หนี้สิน",
+}
+
 export const SOURCE_KIND_LABELS: Record<string, string> = {
   MANUAL: "บันทึกเอง",
   MODULE: "เชื่อมโมดูล",

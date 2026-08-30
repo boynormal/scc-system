@@ -49,6 +49,7 @@ function closedRepair(over: { id: string; repairCost: unknown }) {
     repairCost: over.repairCost,
     paymentMethod: null,
     symptom: "ซ่อม",
+    repairNumber: "RP-2026-00001",
     status: "closed",
     vehicle,
   }
@@ -61,6 +62,7 @@ describe("listUnlinkedExpenseSources — finance-ready queue", () => {
     const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
     expect(result.data).toHaveLength(1)
     expect(result.data[0].sourceDocumentId).toBe("r-null")
+    expect(result.data[0].documentNo).toBe("RP-2026-00001")
     expect(result.data[0].amount).toBeNull()
   })
 
@@ -118,6 +120,8 @@ describe("listUnlinkedExpenseSources — finance-ready queue", () => {
     expect(result.data[0].sourceType).toBe("TRANSPORT_JOB")
     expect(result.data[0].sourceDocumentId).toBe("job-1")
     expect(result.data[0].sourceLineId).toBeNull()
+    expect(result.data[0].documentNo).toBe("JOB-1")
+    expect(result.data[0].description).toBe("A")
     expect(db.transportJob.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ status: "completed" }),
@@ -135,12 +139,14 @@ describe("listUnlinkedExpenseSources — finance-ready queue", () => {
         vehicleId: "v1",
         cost: null,
         paymentMethod: null,
+        tireNumber: "TY-2026-00001",
         vehicle,
       },
     ])
     const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
     expect(result.data).toHaveLength(1)
     expect(result.data[0].sourceType).toBe("TRANSPORT_TIRE")
+    expect(result.data[0].documentNo).toBe("TY-2026-00001")
     expect(db.transportTireLog.findMany.mock.calls[0][0].where.cost).toBeUndefined()
     expect(db.transportTireLog.findMany.mock.calls[0][0].where.status).toBeUndefined()
   })
@@ -158,6 +164,16 @@ describe("listUnlinkedExpenseSources — finance-ready queue", () => {
     ])
     const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
     expect(result.data.map((r) => r.sourceDocumentId)).toEqual(["r-ok"])
+  })
+
+  it("excludes NO_EXPENSE even when stored sourceLineId is not null", async () => {
+    const db = createMockDb()
+    db.transportRepairLog.findMany.mockResolvedValue([closedRepair({ id: "r-no", repairCost: 10 })])
+    db.financeSourceReview.findMany.mockResolvedValue([
+      { sourceType: "TRANSPORT_REPAIR", sourceDocumentId: "r-no", sourceLineId: "legacy", status: "NO_EXPENSE" },
+    ])
+    const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
+    expect(result.data).toEqual([])
   })
 })
 

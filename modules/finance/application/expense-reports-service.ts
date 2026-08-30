@@ -7,6 +7,7 @@ const REPORT_STATUSES = ["DRAFT", "PENDING", "APPROVED", "PAID"] as const
 const EXCLUDED_STATUSES = ["CANCELLED", "REJECTED"] as const
 const NONE_KEY = "none"
 const MANUAL_KEY = "MANUAL"
+const REPORT_ROW_LIMIT = 10000
 
 /** Same labels as finance-theme COST_OBJECT_TYPE_LABELS — kept here to avoid modules→components import. */
 const COST_OBJECT_TYPE_LABELS: Record<string, string> = {
@@ -188,10 +189,10 @@ export function lineMatchesFilters(line: ReportLineInput, filters: ReportLineFil
   const ccId = filters.costCenterId?.trim()
   if (ccId && line.costCenterId !== ccId) return false
 
-  const module = filters.sourceModule?.trim()
-  if (module === MANUAL_KEY) {
+  const sourceModule = filters.sourceModule?.trim()
+  if (sourceModule === MANUAL_KEY) {
     if (line.sourceModule != null) return false
-  } else if (module && line.sourceModule !== module) {
+  } else if (sourceModule && line.sourceModule !== sourceModule) {
     return false
   }
 
@@ -320,11 +321,11 @@ function lineFilterWhere(filters: ReportLineFilters): Prisma.ExpenseLineWhereInp
   const ccId = optionalUuid(filters.costCenterId)
   if (ccId) where.costCenterId = ccId
 
-  const module = filters.sourceModule?.trim()
-  if (module === MANUAL_KEY) {
+  const sourceModule = filters.sourceModule?.trim()
+  if (sourceModule === MANUAL_KEY) {
     where.sourceModule = null
-  } else if (module) {
-    where.sourceModule = module as ExpenseSourceModule
+  } else if (sourceModule) {
+    where.sourceModule = sourceModule as ExpenseSourceModule
   }
 
   return Object.keys(where).length ? where : null
@@ -379,6 +380,7 @@ export async function getExpenseReport(
 
   const rows = await db.expense.findMany({
     where,
+    orderBy: [{ expenseDate: "desc" }, { id: "desc" }],
     select: {
       id: true,
       vendorId: true,
@@ -403,10 +405,11 @@ export async function getExpenseReport(
         },
       },
     },
-    take: 10000,
+    take: REPORT_ROW_LIMIT + 1,
   })
 
-  const mapped: ReportRowInput[] = rows.map((r) => ({
+  const truncated = rows.length > REPORT_ROW_LIMIT
+  const mapped: ReportRowInput[] = rows.slice(0, REPORT_ROW_LIMIT).map((r) => ({
     id: r.id,
     branchId: r.branchId,
     branchName: r.branch.name,
@@ -430,7 +433,10 @@ export async function getExpenseReport(
     })),
   }))
 
-  return { data: aggregateExpenseReport(mapped, lineFilters) }
+  return {
+    data: aggregateExpenseReport(mapped, lineFilters),
+    meta: { truncated, limit: REPORT_ROW_LIMIT },
+  }
 }
 
 export {

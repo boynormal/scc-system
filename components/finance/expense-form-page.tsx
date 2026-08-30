@@ -23,6 +23,14 @@ import { FIN_GLASS_FIELD, FIN_GLASS_PANEL, formatBaht, sourceModuleLabel } from 
 
 export const NEW_EXPENSE_SOURCES_KEY = "finance:new-expense-sources"
 
+export function clearNewExpenseSourcePrefill() {
+  try {
+    sessionStorage.removeItem(NEW_EXPENSE_SOURCES_KEY)
+  } catch {
+    // ignore unavailable storage
+  }
+}
+
 export type PrefillPayload = {
   branchId?: string
   expenseDate?: string
@@ -65,9 +73,11 @@ function itemToDrafts(item: ExpenseDto): LineDraft[] {
 export function ExpenseFormPage({
   mode,
   item,
+  ignoreSourcePrefill = false,
 }: {
   mode: "create" | "edit"
   item?: ExpenseDto
+  ignoreSourcePrefill?: boolean
   perms: FinancePerms
 }) {
   const router = useRouter()
@@ -127,21 +137,24 @@ export function ExpenseFormPage({
 
         if (mode === "create") {
           let seeded = false
-          try {
-            const raw = sessionStorage.getItem(NEW_EXPENSE_SOURCES_KEY)
-            if (raw) {
-              const payload = JSON.parse(raw) as PrefillPayload
-              if (payload.lines?.length) {
-                setLines(payload.lines)
-                if (payload.branchId) setBranchId(payload.branchId)
-                if (payload.expenseDate) setExpenseDate(payload.expenseDate)
-                if (payload.paymentMethod) setPaymentMethod(payload.paymentMethod)
-                seeded = true
+          if (ignoreSourcePrefill) {
+            clearNewExpenseSourcePrefill()
+          } else {
+            try {
+              const raw = sessionStorage.getItem(NEW_EXPENSE_SOURCES_KEY)
+              if (raw) {
+                const payload = JSON.parse(raw) as PrefillPayload
+                if (payload.lines?.length) {
+                  setLines(payload.lines)
+                  if (payload.branchId) setBranchId(payload.branchId)
+                  if (payload.expenseDate) setExpenseDate(payload.expenseDate)
+                  if (payload.paymentMethod) setPaymentMethod(payload.paymentMethod)
+                  seeded = true
+                }
               }
-              sessionStorage.removeItem(NEW_EXPENSE_SOURCES_KEY)
+            } catch {
+              // ignore malformed hand-off
             }
-          } catch {
-            // ignore malformed hand-off
           }
           if (!seeded && !branchId && branchRows[0]) setBranchId(branchRows[0].id)
           if (!seeded) {
@@ -286,6 +299,7 @@ export function ExpenseFormPage({
         setError(typeof json.error === "string" ? json.error : json.error?.message ?? "บันทึกไม่สำเร็จ")
         return
       }
+      if (mode === "create") clearNewExpenseSourcePrefill()
       const savedId = json.data?.id ?? item?.id
       router.push(savedId ? `/finance/expenses/${savedId}` : "/finance/expenses")
       router.refresh()

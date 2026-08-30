@@ -53,11 +53,14 @@ describe("mapRepair / mapTire / mapJob", () => {
       vehicleId: "v1",
       paymentMethod: null,
       symptom: "น้ำมันรั่ว",
+      repairNumber: "RP-2026-00001",
       vehicle: VEHICLE,
     }
     expect(mapRepair({ ...base, repairCost: null }).amount).toBeNull()
     expect(mapRepair({ ...base, repairCost: 0 }).amount).toBe(0)
     expect(mapRepair({ ...base, repairCost: 8500 }).amount).toBe(8500)
+    expect(mapRepair({ ...base, repairCost: null }).documentNo).toBe("RP-2026-00001")
+    expect(mapRepair({ ...base, repairCost: null }).description).toBe("น้ำมันรั่ว")
   })
 
   it("maps every tire log without a status field", () => {
@@ -68,10 +71,12 @@ describe("mapRepair / mapTire / mapJob", () => {
       vehicleId: "v1",
       cost: null,
       paymentMethod: null,
+      tireNumber: "TY-2026-00001",
       vehicle: VEHICLE,
     })
     expect(row.sourceType).toBe("TRANSPORT_TIRE")
     expect(row.amount).toBeNull()
+    expect(row.documentNo).toBe("TY-2026-00001")
     expect(row.description).toBe("ค่ายาง")
   })
 
@@ -89,7 +94,9 @@ describe("mapRepair / mapTire / mapJob", () => {
     expect(row.sourceType).toBe("TRANSPORT_JOB")
     expect(row.sourceId).toBe("job-1")
     expect(row.amount).toBeNull()
-    expect(row.description).toContain("JOB-001")
+    expect(row.documentNo).toBe("JOB-001")
+    expect(row.description).toBe("ลูกค้า A")
+    expect(row.description).not.toMatch(/^ใบงาน/)
     expect(row).not.toHaveProperty("stops")
   })
 })

@@ -1,0 +1,40 @@
+---
+description: Reuse Shared Master — do not duplicate Customer/Supplier/Vendor/Unit/Branch
+globs: "prisma/**/*,modules/**/*,app/**/*"
+alwaysApply: false
+---
+
+# ERP Shared Master
+
+Policy: [docs/architecture/erp-shared-master.md](docs/architecture/erp-shared-master.md)
+
+**Reuse Master, Don't Duplicate Master.** Before adding a master table or "vendor/customer" model, answer:
+
+1. Is there already a Shared Master?
+2. Does another module own the same business meaning?
+3. Is this a master, a transaction, or a snapshot?
+4. If module-only fields, is a profile enough?
+5. Must Finance/GL reference it, or own it?
+
+## Locked shared masters
+
+- `Company`, `Branch`, `Unit` — Settings. Do not add per-module copies.
+- `Supplier` — the only vendor. `Expense.vendorId` and `SparePart.supplierId` already point here.
+- `Customer` — **do not create yet**. Add one Shared Customer only when Sales or scrap-purchase goes live.
+
+## Do not create
+
+- `FinanceVendor`, `PurchaseSupplier`, `SalesCustomer`, `TransportCustomer`
+- GL copies (`GLSupplier`, `GLCustomer`, `GLVehicle`, `GLMachine`)
+- Business Partner / Party / Person / global Contact / Address engine
+- Location master (until the criteria in the policy doc are met)
+
+## Leave as-is until a module needs migration
+
+- `TmsCustomer` stays Transport-owned. It is not Shared Customer. Do not lift the whole table into Sales.
+- `JobStop` is a job snapshot, not a customer or location master.
+- `Vehicle` = Transport. `Machine` = Maintenance. Finance may reference as cost objects only.
+- `User` = login. `Personnel` = employment. `Driver` = operational role (no User required).
+- `SparePart.unit` stays a string until Inventory is ready to map to `Unit.id`.
+
+Finance still owns Expense / ExpenseLine. See [finance-expense-ssot.mdc](finance-expense-ssot.mdc).

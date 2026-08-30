@@ -10,6 +10,7 @@ import {
   resolveJobListGroup,
   statusFilterForGroup,
 } from "@/shared/transport/job-status-groups"
+import { nextTransportDocumentNo } from "./transport-document-no"
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -124,20 +125,14 @@ export type CreateJobInput = z.infer<typeof createJobSchema>
 export type UpdateJobInput = z.infer<typeof updateJobSchema>
 
 async function generateJobNumber(db: PrismaClient, companyId: string): Promise<string> {
-  const year = new Date().getFullYear()
-  const prefix = `TJ-${year}-`
-
-  const latest = await db.transportJob.findFirst({
-    where: { companyId, jobNumber: { startsWith: prefix } },
-    orderBy: { jobNumber: "desc" },
-    select: { jobNumber: true },
+  return nextTransportDocumentNo("TJ", async (prefix) => {
+    const latest = await db.transportJob.findFirst({
+      where: { companyId, jobNumber: { startsWith: prefix } },
+      orderBy: { jobNumber: "desc" },
+      select: { jobNumber: true },
+    })
+    return latest?.jobNumber
   })
-
-  const nextSeq = latest
-    ? (parseInt(latest.jobNumber.slice(prefix.length), 10) || 0) + 1
-    : 1
-
-  return `${prefix}${String(nextSeq).padStart(5, "0")}`
 }
 
 type JobListFilters = {

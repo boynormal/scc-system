@@ -9,7 +9,7 @@ import {
 import {
   reviewBlocksCreate,
   shouldReopenReviewOnExpenseCancel,
-  sourceReviewKey,
+  sourceReviewDocKey,
   type FinanceSourceReviewStatus,
 } from "./expense-source-review"
 
@@ -34,7 +34,8 @@ function canExpensesWrite(roles: UserRole[]): boolean {
 /**
  * A cost entry from an upstream module that can be linked into an expense line.
  * `sourceDocumentId` identifies the upstream document; `sourceLineId` stays null
- * while a document maps to a single amount (transport today). `groupKey` lets the
+ * while a document maps to a single amount (transport today). `documentNo` is the
+ * human code when the operational module has one. `groupKey` lets the
  * UI group many selectable rows under one heading.
  */
 export type ExpenseSourceDto = TransportCostSource & {
@@ -124,7 +125,7 @@ export async function listUnlinkedExpenseSources(
   const closedReviewSet = new Set(
     reviews
       .filter((r) => reviewBlocksCreate(r.status as FinanceSourceReviewStatus))
-      .map((r) => sourceReviewKey({ sourceType: r.sourceType, sourceDocumentId: r.sourceDocumentId, sourceLineId: r.sourceLineId }))
+      .map((r) => sourceReviewDocKey({ sourceType: r.sourceType, sourceDocumentId: r.sourceDocumentId }))
   )
 
   return {
@@ -132,7 +133,7 @@ export async function listUnlinkedExpenseSources(
       .filter((s) => {
         if (linkedSet.has(sourceKey(s.sourceType, s.sourceId))) return false
         return !closedReviewSet.has(
-          sourceReviewKey({ sourceType: s.sourceType, sourceDocumentId: s.sourceId, sourceLineId: null })
+          sourceReviewDocKey({ sourceType: s.sourceType, sourceDocumentId: s.sourceId })
         )
       })
       .map(toSourceDto),
@@ -208,7 +209,7 @@ export type ResolvedSource = {
   amount: number | null
   branchId: string
   paymentMethod: "cash" | "credit" | null
-  description: string
+  description: string | null
   vehicleId: string
   vehicleLabel: string
 }

@@ -20,6 +20,18 @@ import {
 
 const db = new PrismaClient()
 const TAG = "E2E-VERIFY"
+const E2E_STAMP = Date.now()
+let e2eDocSeq = 0
+
+function e2eRepairNumber() {
+  e2eDocSeq += 1
+  return `RP-E2E-${E2E_STAMP}-${String(e2eDocSeq).padStart(2, "0")}`
+}
+
+function e2eTireNumber() {
+  e2eDocSeq += 1
+  return `TY-E2E-${E2E_STAMP}-${String(e2eDocSeq).padStart(2, "0")}`
+}
 const results: { name: string; expected: string; result: "PASS" | "FAIL" | "SKIP"; note?: string }[] =
   []
 
@@ -333,6 +345,7 @@ async function main() {
         companyId: company.id,
         branchId: branch.id,
         vehicleId: veh.id,
+        repairNumber: e2eRepairNumber(),
         symptom: `${TAG} null cost`,
         status: "closed",
         reportedById: user.id,
@@ -346,6 +359,7 @@ async function main() {
         companyId: company.id,
         branchId: branch.id,
         vehicleId: veh.id,
+        repairNumber: e2eRepairNumber(),
         symptom: `${TAG} zero cost`,
         status: "closed",
         reportedById: user.id,
@@ -359,6 +373,7 @@ async function main() {
         companyId: company.id,
         branchId: branch.id,
         vehicleId: veh.id,
+        repairNumber: e2eRepairNumber(),
         symptom: `${TAG} 8500`,
         status: "closed",
         reportedById: user.id,
@@ -373,6 +388,7 @@ async function main() {
         companyId: company.id,
         branchId: branch.id,
         vehicleId: veh.id,
+        repairNumber: e2eRepairNumber(),
         symptom: `${TAG} open`,
         status: "reported",
         reportedById: user.id,
@@ -383,6 +399,7 @@ async function main() {
         companyId: company.id,
         branchId: branch.id,
         vehicleId: veh.id,
+        tireNumber: e2eTireNumber(),
         workDate: closedAt,
         wheels: [{ position: 1, workType: "change" }],
         cost: null,
@@ -756,6 +773,7 @@ async function main() {
         companyId: company.id,
         branchId: branch.id,
         vehicleId: veh.id,
+        repairNumber: e2eRepairNumber(),
         symptom: `${TAG} no-expense`,
         status: "closed",
         reportedById: user.id,
@@ -846,6 +864,7 @@ async function main() {
         companyId: company.id,
         branchId: otherBranch.id,
         vehicleId: veh.id,
+        repairNumber: e2eRepairNumber(),
         symptom: `${TAG} hidden`,
         status: "closed",
         reportedById: user.id,

@@ -19,7 +19,7 @@ function refineCostWithPaymentMethod(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["paymentMethod"],
-      message: "กรุณาเลือกวิธีจ่ายเมื่อมีราคาซ่อม",
+      message: "กรุณาเลือกวิธีจ่ายเมื่อมียอดอ้างอิง",
     })
   }
 }
@@ -80,18 +80,17 @@ async function assertVehiclePermission(
   if (!ok) throw new ForbiddenError()
 }
 
-function assertCostRequiredToClose(params: {
+/** Optional reference baht — not a Finance Expense. Required only when amount > 0. */
+function assertReferenceAmountIfPresent(params: {
   repairCost: number | null
   paymentMethod: TransportPaymentMethodOption | null
 }) {
-  if (params.repairCost == null || Number.isNaN(params.repairCost)) {
-    throw new ValidationError("กรุณาระบุค่าใช้จ่ายก่อนปิดงาน")
-  }
+  if (params.repairCost == null || Number.isNaN(params.repairCost)) return
   if (params.repairCost < 0) {
-    throw new ValidationError("ราคาซ่อมต้องเป็นตัวเลขที่ไม่ติดลบ")
+    throw new ValidationError("ยอดอ้างอิงต้องเป็นตัวเลขที่ไม่ติดลบ")
   }
   if (params.repairCost > 0 && !params.paymentMethod) {
-    throw new ValidationError("กรุณาเลือกวิธีจ่ายเมื่อมีราคาซ่อม")
+    throw new ValidationError("กรุณาเลือกวิธีจ่ายเมื่อมียอดอ้างอิง")
   }
 }
 
@@ -393,7 +392,7 @@ export async function closeRepair(
   }
 
   if (params.repairCost != null && (Number.isNaN(params.repairCost) || params.repairCost < 0)) {
-    throw new ValidationError("ราคาซ่อมต้องเป็นตัวเลขที่ไม่ติดลบ")
+    throw new ValidationError("ยอดอ้างอิงต้องเป็นตัวเลขที่ไม่ติดลบ")
   }
 
   const finalCost =
@@ -402,7 +401,7 @@ export async function closeRepair(
       : repair.repairCost != null
         ? Number(repair.repairCost)
         : null
-  assertCostRequiredToClose({
+  assertReferenceAmountIfPresent({
     repairCost: finalCost,
     paymentMethod: repair.paymentMethod,
   })
@@ -468,7 +467,7 @@ export const updateRepairSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["paymentMethod"],
-        message: "กรุณาเลือกวิธีจ่ายเมื่อมีราคาซ่อม",
+        message: "กรุณาเลือกวิธีจ่ายเมื่อมียอดอ้างอิง",
       })
     }
   })
@@ -520,7 +519,7 @@ export async function updateRepair(
     if (statusChanged && repair.status !== "inspection") {
       throw new ValidationError("ปิดงานได้เฉพาะใบที่สถานะตรวจสอบเท่านั้น")
     }
-    assertCostRequiredToClose({
+    assertReferenceAmountIfPresent({
       repairCost: nextCost,
       paymentMethod: nextPayment,
     })

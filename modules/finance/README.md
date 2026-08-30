@@ -10,7 +10,7 @@
 - `/finance` ภาพรวม (การ์ดสรุปตามสถานะ)
 - `/finance/expenses` รายการค่าใช้จ่าย (แสดงประเภทบรรทัดแรก + "และอีก n")
 - `/finance/expenses/new` · `/finance/expenses/[id]` · `/finance/expenses/[id]/edit` — ฟอร์มหน้าเต็ม + ตารางบรรทัด
-- `/finance/sources` ผูกจากเอกสารต้นทาง — เลือกได้หลายรายการ (สาขาเดียวกัน) แล้ว "สร้างบิลจากที่เลือก"
+- `/finance/sources` คิวตรวจสอบจากโมดูล (ซ่อมปิด / ยางทุกใบ / ใบงานเสร็จ) — มีค่าใช้จ่าย หรือไม่มีค่าใช้จ่าย
 - `/finance/reports` รายงานสรุปตามโมดูล/สาขา/หน่วยงาน
 - `/finance/master-data` ประเภทค่าใช้จ่าย + หมวด + กระบวนการ + หน่วยงาน (Cost Center)
 
@@ -26,7 +26,7 @@ API: `app/api/finance/**` (thin adapter → application services)
 
 ## ล็อกบรรทัดตาม `sourceKind`
 - **MANUAL** (ไม่มีต้นทาง): แก้ได้ทุกช่อง
-- **MODULE / IMPORT** (ผูกต้นทาง): จำนวน/หน่วย/ราคา/ยอด และฟิลด์ต้นทางถูกล็อก — เซิร์ฟเวอร์ re-derive ยอดจากโมดูลต้นทางเสมอ; แก้ได้เฉพาะประเภท/หน่วยงาน/กระบวนการ/วัตถุต้นทุน/รายละเอียด
+- **MODULE / IMPORT** (ผูกต้นทาง): ฟิลด์ต้นทางถูกล็อก — ยอดถูกล็อกจากต้นทางเฉพาะเมื่อยอดอ้างอิง `> 0`; ถ้า `null`/`0` ให้ Finance กรอกเอง; แก้ได้เฉพาะประเภท/หน่วยงาน/กระบวนการ/วัตถุต้นทุน/รายละเอียด
 
 ## กันผูกต้นทางซ้ำ (Postgres)
 สอง partial unique index บน `expense_lines` (สร้างด้วย SQL เพราะ Prisma ประกาศ partial unique ไม่ได้):
@@ -34,7 +34,9 @@ API: `app/api/finance/**` (thin adapter → application services)
 - `expense_lines_source_line_uniq` — เพิ่ม `source_line_id` `WHERE ... AND source_line_id IS NOT NULL` (เผื่อเอกสารหลายบรรทัดในอนาคต)
 
 บิลมือ (ต้นทางเป็น null) ไม่เข้า index ทั้งคู่ จึงซ้ำได้ไม่จำกัด แอปเช็คซ้ำเพื่อข้อความไทย ส่วนตัวกัน race คือ unique ที่ DB
-เมื่อบิลถูกยกเลิก/soft-delete จะตั้ง `source_link_active=false` เพื่อปล่อยต้นทางกลับเข้าคิวโดยยังเก็บประวัติ
+เมื่อบิลถูกยกเลิก/soft-delete จะตั้ง `source_link_active=false` แล้วตั้ง review `EXPENSE_CREATED` กลับ `PENDING` (ไม่แตะ `NO_EXPENSE`)
+
+คิว `/finance/sources` อ่านจาก adapter ขนส่ง + `finance_source_reviews` (`PENDING` ถ้ายังไม่มีแถว). `NO_EXPENSE` ปิดคิวโดยไม่สร้างบิล 0 บาท
 
 ## สถานะเอกสาร (`ExpenseStatus`)
 `DRAFT → PENDING → APPROVED → PAID` และแยก `REJECTED` / `CANCELLED`
@@ -102,4 +104,9 @@ Chart of Accounts / GL FK / journal / posting ยังเลื่อนออ�
 ### รายงานหลัก
 Process × ExpenseType — ตอบว่าแต่ละกระบวนการใช้ค่าใช้จ่ายประเภทใด และเป็นจำนวนเท่าไร
 คลิกแถว/เซลล์ไปที่ `/finance/expenses` พร้อมฟิลเตอร์เดิม รายละเอียดบิลยังอยู่ที่ `/finance/expenses/[id]`
+
+## Expense SSOT
+
+Finance เป็นเจ้าของ Expense แห่งเดียว — manual และ source รวมในชุดข้อมูลเดียวกัน  
+กฎและขอบเขต: [`FINANCE-EXPENSE-OWNERSHIP.md`](./FINANCE-EXPENSE-OWNERSHIP.md)
 

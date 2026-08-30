@@ -46,13 +46,13 @@ export function DashboardCharts({
       </div>
 
       <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-4">แนวโน้มค่าใช้จ่ายซ่อมบำรุง</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">แนวโน้มงานซ่อมบำรุง</h2>
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={costTrendData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
-            <YAxis tickFormatter={(v: number) => `฿${v}`} />
-            <Tooltip formatter={(v: number) => [`฿${v}`, "ค่าใช้จ่าย"]} />
+            <YAxis />
+            <Tooltip formatter={(v: number) => [`${v}`, "จำนวนงาน"]} />
             <Line type="monotone" dataKey="cost" stroke="#3b82f6" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>

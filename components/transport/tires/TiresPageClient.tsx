@@ -58,9 +58,9 @@ type LayoutInfo = {
 }
 
 function formatCost(value: string | number | null | undefined): string {
-  if (value == null || value === "") return "—"
+  if (value == null || value === "") return "ยังไม่มียอดอ้างอิง"
   const n = typeof value === "number" ? value : Number(value)
-  if (Number.isNaN(n)) return "—"
+  if (!Number.isFinite(n) || n <= 0) return "ยังไม่มียอดอ้างอิง"
   return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
@@ -346,7 +346,7 @@ export function TiresPageClient() {
     if (costRaw) {
       costValue = Number(costRaw.replace(/,/g, ""))
       if (Number.isNaN(costValue) || costValue < 0) {
-        alert("ค่าใช้จ่ายไม่ถูกต้อง")
+        alert("ยอดอ้างอิงไม่ถูกต้อง")
         return null
       }
     }
@@ -556,14 +556,15 @@ export function TiresPageClient() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">ค่าใช้จ่าย (รวมรอบ)</label>
+            <label className="mb-1 block text-xs text-muted-foreground">ยอดอ้างอิง (บาท)</label>
             <GlassInput
               value={cost}
               onChange={(e) => setCost(e.target.value)}
-              placeholder="เช่น 14500"
+              placeholder="ถ้าทราบ เพื่อนำเข้า Finance ภายหลัง"
               className="h-9"
             />
           </div>
+          {Number(cost.replace(/,/g, "")) > 0 ? (
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">วิธีจ่าย</label>
             <div className="flex gap-4 text-sm">
@@ -587,6 +588,7 @@ export function TiresPageClient() {
               </label>
             </div>
           </div>
+          ) : null}
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">หมายเหตุ</label>
             <GlassInput
@@ -672,7 +674,7 @@ export function TiresPageClient() {
                     <th className="px-4 py-3 font-semibold text-muted-foreground">รถ</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">ตำแหน่ง</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">ประเภท</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">ค่าใช้จ่าย</th>
+                    <th className="px-4 py-3 font-semibold text-muted-foreground">ยอดอ้างอิง</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">วิธีจ่าย</th>
                     <th className="px-4 py-3 font-semibold text-muted-foreground">หมายเหตุ</th>
                     <th className="px-4 py-3 w-24"></th>

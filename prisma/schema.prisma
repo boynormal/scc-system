@@ -136,6 +136,7 @@ model Company {
   costCenters             CostCenter[]
   expenses                Expense[]
   units                   Unit[]
+  financeSourceReviews    FinanceSourceReview[]
 
   @@map("companies")
 }
@@ -256,6 +257,7 @@ model User {
   expensesApproved        Expense[]               @relation("ExpenseApprovedBy")
   expensesPaid            Expense[]               @relation("ExpensePaidBy")
   expenseAttachments      ExpenseAttachment[]     @relation("ExpenseAttachmentUploader")
+  financeSourceReviews    FinanceSourceReview[]   @relation("FinanceSourceReviewReviewedBy")
 
   // Phase B decision (2026-07-23): email stays globally @unique permanently — login
   // may use email or username; both are globally unique (no company picker).
@@ -1385,6 +1387,12 @@ enum ExpenseSourceKind {
   IMPORT
 }
 
+enum FinanceSourceReviewStatus {
+  PENDING
+  EXPENSE_CREATED
+  NO_EXPENSE
+}
+
 enum ExpenseLinePricingMode {
   QTY_PRICE
   AMOUNT
@@ -1696,4 +1704,30 @@ model ExpenseAttachment {
 
   @@index([expenseId])
   @@map("expense_attachments")
+}
+
+// Finance-owned review of an operational source. Missing row = PENDING.
+// Uniqueness for null source_line_id is a partial unique index in SQL
+// (same pattern as expense_lines).
+model FinanceSourceReview {
+  id               String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String                     @map("company_id") @db.Uuid
+  sourceModule     ExpenseSourceModule        @map("source_module")
+  sourceType       String                     @map("source_type") @db.VarChar(50)
+  sourceDocumentId String                     @map("source_document_id") @db.VarChar(64)
+  sourceLineId     String?                    @map("source_line_id") @db.VarChar(64)
+  status           FinanceSourceReviewStatus
+  reason           String?
+  reviewedById     String?                    @map("reviewed_by_id") @db.Uuid
+  reviewedAt       DateTime?                  @map("reviewed_at") @db.Timestamptz
+  createdAt        DateTime                   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime                   @updatedAt @map("updated_at") @db.Timestamptz
+
+  company    Company @relation(fields: [companyId], references: [id])
+  reviewedBy User?   @relation("FinanceSourceReviewReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([companyId])
+  @@index([companyId, sourceModule, sourceType, sourceDocumentId])
+  @@index([status])
+  @@map("finance_source_reviews")
 }

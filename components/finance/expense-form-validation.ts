@@ -67,7 +67,7 @@ export function validateLineDraft(
   extras?: { locked?: boolean }
 ): string | null {
   if (!draft.expenseTypeId || !type) return "กรุณาเลือกประเภทค่าใช้จ่าย"
-  const locked = extras?.locked ?? draft.sourceKind !== "MANUAL"
+  const locked = extras?.locked ?? Boolean(draft.sourceAmountLocked)
 
   if (type.requiresCostCenter && !draft.costCenterId && !type.defaultCostCenterId) {
     return "ต้องระบุหน่วยงานต้นทุน"

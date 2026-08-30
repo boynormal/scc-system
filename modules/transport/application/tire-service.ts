@@ -93,7 +93,7 @@ export const createTireLogSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["paymentMethod"],
-        message: "กรุณาเลือกวิธีจ่ายเมื่อมีค่าใช้จ่าย",
+        message: "กรุณาเลือกวิธีจ่ายเมื่อมียอดอ้างอิง",
       })
     }
     const positions = data.wheels.map((w) => w.position)
@@ -120,7 +120,7 @@ export const updateTireLogSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["paymentMethod"],
-        message: "กรุณาเลือกวิธีจ่ายเมื่อมีค่าใช้จ่าย",
+        message: "กรุณาเลือกวิธีจ่ายเมื่อมียอดอ้างอิง",
       })
     }
     if (data.wheels) {

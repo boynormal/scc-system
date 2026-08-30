@@ -118,14 +118,10 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
     if (costRaw !== "") {
       const n = Number(costRaw)
       if (Number.isNaN(n) || n < 0) {
-        setError("ราคาซ่อมต้องเป็นตัวเลขที่ไม่ติดลบ")
+        setError("ยอดอ้างอิงต้องเป็นตัวเลขที่ไม่ติดลบ")
         return
       }
       costValue = n
-    }
-    if (status === "closed" && costValue == null) {
-      setError("กรุณาระบุค่าใช้จ่ายก่อนปิดงาน")
-      return
     }
     if (costValue != null && costValue > 0 && !paymentMethod) {
       setError("กรุณาเลือกวิธีจ่าย")
@@ -207,17 +203,19 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">ราคาซ่อม (บาท)</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">ยอดอ้างอิง (บาท)</label>
             <input
               type="number"
               min={0}
               step="0.01"
               value={repairCost}
               onChange={(e) => setRepairCost(e.target.value)}
+              placeholder="ถ้าทราบ เพื่อนำเข้า Finance ภายหลัง"
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
 
+          {Number(repairCost) > 0 ? (
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">วิธีจ่าย</label>
             <div className="flex gap-4 text-sm">
@@ -241,6 +239,7 @@ export function EditRepairModal({ open, repair, onSuccess, onCancel }: Props) {
               </label>
             </div>
           </div>
+          ) : null}
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">สถานะ *</label>

@@ -63,10 +63,21 @@ export {
   listUnlinkedExpenseSources,
   assertSourceLinesNotLinked,
   resolveTransportSources,
+  markSourceNoExpense,
+  markReviewsExpenseCreated,
+  reopenReviewsOnExpenseCancel,
   type ExpenseSourceDto,
   type SourceIdentity,
   type ResolvedSource,
 } from "./application/expense-source-service"
+
+export {
+  isOpenInReviewQueue,
+  reviewBlocksCreate,
+  shouldReopenReviewOnExpenseCancel,
+  sourceReviewKey,
+  FINANCE_SOURCE_REVIEW_STATUSES,
+} from "./application/expense-source-review"
 
 export {
   getExpenseReport,

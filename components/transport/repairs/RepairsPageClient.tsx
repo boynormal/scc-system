@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { useTranslations } from "next-intl"
 import {
   Loader2,
@@ -99,11 +100,17 @@ function formatYmdShort(ymd: string) {
   return `${d}/${m}/${y.slice(2)}`
 }
 
-function formatCostDisplay(value: string | number | null | undefined): string {
-  if (value == null || value === "") return "—"
+function referenceAmount(value: string | number | null | undefined): number | null {
+  if (value == null || value === "") return null
   const n = typeof value === "number" ? value : Number(value)
-  if (Number.isNaN(n)) return "—"
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  if (!Number.isFinite(n) || n <= 0) return null
+  return n
+}
+
+function formatReferenceAmount(value: string | number | null | undefined): string {
+  const n = referenceAmount(value)
+  if (n == null) return "ยังไม่มียอดอ้างอิง"
+  return `${n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} บาท`
 }
 
 export function RepairsPageClient() {
@@ -421,9 +428,11 @@ export function RepairsPageClient() {
               item.vehicle.name.trim() !== plate.trim()
                 ? item.vehicle.name
                 : null
-            const paymentLabel = item.paymentMethod
-              ? TRANSPORT_PAYMENT_METHOD_LABELS[item.paymentMethod]
-              : null
+            const refAmount = referenceAmount(item.repairCost)
+            const paymentLabel =
+              refAmount != null && item.paymentMethod
+                ? TRANSPORT_PAYMENT_METHOD_LABELS[item.paymentMethod]
+                : null
 
             return (
             <GlassCard
@@ -477,9 +486,9 @@ export function RepairsPageClient() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-1.5">
-                    <p className="text-[11px] font-medium text-muted-foreground">ค่าใช้จ่าย</p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatCostDisplay(item.repairCost)} บาท
+                    <p className="text-[11px] font-medium text-muted-foreground">ยอดอ้างอิง</p>
+                    <p className={cn("text-sm font-semibold", refAmount != null ? "text-foreground" : "text-muted-foreground")}>
+                      {formatReferenceAmount(item.repairCost)}
                     </p>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-1.5">
@@ -496,7 +505,7 @@ export function RepairsPageClient() {
                         {paymentLabel}
                       </span>
                     ) : (
-                      <p className="text-sm font-medium text-muted-foreground">ไม่ระบุ</p>
+                      <p className="text-sm font-medium text-muted-foreground">—</p>
                     )}
                   </div>
                 </div>
@@ -589,16 +598,7 @@ export function RepairsPageClient() {
                     <GlassButton
                       size="sm"
                       onClick={() => runAction(item.id, "close")}
-                      disabled={
-                        actionId === item.id ||
-                        item.repairCost == null ||
-                        item.repairCost === ""
-                      }
-                      title={
-                        item.repairCost == null || item.repairCost === ""
-                          ? "กรุณาระบุค่าใช้จ่ายก่อนปิดงาน"
-                          : undefined
-                      }
+                      disabled={actionId === item.id}
                       icon={
                         actionId === item.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -609,6 +609,14 @@ export function RepairsPageClient() {
                     >
                       ปิดงาน
                     </GlassButton>
+                  )}
+                  {item.status === "closed" && (
+                    <Link
+                      href="/finance/expenses/new"
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-emerald-800 hover:bg-muted dark:text-emerald-200"
+                    >
+                      บันทึกค่าใช้จ่ายใน Finance
+                    </Link>
                   )}
                 </div>
               </div>

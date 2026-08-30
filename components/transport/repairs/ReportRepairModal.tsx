@@ -104,7 +104,7 @@ export function ReportRepairModal({
     if (costRaw !== "") {
       const n = Number(costRaw)
       if (Number.isNaN(n) || n < 0) {
-        setError("ราคาซ่อมต้องเป็นตัวเลขที่ไม่ติดลบ")
+        setError("ยอดอ้างอิงต้องเป็นตัวเลขที่ไม่ติดลบ")
         return
       }
       costValue = n
@@ -205,18 +205,19 @@ export function ReportRepairModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">ราคาซ่อม (บาท)</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">ยอดอ้างอิง (บาท)</label>
             <input
               type="number"
               min={0}
               step="0.01"
               value={repairCost}
               onChange={(e) => setRepairCost(e.target.value)}
-              placeholder="ถ้าทราบราคาแล้ว"
+              placeholder="ถ้าทราบ เพื่อนำเข้า Finance ภายหลัง"
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
 
+          {Number(repairCost) > 0 ? (
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">วิธีจ่าย</label>
             <div className="flex gap-4 text-sm">
@@ -239,8 +240,8 @@ export function ReportRepairModal({
                 เครดิต
               </label>
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">ใช้เมื่อระบุราคาซ่อม</p>
           </div>
+          ) : null}
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">

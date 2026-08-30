@@ -1,0 +1,34 @@
+---
+description: Finance is the single source of truth for Expense (ownership + architecture)
+globs: "modules/finance/**/*,components/finance/**/*,app/**/finance/**/*,prisma/schema.prisma"
+alwaysApply: false
+---
+
+# Finance Expense — single source of truth
+
+Product decision: [modules/finance/FINANCE-EXPENSE-OWNERSHIP.md](modules/finance/FINANCE-EXPENSE-OWNERSHIP.md)
+
+Finance owns **all financial Expense records**. Operational modules store events (jobs, repairs, stock moves), not a second Expense.
+
+## Ten locked rules
+
+1. Finance is the owner of Expense.
+2. Finance is the single source of truth for financial Expense.
+3. Manual Expense must be creatable with no source (`sourceKind=MANUAL`, source fields null).
+4. Operational modules store operational data, not financial Expense.
+5. Do not add `TransportExpense` / `MaintenanceExpense` / other per-module Expense tables.
+6. Source is an optional reference / convenience integration.
+7. Source is not a dependency of create/PATCH.
+8. Finance must not query another module's tables directly — use that module's application service.
+9. Cost dimensions (type, CC, process, cost object, unit) say what the money is for. Phase 4 validation stays locked.
+10. Approval, payment (bill status), and expense reporting live on Finance Expense.
+
+## Do not
+
+- Force a source before creating an Expense.
+- Wait for Maintenance (or any module) before Finance can record spend.
+- Change Phase 4 create/PATCH / `assertLineDimensions` to "support" this architecture — it already holds.
+- Add a new source adapter or GL / CoA / journal without an explicit product decision.
+- Treat `/finance/sources` as the company expense list, or claim "all costs are recorded" when the review queue is empty. The page is a Finance review queue of operational events, not expenses.
+
+Keep `expense-phase4-acceptance.test.ts` green. Keep reporting grain as `SUM(ExpenseLine.netAmount)` of matching lines.

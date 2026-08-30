@@ -3,8 +3,11 @@ import { Prisma, type PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { generateExpenseNo } from "./generate-expense-no"
+import { isLockedReferenceAmount } from "@/modules/transport"
 import {
   assertSourceLinesNotLinked,
+  markReviewsExpenseCreated,
+  reopenReviewsOnExpenseCancel,
   resolveTransportSources,
   type SourceIdentity,
 } from "./expense-source-service"
@@ -540,11 +543,18 @@ async function resolveBill(
       if (!resolved) {
         throw new ValidationError("ไม่พบเอกสารต้นทาง หรือถูกแก้ไข/ผูกไปแล้ว")
       }
-      // Locked fields come from the source, not the client.
-      pricingMode = "AMOUNT"
-      quantity = 1
-      amount = resolved.amount
-      unitPrice = resolved.amount
+      if (isLockedReferenceAmount(resolved.amount)) {
+        // Locked fields come from the source, not the client.
+        pricingMode = "AMOUNT"
+        quantity = 1
+        amount = resolved.amount as number
+        unitPrice = resolved.amount as number
+      } else if (pricingMode === "QTY_PRICE") {
+        amount = round2(quantity * unitPrice)
+      } else {
+        quantity = quantity || 1
+        unitPrice = amount
+      }
     } else if (pricingMode === "QTY_PRICE") {
       amount = round2(quantity * unitPrice)
     } else {
@@ -951,6 +961,11 @@ export async function createExpense(
       },
       include: expenseInclude,
     })
+    await markReviewsExpenseCreated(db, {
+      companyId: params.companyId,
+      identities: bill.identities,
+      userId: params.userId,
+    })
     return { data: serializeExpense(row) }
   } catch (err) {
     if (isUniqueViolation(err)) {
@@ -1027,6 +1042,10 @@ export async function updateExpense(
             lines: { create: bill.lines.map((l) => toLineCreate(params.companyId, l)) },
           },
         })
+      })
+      await markReviewsExpenseCreated(db, {
+        companyId: params.companyId,
+        identities: bill.identities,
       })
     } else {
       if (params.input.vendorId === null) {
@@ -1144,11 +1163,33 @@ export async function deleteExpense(
     select: { id: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  const linkedLines = await db.expenseLine.findMany({
+    where: { expenseId: params.id, sourceDocumentId: { not: null } },
+    select: {
+      sourceModule: true,
+      sourceType: true,
+      sourceDocumentId: true,
+      sourceLineId: true,
+    },
+  })
   // Release any source links so the upstream documents can be linked again.
   await db.$transaction([
     db.expenseLine.updateMany({ where: { expenseId: params.id }, data: { sourceLinkActive: false } }),
     db.expense.update({ where: { id: params.id }, data: { deletedAt: new Date(), status: "CANCELLED" } }),
   ])
+  await reopenReviewsOnExpenseCancel(db, {
+    companyId: params.companyId,
+    identities: linkedLines
+      .filter((l): l is typeof l & { sourceModule: string; sourceDocumentId: string } =>
+        Boolean(l.sourceModule && l.sourceDocumentId)
+      )
+      .map((l) => ({
+        sourceModule: l.sourceModule,
+        sourceType: l.sourceType,
+        sourceDocumentId: l.sourceDocumentId,
+        sourceLineId: l.sourceLineId,
+      })),
+  })
   return { data: { id: params.id } }
 }
 

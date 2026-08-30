@@ -20,7 +20,7 @@ export function ExpenseListView({
     <div className="space-y-6">
       <FinancePageHeader
         title="ค่าใช้จ่าย"
-        description="บันทึกและติดตามค่าใช้จ่ายและต้นทุนทั้งหมด"
+        description="ทุกบิลของบริษัท — บันทึกเองและจากต้นทางโมดูล"
         actions={
           perms.canCreate ? (
             <Link

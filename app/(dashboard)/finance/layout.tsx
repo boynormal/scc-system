@@ -18,7 +18,7 @@ export default async function FinanceLayout({ children }: { children: React.Reac
   const tabs = [
     canExpenses && { href: "/finance", label: "ภาพรวม", exact: true },
     canExpenses && { href: "/finance/expenses", label: "ค่าใช้จ่าย", exact: false },
-    canExpenses && { href: "/finance/sources", label: "ผูกจากต้นทาง", exact: false },
+    canExpenses && { href: "/finance/sources", label: "ต้นทางโมดูล", exact: false },
     canExpenses && { href: "/finance/reports", label: "รายงาน", exact: false },
     canMasters && { href: "/finance/master-data", label: "ข้อมูลพื้นฐาน", exact: false },
   ].filter(Boolean) as { href: string; label: string; exact: boolean }[]

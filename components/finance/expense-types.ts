@@ -42,6 +42,8 @@ export type LineDraft = {
   sourceType: string | null
   sourceDocumentId: string | null
   sourceLineId: string | null
+  /** True only when the operational reference amount is > 0. Optional so locked Phase 4 drafts stay valid. */
+  sourceAmountLocked?: boolean
 }
 
 export type ExpenseLineDto = {
@@ -199,7 +201,7 @@ export type CostCenterRow = {
 }
 
 export type ExpenseSourceRow = {
-  sourceType: "TRANSPORT_REPAIR" | "TRANSPORT_TIRE"
+  sourceType: "TRANSPORT_REPAIR" | "TRANSPORT_TIRE" | "TRANSPORT_JOB"
   sourceId: string
   sourceKind: "IMPORT"
   sourceModule: "TRANSPORT"
@@ -209,12 +211,13 @@ export type ExpenseSourceRow = {
   date: string
   vehicleId: string
   vehicleLabel: string
-  amount: number
+  amount: number | null
   paymentMethod: "cash" | "credit" | null
   description: string
-  suggestedCostObjectType: "VEHICLE"
+  suggestedCostObjectType: "VEHICLE" | "JOB"
   groupKey: string
   groupLabel: string
+  reviewStatus?: "PENDING"
 }
 
 export type FinancePerms = {

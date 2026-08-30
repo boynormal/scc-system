@@ -45,6 +45,7 @@ export function newLineDraft(): LineDraft {
     sourceType: null,
     sourceDocumentId: null,
     sourceLineId: null,
+    sourceAmountLocked: false,
   }
 }
 
@@ -100,7 +101,7 @@ export function ExpenseLineDialog({
   const [draft, setDraft] = useState<LineDraft>(initial)
   const [error, setError] = useState<string | null>(null)
 
-  const locked = draft.sourceKind !== "MANUAL"
+  const locked = Boolean(draft.sourceAmountLocked)
   const selectedType = types.find((t) => t.id === draft.expenseTypeId)
   const legacy = isLegacyUnrestricted(selectedType)
 
@@ -187,6 +188,11 @@ export function ExpenseLineDialog({
         {locked && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
             บรรทัดนี้ผูกจากต้นทาง ({sourceModuleLabel(draft.sourceModule)}) — จำนวน/ราคา/ยอดถูกล็อกจากเอกสารต้นทาง แก้ได้เฉพาะประเภท หน่วยงาน กระบวนการ วัตถุต้นทุน และรายละเอียด
+          </p>
+        )}
+        {draft.sourceKind !== "MANUAL" && !locked && (
+          <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">
+            บรรทัดนี้ผูกจากต้นทาง ({sourceModuleLabel(draft.sourceModule)}) — ยังไม่มียอดอ้างอิง ให้ Finance กรอกจำนวนเงินเอง
           </p>
         )}
         {error && (

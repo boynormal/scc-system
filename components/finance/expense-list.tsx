@@ -233,7 +233,7 @@ export function ExpenseList({
           </span>
           <p className="mt-4 text-sm font-medium text-foreground">ยังไม่มีรายการค่าใช้จ่าย</p>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            เริ่มบันทึกค่าใช้จ่าย หรือผูกจากเอกสารต้นทางในแท็บ &ldquo;ผูกจากต้นทาง&rdquo;
+            เริ่มบันทึกค่าใช้จ่าย หรือนำเข้าจากแท็บ &ldquo;ต้นทางโมดูล&rdquo;
           </p>
           {perms.canCreate && (
             <Link

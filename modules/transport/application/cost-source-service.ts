@@ -1,21 +1,42 @@
 import type { PrismaClient } from "@prisma/client"
 
-export type TransportCostSourceType = "TRANSPORT_REPAIR" | "TRANSPORT_TIRE"
+export type TransportCostSourceType = "TRANSPORT_REPAIR" | "TRANSPORT_TIRE" | "TRANSPORT_JOB"
 
 export type TransportCostSource = {
   sourceType: TransportCostSourceType
-  /** Upstream document id (repair/tire log id). */
+  /** Upstream document id (repair / tire log / job id). */
   sourceId: string
   branchId: string
   date: string
   vehicleId: string
   vehicleLabel: string
-  amount: number
+  /** Reference amount only. `null` ≠ `0`. Not an Expense. */
+  amount: number | null
   paymentMethod: "cash" | "credit" | null
   description: string
 }
 
-const TAKE_LIMIT = 300
+export const TAKE_LIMIT = 300
+
+/** Keep `null` and `0` distinct. Non-finite values become null. */
+export function toReferenceAmount(value: unknown): number | null {
+  if (value == null || value === "") return null
+  const n = typeof value === "number" ? value : Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+/** Lock IMPORT amount only when the operational reference is strictly > 0. */
+export function isLockedReferenceAmount(amount: number | null): boolean {
+  return amount != null && amount > 0
+}
+
+export function jobSourceIdentity(jobId: string): {
+  sourceType: "TRANSPORT_JOB"
+  sourceDocumentId: string
+  sourceLineId: null
+} {
+  return { sourceType: "TRANSPORT_JOB", sourceDocumentId: jobId, sourceLineId: null }
+}
 
 type RepairRow = {
   id: string
@@ -38,7 +59,21 @@ type TireRow = {
   vehicle: { id: string; plateNumber: string } | null
 }
 
-function mapRepair(r: RepairRow): TransportCostSource {
+type JobRow = {
+  id: string
+  branchId: string
+  jobNumber: string
+  customerName: string | null
+  scheduledDate: Date | null
+  createdAt: Date
+  updatedAt: Date
+  assignment: {
+    vehicleId: string
+    vehicle: { id: string; plateNumber: string } | null
+  } | null
+}
+
+export function mapRepair(r: RepairRow): TransportCostSource {
   return {
     sourceType: "TRANSPORT_REPAIR",
     sourceId: r.id,
@@ -46,13 +81,13 @@ function mapRepair(r: RepairRow): TransportCostSource {
     date: r.reportedAt.toISOString(),
     vehicleId: r.vehicleId,
     vehicleLabel: r.vehicle?.plateNumber ?? "-",
-    amount: r.repairCost != null ? Number(r.repairCost) : 0,
+    amount: toReferenceAmount(r.repairCost),
     paymentMethod: r.paymentMethod ?? null,
     description: `ค่าซ่อม: ${r.symptom}`.slice(0, 255),
   }
 }
 
-function mapTire(t: TireRow): TransportCostSource {
+export function mapTire(t: TireRow): TransportCostSource {
   return {
     sourceType: "TRANSPORT_TIRE",
     sourceId: t.id,
@@ -60,74 +95,106 @@ function mapTire(t: TireRow): TransportCostSource {
     date: t.workDate.toISOString(),
     vehicleId: t.vehicleId,
     vehicleLabel: t.vehicle?.plateNumber ?? "-",
-    amount: t.cost != null ? Number(t.cost) : 0,
+    amount: toReferenceAmount(t.cost),
     paymentMethod: t.paymentMethod ?? null,
     description: "ค่ายาง",
   }
 }
 
+/** 1 completed job = 1 source. Stops are not source lines. */
+export function mapJob(j: JobRow): TransportCostSource {
+  const date = j.scheduledDate ?? j.updatedAt ?? j.createdAt
+  const customer = j.customerName?.trim()
+  return {
+    sourceType: "TRANSPORT_JOB",
+    sourceId: j.id,
+    branchId: j.branchId,
+    date: date.toISOString(),
+    vehicleId: j.assignment?.vehicleId ?? "",
+    vehicleLabel: j.assignment?.vehicle?.plateNumber ?? "-",
+    amount: null,
+    paymentMethod: null,
+    description: `ใบงาน ${j.jobNumber}${customer ? ` — ${customer}` : ""}`.slice(0, 255),
+  }
+}
+
 const vehicleSelect = { select: { id: true, plateNumber: true } } as const
+const jobInclude = { assignment: { include: { vehicle: vehicleSelect } } } as const
+
+function branchWhere(branchIds: string[] | null) {
+  if (branchIds === null) return {}
+  return {
+    branchId: {
+      in: branchIds.length ? branchIds : ["00000000-0000-0000-0000-000000000000"],
+    },
+  }
+}
 
 /**
- * Read-only list of transport cost entries (repair + tire logs with a cost > 0),
- * exposed so the Finance module can reference them without querying transport
- * tables directly. Callers are responsible for permission checks; pass
- * `branchIds = null` for admin (all branches) or a scoped list otherwise.
+ * Finance-ready operational events for the review queue:
+ * closed repairs, every tire log, completed jobs.
+ * Amount is not an eligibility filter. Callers apply RBAC + review exclusion.
  */
 export async function listTransportCostSources(
   db: PrismaClient,
   params: { companyId: string; branchIds: string[] | null }
 ): Promise<TransportCostSource[]> {
-  const branchWhere =
-    params.branchIds === null
-      ? {}
-      : {
-          branchId: {
-            in: params.branchIds.length ? params.branchIds : ["00000000-0000-0000-0000-000000000000"],
-          },
-        }
+  const scoped = branchWhere(params.branchIds)
 
-  const [repairs, tires] = await Promise.all([
+  const [repairs, tires, jobs] = await Promise.all([
     db.transportRepairLog.findMany({
-      where: { companyId: params.companyId, repairCost: { gt: 0 }, ...branchWhere },
+      where: { companyId: params.companyId, status: "closed", ...scoped },
       include: { vehicle: vehicleSelect },
       orderBy: { reportedAt: "desc" },
       take: TAKE_LIMIT,
     }),
     db.transportTireLog.findMany({
-      where: { companyId: params.companyId, cost: { gt: 0 }, ...branchWhere },
+      where: { companyId: params.companyId, ...scoped },
       include: { vehicle: vehicleSelect },
       orderBy: { workDate: "desc" },
       take: TAKE_LIMIT,
     }),
+    db.transportJob.findMany({
+      where: { companyId: params.companyId, status: "completed", ...scoped },
+      include: jobInclude,
+      orderBy: { updatedAt: "desc" },
+      take: TAKE_LIMIT,
+    }),
   ])
 
-  return [...repairs.map(mapRepair), ...tires.map(mapTire)].sort((a, b) => (a.date < b.date ? 1 : -1))
+  return [...repairs.map(mapRepair), ...tires.map(mapTire), ...jobs.map(mapJob)].sort((a, b) =>
+    a.date < b.date ? 1 : -1
+  )
 }
 
 /**
- * Fetch specific transport cost sources by their upstream ids. Used by Finance to
- * re-derive the authoritative amount when linking a source to an expense line
- * (so a client cannot tamper with a locked amount). Only entries with cost > 0
- * are returned; missing/zero-cost ids are simply absent from the result.
+ * Re-fetch specific sources by id so Finance can attach a line when the
+ * reference amount is null or 0. No amount filter. Jobs are 1:1 with job id.
  */
 export async function getTransportCostSourcesByIds(
   db: PrismaClient,
-  params: { companyId: string; repairIds: string[]; tireIds: string[] }
+  params: { companyId: string; repairIds: string[]; tireIds: string[]; jobIds?: string[] }
 ): Promise<TransportCostSource[]> {
-  const [repairs, tires] = await Promise.all([
+  const jobIds = params.jobIds ?? []
+  const [repairs, tires, jobs] = await Promise.all([
     params.repairIds.length
       ? db.transportRepairLog.findMany({
-          where: { companyId: params.companyId, id: { in: params.repairIds }, repairCost: { gt: 0 } },
+          where: { companyId: params.companyId, id: { in: params.repairIds } },
           include: { vehicle: vehicleSelect },
         })
       : Promise.resolve([]),
     params.tireIds.length
       ? db.transportTireLog.findMany({
-          where: { companyId: params.companyId, id: { in: params.tireIds }, cost: { gt: 0 } },
+          where: { companyId: params.companyId, id: { in: params.tireIds } },
           include: { vehicle: vehicleSelect },
         })
       : Promise.resolve([]),
+    jobIds.length
+      ? db.transportJob.findMany({
+          where: { companyId: params.companyId, id: { in: jobIds } },
+          include: jobInclude,
+        })
+      : Promise.resolve([]),
   ])
-  return [...repairs.map(mapRepair), ...tires.map(mapTire)]
+  return [...repairs.map(mapRepair), ...tires.map(mapTire), ...jobs.map(mapJob)]
 }

@@ -58,6 +58,7 @@ function itemToDrafts(item: ExpenseDto): LineDraft[] {
     sourceType: l.sourceType,
     sourceDocumentId: l.sourceDocumentId,
     sourceLineId: l.sourceLineId,
+    sourceAmountLocked: l.sourceKind !== "MANUAL" && l.sourceType !== "TRANSPORT_JOB",
   }))
 }
 
@@ -143,6 +144,12 @@ export function ExpenseFormPage({
             // ignore malformed hand-off
           }
           if (!seeded && !branchId && branchRows[0]) setBranchId(branchRows[0].id)
+          if (!seeded) {
+            const draft = newLineDraft()
+            setLines([draft])
+            setEditingLine(draft)
+            setDialogOpen(true)
+          }
         }
       })
       .catch(() => {
@@ -295,9 +302,14 @@ export function ExpenseFormPage({
         <Button type="button" variant="ghost" size="sm" icon={<ArrowLeft className="h-4 w-4" />} onClick={() => router.back()}>
           กลับ
         </Button>
-        <h1 className="text-xl font-bold text-foreground">
-          {mode === "edit" ? `แก้ไข ${item?.expenseNo ?? ""}` : "สร้างบิลค่าใช้จ่ายใหม่"}
-        </h1>
+        <div>
+          <h1 className="text-xl font-bold text-foreground">
+            {mode === "edit" ? `แก้ไข ${item?.expenseNo ?? ""}` : "สร้างบิลค่าใช้จ่ายใหม่"}
+          </h1>
+          {mode === "create" && (
+            <p className="text-sm text-muted-foreground">บันทึกจาก Finance ได้โดยตรง ไม่ต้องมีเอกสารจากโมดูลอื่น</p>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -394,7 +406,7 @@ export function ExpenseFormPage({
                         <td className="py-2">
                           <div className="font-medium text-foreground">{typeName(l.expenseTypeId)}</div>
                           {l.description && <div className="text-xs text-muted-foreground">{l.description}</div>}
-                          {l.sourceKind !== "MANUAL" && (
+                          {l.sourceAmountLocked && (
                             <span className="mt-0.5 inline-block rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
                               ล็อกจากต้นทาง
                             </span>

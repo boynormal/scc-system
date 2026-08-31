@@ -32,6 +32,9 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
     input: parsed.data,
   })
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if ("error" in updated) {
+    return NextResponse.json({ error: updated.error }, { status: updated.status })
+  }
 
   return NextResponse.json({ data: updated })
 }

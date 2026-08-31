@@ -4,7 +4,7 @@
 
 โครงสร้างมาตรฐาน: `domain/` → `application/` → `infra/` → `ui/` (เลือกใช้ตามความจำเป็น — ปัจจุบันมีแค่ `application/`)
 
-- `personnel-service.ts` — list/create personnel รวม branch scope ตาม RBAC และ multi-branch assignment
+- `personnel-service.ts` — list/get/create/update/soft-delete personnel รวม branch scope ตาม RBAC, `isActive`, โยง `userId`, และแนะนำ `rosterNo` ถัดไปทั้งบริษัท
 - `attendance-service.ts` — list/delete attendance entries (ตามรายการ หรือทั้งวัน) และนำเข้าจากไฟล์ Excel บันทึกเวลา
 - `personnel-branch-utils.ts` — helper ผูก/ย้าย personnel กับ branch (`ensurePersonnelBranch`, `setPersonnelPrimaryBranch`, `replacePersonnelBranchesFromIds`)
 - `parse-timesheet-xls.ts` — parser ไฟล์ Excel บันทึกเวลา (`parseTimeSheetXlsBuffer`)

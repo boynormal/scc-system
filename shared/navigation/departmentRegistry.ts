@@ -17,6 +17,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Machines, tools, equipment hierarchy",
   },
   {
+    id: "asset_register",
+    label: "Asset Register",
+    order: 11,
+    icon: "ClipboardList",
+    description: "Company vehicle and machine register",
+  },
+  {
     id: "work_management",
     label: "Work Management",
     order: 20,

@@ -52,6 +52,7 @@ describe("role-matrix converters", () => {
     expect(form[formKey("transport_jobs", "read")]).toBe(true)
     expect(form[formKey("raw_material_news", "read")]).toBe(true)
     expect(form[formKey("due_dates", "read")]).toBe(true)
+    expect(form[formKey("assets", "read")]).toBe(true)
   })
 
   it("lets stored permissions override defaults for known resources", () => {

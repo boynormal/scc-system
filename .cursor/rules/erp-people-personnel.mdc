@@ -1,0 +1,61 @@
+---
+description: Existing personnel is the Shared People Master — Shared Department Master is locked; do not create Employee twins or merge User/Driver
+globs: "prisma/**/*,modules/**/*,app/**/*"
+alwaysApply: false
+---
+
+# ERP People / Personnel
+
+Policy: [docs/architecture/erp-people-personnel.md](docs/architecture/erp-people-personnel.md)
+
+**Option B is locked.** `personnel` is the Shared People Master. HR (`modules/hr`) owns the register. Do not create a second people table.
+
+**Shared Department Master is locked.** Settings owns `departments` (per Branch). Personnel and Machine reuse the same rows. Do not create `PeopleDepartment`.
+
+```text
+Personnel  = employment roster     (exists — HR)
+User       = login / RBAC / actor  (IAM)
+Driver     = transport role        (no Personnel required)
+Role       = permission            (not a person)
+Department = Shared Org per Branch (Settings — Machine + Personnel.departmentId)
+Department ≠ Permission
+Nav "people" ≠ departments table
+User.employeeCode ≠ Personnel.rosterNo
+```
+
+## Do not create (until an explicit later-phase order)
+
+- Second `Personnel` / `Employee` / `FinanceEmployee` / `ProductionWorker` / `ProductionPersonnel`
+- `MaintenanceTechnician` or `AssetCustodian` as a register table
+- `Position` / `JobTitle` master — keep `Personnel.jobGroup`
+- `PeopleDepartment` — reuse `departments`
+- `Driver.personnelId`, `Expense.employeeId` → Personnel, Asset `personnelId` / custodian
+- Person / Party framework, supervisor graph, org-history table, employment enum
+- Payroll, leave, recruitment, benefits, tax, health — because of People Foundation
+- Company-level Department (would break Machine)
+
+## Phase 2 build (landed) — leave as-is
+
+- Optional `Personnel.departmentId` — one department per person; same `departments` rows as Machine
+- Validate department company + `department.branchId` in the person's assigned branches
+- Machine: validate `department.branchId === machine.branchId` on create / explicit patch
+- Branch mismatch after a branch move → clear FK; do not add an org-history table
+- Delete/move department only when no live Machine and no Personnel (including soft-deleted) point at it
+- `Expense.employeeId` stays **User**. Do not migrate for cleanliness.
+- `Driver` stays Transport. Jobs keep `driverId`. External drivers need no Personnel.
+- WO `assignedTo` / technicians / Expense approvers stay **User**.
+- Nav department `people` still means HR UI (personnel + attendance).
+- `Department.parentId` exists but the app does not use it — no tree UI
+
+## Before adding any people-like table or FK
+
+1. Does `personnel` already own this identity?
+2. Is this employment (Personnel), login/audit (User), or an operational role (Driver)?
+3. Is there an explicit phase order plus a weekly roster use case?
+
+Phase 1 (roster update/delete, `isActive`, optional `userId`) has landed.  
+Phase 2 **build** has landed (`Personnel.departmentId?`).
+
+After this, **STOP** — do not start Position / supervisor / Phase 3 (Driver, Expense, Asset FK) without a new human order.
+
+See also [erp-shared-master.mdc](erp-shared-master.mdc) and [erp-asset-management.mdc](erp-asset-management.mdc).

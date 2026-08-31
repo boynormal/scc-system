@@ -2,6 +2,21 @@ import { z } from "zod"
 import type { PrismaClient } from "@prisma/client"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 
+async function assertDepartmentOnMachineBranch(
+  db: PrismaClient,
+  params: { companyId: string; departmentId: string; branchId: string }
+) {
+  const dept = await db.department.findFirst({
+    where: { id: params.departmentId, isActive: true, branch: { companyId: params.companyId, deletedAt: null } },
+    select: { id: true, branchId: true },
+  })
+  if (!dept) return { error: "Invalid department" as const, status: 400 as const }
+  if (dept.branchId !== params.branchId) {
+    return { error: "Department must belong to the machine branch" as const, status: 400 as const }
+  }
+  return null
+}
+
 export const createMachineSchema = z.object({
   branchId: z.string().uuid(),
   departmentId: z.string().uuid().or(z.literal("")).transform((val) => (val === "" ? null : val)).nullable().optional(),
@@ -143,6 +158,14 @@ export async function createMachine(
   if (!hasPermission(params.roles, branchId, "machines", "create")) {
     return { error: "Forbidden" as const, status: 403 as const }
   }
+  if (params.input.departmentId) {
+    const deptErr = await assertDepartmentOnMachineBranch(db, {
+      companyId: params.companyId,
+      departmentId: params.input.departmentId,
+      branchId,
+    })
+    if (deptErr) return deptErr
+  }
 
   const { attributes, ...rest } = params.input
   const machine = await db.machine.create({
@@ -176,12 +199,25 @@ export async function updateMachine(
   if (!machine) return null
 
   const { installDate, warrantyExpireDate, departmentId, ...rest } = params.input
+  const nextBranchId = rest.branchId ?? machine.branchId
+  let nextDepartmentId = departmentId === undefined ? machine.departmentId : departmentId
+  if (nextDepartmentId) {
+    const deptErr = await assertDepartmentOnMachineBranch(db, {
+      companyId: params.companyId,
+      departmentId: nextDepartmentId,
+      branchId: nextBranchId,
+    })
+    if (deptErr) {
+      if (departmentId) return deptErr
+      nextDepartmentId = null
+    }
+  }
 
   const updated = await db.machine.update({
     where: { id: params.id },
     data: {
       ...rest,
-      departmentId: departmentId ?? null,
+      departmentId: nextDepartmentId,
       installDate: installDate ? new Date(installDate) : installDate === null ? null : undefined,
       warrantyExpireDate: warrantyExpireDate ? new Date(warrantyExpireDate) : warrantyExpireDate === null ? null : undefined,
     },

@@ -29,6 +29,7 @@ Finance owns **all financial Expense records**. Operational modules store events
 - Wait for Maintenance (or any module) before Finance can record spend.
 - Change Phase 4 create/PATCH / `assertLineDimensions` to "support" this architecture — it already holds.
 - Add a new source adapter or GL / CoA / journal without an explicit product decision.
+- Add `FinanceAsset` / `GLAsset` or an asset register inside Finance. The register is a future Shared Master — [erp-asset-management.mdc](erp-asset-management.mdc).
 - Treat `/finance/sources` as the company expense list, or claim "all costs are recorded" when the review queue is empty. The page is a Finance review queue of operational events, not expenses.
 
 Keep `expense-phase4-acceptance.test.ts` green. Keep reporting grain as `SUM(ExpenseLine.netAmount)` of matching lines.

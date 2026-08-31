@@ -80,6 +80,11 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
     rows: [{ resource: "due_dates", label: "ศูนย์ติดตามวันครบกำหนด", actions: CRUD }],
   },
   {
+    id: "assets",
+    label: "ทะเบียนสินทรัพย์",
+    rows: [{ resource: "assets", label: "ทะเบียนสินทรัพย์", actions: CRUD }],
+  },
+  {
     id: "finance",
     label: "การเงินและบัญชี",
     rows: [

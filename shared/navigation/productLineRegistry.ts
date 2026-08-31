@@ -31,6 +31,16 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     iconKey: "Wrench",
   },
   {
+    id: "asset_register",
+    labelTh: "ทะเบียนสินทรัพย์",
+    labelEn: "Asset Register",
+    description: "รถและเครื่องจักรของบริษัท · กรรมสิทธิ์ · รหัสทะเบียน",
+    departmentIds: ["asset_register"],
+    order: 1.5,
+    accent: "from-slate-500 to-blue-700 shadow-slate-600/30",
+    iconKey: "ClipboardList",
+  },
+  {
     id: "people_time",
     labelTh: "บุคลากรและเวลา",
     labelEn: "People & Time",

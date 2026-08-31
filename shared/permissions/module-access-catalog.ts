@@ -91,6 +91,12 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     navModuleIds: ["due_dates"],
   },
   {
+    moduleId: "assets",
+    label: "ทะเบียนสินทรัพย์",
+    anyOfResources: ["assets"],
+    navModuleIds: ["assets"],
+  },
+  {
     moduleId: "finance",
     label: "การเงินและบัญชี",
     anyOfResources: ["expenses", "expense_masters"],

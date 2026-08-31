@@ -96,6 +96,25 @@ enum AuditAction {
   restore
 }
 
+enum AssetType {
+  VEHICLE
+  MACHINE
+}
+
+enum AssetStatus {
+  REGISTERED
+  ACTIVE
+  IDLE
+  RETIRED
+  DISPOSED
+}
+
+enum AssetOwnership {
+  COMPANY
+  LEASED
+  EXTERNAL
+}
+
 // ─── GROUP 1: ORGANIZATION ────────────────────────────────────────────────────
 
 model Company {
@@ -137,6 +156,7 @@ model Company {
   expenses                Expense[]
   units                   Unit[]
   financeSourceReviews    FinanceSourceReview[]
+  assets                  Asset[]
 
   @@map("companies")
 }
@@ -174,6 +194,7 @@ model Branch {
   dueItems                DueItem[]
   costCenters             CostCenter[]
   expenses                Expense[]
+  assets                  Asset[]
 
   @@index([companyId])
   @@index([code])
@@ -193,7 +214,8 @@ model Department {
   branch   Branch       @relation(fields: [branchId], references: [id])
   parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children Department[] @relation("DepartmentHierarchy")
-  machines Machine[]
+  machines   Machine[]
+  personnel  Personnel[]
 
   @@index([branchId])
   @@index([parentId])
@@ -258,6 +280,7 @@ model User {
   expensesPaid            Expense[]               @relation("ExpensePaidBy")
   expenseAttachments      ExpenseAttachment[]     @relation("ExpenseAttachmentUploader")
   financeSourceReviews    FinanceSourceReview[]   @relation("FinanceSourceReviewReviewedBy")
+  assetsCreated           Asset[]                 @relation("AssetCreatedBy")
 
   // Phase B decision (2026-07-23): email stays globally @unique permanently — login
   // may use email or username; both are globally unique (no company picker).
@@ -680,6 +703,7 @@ model Supplier {
   company    Company     @relation(fields: [companyId], references: [id])
   spareParts SparePart[]
   expenses   Expense[]
+  assets     Asset[]
 
   // Phase B: code no longer globally unique — this composite is now the sole
   // enforced constraint (allocateUniqueSupplierCode in master-data-service.ts
@@ -848,14 +872,16 @@ model Personnel {
   phone       String?   @db.VarChar(30)
   address     String?   @db.Text
   notes       String?   @db.Text
-  userId      String?   @unique @map("user_id") @db.Uuid
-  isActive    Boolean   @default(true) @map("is_active")
+  userId       String?   @unique @map("user_id") @db.Uuid
+  departmentId String?   @map("department_id") @db.Uuid
+  isActive     Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   company           Company           @relation(fields: [companyId], references: [id])
   branch            Branch?           @relation(fields: [branchId], references: [id])
+  department        Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   user              User?             @relation(fields: [userId], references: [id])
   attendance        AttendanceEntry[]
   /**
@@ -866,6 +892,7 @@ model Personnel {
   @@unique([companyId, rosterNo], map: "personnel_company_roster_unique")
   @@index([companyId])
   @@index([branchId])
+  @@index([departmentId])
   @@index([displayName])
   @@map("personnel")
 }
@@ -1734,4 +1761,39 @@ model FinanceSourceReview {
   @@index([companyId, sourceModule, sourceType, sourceDocumentId])
   @@index([status])
   @@map("finance_source_reviews")
+}
+
+// ─── GROUP: ASSET REGISTER (Phase 1 — no Machine/Vehicle FK) ─────────────────
+
+model Asset {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String         @map("company_id") @db.Uuid
+  branchId       String         @map("branch_id") @db.Uuid
+  code           String         @db.VarChar(50)
+  name           String         @db.VarChar(255)
+  type           AssetType
+  status         AssetStatus    @default(REGISTERED)
+  ownership      AssetOwnership
+  serialNumber   String?        @map("serial_number") @db.VarChar(100)
+  locationDetail String?        @map("location_detail") @db.VarChar(255)
+  supplierId     String?        @map("supplier_id") @db.Uuid
+  acquiredAt     DateTime?      @map("acquired_at") @db.Date
+  isActive       Boolean        @default(true) @map("is_active")
+  createdBy      String?        @map("created_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?      @map("deleted_at") @db.Timestamptz
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  branch   Branch    @relation(fields: [branchId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  creator  User?     @relation("AssetCreatedBy", fields: [createdBy], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([branchId])
+  @@index([type])
+  @@index([status])
+  @@index([ownership])
+  @@map("assets")
 }

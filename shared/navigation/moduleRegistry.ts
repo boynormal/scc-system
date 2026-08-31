@@ -118,6 +118,26 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
   },
   {
     type: "section",
+    key: "sec_asset_register",
+    label: "sec_asset_register",
+    order: 2,
+    children: [
+      {
+        type: "link",
+        key: "asset_register",
+        href: "/assets",
+        label: "asset_register",
+        icon: "ClipboardList",
+        permission: { resource: "assets", action: "read" },
+        moduleId: "assets",
+        order: 0,
+        keywords: ["asset", "register", "ทะเบียน", "สินทรัพย์", "vehicle", "machine", "AST"],
+        launcher: { departmentId: "asset_register", capabilityId: "register", isPrimary: true },
+      },
+    ],
+  },
+  {
+    type: "section",
     key: "sec_operations",
     label: "sec_operations",
     order: 10,

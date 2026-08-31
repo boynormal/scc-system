@@ -1,0 +1,47 @@
+---
+description: Asset is a future Shared Registration Master — do not create Asset/FixedAsset tables or per-module copies
+globs: "prisma/**/*,modules/**/*,app/**/*"
+alwaysApply: false
+---
+
+# ERP Asset Management
+
+Policy: [docs/architecture/erp-asset-management.md](docs/architecture/erp-asset-management.md)
+
+**Option B is locked.** Asset Management is a separate module from Finance. When a table exists, Asset is a Shared Registration Master — not a required parent of Machine or Vehicle.
+
+```text
+Machine  = Maintenance operational master
+Vehicle  = Transport operational master
+Asset    = Shared registration (not created yet)
+Finance  = Expense today; Financial Profile later — never a second asset register
+```
+
+## Do not create (until an explicit Phase 1+ order with a first use case)
+
+- `Asset`, `FixedAsset`, `ITAsset`, `FinanceAsset`, `GLAsset`, `AccountingAsset`
+- `MaintenanceAsset`, `TransportAsset`, `AssetVehicle`, `ProductionAsset`
+- `Machine.assetId` / `Vehicle.assetId` (Phase 2 only, after ownership data + approval)
+- `modules/assets`, `assets` RBAC resource, Asset API / UI / seed / migration
+- VehicleProfile / MachineProfile tables that duplicate existing columns
+- Auto-backfill of all machines/vehicles into Asset
+- Location master, Component tree, Custodian, Transfer, depreciation engine — because of Asset
+
+## Leave as-is
+
+- `Machine` stays Maintenance. Work orders keep `machineId`.
+- `TransportVehicle` stays Transport. Jobs / GPS / tire / repair keep `vehicleId`.
+- Nav department `asset_management` still means Machines — it is not a register.
+- `ExpenseTransactionType.ASSET` is an expense classification, not a register.
+- `machine-asset-service.ts` is machine media / BOM, not Asset.
+- Finance cost objects stay type + label (Phase 4 locked). Do not require Asset ids.
+
+## Before adding any asset-like table
+
+1. Is this identity (register), operational profile, or financial valuation?
+2. Does Machine / Vehicle / SparePart already own this meaning?
+3. Is there an explicit Phase 1+ order plus a first use case (IT register or company capitalization)?
+
+Phase 0 is docs only. After it, **STOP** — do not start Phase 1 without a new human order.
+
+See also [erp-shared-master.mdc](erp-shared-master.mdc) and [finance-expense-ssot.mdc](finance-expense-ssot.mdc).

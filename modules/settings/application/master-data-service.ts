@@ -376,6 +376,20 @@ export async function updateDepartment(
       select: { id: true },
     })
     if (!branch) return { error: "Invalid branch" as const, status: 400 as const }
+    if (params.input.branchId !== existing.branchId) {
+      const [machineCount, personnelCount] = await Promise.all([
+        db.machine.count({
+          where: { departmentId: params.id, deletedAt: null, branch: { companyId: params.companyId } },
+        }),
+        db.personnel.count({ where: { departmentId: params.id } }),
+      ])
+      if (machineCount + personnelCount > 0) {
+        return {
+          error: { message: "Cannot move department while machines or personnel still use it" },
+          status: 400 as const,
+        }
+      }
+    }
   }
 
   const data = await db.department.update({
@@ -397,11 +411,23 @@ export async function deleteDepartment(db: PrismaClient, params: { id: string; c
   })
   if (!existing) return { error: "Not found" as const, status: 404 as const }
 
-  const count = await db.machine.count({
-    where: { departmentId: params.id, deletedAt: null, branch: { companyId: params.companyId } },
-  })
-  if (count > 0) {
-    return { error: { message: `Cannot delete department because ${count} machines still use it` }, status: 400 as const }
+  const [machineCount, personnelCount] = await Promise.all([
+    db.machine.count({
+      where: { departmentId: params.id, deletedAt: null, branch: { companyId: params.companyId } },
+    }),
+    db.personnel.count({ where: { departmentId: params.id } }),
+  ])
+  if (machineCount > 0) {
+    return {
+      error: { message: `Cannot delete department because ${machineCount} machines still use it` },
+      status: 400 as const,
+    }
+  }
+  if (personnelCount > 0) {
+    return {
+      error: { message: `Cannot delete department because ${personnelCount} personnel still use it` },
+      status: 400 as const,
+    }
   }
 
   await db.department.delete({ where: { id: params.id } })

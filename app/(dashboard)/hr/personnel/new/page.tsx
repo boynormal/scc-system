@@ -1,10 +1,10 @@
 import { Metadata } from "next"
 import Link from "next/link"
-import { GlassCard } from "@/components/glass"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { listAccessiblePersonnelBranches, listPersonnelUserOptions } from "@/modules/hr"
 import { HrPersonnelForm } from "./personnel-form"
 
 export const metadata: Metadata = { title: "เพิ่มบุคลากร" }
@@ -22,24 +22,22 @@ export default async function NewPersonnelPage() {
   const roles = session.user.roles as UserRole[]
   if (!canCreate(roles)) redirect("/hr/personnel")
 
-  const branches = await prisma.branch.findMany({
-    where: { companyId: session.user.companyId, isActive: true, deletedAt: null },
-    select: { id: true, name: true, code: true },
-    orderBy: { name: "asc" },
-  })
+  const companyId = session.user.companyId as string
+  const [{ data: branches }, { data: users }] = await Promise.all([
+    listAccessiblePersonnelBranches(prisma, { companyId, roles }),
+    listPersonnelUserOptions(prisma, { companyId, roles }),
+  ])
 
   return (
-    <div className="space-y-6 max-w-lg">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <Link href="/hr/personnel" className="text-sm text-blue-600 hover:underline">
-          ← กลับ
+          ← บุคลากร
         </Link>
-        <h1 className="text-2xl font-bold text-foreground mt-2">เพิ่มบุคลากร</h1>
-        <p className="text-muted-foreground text-sm mt-1">รหัสรายชื่อ (roster) ต้องไม่ซ้ำกับรายอื่นในบริษัท</p>
+        <h1 className="mt-2 text-2xl font-bold text-foreground">เพิ่มบุคลากร</h1>
+        <p className="mt-1 text-sm text-muted-foreground">กรอกชื่อกับรหัสรายชื่อ เลือกสาขาที่ลงเวลาได้ แล้วบันทึก</p>
       </div>
-      <GlassCard padding="md">
-        <HrPersonnelForm branches={branches} />
-      </GlassCard>
+      <HrPersonnelForm branches={branches} users={users} />
     </div>
   )
 }

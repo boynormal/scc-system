@@ -40,6 +40,16 @@ describe("hasPermission", () => {
     expect(hasPermission(roles, "branch-1", "machines", "read")).toBe(true)
   })
 
+  it("applies default assets permissions for each built-in role", () => {
+    expect(hasPermission([role({ roleName: "Admin" })], "branch-1", "assets", "delete")).toBe(true)
+    expect(hasPermission([role({ roleName: "Manager" })], "branch-1", "assets", "create")).toBe(true)
+    expect(hasPermission([role({ roleName: "Manager" })], "branch-1", "assets", "delete")).toBe(false)
+    expect(hasPermission([role({ roleName: "Technician" })], "branch-1", "assets", "read")).toBe(true)
+    expect(hasPermission([role({ roleName: "Technician" })], "branch-1", "assets", "update")).toBe(false)
+    expect(hasPermission([role({ roleName: "Viewer" })], "branch-1", "assets", "read")).toBe(true)
+    expect(hasPermission([role({ roleName: "Viewer" })], "branch-1", "assets", "create")).toBe(false)
+  })
+
   it("uses stored DB permissions instead of default when the resource key is present", () => {
     const roles: UserRole[] = [
       role({

@@ -3,7 +3,8 @@
 **สถานะ:** Product Decision + Architecture Rule (2026-08-29)  
 Phase 4 ยัง **LOCKED** — [`EXPENSE-PHASE-4-ACCEPTANCE.md`](./EXPENSE-PHASE-4-ACCEPTANCE.md)  
 กฎเอเจนต์: [`.cursor/rules/finance-expense-ssot.mdc`](../../.cursor/rules/finance-expense-ssot.mdc)  
-Shared Master: [`docs/architecture/erp-shared-master.md`](../../docs/architecture/erp-shared-master.md) — **Vendor = `Supplier`** ห้ามสร้าง `FinanceVendor`
+Shared Master: [`docs/architecture/erp-shared-master.md`](../../docs/architecture/erp-shared-master.md) — **Vendor = `Supplier`** ห้ามสร้าง `FinanceVendor`  
+Asset register: [`docs/architecture/erp-asset-management.md`](../../docs/architecture/erp-asset-management.md) — Finance **ไม่ใช่** เจ้าของสมุดทรัพย์สิน; ห้ามสร้าง `FinanceAsset` / `GLAsset`
 
 > Finance เป็นเจ้าของข้อมูลค่าใช้จ่ายทางการเงินทั้งหมดของบริษัท  
 > โมดูลอื่นเก็บข้อมูลปฏิบัติงานได้ แต่ห้ามสร้าง Financial Expense ซ้ำ
@@ -53,7 +54,9 @@ Finance บันทึกได้แม้ไม่มี Source จากโ�
 | Stock Movement | Inventory |
 | **Expense / ExpenseLine / จำนวนเงินที่ต้องจ่าย** | **Finance** |
 | ExpenseType / Cost Center / Process | Finance |
-| Cost Object | ฟิลด์บนบรรทัด (ไม่ใช่ master) |
+| Cost Object | ฟิลด์บนบรรทัด (ไม่ใช่ master) — VEHICLE/MACHINE เป็น label ไม่ใช่สมุด Asset |
+| สมุดทรัพย์สิน (Asset Register) | **Asset Management** เมื่อมีโมดูล — ไม่ใช่ Finance |
+| มูลค่าตามบัญชี / ค่าเสื่อม (อนาคต) | Finance **Profile** ชี้ `assetId` — ห้ามมาสเตอร์ซ้ำ |
 | Vendor | `Supplier` ร่วม (`Expense.vendorId`) — ไม่มีตาราง Vendor แยก |
 | Approval / Payment | สถานะหัวบิล Finance |
 | Expense Reporting | Finance — `SUM(ExpenseLine.netAmount)` |
@@ -124,6 +127,8 @@ TRANSPORT source ยังไม่รวมน้ำมัน / ทางด่
 - Finance query ตารางโมดูลอื่นตรง  
 - เปลี่ยน Phase 4 validation  
 - Source adapter ใหม่หรือ GL / CoA / journal โดยไม่มี Product Decision  
+- `FinanceAsset` / `GLAsset` / `AccountingAsset` หรือสมุดทรัพย์สินใน Finance  
+- บังคับ Expense cost object ให้เป็น Asset id (Phase 4 ยังเป็น type + label)  
 
 ---
 
@@ -142,3 +147,4 @@ Finance ยังเป็นเจ้าของยอดที่ต้อง
 | ใช้งานจริง / feedback workflow | ถัดไป |
 | Maintenance module แล้วค่อย adapter | แยกงาน |
 | GL / CoA / Journal | รอ Product Decision |
+| Asset Financial Profile / ค่าเสื่อม | รอ Phase 4 ของ [erp-asset-management.md](../../docs/architecture/erp-asset-management.md) หลังมี CoA — ห้ามสร้างสมุดใน Finance |

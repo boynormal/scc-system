@@ -21,11 +21,15 @@ Policy: [docs/architecture/erp-shared-master.md](docs/architecture/erp-shared-ma
 - `Company`, `Branch`, `Unit` — Settings. Do not add per-module copies.
 - `Supplier` — the only vendor. `Expense.vendorId` and `SparePart.supplierId` already point here.
 - `Customer` — **do not create yet**. Add one Shared Customer only when Sales or scrap-purchase goes live.
+- `Asset` — Shared Registration exists (Phase 1). Do not add `Machine.assetId` / `Vehicle.assetId` or per-module asset tables. See [erp-asset-management.mdc](erp-asset-management.mdc).
+- `Personnel` — Shared People Master exists (`personnel`). HR owns the register. Do not create Employee twins. See [erp-people-personnel.mdc](erp-people-personnel.mdc).
 
 ## Do not create
 
 - `FinanceVendor`, `PurchaseSupplier`, `SalesCustomer`, `TransportCustomer`
-- GL copies (`GLSupplier`, `GLCustomer`, `GLVehicle`, `GLMachine`)
+- GL copies (`GLSupplier`, `GLCustomer`, `GLVehicle`, `GLMachine`, `GLAsset`)
+- `FinanceAsset`, `MaintenanceAsset`, `TransportAsset`, `ITAsset` as separate registers
+- `FinanceEmployee`, `ProductionWorker`, `ProductionPersonnel`, `MaintenanceTechnician`, `Position`, `PeopleDepartment`
 - Business Partner / Party / Person / global Contact / Address engine
 - Location master (until the criteria in the policy doc are met)
 
@@ -33,8 +37,9 @@ Policy: [docs/architecture/erp-shared-master.md](docs/architecture/erp-shared-ma
 
 - `TmsCustomer` stays Transport-owned. It is not Shared Customer. Do not lift the whole table into Sales.
 - `JobStop` is a job snapshot, not a customer or location master.
-- `Vehicle` = Transport. `Machine` = Maintenance. Finance may reference as cost objects only.
-- `User` = login. `Personnel` = employment. `Driver` = operational role (no User required).
+- `Vehicle` = Transport. `Machine` = Maintenance. Finance may reference as cost objects only. They are not children of Asset.
+- `User` = login / actor. `Personnel` = Shared People Master (employment). `Driver` = operational role (no User or Personnel required). `Expense.employeeId` stays User. `rosterNo` ≠ `employeeCode`.
+- `Department` is Shared Org per Branch (Settings). Machine and `Personnel.departmentId?` reuse the same rows. Do not create `PeopleDepartment`.
 - `SparePart.unit` stays a string until Inventory is ready to map to `Unit.id`.
 
 Finance still owns Expense / ExpenseLine. See [finance-expense-ssot.mdc](finance-expense-ssot.mdc).

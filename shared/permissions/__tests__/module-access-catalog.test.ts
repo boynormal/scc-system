@@ -76,6 +76,19 @@ describe("module-access-catalog", () => {
     expect(canAccessModuleId(roles, "raw_material_news_ewaste", ["transport"])).toBe(false)
   })
 
+  it("maps assets area and fine nav ids", () => {
+    const roles: UserRole[] = [
+      role({
+        roleName: "Custom",
+        permissions: { assets: ["read"] },
+      }),
+    ]
+    expect(hasModuleAreaResourceRead(roles, "assets")).toBe(true)
+    expect(canEnterModuleArea(roles, "assets", null)).toBe(true)
+    expect(canAccessModuleId(roles, "assets", ["assets"])).toBe(true)
+    expect(canAccessModuleId(roles, "assets", ["transport"])).toBe(false)
+  })
+
   it("maps due_dates area and fine nav ids", () => {
     const roles: UserRole[] = [
       role({

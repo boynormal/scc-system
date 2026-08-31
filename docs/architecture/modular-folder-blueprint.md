@@ -67,6 +67,8 @@ modules/
     application/
   transport/              # รถ, คนขับ, ใบงานขนส่ง, ปฏิทิน, GPS
     application/
+  assets/                 # ทะเบียนสินทรัพย์ร่วม (Phase 1 — ไม่มี FK ไป Machine/Vehicle)
+    application/
 
 shared/
   auth/                   # wrapper รอบ NextAuth / session types
@@ -176,6 +178,7 @@ app/                        # ชั้น adapter เท่านั้น — 
 - `modules/iam/application/user-service.ts` — แยก users list/create/detail/update/deactivate ออกจาก `app/api/users/**`
 - `modules/transport/application/*-service.ts` — ครบทั้ง jobs, vehicles, drivers, master-data, assignment ออกจาก `app/api/transport/**` (route เรียกผ่าน `modules/transport` index)
 - `modules/hr/application/personnel-service.ts`, `attendance-service.ts` — แยก personnel + attendance (list/create/delete/import Excel) ออกจาก `app/api/hr/**`; `personnel-branch-utils.ts`, `parse-timesheet-xls.ts` ย้ายเข้าโมดูลเดียวกัน; `lib/personnel-branch-utils.ts` เหลือเป็น re-export wrapper ชั่วคราว
+- `modules/assets/application/asset-service.ts` — ทะเบียนสินทรัพย์ Phase 1 (CRUD + รหัสบริษัท + สาขา/ผู้ขาย) ออกจาก `app/api/assets/**`
 
 สถานะปัจจุบัน:
 

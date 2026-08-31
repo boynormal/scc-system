@@ -2,7 +2,9 @@
 
 **สถานะ:** Architecture lock (P1) — เอกสารและกฎเท่านั้น ไม่มีตารางคู่ค้าใหม่  
 กฎเอเจนต์: [`.cursor/rules/erp-shared-master.mdc`](../../.cursor/rules/erp-shared-master.mdc)  
-Expense SSOT: [`modules/finance/FINANCE-EXPENSE-OWNERSHIP.md`](../../modules/finance/FINANCE-EXPENSE-OWNERSHIP.md)
+Expense SSOT: [`modules/finance/FINANCE-EXPENSE-OWNERSHIP.md`](../../modules/finance/FINANCE-EXPENSE-OWNERSHIP.md)  
+Asset: [`erp-asset-management.md`](./erp-asset-management.md) — ตาราง `assets` มีแล้ว (Phase 1); Phase 2 ยังเกต  
+People: [`erp-people-personnel.md`](./erp-people-personnel.md) — ตาราง `personnel` มีแล้ว; ห้ามสมุดคนซ้ำ
 
 > Reuse Master, Don't Duplicate Master  
 > Transaction อ้าง Shared Master — ห้ามสร้างสมุดคู่ค้าต่อโมดูล
@@ -31,12 +33,18 @@ Future GL / AP / AR  (อ้าง id เดิม — ห้ามสร้า�
 | JobStop | `job_stops` | Transport (ธุรกรรม) | snapshot ชื่อ/ที่อยู่/ผู้ติดต่อ — ไม่มี FK ไปลูกค้า |
 | Vehicle | `transport_vehicles` | Transport | Finance cost object |
 | Machine | `machines` | Maintenance | Finance cost object |
-| Personnel | `personnel` | HR | ลงเวลา; `userId?` |
+| Personnel | `personnel` | HR | Shared People Master — ลงเวลาวันนี้; `userId?` โยงบัญชีในบริษัทได้ (Phase 1) — [erp-people-personnel.md](./erp-people-personnel.md) |
 | Driver | `drivers` | Transport | ไม่มี FK ไป User/Personnel |
-| User / Role | `users` | IAM | login; `Expense.employeeId` ชี้ User |
+| User / Role | `users` | IAM | login; `Expense.employeeId` ชี้ User; `employeeCode` ≠ `rosterNo` |
+| Department | `departments` | Settings | Shared Org ต่อสาขา — Machine และ `Personnel.departmentId?` ใช้ชุดเดียวกัน — ห้าม `PeopleDepartment` |
 | ExpenseType / Category / Process / CostCenter | Finance | Finance | มิติค่าใช้จ่าย |
+| Asset | `assets` | Asset Management | Shared Registration Phase 1 — [erp-asset-management.md](./erp-asset-management.md) |
 
 `Vendor` ใน UI Finance = **Supplier แถวเดียวกัน** (`listExpenseVendors` อ่าน `suppliers`) — ห้ามสร้างตาราง Vendor
+
+`Asset` เป็น Shared Registration แล้ว (Phase 1) — Machine / Vehicle **ไม่ถูกแทนที่** และไม่ต้องมี Asset ทุกแถว  
+
+`Personnel` เป็น Shared People Master แล้ว — ห้ามสร้างสมุดคนซ้ำ; User / Driver **ไม่ถูกแทนที่**
 
 `SparePart.unit` ยังเป็น `String` — ยังไม่ migrate ไป `Unit.id`
 
@@ -53,10 +61,11 @@ Future GL / AP / AR  (อ้าง id เดิม — ห้ามสร้า�
 | Branch / Unit | Settings | ใช่ | ใช่ | ใช่ | ใช่ | ใช่ | ใช่ | ใช่ |
 | Vehicle | Transport | ไม่ | cost object | Owner | — | — | — | — |
 | Machine | Maintenance | ไม่ | cost object | — | Owner | — | — | — |
-| Personnel | HR | ในบริษัท | Ref ภายหลัง | โยง Driver ภายหลัง | Ref | — | — | — |
+| Personnel | HR | ใช่ (สมุดคน) | Ref ภายหลัง; employeeId ยังเป็น User | โยง Driver ภายหลัง | assignee ยังเป็น User | — | — | — |
 | Driver | Transport | ไม่ | ไม่ | Owner | — | — | — | — |
 | User | IAM | login | ผู้สร้าง/ผู้อนุมัติ | ผู้สร้างใบงาน | — | — | — | — |
 | ExpenseType / CC / Process | Finance | การเงิน | Owner | — | — | — | — | — |
+| Asset | Asset Management | ใช่ (Phase 1) | Ref + future Profile | ยังไม่ลิงก์ Vehicle | ยังไม่ลิงก์ Machine | — | — | — |
 
 ---
 
@@ -64,8 +73,12 @@ Future GL / AP / AR  (อ้าง id เดิม — ห้ามสร้า�
 
 `FinanceVendor` · `PurchaseSupplier` · `SalesCustomer` · `TransportCustomer`  
 `GLSupplier` · `GLCustomer` · `GLVehicle` · `GLMachine`  
+`FinanceAsset` · `GLAsset` · `MaintenanceAsset` · `TransportAsset` · `ITAsset` (ตารางแยก)  
+`FinanceEmployee` · `ProductionWorker` · `ProductionPersonnel` · `MaintenanceTechnician` · `AssetCustodian` (ตารางแยก)  
+`Position` จนกว่ามี use case รายสัปดาห์ — `PeopleDepartment` ห้าม (reuse `departments`) — [erp-people-personnel.md](./erp-people-personnel.md)  
 Business Partner / Party / Person framework / Contact กลาง / Address engine  
-Location master จนกว่าเข้าเกณฑ์ด้านล่าง
+Location master จนกว่าเข้าเกณฑ์ด้านล่าง  
+`Machine.assetId` / `Vehicle.assetId` จนกว่า Asset Phase 2 — [erp-asset-management.md](./erp-asset-management.md)
 
 ---
 
@@ -93,6 +106,23 @@ Customer  ≠  Location  ≠  JobStop
 ผู้ซื้อวัสดุรีไซเคิล → Customer  
 ผู้ขายของเก่า → **Supplier** (ชุดเดียวกับร้านอะไหล่/ผู้รับเงินบิล)  
 บริษัทเดียวกันเป็นได้ทั้งสองแถว — Business Partner เป็น P4
+
+---
+
+## Asset — target เท่านั้น (ห้ามสร้างตารางตอนนี้)
+
+สมุดทะเบียนทรัพย์สินเป็น Shared Master **เมื่อมีโมดูล Asset และ use case แรก**  
+รายละเอียดและการล็อก Phase 0: [erp-asset-management.md](./erp-asset-management.md)
+
+```text
+Asset  ≠  Machine  ≠  Vehicle  ≠  SparePart  ≠  Expense
+```
+
+- Owner เมื่อมีตาราง = **Asset Management** (ไม่ใช่ Settings, ไม่ใช่ Finance)
+- Machine / Vehicle คงเป็น operational master — เชื่อมด้วย `assetId?` optional ใน Phase 2 เท่านั้น
+- ห้ามบังคับทุกเครื่อง/ทุกรถให้มี Asset
+- ห้าม backfill อัตโนมัติ
+- ห้าม `FinanceAsset` / `GLAsset` / สมุดซ้ำรายโมดูล
 
 ---
 
@@ -125,15 +155,19 @@ Customer  ≠  Location  ≠  JobStop
 
 ## User / Personnel / Driver
 
+ล็อกเต็ม: [erp-people-personnel.md](./erp-people-personnel.md)
+
 ```text
-User        = login / สิทธิ์
-Personnel   = การจ้าง / ลงเวลา
-Driver      = บทปฏิบัติการขนส่ง (ไม่บังคับมี User)
+User        = login / สิทธิ์ / ผู้กดปุ่ม
+Personnel   = Shared People Master (การจ้าง / ลงเวลา) — ตารางมีแล้ว
+Driver      = บทปฏิบัติการขนส่ง (ไม่บังคับมี User หรือ Personnel)
 ```
 
-ยังไม่สร้าง Person framework  
+ยังไม่สร้าง Person framework หรือตาราง Personnel ชุดที่สอง  
+`Personnel.rosterNo` ≠ `User.employeeCode` — ห้ามคัดลอกอัตโนมัติ  
 เมื่อ HR ใช้ทะเบียนคนขับจริง: `Driver.personnelId?` แบบ optional — คนขับไม่มี Personnel ใช้ต่อได้  
-`Expense.employeeId` ชี้ User อยู่ — อย่าย้ายไป Personnel จนกว่าบิลต้องผูกพนักงานจริง
+`Expense.employeeId` ชี้ User อยู่ — อย่าย้ายไป Personnel จนกว่าบิลต้องผูกพนักงานจริง  
+Department เป็น Shared Org Master ต่อสาขา (คนกับเครื่องใช้ชุดเดียวกัน) — ห้าม `PeopleDepartment` — [erp-people-personnel.md](./erp-people-personnel.md)
 
 ---
 
@@ -181,6 +215,7 @@ Detection ≠ Merge — ห้ามรวมอัตโนมัติ
 | Expense | `vendorId` → Supplier |
 | SparePart | `supplierId` → Supplier |
 | AP | `supplierId` → Supplier |
+| Asset (เมื่อมี) | `supplierId` → Supplier; `branchId` → Branch — ห้าม AssetSupplier |
 
 รายละเอียดเฉพาะโมดูล (lead time มีบน Supplier แล้ว; เงื่อนไขจ่าย/ภาษีภายหลัง) = ฟิลด์บนหัวหรือ **profile** ไม่ใช่ตารางคู่ค้าใหม่
 
@@ -194,8 +229,10 @@ Detection ≠ Merge — ห้ามรวมอัตโนมัติ
 |---|---|---|---|
 | `SparePart.unit` → `unitId` | Inventory พร้อม | Unit.id + ตารางเทียบ | คงสตริงคู่ขนาน |
 | แยก TmsCustomer | มี Sales หรือซื้อของเก่า | องค์กร → Customer; จุด → Location | ไม่ลบ `tms_customers`; ใบงานเก่ายังอ่านได้ |
-| `Driver.personnelId` | HR ใช้ทะเบียนคนขับ | optional FK | Driver ไร้ Personnel ใช้ได้ |
-| `Expense.employeeId` → Personnel | บิลต้องผูกพนักงานจริง | ค่อยเปลี่ยน | อย่าทำถ้ายังใช้ User |
+| `Driver.personnelId` | HR ใช้ทะเบียนคนขับ + approval คน | optional FK | Driver ไร้ Personnel ใช้ได้ |
+| `Expense.employeeId` → Personnel | บิลต้องผูกพนักงานจริง + approval การเงิน | ค่อยเปลี่ยน | อย่าทำถ้ายังใช้ User |
+| โยง `Personnel.userId` | IAM ต้องโชว์คู่ล็อกอิน↔พนักงาน | คอลัมน์มีแล้ว | ตั้ง null ได้ |
+| `Machine.assetId?` / `Vehicle.assetId?` | Phase 2 ของ Asset + ข้อมูล ownership + approval แยก | optional FK เฉพาะแถวที่ขึ้นสมุด | ไม่ลบ `machines` / `transport_vehicles`; FK เป็น null ได้ |
 
 ทุกครั้งต้องมี mapping, ประวัติอ่านได้, FK เดิมคู่ขนานช่วงเปลี่ยน
 
@@ -209,7 +246,7 @@ Detection ≠ Merge — ห้ามรวมอัตโนมัติ
 | **P2** | ออกแบบ Customer ขั้นต่ำ, เกณฑ์แยก TmsCustomer, checklist tax ID | สร้างตารางก่อนโมดูลพร้อม |
 | **P3** | เมื่อโมดูล live ชี้ Supplier/Customer ตามตารางด้านบน | SalesCustomer / PurchaseSupplier |
 | **P4** | Business Partner เมื่อคู่ค้าเดียวเป็นสองบท + เอกสารภาษีชุดเดียว | Party/Person/CRM/merge engine |
-| **เลื่อน** | Location master, Asset hierarchy, GL/AP/AR/Tax/Bank | — |
+| **เลื่อน** | Location master, Asset hierarchy / Component, Position / PeopleDepartment, GL/AP/AR/Tax/Bank | — |
 
 ---
 

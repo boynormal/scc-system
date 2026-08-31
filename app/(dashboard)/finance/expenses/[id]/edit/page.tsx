@@ -20,6 +20,9 @@ export default async function EditExpensePage({ params }: { params: Promise<{ id
       roles,
       id,
     })
+    if (data.status === "APPROVED" || data.status === "CANCELLED") {
+      redirect(`/finance/expenses/${id}`)
+    }
     return <ExpenseFormPage mode="edit" item={data} perms={getFinancePerms(roles)} />
   } catch {
     redirect("/finance/expenses")

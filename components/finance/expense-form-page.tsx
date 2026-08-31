@@ -187,6 +187,7 @@ export function ExpenseFormPage({
   }, [units])
 
   const vendorRequired = useMemo(() => anyLineRequiresVendor(lines, types), [lines, types])
+  const lockFinancials = item?.status === "PAID"
 
   const totals = useMemo(() => {
     let amount = 0
@@ -232,7 +233,10 @@ export function ExpenseFormPage({
   function saveLine(draft: LineDraft) {
     setLines((prev) => {
       const idx = prev.findIndex((l) => l.key === draft.key)
-      if (idx === -1) return [...prev, draft]
+      if (idx === -1) {
+        if (lockFinancials) return prev
+        return [...prev, draft]
+      }
       const next = [...prev]
       next[idx] = draft
       return next
@@ -242,6 +246,7 @@ export function ExpenseFormPage({
   }
 
   function removeLine(key: string) {
+    if (lockFinancials) return
     setLines((prev) => prev.filter((l) => l.key !== key))
   }
 
@@ -257,34 +262,42 @@ export function ExpenseFormPage({
       const payload = {
         branchId,
         expenseDate,
-        postingDate,
+        ...(lockFinancials
+          ? {}
+          : {
+              postingDate,
+              paymentMethod: paymentMethod || null,
+              status: nextStatus ?? status,
+            }),
         vendorId: vendorId || null,
         employeeId: employeeId || null,
-        paymentMethod: paymentMethod || null,
         notes: notes || null,
-        status: nextStatus ?? status,
-        lines: lines.map((l) => ({
+        lines: lines.map((l) => {
+          const original = item?.lines.find((row) => row.id === l.key)
+          return {
+          ...(lockFinancials && /^[0-9a-f-]{36}$/i.test(l.key) ? { id: l.key } : {}),
           expenseTypeId: l.expenseTypeId,
           description: l.description || null,
-          pricingMode: l.pricingMode,
-          quantity: Number(l.quantity) || (l.pricingMode === "AMOUNT" ? 1 : 0),
+          pricingMode: original?.pricingMode ?? l.pricingMode,
+          quantity: original ? original.quantity : Number(l.quantity) || (l.pricingMode === "AMOUNT" ? 1 : 0),
           unitId: l.unitId || null,
           unitCode: l.unitCode || null,
-          unitPrice: Number(l.unitPrice) || 0,
-          amount: computeLineAmount(l),
-          taxAmount: Number(l.taxAmount) || 0,
-          discountAmount: computeDiscountBaht(l),
+          unitPrice: original ? original.unitPrice : Number(l.unitPrice) || 0,
+          amount: original ? original.amount : computeLineAmount(l),
+          taxAmount: original ? original.taxAmount : Number(l.taxAmount) || 0,
+          discountAmount: original ? original.discountAmount : computeDiscountBaht(l),
           costCenterId: l.costCenterId || null,
           processId: l.processId || null,
-          costObjectType: l.costObjectType || null,
-          costObjectId: l.costObjectId || null,
-          costObjectLabel: l.costObjectLabel || null,
-          sourceKind: l.sourceKind,
-          sourceModule: l.sourceModule,
-          sourceType: l.sourceType,
-          sourceDocumentId: l.sourceDocumentId,
-          sourceLineId: l.sourceLineId,
-        })),
+          costObjectType: lockFinancials ? (original?.costObjectType ?? null) : l.costObjectType || null,
+          costObjectId: lockFinancials ? (original?.costObjectId ?? null) : l.costObjectId || null,
+          costObjectLabel: lockFinancials ? (original?.costObjectLabel ?? null) : l.costObjectLabel || null,
+          sourceKind: original?.sourceKind ?? l.sourceKind,
+          sourceModule: original?.sourceModule ?? l.sourceModule,
+          sourceType: original?.sourceType ?? l.sourceType,
+          sourceDocumentId: original?.sourceDocumentId ?? l.sourceDocumentId,
+          sourceLineId: original?.sourceLineId ?? l.sourceLineId,
+        }
+        }),
       }
 
       const url = mode === "edit" && item ? `/api/finance/expenses/${item.id}` : "/api/finance/expenses"
@@ -318,11 +331,19 @@ export function ExpenseFormPage({
         </Button>
         <div>
           <h1 className="text-xl font-bold text-foreground">
-            {mode === "edit" ? `แก้ไข ${item?.expenseNo ?? ""}` : "สร้างบิลค่าใช้จ่ายใหม่"}
+            {lockFinancials
+              ? `แก้ข้อมูล ${item?.expenseNo ?? ""}`
+              : mode === "edit"
+                ? `แก้ไข ${item?.expenseNo ?? ""}`
+                : "สร้างบิลค่าใช้จ่ายใหม่"}
           </h1>
-          {mode === "create" && (
+          {lockFinancials ? (
+            <p className="text-sm text-muted-foreground">
+              บิลจ่ายแล้ว — แก้ได้เฉพาะหมวดและอ้างอิง ยอดเงิน จำนวน ราคา ภาษี ส่วนลด และต้นทางถูกล็อก
+            </p>
+          ) : mode === "create" ? (
             <p className="text-sm text-muted-foreground">บันทึกจาก Finance ได้โดยตรง ไม่ต้องมีเอกสารจากโมดูลอื่น</p>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -339,10 +360,17 @@ export function ExpenseFormPage({
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
             className={FIN_GLASS_FIELD}
+            disabled={lockFinancials}
             options={branches.map((b) => ({ value: b.id, label: b.name }))}
           />
           <GlassInput label="วันที่เกิดรายการ" type="date" required value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} />
-          <GlassInput label="วันที่ลงบัญชี" type="date" value={postingDate} onChange={(e) => setPostingDate(e.target.value)} />
+          <GlassInput
+            label="วันที่ลงบัญชี"
+            type="date"
+            value={postingDate}
+            onChange={(e) => setPostingDate(e.target.value)}
+            disabled={lockFinancials}
+          />
           <Select
             label="ผู้ขาย / ผู้รับเงิน"
             required={vendorRequired}
@@ -363,6 +391,7 @@ export function ExpenseFormPage({
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
             className={FIN_GLASS_FIELD}
+            disabled={lockFinancials}
             options={[
               { value: "", label: "— ไม่ระบุ —" },
               { value: "cash", label: "เงินสด" },
@@ -386,9 +415,11 @@ export function ExpenseFormPage({
           <h2 className="text-sm font-semibold text-foreground">
             รายการ ({lines.length} บรรทัด)
           </h2>
-          <Button type="button" size="sm" variant="outline" icon={<Plus className="h-3.5 w-3.5" />} onClick={openAddLine}>
-            เพิ่มบรรทัด
-          </Button>
+          {!lockFinancials && (
+            <Button type="button" size="sm" variant="outline" icon={<Plus className="h-3.5 w-3.5" />} onClick={openAddLine}>
+              เพิ่มบรรทัด
+            </Button>
+          )}
         </div>
 
         {lines.length === 0 ? (
@@ -436,9 +467,11 @@ export function ExpenseFormPage({
                             <button type="button" className="rounded p-1 text-muted-foreground hover:bg-slate-200/60 hover:text-foreground dark:hover:bg-white/10" onClick={() => openEditLine(l)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
-                            <button type="button" className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" onClick={() => removeLine(l.key)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {!lockFinancials && (
+                              <button type="button" className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" onClick={() => removeLine(l.key)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -473,15 +506,17 @@ export function ExpenseFormPage({
       </GlassCard>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className={cn("min-w-[12rem]", FIN_GLASS_FIELD)}
-          options={[
-            { value: "DRAFT", label: "บันทึกเป็นร่าง" },
-            { value: "PENDING", label: "ส่งขออนุมัติ" },
-          ]}
-        />
+        {!lockFinancials && (
+          <Select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className={cn("min-w-[12rem]", FIN_GLASS_FIELD)}
+            options={[
+              { value: "DRAFT", label: "บันทึกเป็นร่าง" },
+              { value: "PENDING", label: "ส่งขออนุมัติ" },
+            ]}
+          />
+        )}
         <Button type="button" variant="ghost" onClick={() => router.back()}>
           ยกเลิก
         </Button>
@@ -501,6 +536,7 @@ export function ExpenseFormPage({
           costCenters={costCenters}
           processes={processes}
           units={units}
+          lockFinancials={lockFinancials}
           onClose={() => {
             setDialogOpen(false)
             setEditingLine(null)

@@ -75,6 +75,7 @@ export type ExpenseLineDto = {
   sourceDocumentId: string | null
   sourceLineId: string | null
   sourceLinkActive: boolean
+  sourceDocumentNo?: string | null
 }
 
 export type ExpenseDto = {

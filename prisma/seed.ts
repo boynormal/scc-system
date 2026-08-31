@@ -318,6 +318,7 @@ async function main() {
     { code: "JOB", name: "งาน" },
     { code: "TRIP", name: "เที่ยว" },
     { code: "MONTH", name: "เดือน" },
+    { code: "PERSON", name: "คน" },
   ]
   for (const u of commonUnits) {
     await prisma.unit.upsert({

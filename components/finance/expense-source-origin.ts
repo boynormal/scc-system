@@ -7,6 +7,7 @@ export type SourceOriginInput = {
   description?: string | null
   costObjectType?: string | null
   costObjectLabel?: string | null
+  sourceDocumentNo?: string | null
 }
 
 export type SourceOriginDisplay = {
@@ -26,8 +27,10 @@ function humanText(value: string | null | undefined): string | null {
   return text
 }
 
-/** Readable ref from fields already stored on the bill. Never a live module amount. */
+/** Document number from the operational module, then stored bill text. Never a live module amount. */
 export function readableSourceReference(input: SourceOriginInput): string | null {
+  const documentNo = humanText(input.sourceDocumentNo)
+  if (documentNo) return documentNo
   const description = humanText(input.description)
   if (description) return description
   const label = humanText(input.costObjectLabel)

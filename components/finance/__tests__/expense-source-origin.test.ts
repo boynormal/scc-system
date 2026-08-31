@@ -6,6 +6,17 @@ import {
 } from "../expense-source-origin"
 
 describe("readableSourceReference", () => {
+  it("prefers operational document number over description", () => {
+    expect(
+      readableSourceReference({
+        sourceDocumentNo: "TJ-2026-00002",
+        description: "ลูกค้า A",
+        costObjectType: "JOB",
+        costObjectLabel: "TJ-2026-00002",
+      })
+    ).toBe("TJ-2026-00002")
+  })
+
   it("prefers stored description over cost object", () => {
     expect(
       readableSourceReference({

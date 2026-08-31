@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { GlassCard, GlassTabs } from "@/components/glass"
 import { cn, formatDate, formatDateTime } from "@/lib/utils"
-import type { ExpenseDto, ExpenseLineDto, FinancePerms } from "./expense-types"
+import type { ExpenseAttachmentDto, ExpenseDto, ExpenseLineDto, FinancePerms } from "./expense-types"
 import {
   formatExpenseSourceOrigin,
   summarizeExpenseSourceOrigin,
@@ -63,6 +63,7 @@ function lineOrigin(line: ExpenseLineDto) {
     description: line.description,
     costObjectType: line.costObjectType,
     costObjectLabel: line.costObjectLabel,
+    sourceDocumentNo: line.sourceDocumentNo,
   })
 }
 
@@ -72,33 +73,39 @@ function sourceHref(sourceType: string | null | undefined, sourceDocumentId: str
   return null
 }
 
-function sourceCode(origin: SourceOriginDisplay) {
-  const fromRef = origin.reference?.match(/\b((?:TJ|JOB)-[A-Z0-9-]+)\b/i)?.[1]
-  return fromRef ?? origin.reference
+function sourceCode(line: ExpenseLineDto, origin: SourceOriginDisplay) {
+  return line.sourceDocumentNo ?? origin.reference
 }
 
 function SourceLink({
   origin,
   sourceType,
   sourceDocumentId,
+  documentNo,
 }: {
   origin: SourceOriginDisplay
   sourceType?: string | null
   sourceDocumentId?: string | null
+  documentNo?: string | null
 }) {
   if (origin.kind === "บันทึกเอง") return <span>บันทึกเอง</span>
   const href = sourceHref(sourceType, sourceDocumentId)
-  const code = sourceCode(origin)
+  const code = documentNo ?? origin.reference
+  const openLabel = sourceType === "TRANSPORT_JOB" ? "เปิดใบงาน" : "เปิดเอกสาร"
   return (
     <span className="flex flex-col items-end gap-0.5">
       <span>{origin.kind}</span>
-      {code && href ? (
-        <Link href={href} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
-          {code}
+      {code && <span className="font-medium tabular-nums">{code}</span>}
+      {href && (
+        <Link
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+        >
+          {openLabel}
           <ExternalLink className="h-3 w-3" />
         </Link>
-      ) : (
-        code && <span className="text-xs font-normal text-muted-foreground">{code}</span>
       )}
     </span>
   )
@@ -110,9 +117,13 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [files, setFiles] = useState<ExpenseAttachmentDto[]>(expense.attachments)
+  const [uploading, setUploading] = useState(false)
 
   const status = expense.status as ExpenseStatus
   const canEdit = perms.canUpdate && ["DRAFT", "PENDING", "REJECTED"].includes(status)
+  const canClassify = perms.canUpdate && status === "PAID"
+  const canAttach = perms.canUpdate && status !== "CANCELLED"
   const canApprove = perms.canApprove && ["DRAFT", "PENDING"].includes(status)
   const canPay = perms.canUpdate && status === "APPROVED"
   const canDelete = perms.canDelete && status !== "PAID"
@@ -121,7 +132,13 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
 
   const relatedSources = useMemo(() => {
     const seen = new Set<string>()
-    const rows: { key: string; origin: SourceOriginDisplay; href: string | null; type: string | null }[] = []
+    const rows: {
+      key: string
+      origin: SourceOriginDisplay
+      href: string | null
+      type: string | null
+      documentNo: string | null
+    }[] = []
     for (const line of expense.lines) {
       const origin = lineOrigin(line)
       if (origin.kind === "บันทึกเอง") continue
@@ -133,6 +150,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
         origin,
         href: sourceHref(line.sourceType, line.sourceDocumentId),
         type: line.sourceType,
+        documentNo: line.sourceDocumentNo ?? origin.reference,
       })
     }
     return rows
@@ -181,10 +199,60 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
     }
   }
 
+  async function uploadAttachment(file: File) {
+    setUploading(true)
+    setError(null)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const uploaded = await fetch("/api/upload", { method: "POST", body: form })
+      const uploadedJson = await uploaded.json().catch(() => ({}))
+      if (!uploaded.ok) {
+        setError(
+          typeof uploadedJson.error === "string"
+            ? uploadedJson.error
+            : uploadedJson.error?.message ?? "อัปโหลดไฟล์ไม่สำเร็จ"
+        )
+        return
+      }
+      const data = uploadedJson.data as { fileUrl: string; fileName?: string; fileSize?: number }
+      const res = await fetch(`/api/finance/expenses/${expense.id}/attachments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileUrl: data.fileUrl,
+          fileName: data.fileName ?? file.name,
+          fileSize: data.fileSize ?? file.size,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(typeof json.error === "string" ? json.error : json.error?.message ?? "บันทึกไฟล์ไม่สำเร็จ")
+        return
+      }
+      setFiles((prev) => [...prev, json.data as ExpenseAttachmentDto])
+    } catch {
+      setError("อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองอีกครั้ง")
+    } finally {
+      setUploading(false)
+    }
+  }
+
   function ActionCluster({ compact }: { compact?: boolean }) {
     const size = compact ? "sm" : "md"
     return (
       <div className="relative flex flex-wrap items-center justify-end gap-2">
+        {canClassify && (
+          <Button
+            type="button"
+            variant="outline"
+            size={size}
+            icon={<Pencil className="h-3.5 w-3.5" />}
+            onClick={() => router.push(`/finance/expenses/${expense.id}/edit`)}
+          >
+            แก้ข้อมูล
+          </Button>
+        )}
         {canEdit && (
           <Button
             type="button"
@@ -363,11 +431,16 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                     origin={headerOrigin}
                     sourceType={primaryLinked?.sourceType}
                     sourceDocumentId={primaryLinked?.sourceDocumentId}
+                    documentNo={primaryLinked?.sourceDocumentNo}
                   />
                 }
               />
-              {headerOrigin.kind !== "บันทึกเอง" && sourceCode(headerOrigin) && (
-                <InfoRow label="เอกสารอ้างอิง" value={sourceCode(headerOrigin)} />
+              {headerOrigin.kind !== "บันทึกเอง" &&
+                (primaryLinked?.sourceDocumentNo || headerOrigin.reference) && (
+                <InfoRow
+                  label="เอกสารอ้างอิง"
+                  value={primaryLinked?.sourceDocumentNo ?? headerOrigin.reference}
+                />
               )}
             </GlassCard>
           </div>
@@ -407,7 +480,8 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                 {expense.lines.map((l, index) => {
                   const origin = lineOrigin(l)
                   const href = sourceHref(l.sourceType, l.sourceDocumentId)
-                  const code = sourceCode(origin)
+                  const code = sourceCode(l, origin)
+                  const openLabel = l.sourceType === "TRANSPORT_JOB" ? "เปิดใบงาน" : "เปิดเอกสาร"
                   return (
                     <tr key={l.id} className="border-b border-slate-100 dark:border-white/5">
                       <td className="py-3 pr-3 tabular-nums text-muted-foreground">{index + 1}</td>
@@ -440,16 +514,17 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                         ) : (
                           <div>
                             <div>{origin.kind}</div>
-                            {code && href ? (
+                            {code && <div className="max-w-[12rem] truncate text-xs tabular-nums">{code}</div>}
+                            {href && (
                               <Link
                                 href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
                               >
-                                {code}
+                                {openLabel}
                                 <ExternalLink className="h-3 w-3" />
                               </Link>
-                            ) : (
-                              code && <div className="max-w-[12rem] truncate text-xs">{code}</div>
                             )}
                           </div>
                         )}
@@ -490,11 +565,16 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                 <li key={row.key} className="flex items-center justify-between gap-3 py-3 text-sm">
                   <div>
                     <div className="font-medium text-foreground">{row.origin.kind}</div>
-                    <div className="text-muted-foreground">{sourceCode(row.origin) ?? "—"}</div>
+                    <div className="text-muted-foreground tabular-nums">{row.documentNo ?? "—"}</div>
                   </div>
                   {row.href && (
-                    <Link href={row.href} className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400">
-                      เปิดเอกสาร
+                    <Link
+                      href={row.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      {row.type === "TRANSPORT_JOB" ? "เปิดใบงาน" : "เปิดเอกสาร"}
                       <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
                   )}
@@ -507,15 +587,33 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
 
       {tab === "files" && (
         <GlassCard className={cn("p-5 shadow-none", PANEL)}>
-          <h2 className="mb-3 text-sm font-semibold text-foreground">ไฟล์แนบ</h2>
-          {expense.attachments.length === 0 ? (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-foreground">ไฟล์แนบ</h2>
+            {canAttach && (
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white/90 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted dark:border-white/15 dark:bg-transparent">
+                <Paperclip className="h-3.5 w-3.5" />
+                {uploading ? "กำลังอัปโหลด…" : "แนบไฟล์"}
+                <input
+                  type="file"
+                  className="sr-only"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ""
+                    if (file) void uploadAttachment(file)
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          {files.length === 0 ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Paperclip className="h-4 w-4" />
               ยังไม่มีไฟล์แนบ
             </p>
           ) : (
             <ul className="divide-y divide-slate-100 dark:divide-white/10">
-              {expense.attachments.map((file) => (
+              {files.map((file) => (
                 <li key={file.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                   <span className="font-medium text-foreground">{file.fileName ?? "ไฟล์"}</span>
                   <a href={file.fileUrl} className="text-blue-600 hover:underline dark:text-blue-400" target="_blank" rel="noreferrer">

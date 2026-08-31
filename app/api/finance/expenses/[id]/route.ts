@@ -36,6 +36,7 @@ export const PATCH = withAuth(async (req, ctx, session) => {
   const result = await updateExpense(prisma, {
     companyId: session.user.companyId as string,
     roles: session.user.roles as UserRole[],
+    userId: session.user.id as string,
     id,
     input: parsed.data,
   })

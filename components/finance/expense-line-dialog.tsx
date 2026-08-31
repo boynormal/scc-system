@@ -86,6 +86,7 @@ export function ExpenseLineDialog({
   costCenters,
   processes,
   units,
+  lockFinancials = false,
   onClose,
   onSave,
 }: {
@@ -95,6 +96,7 @@ export function ExpenseLineDialog({
   costCenters: CostCenterRow[]
   processes: ProcessRow[]
   units: UnitOption[]
+  lockFinancials?: boolean
   onClose: () => void
   onSave: (draft: LineDraft) => void
 }) {
@@ -102,6 +104,7 @@ export function ExpenseLineDialog({
   const [error, setError] = useState<string | null>(null)
 
   const locked = Boolean(draft.sourceAmountLocked)
+  const financialLocked = locked || lockFinancials
   const selectedType = types.find((t) => t.id === draft.expenseTypeId)
   const legacy = isLegacyUnrestricted(selectedType)
 
@@ -146,11 +149,11 @@ export function ExpenseLineDialog({
       setError("กรุณาเลือกประเภทค่าใช้จ่าย")
       return
     }
-    if (!locked && draft.pricingMode === "AMOUNT" && !(Number(draft.amount) > 0)) {
+    if (!financialLocked && draft.pricingMode === "AMOUNT" && !(Number(draft.amount) > 0)) {
       setError("กรุณาระบุจำนวนเงิน")
       return
     }
-    if (!locked && draft.pricingMode === "QTY_PRICE" && !(preview > 0)) {
+    if (!financialLocked && draft.pricingMode === "QTY_PRICE" && !(preview > 0)) {
       setError("จำนวนและราคาต่อหน่วยต้องมากกว่า 0")
       return
     }
@@ -161,7 +164,7 @@ export function ExpenseLineDialog({
         return
       }
     }
-    const dimErr = validateLineDraft(draft, selectedType, { locked })
+    const dimErr = validateLineDraft(draft, selectedType, { locked: financialLocked })
     if (dimErr) {
       setError(dimErr)
       return
@@ -185,12 +188,17 @@ export function ExpenseLineDialog({
   return (
     <GlassDialog open={open} onOpenChange={(o) => !o && onClose()} title="รายการค่าใช้จ่าย (บรรทัด)" className="max-w-xl">
       <div className="space-y-4">
-        {locked && (
+        {lockFinancials && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            บิลจ่ายแล้ว — แก้ได้เฉพาะประเภท หน่วยงาน กระบวนการ รายละเอียด และหน่วยนับ ยอดเงินถูกล็อก
+          </p>
+        )}
+        {locked && !lockFinancials && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
             บรรทัดนี้ผูกจากต้นทาง ({sourceModuleLabel(draft.sourceModule)}) — จำนวน/ราคา/ยอดถูกล็อกจากเอกสารต้นทาง แก้ได้เฉพาะประเภท หน่วยงาน กระบวนการ วัตถุต้นทุน และรายละเอียด
           </p>
         )}
-        {draft.sourceKind !== "MANUAL" && !locked && (
+        {draft.sourceKind !== "MANUAL" && !locked && !lockFinancials && (
           <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">
             บรรทัดนี้ผูกจากต้นทาง ({sourceModuleLabel(draft.sourceModule)}) — ยังไม่มียอดอ้างอิง ให้ Finance กรอกจำนวนเงินเอง
           </p>
@@ -220,7 +228,7 @@ export function ExpenseLineDialog({
           placeholder="รายละเอียดบรรทัดนี้"
         />
 
-        {!locked && (
+        {!locked && !lockFinancials && (
           <div className="space-y-1.5">
             <span className="block text-sm font-medium text-foreground">วิธีคิดเงิน</span>
             <div className="inline-flex rounded-xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/10 dark:bg-white/5">
@@ -251,7 +259,7 @@ export function ExpenseLineDialog({
               step="0.001"
               value={draft.quantity}
               onChange={(e) => set("quantity", e.target.value)}
-              disabled={locked}
+              disabled={financialLocked}
             />
             <Select
               label="หน่วย"
@@ -259,7 +267,7 @@ export function ExpenseLineDialog({
               value={draft.unitId}
               onChange={(e) => changeUnit(e.target.value)}
               placeholder="— เลือกหน่วย —"
-              disabled={locked}
+              disabled={locked && !lockFinancials}
               options={[
                 ...units.filter((u) => u.isActive || u.id === draft.unitId).map((u) => ({
                   value: u.id,
@@ -277,7 +285,7 @@ export function ExpenseLineDialog({
               step="0.01"
               value={draft.unitPrice}
               onChange={(e) => set("unitPrice", e.target.value)}
-              disabled={locked}
+              disabled={financialLocked}
             />
           </div>
         ) : (
@@ -288,7 +296,7 @@ export function ExpenseLineDialog({
             step="0.01"
             value={draft.amount}
             onChange={(e) => set("amount", e.target.value)}
-            disabled={locked}
+            disabled={financialLocked}
           />
         )}
 
@@ -300,6 +308,7 @@ export function ExpenseLineDialog({
             step="0.01"
             value={draft.taxAmount}
             onChange={(e) => set("taxAmount", e.target.value)}
+            disabled={lockFinancials}
           />
           <div className="space-y-1.5">
             <span className="block text-sm font-medium text-foreground">ส่วนลด</span>
@@ -312,13 +321,14 @@ export function ExpenseLineDialog({
                 value={draft.discountAmount}
                 onChange={(e) => set("discountAmount", e.target.value)}
                 className="flex-1"
+                disabled={lockFinancials}
               />
               <div className="inline-flex shrink-0 self-end rounded-xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/10 dark:bg-white/5">
                 {(["BAHT", "PERCENT"] as const).map((kind) => (
                   <button
                     key={kind}
                     type="button"
-                    onClick={() => setDiscountKind(kind)}
+                    onClick={() => !lockFinancials && setDiscountKind(kind)}
                     className={
                       draft.discountKind === kind
                         ? "rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white shadow"
@@ -371,6 +381,7 @@ export function ExpenseLineDialog({
               label="ประเภทวัตถุต้นทุน"
               value={draft.costObjectType}
               onChange={(e) => set("costObjectType", e.target.value)}
+              disabled={lockFinancials}
               options={[
                 { value: "", label: "— ไม่ระบุ —" },
                 ...COST_OBJECT_TYPES.map((t) => ({ value: t, label: COST_OBJECT_TYPE_LABELS[t] ?? t })),
@@ -381,6 +392,7 @@ export function ExpenseLineDialog({
               value={draft.costObjectLabel}
               onChange={(e) => set("costObjectLabel", e.target.value)}
               placeholder="เช่น ทะเบียนรถ / ชื่อเครื่องจักร"
+              disabled={lockFinancials}
             />
           </div>
         )}
@@ -392,6 +404,7 @@ export function ExpenseLineDialog({
             value={draft.costObjectLabel}
             onChange={(e) => setDraft((d) => ({ ...d, costObjectType: "VEHICLE", costObjectLabel: e.target.value }))}
             placeholder="ทะเบียนรถ / ชื่อรถ"
+            disabled={lockFinancials}
           />
         )}
         {showMachine && !showGenericCostObject && (
@@ -401,6 +414,7 @@ export function ExpenseLineDialog({
             value={draft.costObjectLabel}
             onChange={(e) => setDraft((d) => ({ ...d, costObjectType: "MACHINE", costObjectLabel: e.target.value }))}
             placeholder="ชื่อเครื่องจักร"
+            disabled={lockFinancials}
           />
         )}
         {showLocation && !showGenericCostObject && (
@@ -410,6 +424,7 @@ export function ExpenseLineDialog({
             value={draft.costObjectLabel}
             onChange={(e) => setDraft((d) => ({ ...d, costObjectType: "LOCATION", costObjectLabel: e.target.value }))}
             placeholder="สถานที่ / สาขา / ไซต์งาน"
+            disabled={lockFinancials}
           />
         )}
 

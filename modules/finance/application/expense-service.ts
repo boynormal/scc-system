@@ -3,7 +3,7 @@ import { Prisma, type PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { generateExpenseNo } from "./generate-expense-no"
-import { isLockedReferenceAmount } from "@/modules/transport"
+import { getTransportCostSourcesByIds, isLockedReferenceAmount } from "@/modules/transport"
 import {
   assertSourceLinesNotLinked,
   markReviewsExpenseCreated,
@@ -51,6 +51,7 @@ const qtySchema = z.number().min(0).max(9_999_999)
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
 export const expenseLineInputSchema = z.object({
+  id: z.string().uuid().optional(),
   expenseTypeId: z.string().uuid(),
   description: z.string().max(2000).nullable().optional(),
   pricingMode: z.enum(EXPENSE_PRICING_MODES).optional(),
@@ -111,6 +112,12 @@ export const payExpenseSchema = z.object({
   paidAt: z.string().min(1).nullable().optional(),
 })
 
+export const expenseAttachmentInputSchema = z.object({
+  fileUrl: z.string().min(1).max(2000),
+  fileName: z.string().max(255).nullable().optional(),
+  fileSize: z.number().int().min(0).max(20 * 1024 * 1024).nullable().optional(),
+})
+
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>
 
@@ -140,6 +147,26 @@ function isoDate(value: Date): string {
   const m = String(value.getUTCMonth() + 1).padStart(2, "0")
   const d = String(value.getUTCDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
+}
+
+/** YYYY-MM from a date-only string (`YYYY-MM-DD`) or Date stored as UTC midnight. */
+export function bangkokYearMonth(value: string | Date): string {
+  if (value instanceof Date) return isoDate(value).slice(0, 7)
+  const ymd = value.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) throw new ValidationError("วันที่ไม่ถูกต้อง")
+  return ymd.slice(0, 7)
+}
+
+function moneyEq(a: number, b: number): boolean {
+  return round2(a) === round2(b)
+}
+
+function qtyEq(a: number, b: number): boolean {
+  return Math.round(a * 1000) / 1000 === Math.round(b * 1000) / 1000
+}
+
+function sameNullable(a: string | null | undefined, b: string | null | undefined): boolean {
+  return (a ?? null) === (b ?? null)
 }
 
 function round2(value: number): number {
@@ -760,6 +787,7 @@ function serializeLine(line: ExpenseLineRow) {
     sourceDocumentId: line.sourceDocumentId,
     sourceLineId: line.sourceLineId,
     sourceLinkActive: line.sourceLinkActive,
+    sourceDocumentNo: null as string | null,
   }
 }
 
@@ -822,6 +850,39 @@ function serializeExpense(row: ExpenseRow) {
 }
 
 export type ExpenseDto = ReturnType<typeof serializeExpense>
+
+async function attachSourceDocumentNos(
+  db: PrismaClient,
+  companyId: string,
+  dto: ExpenseDto
+): Promise<ExpenseDto> {
+  const repairIds: string[] = []
+  const tireIds: string[] = []
+  const jobIds: string[] = []
+  for (const line of dto.lines) {
+    if (!line.sourceDocumentId) continue
+    if (line.sourceType === "TRANSPORT_REPAIR") repairIds.push(line.sourceDocumentId)
+    else if (line.sourceType === "TRANSPORT_TIRE") tireIds.push(line.sourceDocumentId)
+    else if (line.sourceType === "TRANSPORT_JOB") jobIds.push(line.sourceDocumentId)
+  }
+  if (repairIds.length === 0 && tireIds.length === 0 && jobIds.length === 0) return dto
+  const sources = await getTransportCostSourcesByIds(db, { companyId, repairIds, tireIds, jobIds })
+  const nos = new Map(sources.map((s) => [`${s.sourceType}::${s.sourceId}`, s.documentNo]))
+  return {
+    ...dto,
+    lines: dto.lines.map((line) => ({
+      ...line,
+      sourceDocumentNo:
+        line.sourceType && line.sourceDocumentId
+          ? nos.get(`${line.sourceType}::${line.sourceDocumentId}`) ?? null
+          : null,
+    })),
+  }
+}
+
+async function toExpenseDto(db: PrismaClient, companyId: string, row: ExpenseRow): Promise<ExpenseDto> {
+  return attachSourceDocumentNos(db, companyId, serializeExpense(row))
+}
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
@@ -911,7 +972,7 @@ export async function getExpense(
     include: expenseInclude,
   })
   if (!row) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  return { data: serializeExpense(row) }
+  return { data: await toExpenseDto(db, params.companyId, row) }
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
@@ -979,9 +1040,301 @@ export async function createExpense(
 
 const EDITABLE_STATUSES: ExpenseStatusValue[] = ["DRAFT", "PENDING", "REJECTED"]
 
+const PAID_LOCKED_MSG = "บิลที่จ่ายแล้วแก้ได้เฉพาะหมวดและข้อมูลอ้างอิง ยอดเงินถูกล็อก"
+
+function paidLineFinancialsChanged(
+  row: {
+    pricingMode: string
+    quantity: unknown
+    unitPrice: unknown
+    amount: unknown
+    taxAmount: unknown
+    discountAmount: unknown
+    sourceKind: string
+    sourceModule: string | null
+    sourceType: string | null
+    sourceDocumentId: string | null
+    sourceLineId: string | null
+    costObjectType: string | null
+    costObjectId: string | null
+    costObjectLabel: string | null
+  },
+  input: ExpenseLineInput
+): boolean {
+  if (input.pricingMode && input.pricingMode !== row.pricingMode) return true
+  if (input.quantity != null && !qtyEq(input.quantity, Number(row.quantity))) return true
+  if (input.unitPrice != null && !moneyEq(input.unitPrice, Number(row.unitPrice))) return true
+  if (input.amount != null && !moneyEq(input.amount, Number(row.amount))) return true
+  if (input.taxAmount != null && !moneyEq(input.taxAmount, Number(row.taxAmount))) return true
+  if (input.discountAmount != null && !moneyEq(input.discountAmount, Number(row.discountAmount))) return true
+  if (input.sourceKind && input.sourceKind !== row.sourceKind) return true
+  if (input.sourceModule !== undefined && !sameNullable(input.sourceModule, row.sourceModule)) return true
+  if (input.sourceType !== undefined && !sameNullable(input.sourceType, row.sourceType)) return true
+  if (input.sourceDocumentId !== undefined && !sameNullable(input.sourceDocumentId, row.sourceDocumentId)) {
+    return true
+  }
+  if (input.sourceLineId !== undefined && !sameNullable(input.sourceLineId, row.sourceLineId)) return true
+  if (input.costObjectType !== undefined && !sameNullable(input.costObjectType, row.costObjectType)) return true
+  if (input.costObjectId !== undefined && !sameNullable(input.costObjectId, row.costObjectId)) return true
+  if (input.costObjectLabel !== undefined && !sameNullable(input.costObjectLabel, row.costObjectLabel)) return true
+  return false
+}
+
+export async function updatePaidExpenseMetadata(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId?: string
+    id: string
+    input: UpdateExpenseInput
+  }
+) {
+  if (!canExpenses(params.roles, "update")) throw new ForbiddenError()
+  const existing = await db.expense.findFirst({
+    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    include: {
+      lines: {
+        orderBy: { lineNo: "asc" },
+        select: {
+          id: true,
+          lineNo: true,
+          expenseTypeId: true,
+          description: true,
+          pricingMode: true,
+          quantity: true,
+          unitId: true,
+          unitCode: true,
+          unitPrice: true,
+          amount: true,
+          taxAmount: true,
+          discountAmount: true,
+          costCenterId: true,
+          processId: true,
+          costObjectType: true,
+          costObjectId: true,
+          costObjectLabel: true,
+          sourceKind: true,
+          sourceModule: true,
+          sourceType: true,
+          sourceDocumentId: true,
+          sourceLineId: true,
+        },
+      },
+    },
+  })
+  if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  if (existing.status !== "PAID") {
+    throw new ValidationError("ใช้ได้เฉพาะบิลที่จ่ายแล้ว")
+  }
+
+  if (params.input.branchId && params.input.branchId !== existing.branchId) {
+    throw new ValidationError("ไม่สามารถเปลี่ยนสาขาของบิลที่จ่ายแล้ว")
+  }
+  if (params.input.status !== undefined) {
+    throw new ValidationError(PAID_LOCKED_MSG)
+  }
+  if (params.input.paymentMethod !== undefined && params.input.paymentMethod !== existing.paymentMethod) {
+    throw new ValidationError(PAID_LOCKED_MSG)
+  }
+  if (params.input.postingDate !== undefined) {
+    const next = params.input.postingDate ? params.input.postingDate.slice(0, 10) : null
+    const prev = existing.postingDate ? isoDate(existing.postingDate) : null
+    if (next !== prev) throw new ValidationError(PAID_LOCKED_MSG)
+  }
+
+  let nextExpenseDate = existing.expenseDate
+  if (params.input.expenseDate) {
+    const nextMonth = bangkokYearMonth(params.input.expenseDate)
+    const prevMonth = bangkokYearMonth(existing.expenseDate)
+    if (nextMonth !== prevMonth && !canExpenses(params.roles, "approve")) {
+      throw new ValidationError("ข้ามเดือนต้องมีสิทธิ์อนุมัติค่าใช้จ่าย")
+    }
+    nextExpenseDate = parseDateOnly(params.input.expenseDate)
+  }
+
+  const lineInputs = coerceLineInputs(params.input)
+  const existingLines = existing.lines
+  if (lineInputs) {
+    if (lineInputs.length !== existingLines.length) {
+      throw new ValidationError("ไม่สามารถเพิ่มหรือลบบรรทัดของบิลที่จ่ายแล้ว")
+    }
+    const byId = new Map(existingLines.map((l) => [l.id, l]))
+    const seen = new Set<string>()
+    for (const input of lineInputs) {
+      if (!input.id || !byId.has(input.id)) {
+        throw new ValidationError("บรรทัดไม่ตรงกับบิลเดิม")
+      }
+      if (seen.has(input.id)) throw new ValidationError("บรรทัดซ้ำ")
+      seen.add(input.id)
+      const row = byId.get(input.id)
+      if (!row || paidLineFinancialsChanged(row, input)) {
+        throw new ValidationError(PAID_LOCKED_MSG)
+      }
+      if (row.pricingMode === "AMOUNT" && input.unitId) {
+        throw new ValidationError(PAID_LOCKED_MSG)
+      }
+    }
+  }
+
+  const vendorId =
+    params.input.vendorId !== undefined ? (params.input.vendorId ?? null) : existing.vendorId
+
+  type LinePatch = {
+    id: string
+    expenseTypeId: string
+    description: string | null
+    costCenterId: string | null
+    processId: string | null
+    unitId: string | null
+    unitCode: string | null
+  }
+  const linePatches: LinePatch[] = []
+
+  if (lineInputs) {
+    const { typeById, lookup } = await loadDimensionContext(db, params.companyId, lineInputs)
+    const byId = new Map(existingLines.map((l) => [l.id, l]))
+    for (const input of lineInputs) {
+      const row = byId.get(input.id as string)
+      if (!row) throw new ValidationError("บรรทัดไม่ตรงกับบิลเดิม")
+      const type = typeById.get(input.expenseTypeId)
+      if (!type) throw new ValidationError("ประเภทค่าใช้จ่ายไม่ถูกต้อง")
+      const dims = assertLineDimensions(
+        {
+          lineNo: row.lineNo,
+          pricingMode: row.pricingMode,
+          costCenterId: input.costCenterId !== undefined ? (input.costCenterId ?? null) : row.costCenterId,
+          processId: input.processId !== undefined ? (input.processId ?? null) : row.processId,
+          unitId:
+            row.pricingMode === "QTY_PRICE"
+              ? (input.unitId !== undefined ? (input.unitId ?? null) : row.unitId)
+              : null,
+          costObjectType: row.costObjectType,
+          costObjectLabel: row.costObjectLabel,
+        },
+        type,
+        lookup
+      )
+      linePatches.push({
+        id: row.id,
+        expenseTypeId: input.expenseTypeId,
+        description: input.description !== undefined ? (input.description ?? null) : row.description,
+        costCenterId: dims.costCenterId,
+        processId: dims.processId,
+        unitId: dims.unitId,
+        unitCode: dims.unitCode,
+      })
+    }
+    assertHeaderVendor(
+      linePatches.map((l) => ({ requiresVendor: Boolean(typeById.get(l.expenseTypeId)?.requiresVendor) })),
+      vendorId
+    )
+  } else if (params.input.vendorId === null) {
+    const typeIds = [...new Set(existingLines.map((l) => l.expenseTypeId))]
+    if (typeIds.length) {
+      const types = await db.expenseType.findMany({
+        where: { id: { in: typeIds }, companyId: params.companyId },
+        select: { requiresVendor: true },
+      })
+      assertHeaderVendor(types, null)
+    }
+  }
+
+  const oldValues: Record<string, unknown> = {}
+  const newValues: Record<string, unknown> = {}
+  const track = (key: string, prev: unknown, next: unknown) => {
+    if (JSON.stringify(prev) === JSON.stringify(next)) return
+    oldValues[key] = prev
+    newValues[key] = next
+  }
+
+  track("vendorId", existing.vendorId, vendorId)
+  if (params.input.employeeId !== undefined) {
+    track("employeeId", existing.employeeId, params.input.employeeId)
+  }
+  if (params.input.notes !== undefined) track("notes", existing.notes, params.input.notes)
+  if (params.input.expenseDate) track("expenseDate", isoDate(existing.expenseDate), isoDate(nextExpenseDate))
+  if (linePatches.length) {
+    track(
+      "lines",
+      existingLines.map((l) => ({
+        id: l.id,
+        expenseTypeId: l.expenseTypeId,
+        description: l.description,
+        costCenterId: l.costCenterId,
+        processId: l.processId,
+        unitId: l.unitId,
+        unitCode: l.unitCode,
+      })),
+      linePatches
+    )
+  }
+
+  const headerData: Prisma.ExpenseUpdateInput = {
+    ...(params.input.expenseDate ? { expenseDate: nextExpenseDate } : {}),
+    ...(params.input.vendorId !== undefined
+      ? vendorId
+        ? { vendor: { connect: { id: vendorId } } }
+        : { vendor: { disconnect: true } }
+      : {}),
+    ...(params.input.employeeId !== undefined
+      ? params.input.employeeId
+        ? { employee: { connect: { id: params.input.employeeId } } }
+        : { employee: { disconnect: true } }
+      : {}),
+    ...(params.input.notes !== undefined ? { notes: params.input.notes } : {}),
+    ...(linePatches.length
+      ? {
+          expenseType: {
+            connect: {
+              id:
+                linePatches.find((p) => p.id === existingLines[0]?.id)?.expenseTypeId ??
+                linePatches[0].expenseTypeId,
+            },
+          },
+        }
+      : {}),
+  }
+
+  await db.$transaction(async (tx) => {
+    for (const patch of linePatches) {
+      await tx.expenseLine.update({
+        where: { id: patch.id },
+        data: {
+          expenseType: { connect: { id: patch.expenseTypeId } },
+          description: patch.description,
+          costCenter: patch.costCenterId
+            ? { connect: { id: patch.costCenterId } }
+            : { disconnect: true },
+          process: patch.processId ? { connect: { id: patch.processId } } : { disconnect: true },
+          unit: patch.unitId ? { connect: { id: patch.unitId } } : { disconnect: true },
+          unitCode: patch.unitCode,
+        },
+      })
+    }
+    await tx.expense.update({ where: { id: params.id }, data: headerData })
+    if (Object.keys(newValues).length > 0) {
+      await tx.auditLog.create({
+        data: {
+          userId: params.userId ?? null,
+          tableName: "expenses",
+          recordId: params.id,
+          action: "update",
+          oldValues: oldValues as Prisma.InputJsonValue,
+          newValues: newValues as Prisma.InputJsonValue,
+        },
+      })
+    }
+  })
+
+  const row = await db.expense.findFirst({ where: { id: params.id }, include: expenseInclude })
+  if (!row) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  return { data: await toExpenseDto(db, params.companyId, row) }
+}
+
 export async function updateExpense(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; id: string; input: UpdateExpenseInput }
+  params: { companyId: string; roles: UserRole[]; userId?: string; id: string; input: UpdateExpenseInput }
 ) {
   if (!canExpenses(params.roles, "update")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
@@ -989,6 +1342,9 @@ export async function updateExpense(
     select: { id: true, status: true, branchId: true, vendorId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  if (existing.status === "PAID") {
+    return updatePaidExpenseMetadata(db, params)
+  }
   if (!EDITABLE_STATUSES.includes(existing.status)) {
     throw new ValidationError("แก้ไขได้เฉพาะรายการที่ยังไม่อนุมัติ")
   }
@@ -1195,6 +1551,53 @@ export async function deleteExpense(
   return { data: { id: params.id } }
 }
 
+export async function addExpenseAttachment(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    id: string
+    input: z.infer<typeof expenseAttachmentInputSchema>
+  }
+) {
+  if (!canExpenses(params.roles, "update")) throw new ForbiddenError()
+  const existing = await db.expense.findFirst({
+    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    select: { id: true, status: true },
+  })
+  if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  if (existing.status === "CANCELLED") {
+    throw new ValidationError("ไม่สามารถแนบไฟล์กับบิลที่ยกเลิกแล้ว")
+  }
+  const row = await db.expenseAttachment.create({
+    data: {
+      expenseId: params.id,
+      fileUrl: params.input.fileUrl,
+      fileName: params.input.fileName ?? null,
+      fileSize: params.input.fileSize ?? null,
+      uploadedBy: params.userId,
+    },
+  })
+  await db.auditLog.create({
+    data: {
+      userId: params.userId,
+      tableName: "expense_attachments",
+      recordId: row.id,
+      action: "create",
+      newValues: { expenseId: params.id, fileName: row.fileName, fileUrl: row.fileUrl },
+    },
+  })
+  return {
+    data: {
+      id: row.id,
+      fileUrl: row.fileUrl,
+      fileName: row.fileName,
+      fileSize: row.fileSize,
+    },
+  }
+}
+
 // ─── Summary + form option lists ─────────────────────────────────────────────
 
 export async function getExpenseSummary(
@@ -1284,4 +1687,5 @@ export {
   computeNet as _computeNetForTests,
   assertLineDimensions as _assertLineDimensionsForTests,
   assertHeaderVendor as _assertHeaderVendorForTests,
+  bangkokYearMonth as _bangkokYearMonthForTests,
 }

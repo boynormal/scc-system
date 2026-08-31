@@ -1,9 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassDialog, GlassInput } from "@/components/glass"
+import { cn } from "@/lib/utils"
 import type { CostCenterRow, DiscountKind, ExpenseTypeOption, LineDraft, ProcessRow, UnitOption } from "./expense-types"
 import {
   applyTypeChange,
@@ -20,6 +21,20 @@ import {
 } from "./finance-theme"
 
 const COST_OBJECT_TYPES = ["VEHICLE", "MACHINE", "TIRE", "JOB", "CUSTOMER", "PRODUCT", "PROJECT", "LOCATION", "OTHER"]
+const UNCATEGORIZED = "__none__"
+
+function typeGroups(types: ExpenseTypeOption[], keepId: string) {
+  const map = new Map<string, { key: string; label: string; items: ExpenseTypeOption[] }>()
+  for (const t of types) {
+    if (!t.isActive && t.id !== keepId) continue
+    const key = t.categoryId ?? UNCATEGORIZED
+    const label = t.categoryName?.trim() || "อื่นๆ"
+    const g = map.get(key) ?? { key, label, items: [] }
+    g.items.push(t)
+    map.set(key, g)
+  }
+  return [...map.values()]
+}
 
 export function newLineDraft(): LineDraft {
   return {
@@ -121,6 +136,21 @@ export function ExpenseLineDialog({
 
   const ccChoices = costCenterOptions(selectedType, costCenters, draft.costCenterId)
   const processChoices = processOptions(selectedType, processes, draft.processId)
+  const groups = useMemo(() => typeGroups(types, draft.expenseTypeId), [types, draft.expenseTypeId])
+  const [categoryKey, setCategoryKey] = useState(
+    () => types.find((t) => t.id === initial.expenseTypeId)?.categoryId ?? groups[0]?.key ?? UNCATEGORIZED
+  )
+
+  useEffect(() => {
+    setCategoryKey((current) => {
+      const fromType = types.find((t) => t.id === draft.expenseTypeId)?.categoryId ?? UNCATEGORIZED
+      if (draft.expenseTypeId && groups.some((g) => g.key === fromType)) return fromType
+      if (groups.some((g) => g.key === current)) return current
+      return groups[0]?.key ?? UNCATEGORIZED
+    })
+  }, [draft.expenseTypeId, types, groups])
+
+  const visibleTypes = groups.find((g) => g.key === categoryKey)?.items ?? groups[0]?.items ?? []
 
   function set<K extends keyof LineDraft>(field: K, value: LineDraft[K]) {
     setDraft((d) => ({ ...d, [field]: value }))
@@ -186,8 +216,65 @@ export function ExpenseLineDialog({
   }
 
   return (
-    <GlassDialog open={open} onOpenChange={(o) => !o && onClose()} title="รายการค่าใช้จ่าย (บรรทัด)" className="max-w-xl">
-      <div className="space-y-4">
+    <GlassDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title="รายการค่าใช้จ่าย (บรรทัด)"
+      className="max-w-5xl"
+    >
+      <div className="-mx-5 -my-4 flex min-h-[28rem] flex-col md:max-h-[calc(85vh-4.5rem)] md:flex-row">
+        <aside className="flex w-full shrink-0 flex-col bg-slate-800 p-3 text-white md:w-[22rem] lg:w-[26rem] dark:bg-slate-950">
+          <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
+            ประเภทค่าใช้จ่าย <span className="text-red-400">*</span>
+          </p>
+          {groups.length > 1 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {groups.map((g) => (
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => setCategoryKey(g.key)}
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-xs font-medium",
+                    categoryKey === g.key
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white/10 text-slate-200 hover:bg-white/20"
+                  )}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-2 overflow-y-auto pr-0.5">
+            {visibleTypes.map((t) => {
+              const selected = draft.expenseTypeId === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    changeType(t.id)
+                    setError(null)
+                  }}
+                  className={cn(
+                    "flex min-h-[4.5rem] items-center justify-center rounded-xl px-2 py-2 text-center text-xs font-semibold leading-snug shadow-sm",
+                    selected
+                      ? "bg-emerald-500 text-white ring-2 ring-emerald-300"
+                      : "bg-white text-slate-800 hover:bg-emerald-50 dark:bg-white dark:text-slate-800"
+                  )}
+                >
+                  {t.name}
+                </button>
+              )
+            })}
+            {visibleTypes.length === 0 && (
+              <p className="col-span-3 py-8 text-center text-sm text-slate-400">ไม่มีประเภทในหมวดนี้</p>
+            )}
+          </div>
+        </aside>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
         {lockFinancials && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
             บิลจ่ายแล้ว — แก้ได้เฉพาะประเภท หน่วยงาน กระบวนการ รายละเอียด และหน่วยนับ ยอดเงินถูกล็อก
@@ -207,14 +294,10 @@ export function ExpenseLineDialog({
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
 
-        <Select
-          label="ประเภทค่าใช้จ่าย"
-          required
-          value={draft.expenseTypeId}
-          onChange={(e) => changeType(e.target.value)}
-          placeholder="— เลือกประเภท —"
-          options={types.map((t) => ({ value: t.id, label: t.name }))}
-        />
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5">
+          <span className="text-xs text-muted-foreground">ประเภทที่เลือก</span>
+          <p className="font-medium text-foreground">{selectedType?.name ?? "— กดปุ่มด้านซ้ายเพื่อเลือก —"}</p>
+        </div>
         {selectedType?.defaultGlLabel && (
           <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-muted-foreground dark:border-white/10 dark:bg-white/5">
             บัญชีชั่วคราว (ยังไม่ผ่าน GL): {selectedType.defaultGlLabel}
@@ -442,6 +525,7 @@ export function ExpenseLineDialog({
           <Button type="button" onClick={submit}>
             บันทึกบรรทัด
           </Button>
+        </div>
         </div>
       </div>
     </GlassDialog>

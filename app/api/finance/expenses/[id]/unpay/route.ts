@@ -4,10 +4,10 @@ import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
 import { requestAuditMeta } from "@/lib/request-audit"
-import { markExpensePaid, payExpenseSchema } from "@/modules/finance"
+import { unpayExpense, unpayExpenseSchema } from "@/modules/finance"
 
 export const POST = withAuth(async (req, ctx, session) => {
-  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "expenses", "update")
+  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "expenses", "approve")
   if (denied) return denied
   const { id } = await ctx.params
   let body: unknown = {}
@@ -16,10 +16,10 @@ export const POST = withAuth(async (req, ctx, session) => {
   } catch {
     body = {}
   }
-  const parsed = payExpenseSchema.safeParse(body ?? {})
-  if (!parsed.success) throw new ValidationError("ข้อมูลไม่ถูกต้อง")
+  const parsed = unpayExpenseSchema.safeParse(body ?? {})
+  if (!parsed.success) throw new ValidationError("กรุณาระบุเหตุผลในการยกเลิกการจ่าย")
 
-  const result = await markExpensePaid(prisma, {
+  const result = await unpayExpense(prisma, {
     companyId: session.user.companyId as string,
     roles: session.user.roles as UserRole[],
     userId: session.user.id as string,

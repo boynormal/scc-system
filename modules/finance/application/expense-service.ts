@@ -106,10 +106,19 @@ const legacyFlatShape = {
 }
 
 export const createExpenseSchema = z.object({ ...headerShape, ...legacyFlatShape })
-export const updateExpenseSchema = z.object({ ...headerShape, ...legacyFlatShape }).partial()
+export const updateExpenseSchema = z
+  .object({
+    ...headerShape,
+    ...legacyFlatShape,
+    reason: z.string().trim().min(1).max(500).optional(),
+  })
+  .partial()
 export const payExpenseSchema = z.object({
   paymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
   paidAt: z.string().min(1).nullable().optional(),
+})
+export const unpayExpenseSchema = z.object({
+  reason: z.string().trim().min(1).max(500),
 })
 
 export const expenseAttachmentInputSchema = z.object({
@@ -121,6 +130,20 @@ export const expenseAttachmentInputSchema = z.object({
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>
 
+export type ExpenseAuditMeta = {
+  ipAddress?: string | null
+  userAgent?: string | null
+}
+
+type ExpenseAuditEvent =
+  | "EXPENSE_CREATE"
+  | "EXPENSE_UPDATE"
+  | "EXPENSE_APPROVE"
+  | "EXPENSE_REJECT"
+  | "EXPENSE_PAY"
+  | "EXPENSE_UNPAY"
+  | "EXPENSE_PAID_METADATA_UPDATE"
+
 type ExpenseAction = "create" | "read" | "update" | "delete" | "approve"
 
 function canExpenses(roles: UserRole[], action: ExpenseAction): boolean {
@@ -128,6 +151,45 @@ function canExpenses(roles: UserRole[], action: ExpenseAction): boolean {
     isAdminInAnyBranch(roles) ||
     getBranchIds(roles).some((bid) => hasPermission(roles, bid, "expenses", action))
   )
+}
+
+function assertExpensePermission(roles: UserRole[], branchId: string, action: ExpenseAction) {
+  if (!hasPermission(roles, branchId, "expenses", action)) {
+    throw new ForbiddenError("ไม่มีสิทธิ์ในสาขาของรายการนี้")
+  }
+}
+
+async function writeExpenseAudit(
+  db: { auditLog: { create: PrismaClient["auditLog"]["create"] } },
+  params: {
+    userId?: string | null
+    recordId: string
+    action: "create" | "update" | "delete"
+    event: ExpenseAuditEvent
+    branchId: string
+    oldValues?: Record<string, unknown>
+    newValues?: Record<string, unknown>
+    reason?: string
+    audit?: ExpenseAuditMeta
+  }
+) {
+  await db.auditLog.create({
+    data: {
+      userId: params.userId ?? null,
+      tableName: "expenses",
+      recordId: params.recordId,
+      action: params.action,
+      oldValues: (params.oldValues ?? undefined) as Prisma.InputJsonValue | undefined,
+      newValues: {
+        event: params.event,
+        branchId: params.branchId,
+        ...(params.reason ? { reason: params.reason } : {}),
+        ...(params.newValues ?? {}),
+      } as Prisma.InputJsonValue,
+      ipAddress: params.audit?.ipAddress ?? null,
+      userAgent: params.audit?.userAgent ?? null,
+    },
+  })
 }
 
 function optionalUuid(value?: string | null): string | null {
@@ -979,9 +1041,15 @@ export async function getExpense(
 
 export async function createExpense(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; userId: string; input: CreateExpenseInput }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    input: CreateExpenseInput
+    audit?: ExpenseAuditMeta
+  }
 ) {
-  if (!canExpenses(params.roles, "create")) throw new ForbiddenError()
+  assertExpensePermission(params.roles, params.input.branchId, "create")
   await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles)
 
   const lineInputs = coerceLineInputs(params.input)
@@ -1028,6 +1096,19 @@ export async function createExpense(
       companyId: params.companyId,
       identities: bill.identities,
       userId: params.userId,
+    })
+    await writeExpenseAudit(db, {
+      userId: params.userId,
+      recordId: row.id,
+      action: "create",
+      event: "EXPENSE_CREATE",
+      branchId: row.branchId,
+      newValues: {
+        expenseNo: row.expenseNo,
+        status: row.status,
+        netAmount: Number(row.netAmount),
+      },
+      audit: params.audit,
     })
     return { data: serializeExpense(row) }
   } catch (err) {
@@ -1088,9 +1169,9 @@ export async function updatePaidExpenseMetadata(
     userId?: string
     id: string
     input: UpdateExpenseInput
+    audit?: ExpenseAuditMeta
   }
 ) {
-  if (!canExpenses(params.roles, "update")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
     where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
     include: {
@@ -1124,8 +1205,14 @@ export async function updatePaidExpenseMetadata(
     },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "update")
   if (existing.status !== "PAID") {
     throw new ValidationError("ใช้ได้เฉพาะบิลที่จ่ายแล้ว")
+  }
+
+  const reason = params.input.reason?.trim()
+  if (!reason) {
+    throw new ValidationError("กรุณาระบุเหตุผลในการแก้ไขบิลที่จ่ายแล้ว")
   }
 
   if (params.input.branchId && params.input.branchId !== existing.branchId) {
@@ -1147,7 +1234,7 @@ export async function updatePaidExpenseMetadata(
   if (params.input.expenseDate) {
     const nextMonth = bangkokYearMonth(params.input.expenseDate)
     const prevMonth = bangkokYearMonth(existing.expenseDate)
-    if (nextMonth !== prevMonth && !canExpenses(params.roles, "approve")) {
+    if (nextMonth !== prevMonth && !hasPermission(params.roles, existing.branchId, "expenses", "approve")) {
       throw new ValidationError("ข้ามเดือนต้องมีสิทธิ์อนุมัติค่าใช้จ่าย")
     }
     nextExpenseDate = parseDateOnly(params.input.expenseDate)
@@ -1314,15 +1401,16 @@ export async function updatePaidExpenseMetadata(
     }
     await tx.expense.update({ where: { id: params.id }, data: headerData })
     if (Object.keys(newValues).length > 0) {
-      await tx.auditLog.create({
-        data: {
-          userId: params.userId ?? null,
-          tableName: "expenses",
-          recordId: params.id,
-          action: "update",
-          oldValues: oldValues as Prisma.InputJsonValue,
-          newValues: newValues as Prisma.InputJsonValue,
-        },
+      await writeExpenseAudit(tx, {
+        userId: params.userId,
+        recordId: params.id,
+        action: "update",
+        event: "EXPENSE_PAID_METADATA_UPDATE",
+        branchId: existing.branchId,
+        reason,
+        oldValues,
+        newValues,
+        audit: params.audit,
       })
     }
   })
@@ -1334,14 +1422,21 @@ export async function updatePaidExpenseMetadata(
 
 export async function updateExpense(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; userId?: string; id: string; input: UpdateExpenseInput }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId?: string
+    id: string
+    input: UpdateExpenseInput
+    audit?: ExpenseAuditMeta
+  }
 ) {
-  if (!canExpenses(params.roles, "update")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
     where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
     select: { id: true, status: true, branchId: true, vendorId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "update")
   if (existing.status === "PAID") {
     return updatePaidExpenseMetadata(db, params)
   }
@@ -1431,19 +1526,38 @@ export async function updateExpense(
 
   const row = await db.expense.findFirst({ where: { id: params.id }, include: expenseInclude })
   if (!row) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  await writeExpenseAudit(db, {
+    userId: params.userId,
+    recordId: params.id,
+    action: "update",
+    event: "EXPENSE_UPDATE",
+    branchId: existing.branchId,
+    oldValues: { status: existing.status },
+    newValues: {
+      status: row.status,
+      ...(params.input.branchId ? { branchId: params.input.branchId } : {}),
+    },
+    audit: params.audit,
+  })
   return { data: serializeExpense(row) }
 }
 
 export async function approveExpense(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; userId: string; id: string }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    id: string
+    audit?: ExpenseAuditMeta
+  }
 ) {
-  if (!canExpenses(params.roles, "approve")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
     where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
-    select: { id: true, status: true },
+    select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "approve")
   if (existing.status !== "DRAFT" && existing.status !== "PENDING") {
     throw new ValidationError("อนุมัติได้เฉพาะรายการที่รอดำเนินการ")
   }
@@ -1452,19 +1566,35 @@ export async function approveExpense(
     data: { status: "APPROVED", approvedById: params.userId, approvedAt: new Date() },
     include: expenseInclude,
   })
+  await writeExpenseAudit(db, {
+    userId: params.userId,
+    recordId: params.id,
+    action: "update",
+    event: "EXPENSE_APPROVE",
+    branchId: existing.branchId,
+    oldValues: { status: existing.status },
+    newValues: { status: "APPROVED" },
+    audit: params.audit,
+  })
   return { data: serializeExpense(row) }
 }
 
 export async function rejectExpense(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; userId: string; id: string }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    id: string
+    audit?: ExpenseAuditMeta
+  }
 ) {
-  if (!canExpenses(params.roles, "approve")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
     where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
-    select: { id: true, status: true },
+    select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "approve")
   if (existing.status === "PAID") {
     throw new ValidationError("ไม่สามารถปฏิเสธรายการที่จ่ายแล้ว")
   }
@@ -1472,6 +1602,16 @@ export async function rejectExpense(
     where: { id: params.id },
     data: { status: "REJECTED", approvedById: params.userId, approvedAt: new Date() },
     include: expenseInclude,
+  })
+  await writeExpenseAudit(db, {
+    userId: params.userId,
+    recordId: params.id,
+    action: "update",
+    event: "EXPENSE_REJECT",
+    branchId: existing.branchId,
+    oldValues: { status: existing.status },
+    newValues: { status: "REJECTED" },
+    audit: params.audit,
   })
   return { data: serializeExpense(row) }
 }
@@ -1484,14 +1624,15 @@ export async function markExpensePaid(
     userId: string
     id: string
     input?: z.infer<typeof payExpenseSchema>
+    audit?: ExpenseAuditMeta
   }
 ) {
-  if (!canExpenses(params.roles, "update")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
     where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
-    select: { id: true, status: true, paymentMethod: true },
+    select: { id: true, status: true, paymentMethod: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "update")
   if (existing.status !== "APPROVED") {
     throw new ValidationError("ทำเครื่องหมายจ่ายได้เฉพาะรายการที่อนุมัติแล้ว")
   }
@@ -1508,6 +1649,82 @@ export async function markExpensePaid(
     },
     include: expenseInclude,
   })
+  await writeExpenseAudit(db, {
+    userId: params.userId,
+    recordId: params.id,
+    action: "update",
+    event: "EXPENSE_PAY",
+    branchId: existing.branchId,
+    oldValues: { status: existing.status },
+    newValues: { status: "PAID" },
+    audit: params.audit,
+  })
+  return { data: serializeExpense(row) }
+}
+
+export async function unpayExpense(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    id: string
+    input: { reason?: string | null }
+    audit?: ExpenseAuditMeta
+  }
+) {
+  const existing = await db.expense.findFirst({
+    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    select: {
+      id: true,
+      status: true,
+      branchId: true,
+      paidAt: true,
+      paidById: true,
+      paymentMethod: true,
+    },
+  })
+  if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "approve")
+  if (existing.status !== "PAID") {
+    throw new ValidationError("ยกเลิกการจ่ายได้เฉพาะรายการที่จ่ายแล้ว")
+  }
+  const reason = typeof params.input?.reason === "string" ? params.input.reason.trim() : ""
+  if (!reason) {
+    throw new ValidationError("กรุณาระบุเหตุผลในการยกเลิกการจ่าย")
+  }
+  if (reason.length > 500) {
+    throw new ValidationError("เหตุผลยาวเกินไป")
+  }
+
+  const row = await db.expense.update({
+    where: { id: params.id },
+    data: {
+      status: "APPROVED",
+      paidAt: null,
+      paidBy: { disconnect: true },
+    },
+    include: expenseInclude,
+  })
+  await writeExpenseAudit(db, {
+    userId: params.userId,
+    recordId: params.id,
+    action: "update",
+    event: "EXPENSE_UNPAY",
+    branchId: existing.branchId,
+    reason,
+    oldValues: {
+      status: existing.status,
+      paidAt: existing.paidAt ? existing.paidAt.toISOString() : null,
+      paidById: existing.paidById,
+    },
+    newValues: {
+      status: "APPROVED",
+      paidAt: null,
+      paidById: null,
+    },
+    audit: params.audit,
+  })
   return { data: serializeExpense(row) }
 }
 
@@ -1515,12 +1732,15 @@ export async function deleteExpense(
   db: PrismaClient,
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
-  if (!canExpenses(params.roles, "delete")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
     where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
-    select: { id: true },
+    select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "delete")
+  if (existing.status === "PAID") {
+    throw new ValidationError("ไม่สามารถลบรายการที่จ่ายแล้ว")
+  }
   const linkedLines = await db.expenseLine.findMany({
     where: { expenseId: params.id, sourceDocumentId: { not: null } },
     select: {
@@ -1561,12 +1781,12 @@ export async function addExpenseAttachment(
     input: z.infer<typeof expenseAttachmentInputSchema>
   }
 ) {
-  if (!canExpenses(params.roles, "update")) throw new ForbiddenError()
   const existing = await db.expense.findFirst({
     where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
-    select: { id: true, status: true },
+    select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  assertExpensePermission(params.roles, existing.branchId, "update")
   if (existing.status === "CANCELLED") {
     throw new ValidationError("ไม่สามารถแนบไฟล์กับบิลที่ยกเลิกแล้ว")
   }

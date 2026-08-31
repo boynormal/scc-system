@@ -14,7 +14,7 @@ import {
   Plus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { GlassCard, GlassTabs } from "@/components/glass"
+import { GlassCard, GlassDialog, GlassTabs } from "@/components/glass"
 import { cn, formatDate, formatDateTime } from "@/lib/utils"
 import type { ExpenseAttachmentDto, ExpenseDto, ExpenseLineDto, FinancePerms } from "./expense-types"
 import {
@@ -117,6 +117,8 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [unpayOpen, setUnpayOpen] = useState(false)
+  const [unpayReason, setUnpayReason] = useState("")
   const [files, setFiles] = useState<ExpenseAttachmentDto[]>(expense.attachments)
   const [uploading, setUploading] = useState(false)
 
@@ -125,8 +127,11 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
   const canClassify = perms.canUpdate && status === "PAID"
   const canAttach = perms.canUpdate && status !== "CANCELLED"
   const canApprove = perms.canApprove && ["DRAFT", "PENDING"].includes(status)
+  const canReject = perms.canApprove && ["DRAFT", "PENDING", "APPROVED"].includes(status)
   const canPay = perms.canUpdate && status === "APPROVED"
+  const canUnpay = perms.canApprove && status === "PAID"
   const canDelete = perms.canDelete && status !== "PAID"
+  const unpayReasonOk = unpayReason.trim().length >= 1 && unpayReason.trim().length <= 500
   const headerOrigin = summarizeExpenseSourceOrigin(expense.lines)
   const primaryLinked = expense.lines.find((l) => l.sourceKind !== "MANUAL" && (l.sourceModule || l.sourceType))
 
@@ -196,6 +201,32 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
       router.push("/finance/expenses")
     } else {
       router.refresh()
+    }
+  }
+
+  async function submitUnpay() {
+    const reason = unpayReason.trim()
+    if (!reason || reason.length > 500) return
+    setBusy("unpay")
+    setError(null)
+    try {
+      const res = await fetch(`/api/finance/expenses/${expense.id}/unpay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(typeof json.error === "string" ? json.error : json.error?.message ?? "ทำรายการไม่สำเร็จ")
+        return
+      }
+      setUnpayOpen(false)
+      setUnpayReason("")
+      router.refresh()
+    } catch {
+      setError("ทำรายการไม่สำเร็จ")
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -288,7 +319,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
             จ่ายแล้ว
           </Button>
         )}
-        {(canDelete || canPay || canApprove) && (
+        {(canDelete || canPay || canApprove || canReject || canUnpay) && (
           <div className="relative">
             <Button
               type="button"
@@ -302,7 +333,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
             </Button>
             {moreOpen && (
               <div className="absolute right-0 z-30 mt-1 min-w-[10rem] rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-slate-900">
-                {canApprove && (
+                {canReject && (
                   <button
                     type="button"
                     className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
@@ -318,6 +349,19 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                     onClick={() => void act("pay")}
                   >
                     ทำเครื่องหมายจ่ายแล้ว
+                  </button>
+                )}
+                {canUnpay && (
+                  <button
+                    type="button"
+                    className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      setUnpayReason("")
+                      setUnpayOpen(true)
+                    }}
+                  >
+                    ยกเลิกการจ่าย
                   </button>
                 )}
                 {canDelete && (
@@ -670,6 +714,49 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
           <ActionCluster compact />
         </div>
       </div>
+
+      <GlassDialog
+        open={unpayOpen}
+        onOpenChange={(open) => {
+          setUnpayOpen(open)
+          if (!open) setUnpayReason("")
+        }}
+        title="ยกเลิกการจ่าย"
+      >
+        <p className="whitespace-pre-line text-sm text-foreground">
+          {`การยกเลิกการจ่ายจะเปลี่ยนสถานะกลับเป็น APPROVED
+ยอดเงินยังไม่สามารถแก้ไขได้
+หากต้องการแก้ยอด ต้องปฏิเสธรายการก่อน`}
+        </p>
+        <label className="mt-4 block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">
+            เหตุผล<span className="ml-1 text-red-500">*</span>
+          </span>
+          <textarea
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            rows={3}
+            maxLength={500}
+            value={unpayReason}
+            onChange={(e) => setUnpayReason(e.target.value)}
+            placeholder="ระบุเหตุผลในการยกเลิกการจ่าย"
+          />
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setUnpayOpen(false)}>
+            ยกเลิก
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            disabled={!unpayReasonOk}
+            loading={busy === "unpay"}
+            onClick={() => void submitUnpay()}
+          >
+            ยืนยันยกเลิกการจ่าย
+          </Button>
+        </div>
+      </GlassDialog>
     </div>
   )
 }

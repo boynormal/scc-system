@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api-handler"
 import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
+import { requestAuditMeta } from "@/lib/request-audit"
 import { createExpense, createExpenseSchema, listExpenses } from "@/modules/finance"
 
 export const GET = withAuth(async (req, _ctx, session) => {
@@ -48,6 +49,7 @@ export const POST = withAuth(async (req, _ctx, session) => {
     roles: session.user.roles as UserRole[],
     userId: session.user.id as string,
     input: parsed.data,
+    audit: requestAuditMeta(req),
   })
   return Response.json(result)
 })

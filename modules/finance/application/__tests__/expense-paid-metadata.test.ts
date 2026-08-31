@@ -154,6 +154,7 @@ const classifyInput = {
   employeeId: null,
   notes: "ลืมคีย์หมวด",
   expenseDate: "2026-08-20",
+  reason: "แก้หมวดค่าใช้จ่ายให้ถูกต้อง",
   lines: [
     {
       id: LINE,
@@ -180,7 +181,15 @@ describe("bangkokYearMonth", () => {
 
 describe("updatePaidExpenseMetadata", () => {
   it("updates classification fields on a PAID bill and writes audit", async () => {
+    const auditCreate = vi.fn().mockResolvedValue({})
     const db = createMockDb()
+    db.$transaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        expenseLine: { update: vi.fn().mockResolvedValue({}) },
+        expense: { update: vi.fn().mockResolvedValue({}) },
+        auditLog: { create: auditCreate },
+      })
+    )
     const result = await updatePaidExpenseMetadata(asDb(db), {
       companyId: COMPANY,
       roles: adminRoles,
@@ -189,7 +198,26 @@ describe("updatePaidExpenseMetadata", () => {
       input: classifyInput,
     })
     expect(result.data.id).toBe(EXPENSE)
-    expect(db.$transaction).toHaveBeenCalled()
+    expect(auditCreate).toHaveBeenCalled()
+    const payload = auditCreate.mock.calls[0][0].data
+    expect(payload.newValues).toMatchObject({
+      event: "EXPENSE_PAID_METADATA_UPDATE",
+      reason: "แก้หมวดค่าใช้จ่ายให้ถูกต้อง",
+      branchId: BRANCH,
+    })
+  })
+
+  it("requires a reason on PAID metadata edits", async () => {
+    const db = createMockDb()
+    await expect(
+      updatePaidExpenseMetadata(asDb(db), {
+        companyId: COMPANY,
+        roles: adminRoles,
+        userId: USER,
+        id: EXPENSE,
+        input: { notes: "ไม่มีเหตุผล" },
+      })
+    ).rejects.toThrow(/เหตุผล/)
   })
 
   it("rejects amount changes on PAID", async () => {
@@ -201,6 +229,7 @@ describe("updatePaidExpenseMetadata", () => {
         userId: USER,
         id: EXPENSE,
         input: {
+          reason: "แก้ยอดไม่ได้",
           lines: [{ ...classifyInput.lines[0], amount: 999 }],
         },
       })
@@ -216,6 +245,7 @@ describe("updatePaidExpenseMetadata", () => {
         userId: USER,
         id: EXPENSE,
         input: {
+          reason: "ห้ามเพิ่มบรรทัด",
           lines: [
             classifyInput.lines[0],
             { ...classifyInput.lines[0], id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" },
@@ -233,7 +263,7 @@ describe("updatePaidExpenseMetadata", () => {
         roles: clerkRoles,
         userId: USER,
         id: EXPENSE,
-        input: { expenseDate: "2026-09-01", notes: "ข้ามเดือน" },
+        input: { expenseDate: "2026-09-01", notes: "ข้ามเดือน", reason: "ข้ามเดือน" },
       })
     ).rejects.toThrow(/ข้ามเดือน/)
   })

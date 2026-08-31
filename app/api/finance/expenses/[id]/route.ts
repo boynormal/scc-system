@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api-handler"
 import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
+import { requestAuditMeta } from "@/lib/request-audit"
 import { deleteExpense, getExpense, updateExpense, updateExpenseSchema } from "@/modules/finance"
 
 export const GET = withAuth(async (_req, ctx, session) => {
@@ -39,6 +40,7 @@ export const PATCH = withAuth(async (req, ctx, session) => {
     userId: session.user.id as string,
     id,
     input: parsed.data,
+    audit: requestAuditMeta(req),
   })
   return Response.json(result)
 })

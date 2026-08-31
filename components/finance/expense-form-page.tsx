@@ -97,6 +97,7 @@ export function ExpenseFormPage({
   const [employeeId, setEmployeeId] = useState(item?.employeeId ?? "")
   const [paymentMethod, setPaymentMethod] = useState<string>(item?.paymentMethod ?? "")
   const [notes, setNotes] = useState(item?.notes ?? "")
+  const [reason, setReason] = useState("")
   const [status, setStatus] = useState<string>(item?.status === "PENDING" ? "PENDING" : "DRAFT")
 
   const [lines, setLines] = useState<LineDraft[]>(item ? itemToDrafts(item) : [])
@@ -256,6 +257,10 @@ export function ExpenseFormPage({
       setError(formError)
       return
     }
+    if (lockFinancials && !reason.trim()) {
+      setError("กรุณาระบุเหตุผลในการแก้ไขบิลที่จ่ายแล้ว")
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -272,6 +277,7 @@ export function ExpenseFormPage({
         vendorId: vendorId || null,
         employeeId: employeeId || null,
         notes: notes || null,
+        ...(lockFinancials ? { reason: reason.trim() } : {}),
         lines: lines.map((l) => {
           const original = item?.lines.find((row) => row.id === l.key)
           return {
@@ -408,6 +414,21 @@ export function ExpenseFormPage({
             onChange={(e) => setNotes(e.target.value)}
           />
         </label>
+        {lockFinancials && (
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-foreground">
+              เหตุผลในการแก้ไข<span className="ml-1 text-red-500">*</span>
+            </span>
+            <textarea
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              rows={2}
+              required
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="เช่น แก้หมวดค่าใช้จ่ายให้ถูกต้อง"
+            />
+          </label>
+        )}
       </GlassCard>
 
       <GlassCard className={cn("space-y-3 rounded-[1.5rem] p-5 shadow-none", FIN_GLASS_PANEL)}>

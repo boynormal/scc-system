@@ -7,7 +7,9 @@ export {
   approveExpense,
   rejectExpense,
   markExpensePaid,
+  unpayExpense,
   payExpenseSchema,
+  unpayExpenseSchema,
   addExpenseAttachment,
   expenseAttachmentInputSchema,
   deleteExpense,
@@ -28,6 +30,7 @@ export {
   type ExpenseLineInput,
   type CreateExpenseInput,
   type UpdateExpenseInput,
+  type ExpenseAuditMeta,
 } from "./application/expense-service"
 
 export {

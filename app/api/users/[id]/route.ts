@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/shared/db"
 import { auth } from "@/lib/auth"
-import { deactivateUser, getUserById, updateUser, updateUserSchema } from "@/modules/iam"
+import {
+  assignmentBranchIdsFromUpdateInput,
+  deactivateUser,
+  getUserById,
+  updateUser,
+  updateUserSchema,
+} from "@/modules/iam"
 import { hasPermission, type UserRole } from "@/lib/permissions"
 import type { ZodError } from "zod"
 
@@ -60,7 +66,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
 
   const roles = session.user.roles as UserRole[]
   const branchIds = new Set(existing.userBranchRoles.map((r) => r.branch.id))
-  if (parsed.data.branchId) branchIds.add(parsed.data.branchId)
+  for (const bid of assignmentBranchIdsFromUpdateInput(parsed.data)) branchIds.add(bid)
   if (!canManageUserBranches(roles, Array.from(branchIds), "update")) {
     return NextResponse.json({ error: { message: "ไม่มีสิทธิ์แก้ไขผู้ใช้งานนี้" } }, { status: 403 })
   }

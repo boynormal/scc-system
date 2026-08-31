@@ -196,6 +196,9 @@ export async function importAttendanceFromXls(
   } catch {
     throw new ValidationError("อ่านไฟล์ไม่ได้")
   }
+  if (rows.length === 0) {
+    throw new ValidationError("อ่านไฟล์ไม่ได้ หรือไม่มีแถววันที่ที่อ่านได้")
+  }
 
   const merged = new Map<
     GroupKey,

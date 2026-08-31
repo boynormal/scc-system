@@ -177,6 +177,7 @@ model Branch {
 
   company                 Company                 @relation(fields: [companyId], references: [id])
   departments             Department[]
+  positions               Position[]
   machines                Machine[]
   userBranchRoles         UserBranchRole[]
   workOrders              WorkOrder[]
@@ -211,11 +212,12 @@ model Department {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  branch   Branch       @relation(fields: [branchId], references: [id])
-  parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  children Department[] @relation("DepartmentHierarchy")
-  machines   Machine[]
-  personnel  Personnel[]
+  branch    Branch       @relation(fields: [branchId], references: [id])
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children  Department[] @relation("DepartmentHierarchy")
+  machines  Machine[]
+  personnel Personnel[]
+  positions Position[]
 
   @@index([branchId])
   @@index([parentId])
@@ -859,29 +861,62 @@ model AuditLog {
 
 // ─── GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (import จาก Excel รูปแบบบันทึกเวลา) ─
 
+/// Org node ต่อสาขา (People Phase 3-Org) — ลำดับชั้นองค์กรอยู่ที่ parentId ไม่ใช่ที่ Personnel
+/// departmentId เป็นป้าย/ตัวกรองเท่านั้น ไม่ใช่ชั้นในผัง
+model Position {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branchId         String   @map("branch_id") @db.Uuid
+  departmentId     String?  @map("department_id") @db.Uuid
+  parentId         String?  @map("parent_id") @db.Uuid
+  code             String?  @db.VarChar(20)
+  name             String   @db.VarChar(255)
+  sortOrder        Int      @default(0) @map("sort_order")
+  /// อัตราที่วางไว้ — ตำแหน่งว่าง = headcount ลบจำนวนคนที่นั่งจริง
+  headcount        Int      @default(1)
+  /// หน้าที่ความรับผิดชอบ บรรทัดละ 1 ข้อ
+  responsibilities String?  @db.Text
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  parent     Position?   @relation("PositionHierarchy", fields: [parentId], references: [id])
+  children   Position[]  @relation("PositionHierarchy")
+  personnel  Personnel[]
+
+  @@unique([branchId, code], map: "positions_branch_code_unique")
+  @@index([branchId])
+  @@index([parentId])
+  @@index([departmentId])
+  @@map("positions")
+}
+
 model Personnel {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   String    @map("company_id") @db.Uuid
-  branchId    String?   @map("branch_id") @db.Uuid
-  rosterNo    String    @map("roster_no") @db.VarChar(30)
-  displayName String    @map("display_name") @db.VarChar(255)
-  jobGroup    String?   @map("job_group") @db.VarChar(100)
-  firstName   String?   @map("first_name") @db.VarChar(100)
-  lastName    String?   @map("last_name") @db.VarChar(100)
-  idCardNo    String?   @map("id_card_no") @db.VarChar(30)
-  phone       String?   @db.VarChar(30)
-  address     String?   @db.Text
-  notes       String?   @db.Text
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  branchId     String?   @map("branch_id") @db.Uuid
+  rosterNo     String    @map("roster_no") @db.VarChar(30)
+  displayName  String    @map("display_name") @db.VarChar(255)
+  jobGroup     String?   @map("job_group") @db.VarChar(100)
+  firstName    String?   @map("first_name") @db.VarChar(100)
+  lastName     String?   @map("last_name") @db.VarChar(100)
+  idCardNo     String?   @map("id_card_no") @db.VarChar(30)
+  phone        String?   @db.VarChar(30)
+  address      String?   @db.Text
+  notes        String?   @db.Text
   userId       String?   @unique @map("user_id") @db.Uuid
   departmentId String?   @map("department_id") @db.Uuid
+  positionId   String?   @map("position_id") @db.Uuid
   isActive     Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
   company           Company           @relation(fields: [companyId], references: [id])
   branch            Branch?           @relation(fields: [branchId], references: [id])
   department        Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  position          Position?         @relation(fields: [positionId], references: [id], onDelete: Restrict)
   user              User?             @relation(fields: [userId], references: [id])
   attendance        AttendanceEntry[]
   /**
@@ -893,6 +928,7 @@ model Personnel {
   @@index([companyId])
   @@index([branchId])
   @@index([departmentId])
+  @@index([positionId])
   @@index([displayName])
   @@map("personnel")
 }
@@ -1127,20 +1163,20 @@ model TransportVehicle {
 }
 
 model TransportTireLog {
-  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId     String                @map("company_id") @db.Uuid
-  branchId      String                @map("branch_id") @db.Uuid
-  vehicleId     String                @map("vehicle_id") @db.Uuid
-  tireNumber    String                @map("tire_number") @db.VarChar(30)
-  workDate      DateTime              @map("work_date") @db.Timestamptz
+  id            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String                  @map("company_id") @db.Uuid
+  branchId      String                  @map("branch_id") @db.Uuid
+  vehicleId     String                  @map("vehicle_id") @db.Uuid
+  tireNumber    String                  @map("tire_number") @db.VarChar(30)
+  workDate      DateTime                @map("work_date") @db.Timestamptz
   /// [{ position: number, workType: TransportTireWorkType }, ...]
   wheels        Json
-  cost          Decimal?              @db.Decimal(12, 2)
+  cost          Decimal?                @db.Decimal(12, 2)
   paymentMethod TransportPaymentMethod? @map("payment_method")
   notes         String?
-  createdById   String                @map("created_by_id") @db.Uuid
-  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+  createdById   String                  @map("created_by_id") @db.Uuid
+  createdAt     DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime                @updatedAt @map("updated_at") @db.Timestamptz
 
   company   Company          @relation(fields: [companyId], references: [id])
   branch    Branch           @relation(fields: [branchId], references: [id])
@@ -1157,32 +1193,32 @@ model TransportTireLog {
 }
 
 model TransportRepairLog {
-  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId       String                @map("company_id") @db.Uuid
-  branchId        String                @map("branch_id") @db.Uuid
-  vehicleId       String                @map("vehicle_id") @db.Uuid
-  repairNumber    String                @map("repair_number") @db.VarChar(30)
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String                  @map("company_id") @db.Uuid
+  branchId        String                  @map("branch_id") @db.Uuid
+  vehicleId       String                  @map("vehicle_id") @db.Uuid
+  repairNumber    String                  @map("repair_number") @db.VarChar(30)
   symptom         String
   notes           String?
-  status          TransportRepairStatus @default(reported)
-  reportedById    String                @map("reported_by_id") @db.Uuid
-  reportedAt      DateTime              @default(now()) @map("reported_at") @db.Timestamptz
-  startedById     String?               @map("started_by_id") @db.Uuid
-  startedAt       DateTime?             @map("started_at") @db.Timestamptz
-  closedById      String?               @map("closed_by_id") @db.Uuid
-  closedAt        DateTime?             @map("closed_at") @db.Timestamptz
-  mileageAtReport Decimal?              @map("mileage_at_report") @db.Decimal(12, 2)
-  repairCost      Decimal?              @map("repair_cost") @db.Decimal(12, 2)
+  status          TransportRepairStatus   @default(reported)
+  reportedById    String                  @map("reported_by_id") @db.Uuid
+  reportedAt      DateTime                @default(now()) @map("reported_at") @db.Timestamptz
+  startedById     String?                 @map("started_by_id") @db.Uuid
+  startedAt       DateTime?               @map("started_at") @db.Timestamptz
+  closedById      String?                 @map("closed_by_id") @db.Uuid
+  closedAt        DateTime?               @map("closed_at") @db.Timestamptz
+  mileageAtReport Decimal?                @map("mileage_at_report") @db.Decimal(12, 2)
+  repairCost      Decimal?                @map("repair_cost") @db.Decimal(12, 2)
   paymentMethod   TransportPaymentMethod? @map("payment_method")
-  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                @updatedAt @map("updated_at") @db.Timestamptz
 
-  company    Company         @relation(fields: [companyId], references: [id])
-  branch     Branch          @relation(fields: [branchId], references: [id])
+  company    Company          @relation(fields: [companyId], references: [id])
+  branch     Branch           @relation(fields: [branchId], references: [id])
   vehicle    TransportVehicle @relation(fields: [vehicleId], references: [id])
-  reportedBy User            @relation("RepairReportedBy", fields: [reportedById], references: [id])
-  startedBy  User?           @relation("RepairStartedBy", fields: [startedById], references: [id])
-  closedBy   User?           @relation("RepairClosedBy", fields: [closedById], references: [id])
+  reportedBy User             @relation("RepairReportedBy", fields: [reportedById], references: [id])
+  startedBy  User?            @relation("RepairStartedBy", fields: [startedById], references: [id])
+  closedBy   User?            @relation("RepairClosedBy", fields: [closedById], references: [id])
 
   @@unique([companyId, repairNumber])
   @@index([companyId])
@@ -1355,10 +1391,10 @@ model DueItem {
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  company  Company           @relation(fields: [companyId], references: [id])
-  branch   Branch            @relation(fields: [branchId], references: [id])
-  owner    User?             @relation("DueItemOwner", fields: [ownerUserId], references: [id])
-  creator  User              @relation("DueItemCreatedBy", fields: [createdById], references: [id])
+  company  Company          @relation(fields: [companyId], references: [id])
+  branch   Branch           @relation(fields: [branchId], references: [id])
+  owner    User?            @relation("DueItemOwner", fields: [ownerUserId], references: [id])
+  creator  User             @relation("DueItemCreatedBy", fields: [createdById], references: [id])
   renewals DueItemRenewal[]
 
   @@index([companyId])
@@ -1504,28 +1540,28 @@ model Process {
 }
 
 model ExpenseType {
-  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId         String                 @map("company_id") @db.Uuid
-  categoryId        String?                @map("category_id") @db.Uuid
-  code              String                 @db.VarChar(30)
-  name              String                 @db.VarChar(255)
-  subcategory       String?                @db.VarChar(255)
-  description       String?
-  transactionType   ExpenseTransactionType @default(EXPENSE) @map("transaction_type")
-  defaultCostType   ExpenseCostType?       @map("default_cost_type")
-  defaultDirectness ExpenseDirectness?     @map("default_directness")
+  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId          String                 @map("company_id") @db.Uuid
+  categoryId         String?                @map("category_id") @db.Uuid
+  code               String                 @db.VarChar(30)
+  name               String                 @db.VarChar(255)
+  subcategory        String?                @db.VarChar(255)
+  description        String?
+  transactionType    ExpenseTransactionType @default(EXPENSE) @map("transaction_type")
+  defaultCostType    ExpenseCostType?       @map("default_cost_type")
+  defaultDirectness  ExpenseDirectness?     @map("default_directness")
   // Temporary free-text GL label only (Phase 1-2). NOT an FK; no posting logic.
-  defaultGlLabel    String?                @map("default_gl_label") @db.VarChar(255)
+  defaultGlLabel     String?                @map("default_gl_label") @db.VarChar(255)
   // Required-dimension flags. Enforced on expense create/PATCH (Phase 4); GET never fails on history.
-  requiresVendor     Boolean               @default(false) @map("requires_vendor")
-  requiresVehicle    Boolean               @default(false) @map("requires_vehicle")
-  requiresMachine    Boolean               @default(false) @map("requires_machine")
-  requiresLocation   Boolean               @default(false) @map("requires_location")
-  requiresCostCenter Boolean               @default(false) @map("requires_cost_center")
-  requiresProcess    Boolean               @default(false) @map("requires_process")
-  isActive          Boolean                @default(true) @map("is_active")
-  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+  requiresVendor     Boolean                @default(false) @map("requires_vendor")
+  requiresVehicle    Boolean                @default(false) @map("requires_vehicle")
+  requiresMachine    Boolean                @default(false) @map("requires_machine")
+  requiresLocation   Boolean                @default(false) @map("requires_location")
+  requiresCostCenter Boolean                @default(false) @map("requires_cost_center")
+  requiresProcess    Boolean                @default(false) @map("requires_process")
+  isActive           Boolean                @default(true) @map("is_active")
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz
 
   company        Company                 @relation(fields: [companyId], references: [id])
   category       ExpenseCategory?        @relation(fields: [categoryId], references: [id])
@@ -1594,8 +1630,8 @@ model CostCenter {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company      Company       @relation(fields: [companyId], references: [id])
-  branch       Branch?       @relation(fields: [branchId], references: [id])
+  company         Company                 @relation(fields: [companyId], references: [id])
+  branch          Branch?                 @relation(fields: [branchId], references: [id])
   parent          CostCenter?             @relation("CostCenterHierarchy", fields: [parentId], references: [id])
   children        CostCenter[]            @relation("CostCenterHierarchy")
   expenses        Expense[]
@@ -1669,26 +1705,26 @@ model Expense {
 }
 
 model ExpenseLine {
-  id               String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId        String                  @map("company_id") @db.Uuid
-  expenseId        String                  @map("expense_id") @db.Uuid
-  lineNo           Int                     @map("line_no")
-  expenseTypeId    String                  @map("expense_type_id") @db.Uuid
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String                 @map("company_id") @db.Uuid
+  expenseId        String                 @map("expense_id") @db.Uuid
+  lineNo           Int                    @map("line_no")
+  expenseTypeId    String                 @map("expense_type_id") @db.Uuid
   description      String?
-  pricingMode      ExpenseLinePricingMode  @default(AMOUNT) @map("pricing_mode")
-  quantity         Decimal                 @default(1) @db.Decimal(14, 3)
-  unitId           String?                 @map("unit_id") @db.Uuid
-  unitCode         String?                 @map("unit_code") @db.VarChar(30)
-  unitPrice        Decimal                 @default(0) @map("unit_price") @db.Decimal(14, 2)
-  amount           Decimal                 @default(0) @db.Decimal(14, 2)
-  taxAmount        Decimal                 @default(0) @map("tax_amount") @db.Decimal(14, 2)
-  discountAmount   Decimal                 @default(0) @map("discount_amount") @db.Decimal(14, 2)
-  netAmount        Decimal                 @default(0) @map("net_amount") @db.Decimal(14, 2)
-  costCenterId     String?                 @map("cost_center_id") @db.Uuid
-  processId        String?                 @map("process_id") @db.Uuid
-  costObjectType   ExpenseCostObjectType?  @map("cost_object_type")
-  costObjectId     String?                 @map("cost_object_id") @db.VarChar(64)
-  costObjectLabel  String?                 @map("cost_object_label") @db.VarChar(255)
+  pricingMode      ExpenseLinePricingMode @default(AMOUNT) @map("pricing_mode")
+  quantity         Decimal                @default(1) @db.Decimal(14, 3)
+  unitId           String?                @map("unit_id") @db.Uuid
+  unitCode         String?                @map("unit_code") @db.VarChar(30)
+  unitPrice        Decimal                @default(0) @map("unit_price") @db.Decimal(14, 2)
+  amount           Decimal                @default(0) @db.Decimal(14, 2)
+  taxAmount        Decimal                @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  discountAmount   Decimal                @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  netAmount        Decimal                @default(0) @map("net_amount") @db.Decimal(14, 2)
+  costCenterId     String?                @map("cost_center_id") @db.Uuid
+  processId        String?                @map("process_id") @db.Uuid
+  costObjectType   ExpenseCostObjectType? @map("cost_object_type")
+  costObjectId     String?                @map("cost_object_id") @db.VarChar(64)
+  costObjectLabel  String?                @map("cost_object_label") @db.VarChar(255)
   // Source identity: sourceKind separates manual vs module-linked rows.
   // Uniqueness for linked rows is enforced by two partial unique indexes
   // created in SQL (Prisma cannot express partial unique indexes):
@@ -1696,14 +1732,14 @@ model ExpenseLine {
   //     WHERE source_link_active AND source_document_id IS NOT NULL AND source_line_id IS NULL
   //   (company_id, source_module, source_type, source_document_id, source_line_id)
   //     WHERE source_link_active AND source_document_id IS NOT NULL AND source_line_id IS NOT NULL
-  sourceKind       ExpenseSourceKind       @default(MANUAL) @map("source_kind")
-  sourceModule     ExpenseSourceModule?    @map("source_module")
-  sourceType       String?                 @map("source_type") @db.VarChar(50)
-  sourceDocumentId String?                 @map("source_document_id") @db.VarChar(64)
-  sourceLineId     String?                 @map("source_line_id") @db.VarChar(64)
-  sourceLinkActive Boolean                 @default(true) @map("source_link_active")
-  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+  sourceKind       ExpenseSourceKind      @default(MANUAL) @map("source_kind")
+  sourceModule     ExpenseSourceModule?   @map("source_module")
+  sourceType       String?                @map("source_type") @db.VarChar(50)
+  sourceDocumentId String?                @map("source_document_id") @db.VarChar(64)
+  sourceLineId     String?                @map("source_line_id") @db.VarChar(64)
+  sourceLinkActive Boolean                @default(true) @map("source_link_active")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz
 
   expense     Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   expenseType ExpenseType @relation(fields: [expenseTypeId], references: [id])
@@ -1741,18 +1777,18 @@ model ExpenseAttachment {
 // Uniqueness for null source_line_id is a partial unique index in SQL
 // (same pattern as expense_lines).
 model FinanceSourceReview {
-  id               String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId        String                     @map("company_id") @db.Uuid
-  sourceModule     ExpenseSourceModule        @map("source_module")
-  sourceType       String                     @map("source_type") @db.VarChar(50)
-  sourceDocumentId String                     @map("source_document_id") @db.VarChar(64)
-  sourceLineId     String?                    @map("source_line_id") @db.VarChar(64)
+  id               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String                    @map("company_id") @db.Uuid
+  sourceModule     ExpenseSourceModule       @map("source_module")
+  sourceType       String                    @map("source_type") @db.VarChar(50)
+  sourceDocumentId String                    @map("source_document_id") @db.VarChar(64)
+  sourceLineId     String?                   @map("source_line_id") @db.VarChar(64)
   status           FinanceSourceReviewStatus
   reason           String?
-  reviewedById     String?                    @map("reviewed_by_id") @db.Uuid
-  reviewedAt       DateTime?                  @map("reviewed_at") @db.Timestamptz
-  createdAt        DateTime                   @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime                   @updatedAt @map("updated_at") @db.Timestamptz
+  reviewedById     String?                   @map("reviewed_by_id") @db.Uuid
+  reviewedAt       DateTime?                 @map("reviewed_at") @db.Timestamptz
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
 
   company    Company @relation(fields: [companyId], references: [id])
   reviewedBy User?   @relation("FinanceSourceReviewReviewedBy", fields: [reviewedById], references: [id])

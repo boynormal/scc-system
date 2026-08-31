@@ -344,7 +344,12 @@ export async function createDepartment(
   params: { companyId: string; input: z.infer<typeof createDepartmentSchema> }
 ) {
   const branch = await db.branch.findFirst({
-    where: { id: params.input.branchId, companyId: params.companyId, deletedAt: null },
+    where: {
+      id: params.input.branchId,
+      companyId: params.companyId,
+      deletedAt: null,
+      isActive: true,
+    },
     select: { id: true },
   })
   if (!branch) return { error: "Invalid branch" as const, status: 400 as const }
@@ -372,7 +377,12 @@ export async function updateDepartment(
 
   if (params.input.branchId) {
     const branch = await db.branch.findFirst({
-      where: { id: params.input.branchId, companyId: params.companyId, deletedAt: null },
+      where: {
+        id: params.input.branchId,
+        companyId: params.companyId,
+        deletedAt: null,
+        isActive: true,
+      },
       select: { id: true },
     })
     if (!branch) return { error: "Invalid branch" as const, status: 400 as const }
@@ -667,6 +677,16 @@ function normalizeUnitCode(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "_")
 }
 
+const PERSON_UNIT = { code: "PERSON", name: "คน" } as const
+
+async function ensurePersonUnit(db: PrismaClient, companyId: string) {
+  await db.unit.upsert({
+    where: { companyId_code: { companyId, code: PERSON_UNIT.code } },
+    update: { name: PERSON_UNIT.name, isActive: true },
+    create: { companyId, code: PERSON_UNIT.code, name: PERSON_UNIT.name, isActive: true },
+  })
+}
+
 export const createUnitSchema = z.object({
   code: z.string().trim().min(1).max(20),
   name: z.string().trim().min(1).max(100),
@@ -683,6 +703,7 @@ export async function listUnits(
   db: PrismaClient,
   params: { companyId: string; includeInactive?: boolean }
 ) {
+  await ensurePersonUnit(db, params.companyId)
   return db.unit.findMany({
     where: {
       companyId: params.companyId,

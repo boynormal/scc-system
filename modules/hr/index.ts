@@ -1,4 +1,7 @@
 export * from "./application/personnel-service"
+export * from "./application/position-service"
+export * from "./application/personnel-org-view"
+export * from "./application/personnel-org-chart"
 export * from "./application/attendance-service"
 export * from "./application/personnel-branch-utils"
 export * from "./application/parse-timesheet-xls"

@@ -50,6 +50,26 @@ Future GL / AP / AR  (อ้าง id เดิม — ห้ามสร้า�
 
 ---
 
+## หน้าจอและเจ้าของ
+
+หน้าจอแยกตามเจ้าของความหมาย ไม่ใช่ตามตาราง — ตารางและ `/api/master-data/**` ยังเป็นชุดเดียว
+
+| Entity | หน้าจอวันนี้ | สิทธิ์ที่เกต |
+|---|---|---|
+| Supplier · Unit | `/settings/partners` | `settings.read` (บันทึกต้อง `settings.update`) |
+| Department | `/settings/organization` | `settings.read` |
+| Branch | `/settings/branches` | `branches.read` |
+| MachineCategory · MaintenanceType | `/maintenance/master-data` | `settings.read` |
+| ExpenseType · Category · Process · CostCenter | `/finance/master-data` | `expense_masters.read` |
+| TmsCustomer · job/cargo/vehicle types · Vehicle · Driver | `/transport/master-data` | `transport_jobs.read` |
+| Position | `/hr/positions` | `hr_positions.read` |
+
+- `/settings/master-data` เดิมเหลือเป็น redirect ไป `/settings/partners` เพื่อไม่ให้ bookmark และลิงก์ในเอกสารพัง
+- Customer จะเข้ามาเป็นแท็บที่สามของ `/settings/partners` เมื่อถึง P2/P3 — `suppliers` ยังเป็นสมุดคู่ค้าเดียวไม่แตกตาม UI
+- ห้ามสร้างหน้าคู่ค้าประจำโมดูล (เช่น หน้าซัพพลายเออร์ของอะไหล่หรือของการเงิน) — ให้ลิงก์มาที่ `/settings/partners`
+
+---
+
 ## Ownership matrix
 
 | Entity | Owner | Shared | Finance | Transport | Maint | Inventory | Purchasing | Sales |
@@ -75,7 +95,7 @@ Future GL / AP / AR  (อ้าง id เดิม — ห้ามสร้า�
 `GLSupplier` · `GLCustomer` · `GLVehicle` · `GLMachine`  
 `FinanceAsset` · `GLAsset` · `MaintenanceAsset` · `TransportAsset` · `ITAsset` (ตารางแยก)  
 `FinanceEmployee` · `ProductionWorker` · `ProductionPersonnel` · `MaintenanceTechnician` · `AssetCustodian` (ตารางแยก)  
-`Position` จนกว่ามี use case รายสัปดาห์ — `PeopleDepartment` ห้าม (reuse `departments`) — [erp-people-personnel.md](./erp-people-personnel.md)  
+`PeopleDepartment` ห้าม (reuse `departments`) — `Position` ปลดล็อกแล้วเป็น HR master ต่อสาขา (Phase 3-Org) — [erp-people-personnel.md](./erp-people-personnel.md)  
 Business Partner / Party / Person framework / Contact กลาง / Address engine  
 Location master จนกว่าเข้าเกณฑ์ด้านล่าง  
 `Machine.assetId` / `Vehicle.assetId` จนกว่า Asset Phase 2 — [erp-asset-management.md](./erp-asset-management.md)
@@ -246,7 +266,7 @@ Detection ≠ Merge — ห้ามรวมอัตโนมัติ
 | **P2** | ออกแบบ Customer ขั้นต่ำ, เกณฑ์แยก TmsCustomer, checklist tax ID | สร้างตารางก่อนโมดูลพร้อม |
 | **P3** | เมื่อโมดูล live ชี้ Supplier/Customer ตามตารางด้านบน | SalesCustomer / PurchaseSupplier |
 | **P4** | Business Partner เมื่อคู่ค้าเดียวเป็นสองบท + เอกสารภาษีชุดเดียว | Party/Person/CRM/merge engine |
-| **เลื่อน** | Location master, Asset hierarchy / Component, Position / PeopleDepartment, GL/AP/AR/Tax/Bank | — |
+| **เลื่อน** | Location master, Asset hierarchy / Component, PeopleDepartment, GL/AP/AR/Tax/Bank | — |
 
 ---
 

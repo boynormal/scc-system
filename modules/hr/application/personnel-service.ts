@@ -31,6 +31,13 @@ const personnelFieldsSchema = z.object({
     .nullable()
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),
+  positionId: z
+    .string()
+    .uuid()
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null)),
 })
 
 function refinePrimaryBranch(
@@ -104,6 +111,7 @@ export function formatRosterNo(seq: number): string {
 const personnelInclude = {
   branch: { select: { id: true, name: true, code: true } },
   department: { select: { id: true, name: true, code: true, branchId: true } },
+  position: { select: { id: true, name: true, code: true, branchId: true } },
   user: { select: { id: true, firstName: true, lastName: true, username: true, email: true } },
   branchAssignments: {
     include: { branch: { select: { name: true, code: true, id: true } } },
@@ -146,6 +154,22 @@ async function assertDepartmentAllowed(
   if (!dept) throw new ValidationError("แผนกไม่ถูกต้อง")
   if (!assignedBranchIds.includes(dept.branchId)) {
     throw new ValidationError("แผนกต้องอยู่ในสาขาที่เลือก")
+  }
+}
+
+async function assertPositionAllowed(
+  db: PrismaClient | Prisma.TransactionClient,
+  companyId: string,
+  positionId: string,
+  assignedBranchIds: string[]
+) {
+  const position = await db.position.findFirst({
+    where: { id: positionId, isActive: true, branch: { companyId, deletedAt: null } },
+    select: { id: true, branchId: true },
+  })
+  if (!position) throw new ValidationError("ตำแหน่งไม่ถูกต้อง")
+  if (!assignedBranchIds.includes(position.branchId)) {
+    throw new ValidationError("ตำแหน่งต้องอยู่ในสาขาที่เลือก")
   }
 }
 
@@ -246,6 +270,7 @@ export async function listPersonnel(
     search?: string | null
     isActive?: boolean | null
     departmentId?: string | null
+    positionId?: string | null
     page: number
     pageSize: number
   }
@@ -259,6 +284,7 @@ export async function listPersonnel(
     search,
     isActive: isActiveParam = null,
     departmentId: departmentIdParam = null,
+    positionId: positionIdParam = null,
     page,
     pageSize,
   } = params
@@ -296,6 +322,9 @@ export async function listPersonnel(
   }
   if (departmentIdParam) {
     andParts.push({ departmentId: departmentIdParam })
+  }
+  if (positionIdParam) {
+    andParts.push({ positionId: positionIdParam })
   }
 
   const where: Prisma.PersonnelWhereInput = {
@@ -343,6 +372,7 @@ export async function createPersonnel(
     notes,
     userId,
     departmentId,
+    positionId,
   } = input
 
   const resolvedBranchIds = resolveBranchIdList(input)
@@ -351,6 +381,7 @@ export async function createPersonnel(
   await assertBranchesAllowed(db, companyId, resolvedBranchIds, roles)
   if (userId) await assertUserLinkAllowed(db, companyId, userId)
   if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId, resolvedBranchIds)
+  if (positionId) await assertPositionAllowed(db, companyId, positionId, resolvedBranchIds)
 
   if (resolvedBranchIds.length === 0 && !isAdminInAnyBranch(roles)) {
     const allowed = getBranchIds(roles)
@@ -374,6 +405,7 @@ export async function createPersonnel(
           notes: notes?.trim() || null,
           userId: userId ?? null,
           departmentId: departmentId ?? null,
+          positionId: positionId ?? null,
         },
       })
       if (resolvedBranchIds.length > 0) {
@@ -463,6 +495,25 @@ export async function updatePersonnel(
   }
   if (input.departmentId !== undefined || nextDepartmentId !== existing.departmentId) {
     data.departmentId = nextDepartmentId
+  }
+
+  // กฎเดียวกับแผนก: ย้ายสาขาแล้วตำแหน่งไม่ valid ให้เคลียร์ FK ไม่เก็บประวัติ
+  let nextPositionId = input.positionId !== undefined ? input.positionId : existing.positionId
+  if (nextPositionId) {
+    if (input.positionId) {
+      await assertPositionAllowed(db, companyId, nextPositionId, nextBranchIds)
+    } else {
+      const position = await db.position.findFirst({
+        where: { id: nextPositionId, branch: { companyId } },
+        select: { branchId: true, isActive: true },
+      })
+      if (!position || !position.isActive || !nextBranchIds.includes(position.branchId)) {
+        nextPositionId = null
+      }
+    }
+  }
+  if (input.positionId !== undefined || nextPositionId !== existing.positionId) {
+    data.positionId = nextPositionId
   }
 
   try {

@@ -32,7 +32,7 @@
 4. `/maintenance/schedules` list
 5. `/work-orders` → create WO
 6. `/spare-parts` list → edit
-7. `/settings/master-data` (categories / suppliers)
+7. `/settings/partners` (suppliers / units), `/settings/organization` (departments), `/maintenance/master-data` (categories / maintenance types) และ `/settings/master-data` ต้อง redirect ไป `/settings/partners`
 8. `/notifications`
 9. `/apps` load ได้และเห็น tile ตาม role
 10. Cron (ถ้ามี): `GET /api/cron/generate-schedules` with `Authorization: Bearer $CRON_SECRET`

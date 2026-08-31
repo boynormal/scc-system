@@ -67,6 +67,14 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
           : row.department.name
         : "—",
     },
+    {
+      label: "ตำแหน่ง",
+      value: row.position
+        ? row.position.code
+          ? `${row.position.name} (${row.position.code})`
+          : row.position.name
+        : "—",
+    },
     { label: "บัญชีผู้ใช้", value: formatUser(row.user) },
   ]
 

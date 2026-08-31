@@ -52,6 +52,7 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
     label: "บุคลากรและเวลา",
     rows: [
       { resource: "hr_personnel", label: "ข้อมูลบุคลากร", actions: CRUD },
+      { resource: "hr_positions", label: "ตำแหน่งและผังองค์กร", actions: CRUD },
       { resource: "hr_attendance", label: "บันทึกเวลา", actions: CRUD },
     ],
   },

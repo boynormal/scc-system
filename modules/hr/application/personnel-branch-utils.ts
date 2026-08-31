@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client"
+import type { Prisma, PrismaClient } from "@prisma/client"
 
 export type PersonnelDbTx = Prisma.TransactionClient
 
@@ -98,4 +98,123 @@ export async function replacePersonnelBranchesFromIds(
     where: { id: personnelId },
     data: { branchId: primary },
   })
+}
+
+export type MissingPrimaryPersonnelBranchInsert = {
+  personnelId: string
+  rosterNo: string
+  branchId: string
+  isPrimary: boolean
+  deletedAt: Date | null
+}
+
+export type BackfillMissingPrimaryPersonnelBranchesResult = {
+  scanned: number
+  skippedNullBranch: number
+  skippedAlreadyHasRow: number
+  skippedMissingBranch: Array<{ personnelId: string; rosterNo: string; branchId: string }>
+  toInsert: MissingPrimaryPersonnelBranchInsert[]
+  inserted: number
+  dryRun: boolean
+}
+
+/**
+ * เติมแถว personnel_branches ให้คนที่มี Personnel.branchId แต่ยังไม่มี junction ของสาขานั้น
+ * ไม่เรียก ensurePersonnelBranch — จะไม่ UPDATE personnel.branchId และไม่ลบแถวที่มีอยู่
+ */
+export async function backfillMissingPrimaryPersonnelBranches(
+  db: PrismaClient,
+  opts: { dryRun?: boolean } = {}
+): Promise<BackfillMissingPrimaryPersonnelBranchesResult> {
+  const dryRun = opts.dryRun !== false
+
+  const people = await db.personnel.findMany({
+    select: { id: true, rosterNo: true, branchId: true, deletedAt: true },
+  })
+
+  const withBranch = people.filter((p): p is typeof p & { branchId: string } => p.branchId != null)
+  const skippedNullBranch = people.length - withBranch.length
+
+  const uniqueBranchIds = [...new Set(withBranch.map((p) => p.branchId))]
+  const existingBranches =
+    uniqueBranchIds.length === 0
+      ? []
+      : await db.branch.findMany({
+          where: { id: { in: uniqueBranchIds } },
+          select: { id: true },
+        })
+  const branchSet = new Set(existingBranches.map((b) => b.id))
+
+  const personnelIds = withBranch.map((p) => p.id)
+  const existingPb =
+    personnelIds.length === 0
+      ? []
+      : await db.personnelBranch.findMany({
+          where: { personnelId: { in: personnelIds } },
+          select: { personnelId: true, branchId: true, isPrimary: true },
+        })
+
+  const rowsByPersonnel = new Map<string, { branchIds: Set<string>; hasPrimary: boolean }>()
+  for (const row of existingPb) {
+    const cur = rowsByPersonnel.get(row.personnelId) ?? {
+      branchIds: new Set<string>(),
+      hasPrimary: false,
+    }
+    cur.branchIds.add(row.branchId)
+    if (row.isPrimary) cur.hasPrimary = true
+    rowsByPersonnel.set(row.personnelId, cur)
+  }
+
+  const skippedMissingBranch: BackfillMissingPrimaryPersonnelBranchesResult["skippedMissingBranch"] = []
+  const toInsert: MissingPrimaryPersonnelBranchInsert[] = []
+  let skippedAlreadyHasRow = 0
+
+  for (const p of withBranch) {
+    if (!branchSet.has(p.branchId)) {
+      skippedMissingBranch.push({
+        personnelId: p.id,
+        rosterNo: p.rosterNo,
+        branchId: p.branchId,
+      })
+      continue
+    }
+    const cur = rowsByPersonnel.get(p.id)
+    if (cur?.branchIds.has(p.branchId)) {
+      skippedAlreadyHasRow += 1
+      continue
+    }
+    toInsert.push({
+      personnelId: p.id,
+      rosterNo: p.rosterNo,
+      branchId: p.branchId,
+      isPrimary: !cur?.hasPrimary,
+      deletedAt: p.deletedAt,
+    })
+  }
+
+  let inserted = 0
+  if (!dryRun && toInsert.length > 0) {
+    await db.$transaction(async (tx) => {
+      for (const row of toInsert) {
+        await tx.personnelBranch.create({
+          data: {
+            personnelId: row.personnelId,
+            branchId: row.branchId,
+            isPrimary: row.isPrimary,
+          },
+        })
+      }
+    })
+    inserted = toInsert.length
+  }
+
+  return {
+    scanned: people.length,
+    skippedNullBranch,
+    skippedAlreadyHasRow,
+    skippedMissingBranch,
+    toInsert,
+    inserted,
+    dryRun,
+  }
 }

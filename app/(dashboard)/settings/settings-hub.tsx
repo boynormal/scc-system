@@ -124,12 +124,20 @@ export function SettingsHub({
     }
     if (access.masterData) {
       adminEntries.push({
-        id: "master-data",
-        href: "/settings/master-data",
-        label: t("masterDataTitle"),
-        description: t("masterDataDesc"),
+        id: "partners",
+        href: "/settings/partners",
+        label: t("partnersTitle"),
+        description: t("partnersDesc"),
         icon: Database,
-        keywords: ["master data", "ข้อมูลพื้นฐาน", "categories", "suppliers"],
+        keywords: ["master data", "ข้อมูลพื้นฐาน", "suppliers", "ซัพพลายเออร์", "vendor", "units", "หน่วยนับ"],
+      })
+      adminEntries.push({
+        id: "organization",
+        href: "/settings/organization",
+        label: t("organizationTitle"),
+        description: t("organizationDesc"),
+        icon: Building2,
+        keywords: ["master data", "ข้อมูลพื้นฐาน", "department", "แผนก", "ฝ่าย"],
       })
     }
     if (adminEntries.length > 0) {

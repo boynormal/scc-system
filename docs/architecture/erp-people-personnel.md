@@ -1,7 +1,7 @@
 # ERP People / Personnel Architecture
 
-**สถานะ:** Architecture lock — Phase 0–1 ลงแล้ว · **Phase 2 Shared Department Master ลงแล้ว** (`Personnel.departmentId?`)  
-**ห้ามสร้าง PeopleDepartment / Position** · ห้ามเปลี่ยน Expense/Driver/Asset FK จนกว่ามีคำสั่งเฟสนั้น  
+**สถานะ:** Architecture lock — Phase 0–1 ลงแล้ว · **Phase 2 Shared Department Master ลงแล้ว** (`Personnel.departmentId?`) · **Phase 3-Org ปลดล็อกแล้ว** (`positions` + `Personnel.positionId?`)  
+**ห้ามสร้าง PeopleDepartment** · ห้ามทำ supervisor graph บน Personnel / org history / dual-hat · ห้ามเปลี่ยน Expense/Driver/Asset FK จนกว่ามีคำสั่งเฟสนั้น  
 กฎเอเจนต์: [`.cursor/rules/erp-people-personnel.mdc`](../../.cursor/rules/erp-people-personnel.mdc)  
 Shared Master: [`erp-shared-master.md`](./erp-shared-master.md)  
 Asset custodian (อนาคต): [`erp-asset-management.md`](./erp-asset-management.md)  
@@ -38,13 +38,15 @@ Decision:
   Driver = operational master ของ Transport (ไม่บังคับมี Personnel)
   Department = Shared Organization Master ต่อสาขา (Settings owns)
   คนกับเครื่อง reuse ตาราง departments ชุดเดียวกัน — ห้าม PeopleDepartment
-  Position ยังไม่มี — ใช้ Personnel.jobGroup จนกว่ามี use case รายสัปดาห์
+  Position = Org node ต่อสาขา (HR owns) — ลำดับชั้นองค์กรอยู่บน Position.parentId
+  Personnel.jobGroup ยังอยู่ — Position ไม่แทนที่และไม่ migrate
 
 Status:
   Accepted (2026-08-31) — Phase 0 ล็อกแล้ว
   Phase 1 landed (2026-08-31) — roster CRUD + isActive + optional userId
   Phase 2 architecture accepted (2026-08-31) — Shared Department Master
   Phase 2 build landed (2026-08-31) — optional Personnel.departmentId + validate + delete/move guard
+  Phase 3-Org unlocked (2026-08-31) — positions master + Personnel.positionId? + org chart
   Expense.employeeId ยังเป็น User; Driver ไม่เปลี่ยน
 
 Owner:
@@ -78,7 +80,8 @@ Implementation:
   Phase 3+ = Driver.personnelId / Expense remap — รอคำสั่งแยก
 
 Deferred:
-  Position master, supervisor, org history, payroll, leave, recruitment,
+  supervisor graph บน Personnel, org / occupancy history, dual-hat (รักษาการ),
+  payroll, leave, recruitment,
   Driver.personnelId, Expense.employeeId → Personnel, Asset custodian FK
 ```
 
@@ -96,7 +99,7 @@ Deferred:
 | User | `users` | IAM | `employeeCode` คนละช่องกับ `rosterNo` |
 | Driver | `drivers` | Transport | ไม่มี `personnelId` / `userId` |
 | Department | `departments` | Settings | Shared Org ต่อสาขา; วันนี้ผู้บริโภค = Machine; Personnel.departmentId ยังไม่มี |
-| Position | — | — | ไม่มีตาราง; มีแค่ `Personnel.jobGroup` |
+| Position | `positions` | HR | Org node ต่อสาขา (Phase 3-Org); `parentId` = สายบังคับบัญชา; `Personnel.jobGroup` ยังอยู่คู่กัน |
 | Expense.employeeId | `expenses.employee_id` | Finance | FK → **User** ไม่ใช่ Personnel |
 
 คำว่า “คน” ใน repo **ไม่ใช่สมุดเดียวกัน**:
@@ -146,7 +149,7 @@ Personnel ──── Shared People Master     (HR owns register)
 User ───────── Login / audit actor      (IAM)
 Driver ─────── Transport operational    (ไม่บังคับมี Personnel)
 Department ─── Shared Org Master        (Settings; ต่อสาขา; Machine + คนใช้ชุดเดียวกัน)
-Position ───── ยังไม่มีมาสเตอร์         (jobGroup สตริง)
+Position ───── Org node ต่อสาขา          (HR; parentId = สายบังคับบัญชา)
 ```
 
 Personnel **ไม่ใช่ parent** ของ User หรือ Driver  
@@ -157,15 +160,18 @@ Personnel **ไม่ใช่ parent** ของ User หรือ Driver
 ## Organization
 
 ```text
-Company  →  Branch  →  Department  →  (Position ยังไม่มี)  →  Personnel
+Company  →  Branch  →  Position (parentId ซ้อนชั้นได้)  →  Personnel
+                    →  Department  →  Personnel            (แผนกบ้าน คงเดิม)
 ```
+
+แผนกกับตำแหน่งเป็นสองมิติที่ตั้งฉากกัน ไม่ซ้อนเป็นชั้นเดียวกัน — `Position.departmentId?` เป็นแค่ป้าย/ตัวกรอง
 
 Reuse:
 
 - Company / Branch — ใช้ของที่มี
 - Department — ตาราง `departments` เดิมเท่านั้น (Shared Org). Product ยืนยันคนกับเครื่องใช้แถวชุดเดียวกัน
 - `Personnel.departmentId?` = หนึ่งแผนกต่อคน **หลัง** `APPROVE PERSONNEL PHASE 2 BUILD` — ห้าม `PeopleDepartment`
-- Position — ห้ามสร้าง; คง `jobGroup`
+- Position — ตาราง `positions` ของ HR (Phase 3-Org); คง `jobGroup` ไว้คู่กัน
 
 คนหนึ่งอยู่ได้หลาย**สาขา** (`PersonnelBranch`)  
 คนหนึ่งอยู่หลายแผนก — ยังไม่รองรับ ห้ามสร้าง join  
@@ -173,7 +179,8 @@ Reuse:
 ย้ายสาขาแล้วแผนกไม่ valid → เคลียร์ `departmentId`  
 ลบแผนก: นับทั้ง Machine และ Personnel (รวมแถว soft-delete)
 
-หัวหน้า — ยังไม่มี; เมื่อมีใช้ `supervisorPersonnelId?` คนเดียว ไม่ใช่กราฟ ไม่ใช่ User ไม่ใช่หัวหน้าแผนกอัตโนมัติ
+หัวหน้า — อ่านจาก `Position.parentId` (ตำแหน่งแม่) ไม่ใช่ฟิลด์บนคน  
+ห้ามเพิ่ม `supervisorPersonnelId` ห้ามทำกราฟหัวหน้าบน Personnel ห้ามอนุมานหัวหน้าแผนกอัตโนมัติ
 
 CostCenter เป็นมิติการเงิน — ไม่ใช่แผนกคน  
 Nav `launcher.departmentId: "people"` ≠ ตาราง `departments`
@@ -199,6 +206,37 @@ Company → Branch → Department → Personnel?   (home org, 0..1 — landed)
 - อย่ายกระดับแผนกเป็นของบริษัท
 
 Machine ปรับ architecture ได้: เพิ่มตรวจสาขาตอน build — ไม่รื้อ `Machine.departmentId`
+
+---
+
+## Position Master (Phase 3-Org)
+
+ปลดล็อกโดยคำสั่งมนุษย์ 2026-08-31 เพื่อทำผังองค์กรที่ `/hr/org` ตามผังกระดาษ
+
+```text
+Branch → Position (parentId ซ้อนชั้น) → Personnel (positionId?)
+                 └── departmentId? = ป้าย/ตัวกรอง ไม่ใช่ชั้น
+```
+
+ทำไมลำดับชั้นอยู่บน Position ไม่ใช่บน Personnel: ผังต้องแสดง**ตำแหน่งว่าง**และ **JD** ซึ่งผูกกับตำแหน่ง ไม่ผูกกับคน ถ้าใช้ `supervisorPersonnelId` ตำแหน่งว่างจะแสดงไม่ได้
+
+| ช่อง | ความหมาย |
+|---|---|
+| `branchId` | บังคับ — `positions` เป็น branch-scoped เหมือน `departments` |
+| `parentId?` | สายบังคับบัญชา; `parent.branchId` ต้องเท่ากับ `branchId`; ห้ามวงกลม; ลึกไม่เกิน 10 |
+| `departmentId?` | ป้าย/ตัวกรองเท่านั้น; `department.branchId` ต้องเท่ากับ `branchId` |
+| `headcount` | อัตราที่วางไว้; ว่าง = `headcount - จำนวนคนที่นั่ง` |
+| `responsibilities?` | JD บรรทัดละ 1 ข้อ แสดงเป็นลิสต์เลข |
+| `isActive` | ปิดใช้งานแทนการลบเมื่อมีลูกหรือมีคนนั่ง |
+
+กฎที่ล็อก:
+
+- `Personnel.positionId?` — คนหนึ่งหนึ่งตำแหน่ง; `position.branchId` ต้องอยู่ในสาขาที่คนถูก assign
+- ย้ายสาขาแล้วตำแหน่งไม่ valid → เคลียร์ `positionId` ไม่เก็บประวัติ (กฎเดียวกับ `departmentId`)
+- `Personnel.jobGroup` **ไม่ถูกแทนที่ ไม่ถูก migrate ไม่ถูกลบ**
+- `Department.parentId` ยังไม่ใช้ — ลำดับชั้นมีชุดเดียว
+- ปิดใช้งานตำแหน่งที่มีลูก → ลูกเลื่อนขึ้นเป็น root ในมุมมองผัง ไม่ทิ้งกิ่งกำพร้า
+- มุมมองแผนกเดิม (`getPersonnelOrgView`) คงไว้ทั้งหมด — `/hr/org?view=dept`
 
 ---
 
@@ -246,7 +284,6 @@ Enum ภายหลังเมื่อ HR กรองรายสัปด�
 
 ```text
 ตาราง Personnel / Employee ชุดที่สอง
-Position / JobTitle master
 PeopleDepartment / HRDepartment
 FinanceEmployee / ProductionWorker / ProductionPersonnel
 MaintenanceTechnician / AssetCustodian (ตารางแยก)
@@ -254,13 +291,16 @@ Person / Party framework
 Driver.personnelId
 Expense.employeeId → Personnel
 Asset.custodian / personnelId
-supervisor / org history / employment enum
+supervisorPersonnelId / supervisor graph บน Personnel
+org history / occupancy history / employment enum
+dual-hat / รักษาการ (junction คนต่อหลายตำแหน่ง)
 Payroll, leave, recruitment, benefits, tax, health
 Department = Permission
+Department.parentId tree UI (ลำดับชั้นมีชุดเดียวคือ Position)
 ```
 
 อย่าเปลี่ยน nav `people` — ค่านี้ยังหมายถึง HR UI  
-อย่าเพิ่ม resource / เมนูใหม่ — `hr_personnel` มี create|read|update|delete อยู่แล้ว
+Phase 3-Org เพิ่ม resource `hr_positions` (create|read|update|delete) ได้ — นอกจากนี้ห้ามเพิ่ม resource ใหม่
 
 ---
 
@@ -272,11 +312,12 @@ Department = Permission
 | **1** (landed) | อัปเดต/ลบ Personnel + isActive; แก้ list ตามสาขา; โยง userId | ตารางใหม่, Position, Expense/Driver FK | `APPROVE PERSONNEL PHASE 1` |
 | **2 arch** | ล็อก Shared Department Master ในเอกสาร | migrate, picker, Position | product ยืนยันต้นไม้ร่วม |
 | **2 build** (landed) | `Personnel.departmentId?` + validate สาขา + ขยาย delete-guard + picker | Position, supervisor, ประวัติย้าย | `APPROVE PERSONNEL PHASE 2 BUILD` |
+| **3-Org** (unlocked) | `positions` + `Personnel.positionId?` + ผังองค์กร + JD + พิมพ์/ส่งออก | supervisor บน Personnel, ประวัติ, dual-hat, Department tree | คำสั่งมนุษย์ (2026-08-31) |
 | **3** | `Driver.personnelId?` และ/หรือ remap Expense employee | รื้อ Driver | approval รายโมดูล |
 | **4** | Asset custodian `personnelId` | Asset machine/vehicle FK | หลังคำสั่ง Asset ที่เกี่ยวข้อง |
-| **เลื่อน** | Position, supervisor, ประวัติย้าย, HRIS เต็ม | — | — |
+| **เลื่อน** | supervisor graph, ประวัติย้าย/ครองตำแหน่ง, dual-hat, HRIS เต็ม | — | — |
 
-หลัง Phase 2 build: **STOP** — ห้ามเริ่ม Position / supervisor / org history / Phase 3 (Driver/Expense/Asset FK) โดยไม่มีคำสั่งใหม่
+หลัง Phase 3-Org: **STOP** — ห้ามเริ่ม supervisor graph บน Personnel / org history / dual-hat / Phase 3 (Driver/Expense/Asset FK) โดยไม่มีคำสั่งใหม่
 
 ---
 
@@ -297,3 +338,14 @@ Phase 3–4 เริ่มได้เมื่อมี trigger ในตา�
 - ลบ/ย้ายแผนกกันเมื่อยังมี Machine หรือ Personnel (รวม soft-delete) ชี้
 - HR list/form/detail เลือกและกรองแผนกได้ — ไม่เพิ่ม permission / nav
 - Expense / Driver / Asset FK **ไม่เปลี่ยน**
+
+---
+
+## Definition of Done (Phase 3-Org)
+
+- ตาราง `positions` branch-scoped; `parentId` สาขาเดียวกัน + กันวงกลม + ลึกไม่เกิน 10
+- `Personnel.positionId?` validate สาขาแบบเดียวกับ `departmentId`; ย้ายสาขาแล้วไม่ valid → เคลียร์
+- `/hr/positions` จัดต้นไม้ตำแหน่งได้ พร้อม JD และ `headcount`
+- `/hr/org?view=chart` แสดงผัง กล่อง = ตำแหน่ง + คนที่นั่ง + จำนวนว่าง; `?view=dept` คงมุมมองแผนกเดิม
+- หน้าพิมพ์และส่งออก Excel ใช้ข้อมูลชุดเดียวกับผัง
+- resource `hr_positions` เท่านั้นที่เพิ่ม; `Personnel.jobGroup` และ FK โมดูลอื่น **ไม่เปลี่ยน**

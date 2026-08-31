@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/shared/db"
 import { auth } from "@/lib/auth"
-import { createUser, createUserSchema, listUsers } from "@/modules/iam"
+import {
+  assignmentBranchIdsFromCreateInput,
+  createUser,
+  createUserSchema,
+  listUsers,
+} from "@/modules/iam"
 import { hasPermission, type UserRole } from "@/lib/permissions"
 import type { ZodError } from "zod"
 
@@ -44,7 +49,8 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return zodErrorResponse(parsed.error)
 
   const roles = session.user.roles as UserRole[]
-  if (!hasPermission(roles, parsed.data.branchId, "users", "create")) {
+  const assignmentBranchIds = assignmentBranchIdsFromCreateInput(parsed.data)
+  if (!assignmentBranchIds.every((bid) => hasPermission(roles, bid, "users", "create"))) {
     return NextResponse.json({ error: { message: "ไม่มีสิทธิ์สร้างผู้ใช้งานในสาขานี้" } }, { status: 403 })
   }
 

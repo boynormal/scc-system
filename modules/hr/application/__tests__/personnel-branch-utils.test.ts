@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 import type { PersonnelDbTx } from "@/modules/hr/application/personnel-branch-utils"
+import type { PrismaClient } from "@prisma/client"
 import {
+  backfillMissingPrimaryPersonnelBranches,
   ensurePersonnelBranch,
   replacePersonnelBranchesFromIds,
   setPersonnelPrimaryBranch,
@@ -176,5 +178,149 @@ describe("replacePersonnelBranchesFromIds", () => {
       where: { id: PERSONNEL_ID },
       data: { branchId: null },
     })
+  })
+})
+
+type BackfillPerson = {
+  id: string
+  rosterNo: string
+  branchId: string | null
+  deletedAt: Date | null
+}
+
+function createBackfillDb(opts: {
+  people: BackfillPerson[]
+  branches: string[]
+  existingPb: Array<{ personnelId: string; branchId: string; isPrimary: boolean }>
+}) {
+  const created: Array<{ personnelId: string; branchId: string; isPrimary: boolean }> = []
+  const personnelUpdates: unknown[] = []
+
+  const tx = {
+    personnelBranch: {
+      create: vi.fn(async ({ data }: { data: { personnelId: string; branchId: string; isPrimary: boolean } }) => {
+        created.push(data)
+        return data
+      }),
+    },
+    personnel: {
+      update: vi.fn(async (args: unknown) => {
+        personnelUpdates.push(args)
+        return args
+      }),
+    },
+  }
+
+  const db = {
+    personnel: {
+      findMany: vi.fn(async () => opts.people),
+      update: vi.fn(async (args: unknown) => {
+        personnelUpdates.push(args)
+        return args
+      }),
+    },
+    branch: {
+      findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) =>
+        opts.branches.filter((id) => where.id.in.includes(id)).map((id) => ({ id }))
+      ),
+    },
+    personnelBranch: {
+      findMany: vi.fn(async () => opts.existingPb),
+    },
+    $transaction: vi.fn(async (fn: (inner: typeof tx) => Promise<void>) => fn(tx)),
+  }
+
+  return { db: db as unknown as PrismaClient, created, personnelUpdates, tx }
+}
+
+describe("backfillMissingPrimaryPersonnelBranches", () => {
+  const PAD = "pad-branch"
+  const OTHER = "other-branch"
+  const live = {
+    id: "p-live",
+    rosterNo: "3",
+    branchId: PAD,
+    deletedAt: null,
+  }
+  const softDeleted = {
+    id: "p-deleted",
+    rosterNo: "ATT-TEST",
+    branchId: PAD,
+    deletedAt: new Date("2026-08-31T00:00:00.000Z"),
+  }
+
+  it("dry-run previews inserts including soft-deleted and does not write", async () => {
+    const { db, created, personnelUpdates } = createBackfillDb({
+      people: [live, softDeleted, { id: "p-null", rosterNo: "x", branchId: null, deletedAt: null }],
+      branches: [PAD],
+      existingPb: [],
+    })
+
+    const result = await backfillMissingPrimaryPersonnelBranches(db, { dryRun: true })
+
+    expect(result.dryRun).toBe(true)
+    expect(result.inserted).toBe(0)
+    expect(result.skippedNullBranch).toBe(1)
+    expect(result.toInsert).toHaveLength(2)
+    expect(result.toInsert.every((row) => row.branchId === PAD && row.isPrimary)).toBe(true)
+    expect(created).toHaveLength(0)
+    expect(personnelUpdates).toHaveLength(0)
+  })
+
+  it("apply inserts one primary matching branchId and never updates Personnel.branchId", async () => {
+    const { db, created, personnelUpdates } = createBackfillDb({
+      people: [live],
+      branches: [PAD],
+      existingPb: [],
+    })
+
+    const result = await backfillMissingPrimaryPersonnelBranches(db, { dryRun: false })
+
+    expect(result.inserted).toBe(1)
+    expect(created).toEqual([{ personnelId: live.id, branchId: PAD, isPrimary: true }])
+    expect(personnelUpdates).toHaveLength(0)
+  })
+
+  it("skips people who already have a row for the current branchId (idempotent)", async () => {
+    const { db, created } = createBackfillDb({
+      people: [live],
+      branches: [PAD],
+      existingPb: [{ personnelId: live.id, branchId: PAD, isPrimary: true }],
+    })
+
+    const result = await backfillMissingPrimaryPersonnelBranches(db, { dryRun: false })
+
+    expect(result.skippedAlreadyHasRow).toBe(1)
+    expect(result.toInsert).toHaveLength(0)
+    expect(result.inserted).toBe(0)
+    expect(created).toHaveLength(0)
+  })
+
+  it("inserts non-primary when another primary already exists for a different branch", async () => {
+    const { db, created } = createBackfillDb({
+      people: [live],
+      branches: [PAD, OTHER],
+      existingPb: [{ personnelId: live.id, branchId: OTHER, isPrimary: true }],
+    })
+
+    const result = await backfillMissingPrimaryPersonnelBranches(db, { dryRun: false })
+
+    expect(result.toInsert[0]?.isPrimary).toBe(false)
+    expect(created).toEqual([{ personnelId: live.id, branchId: PAD, isPrimary: false }])
+  })
+
+  it("skips and reports when Personnel.branchId points at a missing branch", async () => {
+    const { db, created } = createBackfillDb({
+      people: [live],
+      branches: [],
+      existingPb: [],
+    })
+
+    const result = await backfillMissingPrimaryPersonnelBranches(db, { dryRun: false })
+
+    expect(result.skippedMissingBranch).toEqual([
+      { personnelId: live.id, rosterNo: live.rosterNo, branchId: PAD },
+    ])
+    expect(created).toHaveLength(0)
   })
 })

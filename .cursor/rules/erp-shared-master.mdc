@@ -24,12 +24,14 @@ Policy: [docs/architecture/erp-shared-master.md](docs/architecture/erp-shared-ma
 - `Asset` — Shared Registration exists (Phase 1). Do not add `Machine.assetId` / `Vehicle.assetId` or per-module asset tables. See [erp-asset-management.mdc](erp-asset-management.mdc).
 - `Personnel` — Shared People Master exists (`personnel`). HR owns the register. Do not create Employee twins. See [erp-people-personnel.mdc](erp-people-personnel.mdc).
 
+Supplier and Unit are edited at `/settings/partners` (Department at `/settings/organization`). Do not build a per-module partner screen — link to `/settings/partners` instead.
+
 ## Do not create
 
 - `FinanceVendor`, `PurchaseSupplier`, `SalesCustomer`, `TransportCustomer`
 - GL copies (`GLSupplier`, `GLCustomer`, `GLVehicle`, `GLMachine`, `GLAsset`)
 - `FinanceAsset`, `MaintenanceAsset`, `TransportAsset`, `ITAsset` as separate registers
-- `FinanceEmployee`, `ProductionWorker`, `ProductionPersonnel`, `MaintenanceTechnician`, `Position`, `PeopleDepartment`
+- `FinanceEmployee`, `ProductionWorker`, `ProductionPersonnel`, `MaintenanceTechnician`, `PeopleDepartment`
 - Business Partner / Party / Person / global Contact / Address engine
 - Location master (until the criteria in the policy doc are met)
 

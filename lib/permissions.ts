@@ -13,6 +13,7 @@ export type Resource =
   | "settings"
   | "notifications"
   | "hr_personnel"
+  | "hr_positions"
   | "hr_attendance"
   | "transport_jobs"
   | "transport_vehicles"
@@ -129,6 +130,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     settings: ["read", "update"],
     notifications: ["read"],
     hr_personnel: ["create", "read", "update", "delete"],
+    hr_positions: ["create", "read", "update", "delete"],
     hr_attendance: ["create", "read", "update", "delete"],
     transport_jobs: ["create", "read", "update", "delete"],
     transport_vehicles: ["create", "read", "update", "delete"],
@@ -155,6 +157,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     settings: ["read"],
     notifications: ["read"],
     hr_personnel: ["create", "read", "update"],
+    hr_positions: ["create", "read", "update"],
     hr_attendance: ["create", "read", "update"],
     transport_jobs: ["create", "read", "update"],
     transport_vehicles: ["read", "update"],
@@ -177,6 +180,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     reports: ["read"],
     notifications: ["read"],
     hr_personnel: ["read"],
+    hr_positions: ["read"],
     hr_attendance: ["read"],
     transport_jobs: ["read"],
     transport_vehicles: ["read"],
@@ -199,6 +203,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     reports: ["read"],
     notifications: ["read"],
     hr_personnel: ["read"],
+    hr_positions: ["read"],
     hr_attendance: ["read"],
     transport_jobs: ["read"],
     transport_vehicles: ["read"],

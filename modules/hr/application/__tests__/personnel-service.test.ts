@@ -28,6 +28,9 @@ const PERSON_OTHER = "77777777-7777-7777-7777-777777777777"
 const DEPT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 const DEPT_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 const DEPT_OTHER_CO = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+const POS_A = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeea"
+const POS_B = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeeb"
+const POS_INACTIVE = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeec"
 
 const adminRoles: UserRole[] = [
   { branchId: BRANCH_A, branchName: "HQ", roleName: "Admin", permissions: null },
@@ -65,6 +68,8 @@ type PersonRow = {
   userId: string | null
   departmentId: string | null
   department: { id: string; name: string; code: string | null; branchId: string } | null
+  positionId: string | null
+  position: { id: string; name: string; code: string | null; branchId: string } | null
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -108,6 +113,8 @@ function personRow(over: Partial<PersonRow> = {}): PersonRow {
     userId: null,
     departmentId: null,
     department: null,
+    positionId: null,
+    position: null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -125,6 +132,7 @@ function matchPersonnel(where: Record<string, unknown> | undefined, row: PersonR
   if (typeof where.id === "string" && row.id !== where.id) return false
   if (typeof where.companyId === "string" && row.companyId !== where.companyId) return false
   if (typeof where.departmentId === "string" && row.departmentId !== where.departmentId) return false
+  if (typeof where.positionId === "string" && row.positionId !== where.positionId) return false
   if (where.deletedAt === null && row.deletedAt) return false
   if (where.isActive === true || where.isActive === false) {
     if (row.isActive !== where.isActive) return false
@@ -166,10 +174,20 @@ type DeptRow = {
   isActive: boolean
 }
 
+type PositionRowFake = {
+  id: string
+  name: string
+  code: string | null
+  branchId: string
+  companyId: string
+  isActive: boolean
+}
+
 type FakeState = {
   people?: PersonRow[]
   users?: UserRow[]
   departments?: DeptRow[]
+  positions?: PositionRowFake[]
   branches?: Record<string, { companyId: string; isActive: boolean; deletedAt: Date | null }>
   lastFindManyWhere?: unknown
 }
@@ -178,17 +196,29 @@ function fakeDb(state: FakeState = {}): PrismaClient {
   const people = state.people ?? [personRow()]
   const users = state.users ?? []
   const departments = state.departments ?? []
+  const positions = state.positions ?? []
   const branches = state.branches ?? {
     [BRANCH_A]: { companyId: CID, isActive: true, deletedAt: null },
     [BRANCH_B]: { companyId: CID, isActive: true, deletedAt: null },
   }
 
   function attachDept(row: PersonRow): PersonRow {
-    if (!row.departmentId) return { ...row, department: null }
-    const d = departments.find((x) => x.id === row.departmentId)
+    const withDept = row.departmentId
+      ? {
+          ...row,
+          department:
+            departments
+              .filter((x) => x.id === row.departmentId)
+              .map((d) => ({ id: d.id, name: d.name, code: d.code, branchId: d.branchId }))[0] ??
+            row.department,
+        }
+      : { ...row, department: null }
+
+    if (!withDept.positionId) return { ...withDept, position: null }
+    const p = positions.find((x) => x.id === withDept.positionId)
     return {
-      ...row,
-      department: d ? { id: d.id, name: d.name, code: d.code, branchId: d.branchId } : row.department,
+      ...withDept,
+      position: p ? { id: p.id, name: p.name, code: p.code, branchId: p.branchId } : withDept.position,
     }
   }
 
@@ -238,6 +268,18 @@ function fakeDb(state: FakeState = {}): PrismaClient {
             return true
           })
           .map((d) => ({ id: d.id, name: d.name, code: d.code, branchId: d.branchId }))
+      },
+    },
+    position: {
+      findFirst: async ({ where }: { where: Record<string, unknown> }) => {
+        const row = positions.find((p) => p.id === where.id)
+        if (!row) return null
+        if (where.isActive === true && !row.isActive) return null
+        const branchWhere = where.branch as { companyId?: string; deletedAt?: null } | undefined
+        const branch = branches[row.branchId]
+        if (branchWhere?.companyId && row.companyId !== branchWhere.companyId) return null
+        if (branchWhere?.deletedAt === null && branch?.deletedAt) return null
+        return { id: row.id, branchId: row.branchId, isActive: row.isActive }
       },
     },
     personnelBranch: {
@@ -310,6 +352,7 @@ function fakeDb(state: FakeState = {}): PrismaClient {
           notes: (data.notes as string | null) ?? null,
           userId: (data.userId as string | null) ?? null,
           departmentId: (data.departmentId as string | null) ?? null,
+          positionId: (data.positionId as string | null) ?? null,
         })
         const attached = attachDept(row)
         people.push(attached)
@@ -662,12 +705,149 @@ describe("personnel department", () => {
   })
 })
 
+describe("personnel position", () => {
+  const positions: PositionRowFake[] = [
+    { id: POS_A, name: "ผู้จัดการฝ่ายผลิต", code: "MGR", branchId: BRANCH_A, companyId: CID, isActive: true },
+    { id: POS_B, name: "หัวหน้าคลัง", code: "WH1", branchId: BRANCH_B, companyId: CID, isActive: true },
+    { id: POS_INACTIVE, name: "ยกเลิกแล้ว", code: null, branchId: BRANCH_A, companyId: CID, isActive: false },
+  ]
+
+  it("creates with a position on an assigned branch", async () => {
+    const db = fakeDb({ positions })
+    const parsed = createPersonnelSchema.parse({
+      rosterNo: "020",
+      displayName: "คนมีตำแหน่ง",
+      branchIds: [BRANCH_A],
+      positionId: POS_A,
+    })
+    const created = await createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
+    expect(created.positionId).toBe(POS_A)
+  })
+
+  it("rejects a position whose branch is not assigned", async () => {
+    const db = fakeDb({ positions })
+    const parsed = createPersonnelSchema.parse({
+      rosterNo: "021",
+      displayName: "ตำแหน่งสาขาอื่น",
+      branchIds: [BRANCH_A],
+      positionId: POS_B,
+    })
+    await expect(
+      createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
+    ).rejects.toThrow("ตำแหน่งต้องอยู่ในสาขาที่เลือก")
+  })
+
+  it("rejects an inactive position", async () => {
+    const db = fakeDb({ positions })
+    const parsed = createPersonnelSchema.parse({
+      rosterNo: "022",
+      displayName: "ตำแหน่งปิด",
+      branchIds: [BRANCH_A],
+      positionId: POS_INACTIVE,
+    })
+    await expect(
+      createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
+    ).rejects.toThrow("ตำแหน่งไม่ถูกต้อง")
+  })
+
+  it("clears positionId when assigned branches no longer include the position branch", async () => {
+    const db = fakeDb({
+      positions,
+      people: [
+        personRow({
+          positionId: POS_A,
+          position: { id: POS_A, name: "ผู้จัดการฝ่ายผลิต", code: "MGR", branchId: BRANCH_A },
+        }),
+      ],
+    })
+    const result = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ branchIds: [BRANCH_B] }),
+    })
+    expect(result.data.positionId).toBeNull()
+  })
+
+  it("keeps positionId when the branch is still assigned", async () => {
+    const db = fakeDb({
+      positions,
+      people: [
+        personRow({
+          positionId: POS_A,
+          position: { id: POS_A, name: "ผู้จัดการฝ่ายผลิต", code: "MGR", branchId: BRANCH_A },
+        }),
+      ],
+    })
+    const result = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ branchIds: [BRANCH_A, BRANCH_B] }),
+    })
+    expect(result.data.positionId).toBe(POS_A)
+  })
+
+  it("clears positionId when the caller sends an explicit null", async () => {
+    const db = fakeDb({
+      positions,
+      people: [
+        personRow({
+          positionId: POS_A,
+          position: { id: POS_A, name: "ผู้จัดการฝ่ายผลิต", code: "MGR", branchId: BRANCH_A },
+        }),
+      ],
+    })
+    const result = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ positionId: "" }),
+    })
+    expect(result.data.positionId).toBeNull()
+  })
+
+  it("filters the list by positionId", async () => {
+    const db = fakeDb({
+      positions,
+      people: [
+        personRow({ positionId: POS_A }),
+        personRow({ id: PERSON_OTHER, rosterNo: "002", displayName: "คลัง", positionId: POS_B }),
+      ],
+    })
+    const listed = await listPersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      positionId: POS_A,
+      page: 1,
+      pageSize: 20,
+    })
+    expect(listed.data.map((p) => p.id)).toEqual([PERSON_ID])
+  })
+
+  it("leaves jobGroup untouched when a position is assigned", async () => {
+    const db = fakeDb({ positions })
+    const parsed = createPersonnelSchema.parse({
+      rosterNo: "023",
+      displayName: "คงกลุ่มงาน",
+      branchIds: [BRANCH_A],
+      jobGroup: "ผลิต",
+      positionId: POS_A,
+    })
+    const created = await createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
+    expect(created.jobGroup).toBe("ผลิต")
+    expect(created.positionId).toBe(POS_A)
+  })
+})
+
 describe("personnel schemas", () => {
-  it("maps empty userId and departmentId to null", () => {
+  it("maps empty userId, departmentId and positionId to null", () => {
     expect(updatePersonnelSchema.parse({ userId: "" }).userId).toBeNull()
     expect(createPersonnelSchema.parse({ rosterNo: "1", displayName: "A", userId: "" }).userId).toBeNull()
     expect(updatePersonnelSchema.parse({ departmentId: "" }).departmentId).toBeNull()
     expect(createPersonnelSchema.parse({ rosterNo: "1", displayName: "A", departmentId: "" }).departmentId).toBeNull()
+    expect(updatePersonnelSchema.parse({ positionId: "" }).positionId).toBeNull()
+    expect(createPersonnelSchema.parse({ rosterNo: "1", displayName: "A", positionId: "" }).positionId).toBeNull()
   })
 })
 

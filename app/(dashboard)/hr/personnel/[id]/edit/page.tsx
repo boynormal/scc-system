@@ -65,6 +65,7 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
           isActive: row.isActive,
           userId: row.userId,
           departmentId: row.departmentId,
+          positionId: row.positionId,
           branchIds: assignedIds.length ? assignedIds : row.branchId ? [row.branchId] : [],
           primaryBranchId: primary,
         }}

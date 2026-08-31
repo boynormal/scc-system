@@ -9,6 +9,7 @@ import { GlassForm, GlassFormActions, GlassFormSection, GlassInput } from "@/com
 type BranchOpt = { id: string; name: string; code: string }
 type UserOpt = { id: string; firstName: string; lastName: string; username: string; email: string }
 type DeptOpt = { id: string; name: string; code: string | null; branchId: string }
+type PositionOpt = { id: string; name: string; code: string | null; depth: number; branchId: string }
 
 export type PersonnelFormInitial = {
   rosterNo: string
@@ -23,6 +24,7 @@ export type PersonnelFormInitial = {
   isActive: boolean
   userId: string | null
   departmentId: string | null
+  positionId: string | null
   branchIds: string[]
   primaryBranchId: string | null
 }
@@ -60,6 +62,8 @@ export function HrPersonnelForm({
   const [notes, setNotes] = useState(initial?.notes ?? "")
   const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "")
   const [departments, setDepartments] = useState<DeptOpt[]>([])
+  const [positionId, setPositionId] = useState(initial?.positionId ?? "")
+  const [positions, setPositions] = useState<PositionOpt[]>([])
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>(() => {
     if (initial?.branchIds.length) return initial.branchIds
     return branches[0]?.id ? [branches[0].id] : []
@@ -95,6 +99,22 @@ export function HrPersonnelForm({
         const rows = (json.data ?? []) as DeptOpt[]
         setDepartments(rows)
         setDepartmentId((prev) => (prev && rows.some((d) => d.id === prev) ? prev : ""))
+      })
+  }, [selectedBranchIds])
+
+  useEffect(() => {
+    if (selectedBranchIds.length === 0) {
+      setPositions([])
+      setPositionId("")
+      return
+    }
+    const qs = selectedBranchIds.map((id) => `branchId=${encodeURIComponent(id)}`).join("&")
+    void fetch(`/api/hr/personnel/position-options?${qs}`)
+      .then((r) => r.json())
+      .then((json) => {
+        const rows = (json.data ?? []) as PositionOpt[]
+        setPositions(rows)
+        setPositionId((prev) => (prev && rows.some((p) => p.id === prev) ? prev : ""))
       })
   }, [selectedBranchIds])
 
@@ -148,6 +168,7 @@ export function HrPersonnelForm({
       isActive,
       userId: userId || null,
       departmentId: departmentId || null,
+      positionId: positionId || null,
     }
     const url = mode === "edit" && personnelId ? `/api/hr/personnel/${personnelId}` : "/api/hr/personnel"
     const res = await fetch(url, {
@@ -262,24 +283,43 @@ export function HrPersonnelForm({
         )}
       </GlassFormSection>
 
-      <GlassFormSection title="แผนก" description="แผนกเดียวจากสาขาที่เลือก — ใช้ชุดเดียวกับเครื่องจักร">
-        <Select
-          label="แผนก"
-          value={departmentId}
-          onChange={(e) => setDepartmentId(e.target.value)}
-          hint={
-            selectedBranchIds.length === 0
-              ? "เลือกสาขาก่อน จึงจะเห็นแผนกของสาขานั้น"
-              : "ไม่บังคับ — แผนกที่ปิดใช้งานจะไม่แสดง"
-          }
-          options={[
-            { value: "", label: "— ไม่ระบุแผนก —" },
-            ...departments.map((d) => ({
-              value: d.id,
-              label: d.code ? `${d.name} (${d.code})` : d.name,
-            })),
-          ]}
-        />
+      <GlassFormSection title="แผนกและตำแหน่ง" description="แผนกใช้ชุดเดียวกับเครื่องจักร ตำแหน่งคือกล่องในผังองค์กร">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="แผนก"
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            hint={
+              selectedBranchIds.length === 0
+                ? "เลือกสาขาก่อน จึงจะเห็นแผนกของสาขานั้น"
+                : "ไม่บังคับ — แผนกที่ปิดใช้งานจะไม่แสดง"
+            }
+            options={[
+              { value: "", label: "— ไม่ระบุแผนก —" },
+              ...departments.map((d) => ({
+                value: d.id,
+                label: d.code ? `${d.name} (${d.code})` : d.name,
+              })),
+            ]}
+          />
+          <Select
+            label="ตำแหน่ง"
+            value={positionId}
+            onChange={(e) => setPositionId(e.target.value)}
+            hint={
+              selectedBranchIds.length === 0
+                ? "เลือกสาขาก่อน จึงจะเห็นตำแหน่งของสาขานั้น"
+                : "ไม่บังคับ — จัดต้นไม้ตำแหน่งได้ที่แท็บตำแหน่ง"
+            }
+            options={[
+              { value: "", label: "— ไม่ระบุตำแหน่ง —" },
+              ...positions.map((p) => ({
+                value: p.id,
+                label: `${"— ".repeat(p.depth)}${p.code ? `${p.name} (${p.code})` : p.name}`,
+              })),
+            ]}
+          />
+        </div>
       </GlassFormSection>
 
       <details className="rounded-lg border border-border px-4 py-3" open={mode === "edit" && hasExtra}>

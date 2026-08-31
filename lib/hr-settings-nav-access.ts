@@ -7,6 +7,13 @@ export function canReadHrPersonnel(roles: UserRole[]) {
   )
 }
 
+export function canManageHrPositions(roles: UserRole[]) {
+  return (
+    isAdminInAnyBranch(roles) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "hr_positions", "read"))
+  )
+}
+
 export function canReadHrAttendance(roles: UserRole[]) {
   return (
     isAdminInAnyBranch(roles) ||

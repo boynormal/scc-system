@@ -54,8 +54,8 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
   {
     moduleId: "hr",
     label: "บุคลากร",
-    anyOfResources: ["hr_personnel", "hr_attendance"],
-    navModuleIds: ["hr_personnel", "hr_attendance"],
+    anyOfResources: ["hr_personnel", "hr_positions", "hr_attendance"],
+    navModuleIds: ["hr_personnel", "hr_org", "hr_positions", "hr_attendance"],
   },
   {
     moduleId: "transport",
@@ -130,7 +130,9 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
       "settings_users",
       "settings_branches",
       "settings_roles",
-      "settings_master_data",
+      "settings_partners",
+      "settings_organization",
+      "maintenance_master_data",
     ],
   },
 ]

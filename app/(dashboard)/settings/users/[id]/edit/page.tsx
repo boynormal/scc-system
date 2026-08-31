@@ -7,10 +7,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
-import { Select } from "@/components/ui/select"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 import { ModuleAccessPicker, type ModuleAccessValue } from "@/components/settings/module-access-picker"
 import { UserEffectiveAccessSummary } from "@/components/settings/user-effective-access-summary"
+import {
+  BranchAssignmentsEditor,
+  emptyAssignmentRow,
+  type BranchAssignmentRow,
+} from "@/components/settings/branch-assignments-editor"
 
 const schema = z.object({
   username: z
@@ -25,8 +29,6 @@ const schema = z.object({
   phone: z.string().optional(),
   isActive: z.boolean(),
   password: z.string().min(8).optional().or(z.literal("")),
-  branchId: z.string().uuid("กรุณาเลือกสาขา"),
-  roleId: z.string().uuid("กรุณาเลือก Role"),
 })
 
 type FormData = z.infer<typeof schema>
@@ -35,22 +37,23 @@ export default function EditUserPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
   const [error, setError] = useState<string | null>(null)
+  const [assignmentError, setAssignmentError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [displayName, setDisplayName] = useState("")
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([])
-  const [userBranchRoleId, setUserBranchRoleId] = useState<string | undefined>(undefined)
+  const [assignments, setAssignments] = useState<BranchAssignmentRow[]>([emptyAssignmentRow()])
   const [moduleAccess, setModuleAccess] = useState<ModuleAccessValue>(null)
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
-  const roleId = watch("roleId")
+  const summaryRoleId = assignments.find((r) => r.roleId)?.roleId
+  const mixedRoles = new Set(assignments.map((r) => r.roleId).filter(Boolean)).size > 1
 
   useEffect(() => {
     Promise.all([
@@ -66,12 +69,21 @@ export default function EditUserPage() {
 
       if (data) {
         setDisplayName(`${data.firstName} ${data.lastName}`)
-        const firstUbr = data.userBranchRoles?.[0] as
-          | { id: string; branch: { id: string }; role: { id: string } }
-          | undefined
-        const defaultBranchId = firstUbr?.branch.id ?? branchList[0]?.id ?? ""
-        const defaultRoleId = firstUbr?.role.id ?? roleList[0]?.id ?? ""
-        setUserBranchRoleId(firstUbr?.id)
+        const ubr = (data.userBranchRoles ?? []) as {
+          id: string
+          branch: { id: string }
+          role: { id: string }
+        }[]
+        setAssignments(
+          ubr.length
+            ? ubr.map((row) => ({
+                key: row.id,
+                id: row.id,
+                branchId: row.branch.id,
+                roleId: row.role.id,
+              }))
+            : [emptyAssignmentRow({ branchId: branchList[0]?.id, roleId: roleList[0]?.id })]
+        )
         const ma = data.moduleAccess
         setModuleAccess(ma === "all" || Array.isArray(ma) ? (ma as ModuleAccessValue) : null)
         reset({
@@ -83,8 +95,6 @@ export default function EditUserPage() {
           phone: data.phone ?? "",
           isActive: data.isActive,
           password: "",
-          branchId: defaultBranchId,
-          roleId: defaultRoleId,
         })
       }
       setLoading(false)
@@ -93,7 +103,34 @@ export default function EditUserPage() {
 
   const onSubmit = async (data: FormData) => {
     setError(null)
-    const payload = { ...data, password: data.password || undefined, userBranchRoleId, moduleAccess }
+    setAssignmentError(null)
+    const uuid = /^[0-9a-f-]{36}$/i
+    const branchAssignments = assignments
+      .filter((r) => r.branchId && r.roleId)
+      .map((r) => ({
+        ...(r.id && uuid.test(r.id) ? { id: r.id } : {}),
+        branchId: r.branchId,
+        roleId: r.roleId,
+      }))
+    if (branchAssignments.length === 0) {
+      setAssignmentError("ต้องมีสิทธิ์อย่างน้อย 1 สาขา")
+      return
+    }
+    const seen = new Set<string>()
+    for (const row of branchAssignments) {
+      if (seen.has(row.branchId)) {
+        setAssignmentError("ไม่สามารถกำหนด Role ซ้ำในสาขาเดียวกันได้")
+        return
+      }
+      seen.add(row.branchId)
+    }
+
+    const payload = {
+      ...data,
+      password: data.password || undefined,
+      moduleAccess,
+      branchAssignments,
+    }
     try {
       const res = await fetch(`/api/users/${id}`, {
         method: "PATCH",
@@ -185,30 +222,24 @@ export default function EditUserPage() {
         </GlassCard>
 
         <GlassCard>
-          <GlassCardHeader><GlassCardTitle>สิทธิ์การเข้าถึง</GlassCardTitle></GlassCardHeader>
+          <GlassCardHeader><GlassCardTitle>สาขาและ Role</GlassCardTitle></GlassCardHeader>
           <p className="text-xs text-muted-foreground -mt-2 mb-4">
-            สาขาและ Role ใช้ตรวจสิทธิ์ในระบบ (เช่น แก้ไขเครื่อง BOM) — บันทึกแล้วควรให้ผู้ใช้ออกจากระบบแล้วเข้าใหม่เพื่ออัปเดตสิทธิ์ทันที
+            สิทธิ์อ่าน/เขียนมาจาก Role ของแต่ละสาขา — ผู้ใช้งานการเงินที่ดูแลหลายสาขาให้เพิ่มสาขาที่นี่ ไม่ต้องเป็น Admin
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="สาขา"
-              required
-              placeholder="เลือกสาขา"
-              options={branches.map((b) => ({ value: b.id, label: b.name }))}
-              error={errors.branchId?.message}
-              {...register("branchId")}
-            />
-            <Select
-              label="Role"
-              required
-              placeholder="เลือก Role"
-              options={roles.map((r) => ({ value: r.id, label: r.name }))}
-              error={errors.roleId?.message}
-              {...register("roleId")}
-            />
-          </div>
+          <BranchAssignmentsEditor
+            rows={assignments}
+            onChange={setAssignments}
+            branches={branches}
+            roles={roles}
+            error={assignmentError ?? undefined}
+          />
+          {mixedRoles && (
+            <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+              Role ไม่เหมือนกันทุกสาขา — สรุปด้านล่างแสดง Role แถวแรก
+            </p>
+          )}
           <div className="mt-4">
-            <UserEffectiveAccessSummary roleId={roleId} moduleAccess={moduleAccess} />
+            <UserEffectiveAccessSummary roleId={summaryRoleId} moduleAccess={moduleAccess} />
           </div>
         </GlassCard>
 

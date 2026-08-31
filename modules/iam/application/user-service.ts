@@ -20,18 +20,57 @@ const usernameSchema = z
   .toLowerCase()
   .regex(/^[a-z0-9._]{3,50}$/, "Username ต้องเป็น a-z, 0-9, . หรือ _ ความยาว 3–50 ตัว")
 
-export const createUserSchema = z.object({
-  username: usernameSchema,
-  email: z.string().email(),
-  password: z.string().min(8),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  employeeCode: z.string().optional(),
-  phone: z.string().optional(),
+export const branchAssignmentInputSchema = z.object({
+  id: z.string().uuid().optional(),
   branchId: z.string().uuid(),
   roleId: z.string().uuid(),
-  moduleAccess: moduleAccessSchema,
 })
+
+function issueDuplicateBranches(
+  assignments: { branchId: string }[],
+  ctx: z.RefinementCtx,
+  path: (string | number)[]
+) {
+  const seen = new Set<string>()
+  for (let i = 0; i < assignments.length; i++) {
+    const branchId = assignments[i].branchId
+    if (seen.has(branchId)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "ไม่สามารถกำหนด Role ซ้ำในสาขาเดียวกันได้",
+        path: [...path, i, "branchId"],
+      })
+    }
+    seen.add(branchId)
+  }
+}
+
+export const createUserSchema = z
+  .object({
+    username: usernameSchema,
+    email: z.string().email(),
+    password: z.string().min(8),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    employeeCode: z.string().optional(),
+    phone: z.string().optional(),
+    branchId: z.string().uuid().optional(),
+    roleId: z.string().uuid().optional(),
+    branchAssignments: z.array(branchAssignmentInputSchema).min(1).optional(),
+    moduleAccess: moduleAccessSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.branchAssignments && data.branchAssignments.length > 0) {
+      issueDuplicateBranches(data.branchAssignments, ctx, ["branchAssignments"])
+      return
+    }
+    if (!data.branchId) {
+      ctx.addIssue({ code: "custom", message: "กรุณาเลือกสาขา", path: ["branchId"] })
+    }
+    if (!data.roleId) {
+      ctx.addIssue({ code: "custom", message: "กรุณาเลือก Role", path: ["roleId"] })
+    }
+  })
 
 export const updateUserSchema = z
   .object({
@@ -47,9 +86,22 @@ export const updateUserSchema = z
     roleId: z.string().uuid().optional(),
     /** ระบุแถว user_branch_roles ที่ต้องการแก้ไข เมื่อผู้ใช้มีมากกว่า 1 สาขา/role — ป้องกันการลบสิทธิ์สาขาอื่นโดยไม่ตั้งใจ */
     userBranchRoleId: z.string().uuid().optional(),
+    branchAssignments: z.array(branchAssignmentInputSchema).optional(),
     moduleAccess: moduleAccessSchema,
   })
   .superRefine((data, ctx) => {
+    if (data.branchAssignments !== undefined) {
+      if (data.branchAssignments.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "ต้องมีสิทธิ์อย่างน้อย 1 สาขา",
+          path: ["branchAssignments"],
+        })
+        return
+      }
+      issueDuplicateBranches(data.branchAssignments, ctx, ["branchAssignments"])
+      return
+    }
     const hasBranch = data.branchId !== undefined
     const hasRole = data.roleId !== undefined
     if (hasBranch !== hasRole) {
@@ -60,6 +112,28 @@ export const updateUserSchema = z
       })
     }
   })
+
+export type BranchAssignmentInput = z.infer<typeof branchAssignmentInputSchema>
+
+export function resolveCreateAssignments(
+  input: z.infer<typeof createUserSchema>
+): { branchId: string; roleId: string }[] {
+  if (input.branchAssignments && input.branchAssignments.length > 0) {
+    return input.branchAssignments.map(({ branchId, roleId }) => ({ branchId, roleId }))
+  }
+  return [{ branchId: input.branchId as string, roleId: input.roleId as string }]
+}
+
+export function assignmentBranchIdsFromCreateInput(input: z.infer<typeof createUserSchema>): string[] {
+  return [...new Set(resolveCreateAssignments(input).map((a) => a.branchId))]
+}
+
+export function assignmentBranchIdsFromUpdateInput(input: z.infer<typeof updateUserSchema>): string[] {
+  if (input.branchAssignments) {
+    return [...new Set(input.branchAssignments.map((a) => a.branchId))]
+  }
+  return input.branchId ? [input.branchId] : []
+}
 
 export async function listUsers(
   db: PrismaClient,
@@ -117,6 +191,30 @@ export async function listUsers(
   }
 }
 
+type ServiceError = { error: { message: string }; status: 400 | 409 }
+
+async function assertAssignmentsExist(
+  db: PrismaClient,
+  companyId: string,
+  assignments: { branchId: string; roleId: string }[]
+): Promise<ServiceError | null> {
+  const branchIds = [...new Set(assignments.map((a) => a.branchId))]
+  const roleIds = [...new Set(assignments.map((a) => a.roleId))]
+  const [branches, roles] = await Promise.all([
+    db.branch.findMany({
+      where: { id: { in: branchIds }, companyId, deletedAt: null, isActive: true },
+      select: { id: true },
+    }),
+    db.role.findMany({
+      where: { id: { in: roleIds }, companyId },
+      select: { id: true },
+    }),
+  ])
+  if (branches.length !== branchIds.length) return { error: { message: "Branch not found" }, status: 400 }
+  if (roles.length !== roleIds.length) return { error: { message: "Role not found" }, status: 400 }
+  return null
+}
+
 export async function createUser(
   db: PrismaClient,
   params: { companyId: string; input: z.infer<typeof createUserSchema> }
@@ -130,18 +228,9 @@ export async function createUser(
   const exists = await db.user.findUnique({ where: { email: params.input.email } })
   if (exists) return { error: { message: "อีเมลนี้ถูกใช้งานแล้ว" }, status: 409 as const }
 
-  const [branch, role] = await Promise.all([
-    db.branch.findFirst({
-      where: { id: params.input.branchId, companyId: params.companyId, deletedAt: null, isActive: true },
-      select: { id: true },
-    }),
-    db.role.findFirst({
-      where: { id: params.input.roleId, companyId: params.companyId },
-      select: { id: true },
-    }),
-  ])
-  if (!branch) return { error: { message: "Branch not found" }, status: 400 as const }
-  if (!role) return { error: { message: "Role not found" }, status: 400 as const }
+  const assignments = resolveCreateAssignments(params.input)
+  const assignmentError = await assertAssignmentsExist(db, params.companyId, assignments)
+  if (assignmentError) return assignmentError
 
   if (params.input.employeeCode) {
     const dupCode = await db.user.findFirst({
@@ -154,7 +243,10 @@ export async function createUser(
   }
 
   const passwordHash = await bcrypt.hash(params.input.password, 12)
-  const { branchId, roleId, password, moduleAccess, ...userData } = params.input
+  const { branchId, roleId, branchAssignments, password, moduleAccess, ...userData } = params.input
+  void branchId
+  void roleId
+  void branchAssignments
   void password
 
   const user = await db.user.create({
@@ -166,7 +258,7 @@ export async function createUser(
       companyId: params.companyId,
       isActive: true,
       userBranchRoles: {
-        create: { branchId, roleId },
+        create: assignments.map((a) => ({ branchId: a.branchId, roleId: a.roleId })),
       },
     },
   })
@@ -210,7 +302,7 @@ export async function updateUser(
 ) {
   const user = await db.user.findFirst({
     where: { id: params.id, companyId: params.companyId, deletedAt: null },
-    include: { userBranchRoles: { select: { id: true } } },
+    include: { userBranchRoles: { select: { id: true, branchId: true, roleId: true } } },
   })
   if (!user) return { error: "Not found" as const, status: 404 as const }
 
@@ -219,6 +311,7 @@ export async function updateUser(
     branchId,
     roleId,
     userBranchRoleId,
+    branchAssignments,
     moduleAccess,
     email,
     username,
@@ -270,21 +363,36 @@ export async function updateUser(
     }
   }
 
-  if (branchId && roleId) {
-    const [branch, role] = await Promise.all([
-      db.branch.findFirst({
-        where: { id: branchId, companyId: params.companyId, deletedAt: null, isActive: true },
-        select: { id: true },
-      }),
-      db.role.findFirst({
-        where: { id: roleId, companyId: params.companyId },
-        select: { id: true },
-      }),
-    ])
-    if (!branch) return { error: { message: "Branch not found" }, status: 400 as const }
-    if (!role) return { error: { message: "Role not found" }, status: 400 as const }
+  if (branchAssignments) {
+    const incoming = branchAssignments.map(({ branchId: bid, roleId: rid }) => ({
+      branchId: bid,
+      roleId: rid,
+    }))
+    const assignmentError = await assertAssignmentsExist(db, params.companyId, incoming)
+    if (assignmentError) return assignmentError
+
+    await db.$transaction(async (tx) => {
+      await tx.userBranchRole.deleteMany({ where: { userId: params.id } })
+      await tx.userBranchRole.createMany({
+        data: incoming.map((a) => ({
+          userId: params.id,
+          branchId: a.branchId,
+          roleId: a.roleId,
+          assignedBy: params.assignedBy,
+        })),
+      })
+    })
+  } else if (branchId && roleId) {
+    const assignmentError = await assertAssignmentsExist(db, params.companyId, [{ branchId, roleId }])
+    if (assignmentError) return assignmentError
 
     const existingRoles = user.userBranchRoles
+    const otherOnSameBranch = existingRoles.find(
+      (r) => r.branchId === branchId && r.id !== (userBranchRoleId ?? existingRoles[0]?.id)
+    )
+    if (otherOnSameBranch) {
+      return { error: { message: "ไม่สามารถกำหนด Role ซ้ำในสาขาเดียวกันได้" }, status: 400 as const }
+    }
 
     if (userBranchRoleId) {
       const target = existingRoles.find((r) => r.id === userBranchRoleId)

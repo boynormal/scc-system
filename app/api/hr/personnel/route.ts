@@ -10,6 +10,7 @@ export const GET = withAuth(async (req, _ctx, session) => {
   const isActiveRaw = searchParams.get("isActive")
   const isActive = isActiveRaw === "true" ? true : isActiveRaw === "false" ? false : null
   const departmentId = searchParams.get("departmentId")
+  const positionId = searchParams.get("positionId")
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10))
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") ?? "20", 10)))
 
@@ -20,6 +21,7 @@ export const GET = withAuth(async (req, _ctx, session) => {
     search,
     isActive,
     departmentId,
+    positionId,
     page,
     pageSize,
   })

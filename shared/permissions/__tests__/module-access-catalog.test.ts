@@ -114,4 +114,17 @@ describe("module-access-catalog", () => {
     expect(canAccessModuleId(roles, "finance_expenses", ["finance"])).toBe(true)
     expect(canAccessModuleId(roles, "finance_overview", ["transport"])).toBe(false)
   })
+
+  it("maps dashboards area and Scrapee nav id", () => {
+    const roles: UserRole[] = [
+      role({
+        roleName: "Custom",
+        permissions: { dashboards: ["read"] },
+      }),
+    ]
+    expect(hasModuleAreaResourceRead(roles, "dashboards")).toBe(true)
+    expect(canEnterModuleArea(roles, "dashboards", null)).toBe(true)
+    expect(canAccessModuleId(roles, "dashboards_scrapee", ["dashboards"])).toBe(true)
+    expect(canAccessModuleId(roles, "dashboards_scrapee", ["transport"])).toBe(false)
+  })
 })

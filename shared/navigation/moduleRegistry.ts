@@ -548,6 +548,26 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
   },
   {
     type: "section",
+    key: "sec_dashboards",
+    label: "sec_dashboards",
+    order: 85,
+    children: [
+      {
+        type: "link",
+        key: "dashboards_scrapee",
+        href: "https://scrapee.scharoenchai.cloud/",
+        label: "dashboards_scrapee",
+        icon: "Recycle",
+        permission: { resource: "dashboards", action: "read" },
+        moduleId: "dashboards_scrapee",
+        order: 0,
+        keywords: ["scrapee", "dashboard", "แดชบอร์ด", "ของเก่า", "ซื้อขาย", "scrap"],
+        launcher: { departmentId: "dashboards", isPrimary: true },
+      },
+    ],
+  },
+  {
+    type: "section",
     key: "sec_iot",
     label: "sec_iot",
     order: 90,

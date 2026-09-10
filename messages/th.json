@@ -72,6 +72,8 @@
     "transport_repairs": "ใบแจ้งซ่อม",
     "transport_tires": "จัดการยาง",
     "transport_master_data": "ข้อมูลพื้นฐาน",
+    "sec_dashboards": "Dashboard",
+    "dashboards_scrapee": "Scrapee",
     "sec_iot": "ควบคุม IoT",
     "iot_queue_ticket": "ควบคุมบัตรคิว",
     "iot_queue_issue": "ออกบัตรคิว",

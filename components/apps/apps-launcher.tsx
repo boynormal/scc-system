@@ -82,6 +82,13 @@ const LINE_CARD_THEMES: Record<
     ring: "ring-emerald-200/70",
     glow: "shadow-emerald-500/20",
   },
+  dashboards: {
+    tile: "from-sky-50 via-blue-50 to-indigo-100 ring-sky-200/60",
+    icon: "from-sky-500 to-blue-700",
+    blob: "bg-sky-400/30",
+    ring: "ring-sky-200/70",
+    glow: "shadow-sky-500/20",
+  },
 }
 
 function lineTheme(lineId: string) {

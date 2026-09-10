@@ -122,6 +122,12 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     ],
   },
   {
+    moduleId: "dashboards",
+    label: "Dashboard",
+    anyOfResources: ["dashboards"],
+    navModuleIds: ["dashboards", "dashboards_scrapee"],
+  },
+  {
     moduleId: "settings",
     label: "ตั้งค่า",
     anyOfResources: ["settings", "users", "roles", "branches"],

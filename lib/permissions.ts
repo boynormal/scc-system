@@ -19,6 +19,7 @@ export type Resource =
   | "transport_vehicles"
   | "transport_drivers"
   | "iot_devices"
+  | "dashboards"
   | "raw_material_news"
   | "due_dates"
   | "expenses"
@@ -136,6 +137,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     transport_vehicles: ["create", "read", "update", "delete"],
     transport_drivers: ["create", "read", "update", "delete"],
     iot_devices: ["read"],
+    dashboards: ["read"],
     raw_material_news: ["read"],
     due_dates: ["create", "read", "update", "delete"],
     expenses: ["create", "read", "update", "delete", "approve"],
@@ -163,6 +165,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     transport_vehicles: ["read", "update"],
     transport_drivers: ["read", "update"],
     iot_devices: ["read"],
+    dashboards: ["read"],
     raw_material_news: ["read"],
     due_dates: ["create", "read", "update"],
     expenses: ["create", "read", "update", "approve"],
@@ -186,6 +189,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     transport_vehicles: ["read"],
     transport_drivers: ["read"],
     iot_devices: ["read"],
+    dashboards: ["read"],
     raw_material_news: ["read"],
     due_dates: ["read", "update"],
     expenses: ["create", "read"],
@@ -208,6 +212,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     transport_jobs: ["read"],
     transport_vehicles: ["read"],
     transport_drivers: ["read"],
+    dashboards: ["read"],
     raw_material_news: ["read"],
     due_dates: ["read"],
     expenses: ["read"],

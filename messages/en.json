@@ -72,6 +72,8 @@
     "transport_repairs": "Repair tickets",
     "transport_tires": "Tire management",
     "transport_master_data": "Master data",
+    "sec_dashboards": "Dashboard",
+    "dashboards_scrapee": "Scrapee",
     "sec_iot": "IoT control",
     "iot_queue_ticket": "Queue ticket control",
     "iot_queue_issue": "Issue queue ticket",

@@ -80,6 +80,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Expense & cost management, approvals, reports",
   },
   {
+    id: "dashboards",
+    label: "Dashboard",
+    order: 39,
+    icon: "LayoutDashboard",
+    description: "External BI dashboards (Scrapee)",
+  },
+  {
     id: "iot_control",
     label: "IoT Control",
     order: 45,

@@ -71,6 +71,11 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
     rows: [{ resource: "iot_devices", label: "อุปกรณ์ IoT", actions: READ_UPDATE }],
   },
   {
+    id: "dashboards",
+    label: "Dashboard",
+    rows: [{ resource: "dashboards", label: "Dashboard", actions: READ_ONLY }],
+  },
+  {
     id: "raw_material_news",
     label: "ข่าวสารวัตถุดิบ",
     rows: [{ resource: "raw_material_news", label: "ข่าวสารวัตถุดิบ", actions: READ_ONLY }],

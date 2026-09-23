@@ -12,6 +12,8 @@ declare module "next-auth" {
       roles: UserRole[]
       /** override การมองเห็นโมดูลรายบุคคล — undefined/null = ใช้ตาม Role */
       moduleAccess?: string[] | "all" | null
+      /** true when this login belongs to a driver account */
+      driverLogin?: boolean
     }
   }
 
@@ -19,6 +21,7 @@ declare module "next-auth" {
     companyId: string
     roles: UserRole[]
     moduleAccess?: string[] | "all" | null
+    driverLogin?: boolean
   }
 }
 
@@ -28,5 +31,6 @@ declare module "next-auth/jwt" {
     companyId: string
     roles: UserRole[]
     moduleAccess?: string[] | "all" | null
+    driverLogin?: boolean
   }
 }

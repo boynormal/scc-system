@@ -2,7 +2,8 @@ import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
-import { getJobById } from "@/modules/transport"
+import { getJobById, getJobPunchView } from "@/modules/transport"
+import { describeLegFlag, legEndpointLabel } from "@/modules/transport/application/job-punch-rules"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { StopTimeline } from "@/components/transport/stop-timeline"
 import { AssignJobForm } from "@/components/transport/assign-job-form"
@@ -10,7 +11,7 @@ import { CompleteJobButton } from "@/components/transport/complete-job-button"
 import { CancelJobButton } from "@/components/transport/cancel-job-button"
 import { ReopenJobButton } from "@/components/transport/reopen-job-button"
 import Link from "next/link"
-import { ArrowLeft, Pencil, Printer } from "lucide-react"
+import { ArrowLeft, ClipboardCheck, Pencil, Printer } from "lucide-react"
 
 const PRIORITY_LABEL: Record<string, string> = { low: "ต่ำ", normal: "ปกติ", high: "สูง", urgent: "ด่วน" }
 
@@ -31,6 +32,16 @@ export default async function TransportJobDetailPage({
       companyId: session.user.companyId as string,
       roles,
     })
+    const punchView = await getJobPunchView(prisma, {
+      id,
+      companyId: session.user.companyId as string,
+      userId: session.user.id as string,
+      roles,
+    }).catch(() => null)
+    const stopName = (stopId: string) =>
+      punchView?.stops.find((stop) => stop.id === stopId)?.customerName ?? "จุด"
+    const endpoint = (kind: "start" | "finish" | "arrive" | "depart", stopId: string | null) =>
+      legEndpointLabel(kind, stopId, stopName)
 
     return (
       <div className="min-w-0 space-y-6 p-4 md:p-6">
@@ -49,6 +60,12 @@ export default async function TransportJobDetailPage({
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link
+              href={`/transport/jobs/${id}/log`}
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/60"
+            >
+              <ClipboardCheck className="h-4 w-4" /> บันทึกเวลา
+            </Link>
             <Link
               href={`/transport/jobs/${id}/print`}
               target="_blank"
@@ -133,6 +150,27 @@ export default async function TransportJobDetailPage({
               <h3 className="mb-4 text-sm font-semibold text-foreground">จุดแวะ ({job.stops.length} จุด)</h3>
               <StopTimeline stops={job.stops} />
             </div>
+            {punchView && punchView.legs.length > 0 ? (
+              <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">เวลาและกิโลต่อขา</h3>
+                <ul className="space-y-2 text-sm text-foreground">
+                  {punchView.legs.map((leg, index) => {
+                    const warning = describeLegFlag(leg)
+                    return (
+                      <li key={`${leg.fromStopId}-${leg.fromKind}-${leg.toStopId}-${leg.toKind}-${index}`}>
+                        <span>
+                          {endpoint(leg.fromKind, leg.fromStopId)} → {endpoint(leg.toKind, leg.toStopId)} · {leg.minutes} นาที ·{" "}
+                          {leg.km != null ? `${leg.km.toLocaleString()} กม.` : "รอเลขไมล์"}
+                        </span>
+                        {warning ? (
+                          <span className="ml-2 font-semibold text-red-600 dark:text-red-400">{warning}</span>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

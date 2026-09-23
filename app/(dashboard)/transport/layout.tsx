@@ -16,6 +16,10 @@ export default async function TransportLayout({ children }: { children: React.Re
   const session = await auth()
   if (!session) redirect("/login")
 
+  if (session.user.driverLogin) {
+    return <div className="min-w-0">{children}</div>
+  }
+
   const roles = session.user.roles as UserRole[]
   if (!canEnterModuleArea(roles, "transport", session.user.moduleAccess)) redirect("/")
 

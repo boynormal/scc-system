@@ -75,12 +75,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           data: { lastLoginAt: new Date() },
         })
 
+        const driverAccount = await prisma.driver.findFirst({
+          where: { userId: user.id },
+          select: { id: true },
+        })
+
         return {
           id: user.id,
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           companyId: user.companyId,
           moduleAccess: user.moduleAccess,
+          driverLogin: Boolean(driverAccount),
           roles: user.userBranchRoles.map((r) => ({
             branchId: r.branchId,
             branchName: r.branch.name,

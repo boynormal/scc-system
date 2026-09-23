@@ -5,6 +5,7 @@ export {
   createUser,
   createUserSchema,
   deactivateUser,
+  syncDriverLoginAccount,
   getUserById,
   listUsers,
   resolveCreateAssignments,

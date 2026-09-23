@@ -78,6 +78,7 @@ type JobPrintData = {
   driverName: string | null
   driverPhone: string | null
   stops: Stop[]
+  qrDataUrl?: string | null
 }
 
 function formatDate(value: string | null) {
@@ -207,6 +208,13 @@ export function JobPrintView({ job, autoPrint = false }: { job: JobPrintData; au
               </ol>
             )}
           </section>
+
+          {job.qrDataUrl ? (
+            <section className="mt-2.5 border-b border-dashed border-slate-300 pb-2.5 text-center">
+              <img src={job.qrDataUrl} alt="QR บันทึกเวลา" className="mx-auto h-[28mm] w-[28mm]" />
+              <p className="mt-1 text-[11px] font-medium text-slate-700">สแกนเพื่อบันทึกเวลาและเลขไมล์</p>
+            </section>
+          ) : null}
 
           <section className="mt-2.5">
             <p className="mb-1 text-[13px] font-bold text-slate-800">หมายเหตุ</p>

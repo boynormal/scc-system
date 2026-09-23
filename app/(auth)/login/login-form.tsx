@@ -51,7 +51,9 @@ export function LoginForm({ logoUrl }: Props) {
     if (result?.error) {
       setError(t("invalidCredentials"))
     } else {
-      router.push("/")
+      const next = new URLSearchParams(window.location.search).get("callbackUrl")
+      const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/"
+      router.push(safeNext)
       router.refresh()
     }
   }

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import Sidebar from "@/components/layout/sidebar"
 import Header from "@/components/layout/header"
+import { UserMenu } from "@/components/layout/user-menu"
 import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { buildDashboardNav } from "@/shared/navigation/buildDashboardNav"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
@@ -14,6 +15,19 @@ import { cn } from "@/lib/utils"
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect("/login")
+
+  if (session.user.driverLogin) {
+    const cookieStore = await cookies()
+    const appearance = resolveAppearance(cookieStore.get(APPEARANCE_COOKIE)?.value)
+    return (
+      <div className={cn("min-h-screen bg-background text-foreground", appearance === "dark" && "dark")}>
+        <div className="flex justify-end px-4 py-3">
+          <UserMenu user={session.user} />
+        </div>
+        <main className="px-4 pb-8">{children}</main>
+      </div>
+    )
+  }
 
   const company = await prisma.company.findUnique({
     where: { id: session.user.companyId },

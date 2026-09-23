@@ -31,6 +31,7 @@ type Driver = {
   notes: string | null
   currentStatus: string
   isActive: boolean
+  userId: string | null
   branch: { id: string; name: string }
   assignedVehicle: { id: string; plateNumber: string; name: string } | null
 }
@@ -44,6 +45,7 @@ type FormState = {
   drivableVehicleTypes: string[]
   assignedVehicleId: string
   notes: string
+  pin: string
 }
 
 const emptyForm: FormState = {
@@ -55,6 +57,7 @@ const emptyForm: FormState = {
   drivableVehicleTypes: [],
   assignedVehicleId: "",
   notes: "",
+  pin: "",
 }
 
 type Props = {
@@ -148,6 +151,9 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
     if (!editForm.branchId || !editForm.firstName || !editForm.lastName) {
       return alert("กรุณากรอกสาขา ชื่อ และนามสกุล")
     }
+    if (editForm.pin && !/^\d{6}$/.test(editForm.pin)) {
+      return alert("รหัสเข้าใช้ต้องเป็นตัวเลข 6 หลัก")
+    }
     const payload = {
       branchId: editForm.branchId,
       firstName: editForm.firstName.trim(),
@@ -157,6 +163,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
       drivableVehicleTypes: editForm.drivableVehicleTypes,
       assignedVehicleId: editForm.assignedVehicleId || undefined,
       notes: editForm.notes.trim() || undefined,
+      ...(editForm.pin ? { pin: editForm.pin } : {}),
     }
 
     const res = await fetch(id === "new" ? "/api/transport/drivers" : `/api/transport/drivers/${id}`, {
@@ -230,6 +237,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
     drivableVehicleTypes: parseStringArray(item.drivableVehicleTypes),
     assignedVehicleId: item.assignedVehicleId ?? "",
     notes: item.notes ?? "",
+    pin: "",
   })
 
   const renderFormMain = (id: string) => (
@@ -282,7 +290,19 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
             className="min-w-0 w-full"
           />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-3">
+          <div>
+            <p className="mb-2 text-sm font-semibold text-foreground">รหัสเข้าใช้ 6 หลัก</p>
+            <GlassInput
+              value={editForm.pin}
+              inputMode="numeric"
+              autoComplete="new-password"
+              placeholder="เว้นว่างถ้าไม่เปลี่ยน"
+              onChange={(e) => setEditForm((f) => ({ ...f, pin: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+              className="h-8 border-cyan-300"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">คนขับเข้าสู่ระบบด้วยเบอร์โทรและรหัสนี้</p>
+          </div>
           <p className="mb-2 text-sm font-semibold text-foreground">รายละเอียด</p>
           <DetailsField
             value={editForm.notes}
@@ -306,7 +326,9 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
           <MultiSelectDisplay value={parseStringArray(item.drivableVehicleTypes)} />
         </div>
         <div className="min-w-0">
-          <p className="mb-1.5 text-sm font-semibold text-foreground">รายละเอียด</p>
+          <p className="mb-1.5 text-sm font-semibold text-foreground">เข้าสู่ระบบ</p>
+          <p className="text-sm text-muted-foreground">{item.userId ? "ใช้เบอร์โทรเป็นชื่อเข้าใช้" : "ยังไม่ตั้งรหัส"}</p>
+          <p className="mb-1.5 mt-3 text-sm font-semibold text-foreground">รายละเอียด</p>
           <DetailsDisplay value={item.notes} expanded />
         </div>
       </div>

@@ -438,6 +438,109 @@ export async function updateUser(
   return { data: { id: updated.id, email: updated.email, username: updated.username } }
 }
 
+const DRIVER_LOGIN_MODULE_ACCESS = ["transport"]
+
+export async function syncDriverLoginAccount(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    userId: string | null
+    branchId: string
+    firstName: string
+    lastName: string
+    phoneDigits: string
+    pin?: string | null
+    isActive: boolean
+  }
+) {
+  if (!/^\d{9,10}$/.test(params.phoneDigits)) {
+    return { error: { message: "เบอร์โทรสำหรับเข้าสู่ระบบต้องเป็นตัวเลข 9–10 หลัก" }, status: 400 as const }
+  }
+  if (params.pin && !/^\d{6}$/.test(params.pin)) {
+    return { error: { message: "รหัสเข้าใช้ต้องเป็นตัวเลข 6 หลัก" }, status: 400 as const }
+  }
+
+  const viewer = await db.role.findFirst({
+    where: { companyId: params.companyId, name: "Viewer" },
+    select: { id: true },
+  })
+  if (!viewer) {
+    return { error: { message: "ไม่พบบทบาท Viewer สำหรับบัญชีคนขับ" }, status: 400 as const }
+  }
+
+  const username = params.phoneDigits
+  const email = `d${username}@driver.internal`
+  const usernameTaken = await db.user.findFirst({
+    where: { username, ...(params.userId ? { id: { not: params.userId } } : {}) },
+    select: { id: true },
+  })
+  if (usernameTaken) {
+    return { error: { message: "เบอร์นี้ถูกใช้เป็นชื่อเข้าสู่ระบบแล้ว" }, status: 409 as const }
+  }
+  const emailTaken = await db.user.findFirst({
+    where: { email, ...(params.userId ? { id: { not: params.userId } } : {}) },
+    select: { id: true },
+  })
+  if (emailTaken) {
+    return { error: { message: "เบอร์นี้ถูกใช้เป็นชื่อเข้าสู่ระบบแล้ว" }, status: 409 as const }
+  }
+
+  const passwordHash = params.pin ? await bcrypt.hash(params.pin, 12) : undefined
+
+  if (!params.userId) {
+    if (!passwordHash) {
+      return { error: { message: "ต้องตั้งรหัส 6 หลัก" }, status: 400 as const }
+    }
+    const user = await db.user.create({
+      data: {
+        companyId: params.companyId,
+        username,
+        email,
+        passwordHash,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        phone: username,
+        isActive: params.isActive,
+        moduleAccess: DRIVER_LOGIN_MODULE_ACCESS,
+        userBranchRoles: { create: { branchId: params.branchId, roleId: viewer.id } },
+      },
+      select: { id: true },
+    })
+    return { userId: user.id }
+  }
+
+  await db.user.update({
+    where: { id: params.userId },
+    data: {
+      username,
+      email,
+      firstName: params.firstName,
+      lastName: params.lastName,
+      phone: username,
+      isActive: params.isActive,
+      moduleAccess: DRIVER_LOGIN_MODULE_ACCESS,
+      ...(passwordHash ? { passwordHash } : {}),
+    },
+  })
+
+  const existingRole = await db.userBranchRole.findFirst({
+    where: { userId: params.userId },
+    select: { id: true },
+  })
+  if (!existingRole) {
+    await db.userBranchRole.create({
+      data: { userId: params.userId, branchId: params.branchId, roleId: viewer.id },
+    })
+  } else {
+    await db.userBranchRole.update({
+      where: { id: existingRole.id },
+      data: { branchId: params.branchId, roleId: viewer.id },
+    })
+  }
+
+  return { userId: params.userId }
+}
+
 export async function deactivateUser(
   db: PrismaClient,
   params: { id: string; companyId: string; currentUserId: string }

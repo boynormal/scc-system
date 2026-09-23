@@ -1,5 +1,6 @@
 import type { PrismaClient, VehicleStatus } from "@prisma/client"
 import { getBangkokTodayRange } from "./transport-date-utils"
+import { parseOdometer } from "./job-punch-rules"
 
 export type ActiveJobInfo = {
   jobId: string
@@ -298,4 +299,53 @@ export function normalizeGpsData(rawData: Record<string, unknown>[], maps: GpsLo
       vehicleDbStatus,
     }
   })
+}
+
+export async function persistVehicleGpsSnapshots(
+  db: PrismaClient,
+  vehicles: GpsVehicleData[],
+  readAt: Date
+) {
+  const writes = vehicles.flatMap((vehicle) => {
+    if (!vehicle.vehicleDbId) return []
+    const odometer = parseOdometer(vehicle.mileage)
+    return [
+      db.transportVehicle.update({
+        where: { id: vehicle.vehicleDbId },
+        data: {
+          gpsLatitude: Number.isFinite(vehicle.lat) ? vehicle.lat : null,
+          gpsLongitude: Number.isFinite(vehicle.lng) ? vehicle.lng : null,
+          ...(odometer != null ? { gpsOdometerKm: odometer } : {}),
+          gpsReadAt: readAt,
+        },
+      }),
+    ]
+  })
+  await Promise.all(writes)
+}
+
+export async function fetchNormalizedGps(db: PrismaClient, companyId: string): Promise<GpsVehicleData[]> {
+  const apiUrl = process.env.GPS_API_URL
+  const apiAuth = process.env.GPS_API_AUTH
+  const assetId = process.env.GPS_ASSET_ID
+  if (!apiUrl || !apiAuth || !assetId) return []
+
+  const [gpsRes, maps] = await Promise.all([
+    fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: apiAuth,
+      },
+      body: JSON.stringify({ asset: Number(assetId) }),
+      next: { revalidate: 15 },
+    }),
+    fetchGpsLookupMaps(db, companyId),
+  ])
+  if (!gpsRes.ok) {
+    throw new Error(`GPS upstream ${gpsRes.status}`)
+  }
+  const json = await gpsRes.json()
+  const rawData: Record<string, unknown>[] = json?.data ?? []
+  return normalizeGpsData(rawData, maps)
 }

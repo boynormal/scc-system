@@ -1,6 +1,8 @@
 import { z } from "zod"
 import type { PrismaClient, Prisma } from "@prisma/client"
-import { ForbiddenError, NotFoundError } from "@/lib/errors"
+import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
+import { syncDriverLoginAccount } from "@/modules/iam"
+import { phoneDigits } from "./job-punch-rules"
 import {
   hasPermission,
   isAdminInAnyBranch,
@@ -33,6 +35,7 @@ export const createDriverSchema = z.object({
   drivableVehicleTypes: drivableVehicleTypesSchema,
   assignedVehicleId: z.string().uuid().optional(),
   notes: z.string().optional(),
+  pin: z.string().regex(/^\d{6}$/, "รหัสเข้าใช้ต้องเป็นตัวเลข 6 หลัก").optional(),
 })
 
 export const updateDriverSchema = createDriverSchema.partial().extend({
@@ -57,7 +60,9 @@ function toDriverUncheckedUpdateData(input: UpdateDriverInput): Prisma.DriverUnc
     notes,
     currentStatus,
     isActive,
+    pin: _pin,
   } = input
+  void _pin
 
   return {
     ...(firstName !== undefined ? { firstName } : {}),
@@ -161,7 +166,7 @@ export async function createDriver(
     notes,
   } = params.input
 
-  return db.driver.create({
+  const driver = await db.driver.create({
     data: {
       code,
       companyId: params.companyId,
@@ -177,6 +182,20 @@ export async function createDriver(
       assignedVehicleId: assignedVehicleId ?? null,
     },
   })
+
+  if (!params.input.pin) return driver
+  const login = await syncDriverLoginAccount(db, {
+    companyId: params.companyId,
+    userId: null,
+    branchId,
+    firstName,
+    lastName,
+    phoneDigits: phoneDigits(phone),
+    pin: params.input.pin,
+    isActive: true,
+  })
+  if ("error" in login) throw new ValidationError(login.error?.message ?? "ตั้งรหัสคนขับไม่สำเร็จ")
+  return db.driver.update({ where: { id: driver.id }, data: { userId: login.userId } })
 }
 
 export async function updateDriver(
@@ -189,10 +208,36 @@ export async function updateDriver(
   if (!driver) throw new NotFoundError("Driver not found")
   if (!hasTransportDriverAction(params.roles, "update")) throw new ForbiddenError()
 
-  return db.driver.update({
+  const updated = await db.driver.update({
     where: { id: params.id },
     data: toDriverUncheckedUpdateData(params.input),
   })
+
+  const pin = params.input.pin
+  const shouldSyncLogin = Boolean(pin) || Boolean(updated.userId && (params.input.phone !== undefined || params.input.isActive !== undefined || params.input.branchId !== undefined || params.input.firstName !== undefined || params.input.lastName !== undefined))
+  if (!shouldSyncLogin || !updated.userId && !pin) return updated
+
+  if (updated.userId && !pin && !phoneDigits(updated.phone)) {
+    await db.user.updateMany({
+      where: { id: updated.userId, companyId: params.companyId },
+      data: { isActive: updated.isActive },
+    })
+    return updated
+  }
+
+  const login = await syncDriverLoginAccount(db, {
+    companyId: params.companyId,
+    userId: updated.userId,
+    branchId: updated.branchId,
+    firstName: updated.firstName,
+    lastName: updated.lastName,
+    phoneDigits: phoneDigits(updated.phone),
+    pin,
+    isActive: updated.isActive,
+  })
+  if ("error" in login) throw new ValidationError(login.error?.message ?? "ตั้งรหัสคนขับไม่สำเร็จ")
+  if (updated.userId === login.userId) return updated
+  return db.driver.update({ where: { id: updated.id }, data: { userId: login.userId } })
 }
 
 export async function deleteDriver(
@@ -205,5 +250,12 @@ export async function deleteDriver(
   if (!driver) throw new NotFoundError("Driver not found")
   if (!hasTransportDriverAction(params.roles, "delete")) throw new ForbiddenError()
 
-  return db.driver.update({ where: { id: params.id }, data: { isActive: false } })
+  const updated = await db.driver.update({ where: { id: params.id }, data: { isActive: false } })
+  if (updated.userId) {
+    await db.user.updateMany({
+      where: { id: updated.userId, companyId: params.companyId },
+      data: { isActive: false },
+    })
+  }
+  return updated
 }

@@ -4,6 +4,8 @@ import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
 import { getJobByIdForPrint } from "@/modules/transport"
 import { JobPrintView } from "@/components/transport/job-print-view"
+import QRCode from "qrcode"
+import { headers } from "next/headers"
 
 export const metadata = { title: "พิมพ์ใบงานขนส่ง" }
 
@@ -20,6 +22,13 @@ export default async function TransportJobPrintPage({
   const { id } = await params
   const sp = await searchParams
   const autoPrint = sp.auto === "1"
+  const headerList = await headers()
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host")
+  const proto = headerList.get("x-forwarded-proto") ?? "https"
+  const origin = (process.env.NEXTAUTH_URL ?? (host ? `${proto}://${host}` : "")).replace(/\/$/, "")
+  const qrDataUrl = origin
+    ? await QRCode.toDataURL(`${origin}/transport/jobs/${id}/log`, { margin: 1, width: 220 })
+    : null
 
   try {
     const job = await getJobByIdForPrint(prisma, {
@@ -49,6 +58,7 @@ export default async function TransportJobPrintPage({
             ? `${job.assignment.driver.firstName} ${job.assignment.driver.lastName}`
             : null,
           driverPhone: job.assignment?.driver.phone ?? null,
+          qrDataUrl,
           stops: job.stops.map((stop) => ({
             sequence: stop.sequence,
             customerName: stop.customerName,

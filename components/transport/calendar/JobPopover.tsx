@@ -24,6 +24,7 @@ export const STATUS_LABEL: Record<string, string> = {
   departed: "ออกเดินทาง",
   at_destination: "ถึงปลายทาง",
   unloading: "กำลังขนถ่าย",
+  pending_review: "รอตรวจสอบ",
   completed: "เสร็จสิ้น",
   cancelled: "ยกเลิก",
 }

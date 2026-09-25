@@ -21,6 +21,7 @@ const STATUS_LABEL: Record<TransportJobStatus, string> = {
   departed: "ออกเดินทาง",
   at_destination: "ถึงปลายทาง",
   unloading: "กำลังขนถ่าย",
+  pending_review: "รอตรวจสอบ",
   completed: "เสร็จสิ้น",
   cancelled: "ยกเลิก",
 }

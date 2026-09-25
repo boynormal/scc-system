@@ -1095,6 +1095,7 @@ enum TransportJobStatus {
   departed
   at_destination
   unloading
+  pending_review
   completed
   cancelled
 }

@@ -11,6 +11,7 @@ const STATUS_CONFIG: Record<TransportJobStatus, { label: string; className: stri
   departed: { label: "ออกเดินทาง", className: "bg-sky-100 text-sky-800 border-sky-200" },
   at_destination: { label: "ถึงปลายทาง", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   unloading: { label: "กำลังขนถ่าย", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  pending_review: { label: "รอตรวจสอบ", className: "bg-amber-100 text-amber-800 border-amber-200" },
   completed: { label: "เสร็จสิ้น", className: "bg-green-100 text-green-800 border-green-200" },
   cancelled: { label: "ยกเลิก", className: "bg-muted text-muted-foreground border-border" },
 }

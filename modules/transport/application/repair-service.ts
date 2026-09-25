@@ -52,6 +52,7 @@ const ACTIVE_JOB_STATUSES = [
   "departed",
   "at_destination",
   "unloading",
+  "pending_review",
 ] as const
 
 const repairInclude = {

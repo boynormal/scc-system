@@ -62,6 +62,7 @@ export const updateJobSchema = z.object({
       "departed",
       "at_destination",
       "unloading",
+      "pending_review",
       "completed",
       "cancelled",
     ])

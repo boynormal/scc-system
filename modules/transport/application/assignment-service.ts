@@ -259,6 +259,7 @@ export async function completeJob(
   if (!canUpdate) throw new ForbiddenError()
 
   if (job.assignment) {
+    const endTime = job.assignment.endTime ?? new Date()
     const markAvailable = isScheduledTodayBangkok(job.scheduledDate)
     if (markAvailable) {
       const fleetOps = await buildFleetReleaseOps(db, {
@@ -274,7 +275,7 @@ export async function completeJob(
         }),
         db.jobAssignment.update({
           where: { jobId: params.jobId },
-          data: { endTime: new Date() },
+          data: { endTime },
         }),
         ...fleetOps,
       ])
@@ -286,7 +287,7 @@ export async function completeJob(
         }),
         db.jobAssignment.update({
           where: { jobId: params.jobId },
-          data: { endTime: new Date() },
+          data: { endTime },
         }),
       ])
     }

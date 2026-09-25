@@ -18,6 +18,7 @@ export const ACTIVE_JOB_STATUSES: TransportJobStatus[] = [
   "departed",
   "at_destination",
   "unloading",
+  "pending_review",
 ]
 
 export function resolveJobListGroup(group?: string | null): JobListGroup {

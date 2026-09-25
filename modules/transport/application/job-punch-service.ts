@@ -158,6 +158,9 @@ async function assertCanPunch(
   job: Awaited<ReturnType<typeof loadJob>>,
   params: { companyId: string; userId: string }
 ) {
+  if (job.status === "pending_review") {
+    throw new ValidationError("ใบงานรอตรวจสอบแล้ว บันทึกเพิ่มไม่ได้")
+  }
   if (job.status === "completed" || job.status === "cancelled") {
     throw new ValidationError("ใบงานนี้ปิดแล้ว")
   }
@@ -249,7 +252,7 @@ export async function recordJobPunch(
     }
 
     if (closesTrip) {
-      await tx.transportJob.update({ where: { id: job.id }, data: { status: "completed" } })
+      await tx.transportJob.update({ where: { id: job.id }, data: { status: "pending_review" } })
       await tx.jobAssignment.update({
         where: { jobId: job.id },
         data: { endTime: now },

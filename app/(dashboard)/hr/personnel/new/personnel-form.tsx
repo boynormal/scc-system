@@ -5,11 +5,31 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassForm, GlassFormActions, GlassFormSection, GlassInput } from "@/components/glass"
+import { DutyPicker, useDutyCatalog } from "../../duty-picker"
 
 type BranchOpt = { id: string; name: string; code: string }
 type UserOpt = { id: string; firstName: string; lastName: string; username: string; email: string }
 type DeptOpt = { id: string; name: string; code: string | null; branchId: string }
-type PositionOpt = { id: string; name: string; code: string | null; depth: number; branchId: string }
+type PositionOpt = {
+  id: string
+  name: string
+  code: string | null
+  depth: number
+  branchId: string
+  dutyItemIds: string[]
+}
+type SeatDraft = { dutyItemIds: string[]; extraDuties: string }
+
+export type PersonnelSeatInitial = { positionId: string; dutyItemIds: string[]; extraDuties: string | null }
+
+function seatHasContent(seat: SeatDraft | undefined) {
+  return Boolean(seat && (seat.dutyItemIds.length > 0 || seat.extraDuties.trim()))
+}
+
+function seatCount(seat: SeatDraft | undefined) {
+  if (!seat) return 0
+  return seat.dutyItemIds.length + seat.extraDuties.split("\n").filter((line) => line.trim()).length
+}
 
 export type PersonnelFormInitial = {
   rosterNo: string
@@ -25,6 +45,7 @@ export type PersonnelFormInitial = {
   userId: string | null
   departmentId: string | null
   positionIds: string[]
+  seats?: PersonnelSeatInitial[]
   branchIds: string[]
   primaryBranchId: string | null
 }
@@ -64,6 +85,29 @@ export function HrPersonnelForm({
   const [departments, setDepartments] = useState<DeptOpt[]>([])
   const [positionIds, setPositionIds] = useState<string[]>(initial?.positionIds ?? [])
   const [positions, setPositions] = useState<PositionOpt[]>([])
+  const [seatDrafts, setSeatDrafts] = useState<Record<string, SeatDraft>>(() =>
+    Object.fromEntries(
+      (initial?.seats ?? []).map((seat) => [
+        seat.positionId,
+        { dutyItemIds: seat.dutyItemIds, extraDuties: seat.extraDuties ?? "" },
+      ])
+    )
+  )
+  const [openSeat, setOpenSeat] = useState<string | null>(null)
+  const dutyCatalog = useDutyCatalog()
+  /** ข้อที่ปิดแล้วส่งได้เฉพาะที่เดิมติ๊กอยู่ในที่นั่งนั้น — ตรงกับที่ service ยอมรับ */
+  const initialLinks = useMemo(
+    () => new Map((initial?.seats ?? []).map((seat) => [seat.positionId, new Set(seat.dutyItemIds)])),
+    [initial?.seats]
+  )
+  const activeItemIds = useMemo(() => {
+    if (!dutyCatalog) return null
+    return new Set(
+      dutyCatalog
+        .filter((category) => category.isActive)
+        .flatMap((category) => category.items.filter((item) => item.isActive).map((item) => item.id))
+    )
+  }, [dutyCatalog])
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>(() => {
     if (initial?.branchIds.length) return initial.branchIds
     return branches[0]?.id ? [branches[0].id] : []
@@ -147,6 +191,15 @@ export function HrPersonnelForm({
   }, [mode])
 
   function toggleBranch(id: string) {
+    if (selectedSet.has(id)) {
+      const dropping = positions.filter((p) => p.branchId === id && positionIds.includes(p.id))
+      if (
+        dropping.some((p) => seatHasContent(seatDrafts[p.id])) &&
+        !window.confirm("ตำแหน่งในสาขานี้มีรายการที่ดูแลอยู่ เอาสาขาออกแล้วรายการเหล่านั้นจะหายเมื่อบันทึก ยืนยันหรือไม่")
+      ) {
+        return
+      }
+    }
     setSelectedBranchIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -156,7 +209,45 @@ export function HrPersonnelForm({
   }
 
   function togglePosition(id: string) {
-    setPositionIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+    if (positionIds.includes(id)) {
+      if (
+        seatHasContent(seatDrafts[id]) &&
+        !window.confirm("ตำแหน่งนี้มีรายการที่ดูแลอยู่ เอาออกแล้วรายการจะหายเมื่อบันทึก ยืนยันหรือไม่")
+      ) {
+        return
+      }
+      setPositionIds((prev) => prev.filter((item) => item !== id))
+      setSeatDrafts((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+      if (openSeat === id) setOpenSeat(null)
+      return
+    }
+    setPositionIds((prev) => [...prev, id])
+    setSeatDrafts((prev) => {
+      if (prev[id]) return prev
+      const defaults = positions.find((p) => p.id === id)?.dutyItemIds ?? []
+      const usable = activeItemIds ? defaults.filter((itemId) => activeItemIds.has(itemId)) : defaults
+      return { ...prev, [id]: { dutyItemIds: usable, extraDuties: "" } }
+    })
+  }
+
+  function updateSeat(id: string, patch: Partial<SeatDraft>) {
+    setSeatDrafts((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? { dutyItemIds: [], extraDuties: "" }), ...patch },
+    }))
+  }
+
+  function seatPayload(id: string) {
+    const draft = seatDrafts[id]
+    const kept = initialLinks.get(id)
+    const dutyItemIds = (draft?.dutyItemIds ?? []).filter(
+      (itemId) => !activeItemIds || activeItemIds.has(itemId) || kept?.has(itemId)
+    )
+    return { positionId: id, dutyItemIds, extraDuties: draft?.extraDuties.trim() || null }
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -180,6 +271,7 @@ export function HrPersonnelForm({
       userId: userId || null,
       departmentId: departmentId || null,
       positionIds,
+      seats: positionIds.map(seatPayload),
     }
     const url = mode === "edit" && personnelId ? `/api/hr/personnel/${personnelId}` : "/api/hr/personnel"
     const res = await fetch(url, {
@@ -354,6 +446,47 @@ export function HrPersonnelForm({
                           })}
                         </div>
                       )}
+                      {rows
+                        .filter((p) => positionIds.includes(p.id))
+                        .map((p) => {
+                          const draft = seatDrafts[p.id]
+                          const open = openSeat === p.id
+                          return (
+                            <div key={`seat-${p.id}`} className="mt-2 rounded-md border border-border/70 bg-muted/20 px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => setOpenSeat(open ? null : p.id)}
+                                className="flex w-full items-center justify-between gap-2 text-left text-sm"
+                              >
+                                <span className="font-medium text-foreground">{p.name}</span>
+                                <span className="text-xs text-blue-700 dark:text-blue-300">
+                                  {seatCount(draft) > 0 ? `ดูแล ${seatCount(draft)} รายการ` : "ยังไม่ได้ติ๊กรายการ"}
+                                  {open ? " · ปิด" : " · แก้ไข"}
+                                </span>
+                              </button>
+                              {open && (
+                                <div className="mt-2 space-y-2">
+                                  <DutyPicker
+                                    catalog={dutyCatalog}
+                                    selected={draft?.dutyItemIds ?? []}
+                                    onChange={(ids) => updateSeat(p.id, { dutyItemIds: ids })}
+                                  />
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-foreground">หน้าที่เพิ่มเติม</label>
+                                    <textarea
+                                      rows={3}
+                                      maxLength={5000}
+                                      value={draft?.extraDuties ?? ""}
+                                      onChange={(e) => updateSeat(p.id, { extraDuties: e.target.value })}
+                                      placeholder="บรรทัดละ 1 ข้อ — ข้อที่ไม่มีในสมุดหน้าที่"
+                                      className={fieldClass}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                     </div>
                   )
                 })}

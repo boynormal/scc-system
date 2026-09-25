@@ -10,6 +10,7 @@ import {
   parseResponsibilities,
   type OrgChartOccupant,
 } from "@/modules/hr/application/personnel-org-chart"
+import type { DutyItemRef } from "@/modules/hr/application/duty-groups"
 
 const CID = "00000000-0000-0000-0000-0000000000cc"
 const BRANCH_A = "11111111-1111-1111-1111-111111111111"
@@ -49,6 +50,7 @@ type PosRaw = {
   responsibilities: string | null
   isActive: boolean
   department: { id: string; name: string; code: string | null } | null
+  dutyItems?: { dutyItem: DutyItemRef }[]
 }
 
 function pos(over: Partial<PosRaw> & { id: string; name: string }): PosRaw {
@@ -73,7 +75,7 @@ function person(over: {
   jobGroup?: string | null
   isActive?: boolean
   positionId?: string | null
-  positionAssignments?: { positionId: string }[]
+  positionAssignments?: { positionId: string; extraDuties?: string | null; dutyItems?: { dutyItem: DutyItemRef }[] }[]
 }) {
   return {
     id: over.id ?? PERSON_1,
@@ -124,6 +126,8 @@ const occupant = (over: Partial<OrgChartOccupant> = {}): OrgChartOccupant => ({
   lastName: null,
   jobGroup: "ผลิต",
   isActive: true,
+  duties: [],
+  extraDuties: [],
   ...over,
 })
 
@@ -503,5 +507,68 @@ describe("getPersonnelOrgChart", () => {
     expect(data.roots).toEqual([])
     expect(data.totals.positions).toBe(0)
     expect(data.unplaced).toHaveLength(1)
+  })
+
+  it("คนสองคนตำแหน่งเดียวกันดูแลคนละชุด และตำแหน่งแสดงชุดตั้งต้นตามลำดับสมุด", async () => {
+    const price = { id: "c-price", name: "ราคา", sortOrder: 10 }
+    const customer = { id: "c-cust", name: "ลูกค้า", sortOrder: 20 }
+    const ref = (id: string, name: string, sortOrder: number, category: typeof price) => ({
+      dutyItem: { id, name, sortOrder, isActive: true, category },
+    })
+    const db = createDb({
+      positions: [
+        {
+          ...pos({ id: POS_ROOT, name: "ธุรการ", headcount: 2, responsibilities: "ข้อเฉพาะ" }),
+          dutyItems: [ref("i-cust", "รับรองลูกค้า", 10, customer), ref("i-price", "อัพเดตราคา", 10, price)],
+        } as PosRaw,
+      ],
+      people: [
+        {
+          ...person({ id: PERSON_1, positionId: POS_ROOT }),
+          positionAssignments: [
+            { positionId: POS_ROOT, extraDuties: "ตอบไลน์\n", dutyItems: [ref("i-price", "อัพเดตราคา", 10, price)] },
+          ],
+        },
+        {
+          ...person({ id: PERSON_2, rosterNo: "002", positionId: POS_ROOT }),
+          positionAssignments: [
+            { positionId: POS_ROOT, extraDuties: null, dutyItems: [ref("i-cust", "รับรองลูกค้า", 10, customer)] },
+          ],
+        },
+      ] as ReturnType<typeof person>[],
+    })
+
+    const { data } = await getPersonnelOrgChart(asDb(db), { companyId: CID, roles: managerA, branchId: BRANCH_A })
+    const node = data.roots[0]!
+    expect(node.duties.map((g) => g.category)).toEqual(["ราคา", "ลูกค้า"])
+    expect(node.responsibilities).toEqual(["ข้อเฉพาะ"])
+    const byId = new Map(node.occupants.map((o) => [o.id, o]))
+    expect(byId.get(PERSON_1)!.duties.flatMap((g) => g.items.map((i) => i.name))).toEqual(["อัพเดตราคา"])
+    expect(byId.get(PERSON_1)!.extraDuties).toEqual(["ตอบไลน์"])
+    expect(byId.get(PERSON_2)!.duties.flatMap((g) => g.items.map((i) => i.name))).toEqual(["รับรองลูกค้า"])
+    expect(matchesOrgChartSearch(node, "ตอบไลน์")).toBe(true)
+  })
+
+  it("คนเดียวสองตำแหน่งได้รายการแยกตามตำแหน่ง", async () => {
+    const cat = { id: "c1", name: "ราคา", sortOrder: 10 }
+    const db = createDb({
+      positions: [
+        pos({ id: POS_ROOT, name: "หัวหน้า" }),
+        pos({ id: POS_CHILD, name: "ธุรการ", parentId: POS_ROOT }),
+      ],
+      people: [
+        {
+          ...person({ id: PERSON_1, positionId: POS_ROOT }),
+          positionAssignments: [
+            { positionId: POS_ROOT, dutyItems: [{ dutyItem: { id: "a", name: "อนุมัติ", sortOrder: 10, isActive: true, category: cat } }] },
+            { positionId: POS_CHILD, dutyItems: [] },
+          ],
+        },
+      ] as ReturnType<typeof person>[],
+    })
+
+    const { data } = await getPersonnelOrgChart(asDb(db), { companyId: CID, roles: managerA, branchId: BRANCH_A })
+    expect(data.roots[0]!.occupants[0]!.duties).toHaveLength(1)
+    expect(data.roots[0]!.children[0]!.occupants[0]!.duties).toHaveLength(0)
   })
 })

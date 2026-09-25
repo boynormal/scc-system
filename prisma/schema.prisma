@@ -157,6 +157,7 @@ model Company {
   units                   Unit[]
   financeSourceReviews    FinanceSourceReview[]
   assets                  Asset[]
+  dutyCategories          DutyCategory[]
 
   @@map("companies")
 }
@@ -887,6 +888,7 @@ model Position {
   children   Position[]  @relation("PositionHierarchy")
   personnel  Personnel[]
   personnelSeats PersonnelPosition[]
+  dutyItems  PositionDutyItem[]
 
   @@unique([branchId, code], map: "positions_branch_code_unique")
   @@index([branchId])
@@ -956,14 +958,81 @@ model PersonnelPosition {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   personnelId String   @map("personnel_id") @db.Uuid
   positionId  String   @map("position_id") @db.Uuid
+  /// งานที่ไม่มีในสมุดหน้าที่ บรรทัดละ 1 ข้อ
+  extraDuties String?  @map("extra_duties") @db.Text
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  personnel Personnel @relation(fields: [personnelId], references: [id], onDelete: Cascade)
-  position  Position  @relation(fields: [positionId], references: [id], onDelete: Restrict)
+  personnel Personnel                   @relation(fields: [personnelId], references: [id], onDelete: Cascade)
+  position  Position                    @relation(fields: [positionId], references: [id], onDelete: Restrict)
+  dutyItems PersonnelPositionDutyItem[]
 
   @@unique([personnelId, positionId], map: "personnel_position_unique")
   @@index([positionId])
   @@map("personnel_positions")
+}
+
+/// สมุดหน้าที่ระดับบริษัท ชั้นหมวด
+model DutyCategory {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String   @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company    @relation(fields: [companyId], references: [id])
+  items   DutyItem[]
+
+  @@unique([companyId, name], map: "duty_categories_company_name_unique")
+  @@index([companyId])
+  @@map("duty_categories")
+}
+
+model DutyItem {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  name       String   @db.VarChar(500)
+  sortOrder  Int      @default(0) @map("sort_order")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  category  DutyCategory                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  positions PositionDutyItem[]
+  seats     PersonnelPositionDutyItem[]
+
+  @@unique([categoryId, name], map: "duty_items_category_name_unique")
+  @@index([categoryId])
+  @@map("duty_items")
+}
+
+/// ชุดตั้งต้นของตำแหน่ง
+model PositionDutyItem {
+  positionId String   @map("position_id") @db.Uuid
+  dutyItemId String   @map("duty_item_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  dutyItem DutyItem @relation(fields: [dutyItemId], references: [id], onDelete: Restrict)
+
+  @@id([positionId, dutyItemId])
+  @@index([dutyItemId])
+  @@map("position_duty_items")
+}
+
+/// รายการที่คนนี้ดูแลจริงในตำแหน่งนี้
+model PersonnelPositionDutyItem {
+  seatId     String   @map("personnel_position_id") @db.Uuid
+  dutyItemId String   @map("duty_item_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  seat     PersonnelPosition @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  dutyItem DutyItem          @relation(fields: [dutyItemId], references: [id], onDelete: Restrict)
+
+  @@id([seatId, dutyItemId])
+  @@index([dutyItemId])
+  @@map("personnel_position_duty_items")
 }
 
 model AttendanceImportBatch {

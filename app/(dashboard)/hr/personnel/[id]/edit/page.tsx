@@ -70,6 +70,11 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
             : row.positionId
               ? [row.positionId]
               : [],
+          seats: row.positionAssignments.map((seat) => ({
+            positionId: seat.positionId,
+            dutyItemIds: seat.dutyItems.map((link) => link.dutyItemId),
+            extraDuties: seat.extraDuties,
+          })),
           branchIds: assignedIds.length ? assignedIds : row.branchId ? [row.branchId] : [],
           primaryBranchId: primary,
         }}

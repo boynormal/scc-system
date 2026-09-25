@@ -5,7 +5,14 @@ import { ChevronDown, ChevronRight, FileText, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { GlassCard } from "@/components/glass"
 import { Badge } from "@/components/ui/badge"
-import type { OrgChartNode, PersonnelOrgChart } from "@/modules/hr"
+import type { DutyGroup, OrgChartNode, PersonnelOrgChart } from "@/modules/hr"
+
+function dutiesMatch(groups: DutyGroup[], lines: string[], q: string): boolean {
+  return (
+    groups.some((g) => g.items.some((item) => item.name.toLowerCase().includes(q))) ||
+    lines.some((line) => line.toLowerCase().includes(q))
+  )
+}
 
 function matches(node: OrgChartNode, query: string): boolean {
   const q = query.trim().toLowerCase()
@@ -13,6 +20,7 @@ function matches(node: OrgChartNode, query: string): boolean {
   if (node.name.toLowerCase().includes(q)) return true
   if (node.code?.toLowerCase().includes(q)) return true
   if (node.department?.name.toLowerCase().includes(q)) return true
+  if (dutiesMatch(node.duties, node.responsibilities, q)) return true
   return node.occupants.some(
     (o) =>
       o.displayName.toLowerCase().includes(q) ||
@@ -20,7 +28,39 @@ function matches(node: OrgChartNode, query: string): boolean {
       (o.firstName?.toLowerCase().includes(q) ?? false) ||
       (o.lastName?.toLowerCase().includes(q) ?? false) ||
       o.rosterNo.toLowerCase().includes(q) ||
-      (o.jobGroup?.toLowerCase().includes(q) ?? false)
+      (o.jobGroup?.toLowerCase().includes(q) ?? false) ||
+      dutiesMatch(o.duties, o.extraDuties, q)
+  )
+}
+
+function dutyCount(groups: DutyGroup[], lines: string[]): number {
+  return groups.reduce((sum, g) => sum + g.items.length, 0) + lines.length
+}
+
+function DutyList({ groups, lines, linesLabel }: { groups: DutyGroup[]; lines: string[]; linesLabel: string }) {
+  return (
+    <div className="space-y-1.5">
+      {groups.map((group) => (
+        <div key={group.categoryId}>
+          <p className="text-[11px] font-semibold text-foreground">{group.category}</p>
+          <ul className="list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
+            {group.items.map((item) => (
+              <li key={item.id}>{item.name}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {lines.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold text-foreground">{linesLabel}</p>
+          <ul className="list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
+            {lines.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -70,6 +110,7 @@ function PositionBox({
   onToggle: () => void
 }) {
   const hiddenCount = node.subtreeSize - 1
+  const duties = dutyCount(node.duties, node.responsibilities)
 
   return (
     <div
@@ -83,8 +124,11 @@ function PositionBox({
       <button type="button" onClick={onSelect} className="block w-full text-left">
         <div className="flex items-start justify-between gap-1.5">
           <span className="text-sm font-semibold leading-snug text-foreground">{node.name}</span>
-          {node.responsibilities.length > 0 && (
-            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {duties > 0 && (
+            <span className="mt-0.5 flex shrink-0 items-center gap-0.5 text-[10px] text-muted-foreground" title={`หน้าที่ ${duties} ข้อ`}>
+              <FileText className="h-3.5 w-3.5" />
+              {duties}
+            </span>
           )}
         </div>
         {(node.code || node.department) && (
@@ -270,9 +314,9 @@ export function OrgChart({ chart, search }: { chart: PersonnelOrgChart; search: 
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
+    <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
       <div className="lg:order-2">
-        <GlassCard padding="sm" className="lg:sticky lg:top-4">
+        <GlassCard padding="sm" className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           {selected ? (
             <div className="space-y-3">
               <div>
@@ -309,18 +353,39 @@ export function OrgChart({ chart, search }: { chart: PersonnelOrgChart; search: 
               <div>
                 <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-foreground">
                   <FileText className="h-3.5 w-3.5" />
-                  หน้าที่ความรับผิดชอบ
+                  หน้าที่ของตำแหน่ง
                 </p>
-                {selected.responsibilities.length > 0 ? (
-                  <ol className="list-decimal space-y-0.5 pl-5 text-xs text-muted-foreground">
-                    {selected.responsibilities.map((line, i) => (
-                      <li key={i}>{line}</li>
-                    ))}
-                  </ol>
+                {dutyCount(selected.duties, selected.responsibilities) > 0 ? (
+                  <DutyList
+                    groups={selected.duties}
+                    lines={selected.responsibilities}
+                    linesLabel="ข้อเฉพาะตำแหน่งนี้"
+                  />
                 ) : (
                   <p className="text-xs italic text-muted-foreground">ยังไม่ได้บันทึก</p>
                 )}
               </div>
+              {selected.occupants.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold text-foreground">รายการที่แต่ละคนดูแล</p>
+                  <div className="space-y-2">
+                    {selected.occupants.map((o) => (
+                      <div key={o.id} className="rounded-md border border-border/60 px-2 py-1.5">
+                        <p className={cn("text-xs font-medium text-foreground", !o.isActive && "line-through")}>
+                          {o.displayName}
+                        </p>
+                        {dutyCount(o.duties, o.extraDuties) > 0 ? (
+                          <div className="mt-1">
+                            <DutyList groups={o.duties} lines={o.extraDuties} linesLabel="หน้าที่เพิ่มเติม" />
+                          </div>
+                        ) : (
+                          <p className="text-[11px] italic text-muted-foreground">ยังไม่ได้ติ๊กรายการ</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-2">

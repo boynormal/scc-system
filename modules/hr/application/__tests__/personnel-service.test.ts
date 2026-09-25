@@ -71,7 +71,10 @@ type PersonRow = {
   positionId: string | null
   position: { id: string; name: string; code: string | null; branchId: string } | null
   positionAssignments: Array<{
+    id?: string
     positionId: string
+    extraDuties?: string | null
+    dutyItems?: { dutyItemId: string }[]
     position: { id: string; name: string; code: string | null; branchId: string }
   }>
   isActive: boolean
@@ -202,6 +205,7 @@ type FakeState = {
   departments?: DeptRow[]
   positions?: PositionRowFake[]
   branches?: Record<string, { companyId: string; isActive: boolean; deletedAt: Date | null }>
+  dutyItems?: { id: string; companyId: string; isActive: boolean }[]
   lastFindManyWhere?: unknown
 }
 
@@ -309,25 +313,68 @@ function fakeDb(state: FakeState = {}): PrismaClient {
           .map((row) => ({ id: row.id, branchId: row.branchId, isActive: row.isActive }))
       },
     },
+    dutyItem: {
+      findMany: async ({ where }: { where: { id: { in: string[] }; category: { companyId: string } } }) =>
+        (state.dutyItems ?? [])
+          .filter((item) => where.id.in.includes(item.id) && item.companyId === where.category.companyId)
+          .map((item) => ({ id: item.id, isActive: item.isActive, category: { isActive: true } })),
+    },
     personnelPosition: {
-      deleteMany: async ({ where }: { where: { personnelId: string } }) => {
+      findMany: async ({ where }: { where: { personnelId: string } }) => {
         const person = people.find((p) => p.id === where.personnelId)
-        if (person) person.positionAssignments = []
-        return { count: 0 }
+        return (person?.positionAssignments ?? []).map((seat) => ({
+          id: seat.id ?? `seat-${seat.positionId}`,
+          positionId: seat.positionId,
+        }))
       },
-      createMany: async ({ data }: { data: { personnelId: string; positionId: string }[] }) => {
-        for (const item of data) {
-          const person = people.find((p) => p.id === item.personnelId)
-          if (!person) continue
-          const pos = positions.find((p) => p.id === item.positionId)
-          person.positionAssignments.push({
-            positionId: item.positionId,
-            position: pos
-              ? { id: pos.id, name: pos.name, code: pos.code, branchId: pos.branchId }
-              : { id: item.positionId, name: item.positionId, code: null, branchId: "" },
-          })
+      deleteMany: async ({ where }: { where: { id: { in: string[] } } }) => {
+        for (const person of people) {
+          person.positionAssignments = person.positionAssignments.filter(
+            (seat) => !where.id.in.includes(seat.id ?? `seat-${seat.positionId}`)
+          )
         }
-        return { count: data.length }
+        return { count: where.id.in.length }
+      },
+      create: async ({
+        data,
+      }: {
+        data: {
+          personnelId: string
+          positionId: string
+          extraDuties: string | null
+          dutyItems?: { create: { dutyItemId: string }[] }
+        }
+      }) => {
+        const person = people.find((p) => p.id === data.personnelId)
+        const pos = positions.find((p) => p.id === data.positionId)
+        const seat = {
+          id: `seat-${data.positionId}`,
+          positionId: data.positionId,
+          extraDuties: data.extraDuties,
+          dutyItems: data.dutyItems?.create ?? [],
+          position: pos
+            ? { id: pos.id, name: pos.name, code: pos.code, branchId: pos.branchId }
+            : { id: data.positionId, name: data.positionId, code: null, branchId: "" },
+        }
+        person?.positionAssignments.push(seat)
+        return seat
+      },
+      update: async ({
+        where,
+        data,
+      }: {
+        where: { id: string }
+        data: { extraDuties: string | null; dutyItems: { create: { dutyItemId: string }[] } }
+      }) => {
+        for (const person of people) {
+          const seat = person.positionAssignments.find((s) => (s.id ?? `seat-${s.positionId}`) === where.id)
+          if (seat) {
+            seat.extraDuties = data.extraDuties
+            seat.dutyItems = data.dutyItems.create
+            return seat
+          }
+        }
+        throw new Error("seat not found")
       },
     },
     personnelBranch: {
@@ -921,6 +968,160 @@ describe("personnel position", () => {
     const created = await createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
     expect(created.jobGroup).toBe("ผลิต")
     expect(created.positionId).toBe(POS_A)
+  })
+})
+
+describe("รายการที่แต่ละคนดูแล", () => {
+  const DUTY_1 = "30000000-0000-0000-0000-000000000001"
+  const DUTY_2 = "30000000-0000-0000-0000-000000000002"
+  const DUTY_OFF = "30000000-0000-0000-0000-000000000003"
+  const dutyItems = [
+    { id: DUTY_1, companyId: CID, isActive: true },
+    { id: DUTY_2, companyId: CID, isActive: true },
+    { id: DUTY_OFF, companyId: CID, isActive: false },
+  ]
+  const positions: PositionRowFake[] = [
+    { id: POS_A, name: "ธุรการ", code: null, branchId: BRANCH_A, companyId: CID, isActive: true },
+    { id: POS_B, name: "คลัง", code: null, branchId: BRANCH_B, companyId: CID, isActive: true },
+  ]
+  const seatA = (over: Partial<PersonRow["positionAssignments"][number]> = {}) => ({
+    id: "seat-a",
+    positionId: POS_A,
+    extraDuties: "ตอบไลน์",
+    dutyItems: [{ dutyItemId: DUTY_1 }],
+    position: { id: POS_A, name: "ธุรการ", code: null, branchId: BRANCH_A },
+    ...over,
+  })
+
+  it("สร้างพร้อมรายการของแต่ละที่นั่ง และ seats มาก่อน positionIds", async () => {
+    const db = fakeDb({ positions, dutyItems })
+    const created = await createPersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      input: createPersonnelSchema.parse({
+        rosterNo: "030",
+        displayName: "มีรายการ",
+        branchIds: [BRANCH_A],
+        positionIds: [],
+        seats: [{ positionId: POS_A, dutyItemIds: [DUTY_1, DUTY_1], extraDuties: "  ตอบไลน์  " }],
+      }),
+    })
+    expect(created.positionId).toBe(POS_A)
+    expect(created.positionAssignments[0]).toMatchObject({
+      positionId: POS_A,
+      extraDuties: "ตอบไลน์",
+      dutyItems: [{ dutyItemId: DUTY_1 }],
+    })
+  })
+
+  it("สองคนตำแหน่งเดียวกันเก็บรายการแยกกัน", async () => {
+    const db = fakeDb({
+      positions,
+      dutyItems,
+      people: [
+        personRow({ positionId: POS_A, positionAssignments: [seatA({ id: "seat-1" })] }),
+        personRow({
+          id: PERSON_OTHER,
+          rosterNo: "002",
+          positionId: POS_A,
+          positionAssignments: [seatA({ id: "seat-2", dutyItems: [{ dutyItemId: DUTY_2 }], extraDuties: null })],
+        }),
+      ],
+    })
+    await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ seats: [{ positionId: POS_A, dutyItemIds: [DUTY_1, DUTY_2] }] }),
+    })
+    const other = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_OTHER,
+      input: updatePersonnelSchema.parse({ displayName: "แก้ชื่ออย่างเดียว" }),
+    })
+    expect(other.data.positionAssignments[0]!.dutyItems).toEqual([{ dutyItemId: DUTY_2 }])
+  })
+
+  it("ไม่ส่ง seats แล้วรายการของที่นั่งเดิมไม่หาย", async () => {
+    const db = fakeDb({
+      positions,
+      dutyItems,
+      people: [personRow({ positionId: POS_A, positionAssignments: [seatA()] })],
+    })
+    const result = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ positionIds: [POS_A] }),
+    })
+    expect(result.data.positionAssignments[0]).toMatchObject({
+      id: "seat-a",
+      extraDuties: "ตอบไลน์",
+      dutyItems: [{ dutyItemId: DUTY_1 }],
+    })
+  })
+
+  it("เอาตำแหน่งออกแล้วรายการของที่นั่งนั้นหายไปด้วย", async () => {
+    const db = fakeDb({
+      positions,
+      dutyItems,
+      people: [
+        personRow({
+          positionId: POS_A,
+          branchAssignments: [
+            { id: "pb-a", branchId: BRANCH_A, isPrimary: true, branch: { id: BRANCH_A, name: "A", code: "A" } },
+            { id: "pb-b", branchId: BRANCH_B, isPrimary: false, branch: { id: BRANCH_B, name: "B", code: "B" } },
+          ],
+          positionAssignments: [
+            seatA(),
+            {
+              id: "seat-b",
+              positionId: POS_B,
+              dutyItems: [{ dutyItemId: DUTY_2 }],
+              position: { id: POS_B, name: "คลัง", code: null, branchId: BRANCH_B },
+            },
+          ],
+        }),
+      ],
+    })
+    const result = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ seats: [{ positionId: POS_B, dutyItemIds: [DUTY_2] }] }),
+    })
+    expect(result.data.positionAssignments.map((seat) => seat.positionId)).toEqual([POS_B])
+    expect(result.data.positionId).toBe(POS_B)
+  })
+
+  it("ข้อที่ปิดแล้วเพิ่มใหม่ไม่ได้ แต่ที่นั่งที่ติ๊กไว้เดิมคงไว้ได้", async () => {
+    const db = fakeDb({
+      positions,
+      dutyItems,
+      people: [personRow({ positionId: POS_A, positionAssignments: [seatA({ dutyItems: [{ dutyItemId: DUTY_OFF }] })] })],
+    })
+    const kept = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ seats: [{ positionId: POS_A, dutyItemIds: [DUTY_OFF, DUTY_1] }] }),
+    })
+    expect(kept.data.positionAssignments[0]!.dutyItems).toEqual([{ dutyItemId: DUTY_OFF }, { dutyItemId: DUTY_1 }])
+
+    const fresh = fakeDb({ positions, dutyItems })
+    await expect(
+      createPersonnel(fresh, {
+        companyId: CID,
+        roles: adminRoles,
+        input: createPersonnelSchema.parse({
+          rosterNo: "031",
+          displayName: "ข้อปิด",
+          branchIds: [BRANCH_A],
+          seats: [{ positionId: POS_A, dutyItemIds: [DUTY_OFF] }],
+        }),
+      })
+    ).rejects.toThrow("รายการหน้าที่นี้ถูกปิดใช้งานแล้ว")
   })
 })
 

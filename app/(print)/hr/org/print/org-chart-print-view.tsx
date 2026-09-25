@@ -119,7 +119,7 @@ export function OrgChartPrintView({
     return () => window.clearTimeout(timer)
   }, [autoPrint])
 
-  const withJd = flatten(chart.roots).filter((n) => n.responsibilities.length > 0)
+  const withJd = flatten(chart.roots).filter((n) => n.duties.length > 0 || n.responsibilities.length > 0)
 
   return (
     <>
@@ -181,11 +181,28 @@ export function OrgChartPrintView({
                       {node.name}
                       {node.code ? ` (${node.code})` : ""}
                     </p>
-                    <ol className="mt-0.5 list-decimal pl-4 text-[10px] leading-snug text-slate-700">
-                      {node.responsibilities.map((line, i) => (
-                        <li key={i}>{line}</li>
-                      ))}
-                    </ol>
+                    {node.duties.map((group) => (
+                      <div key={group.categoryId} className="mt-0.5">
+                        <p className="text-[10px] font-semibold text-slate-800">{group.category}</p>
+                        <ul className="list-disc pl-4 text-[10px] leading-snug text-slate-700">
+                          {group.items.map((item) => (
+                            <li key={item.id}>{item.name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                    {node.responsibilities.length > 0 && (
+                      <div className="mt-0.5">
+                        {node.duties.length > 0 && (
+                          <p className="text-[10px] font-semibold text-slate-800">ข้อเฉพาะตำแหน่งนี้</p>
+                        )}
+                        <ol className="list-decimal pl-4 text-[10px] leading-snug text-slate-700">
+                          {node.responsibilities.map((line, i) => (
+                            <li key={i}>{line}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

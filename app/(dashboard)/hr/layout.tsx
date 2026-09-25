@@ -23,6 +23,7 @@ export default async function HrLayout({ children }: { children: React.ReactNode
   }
   if (canManageHrPositions(roles)) {
     tabs.push({ href: "/hr/positions", label: "ตำแหน่ง" })
+    tabs.push({ href: "/hr/duties", label: "สมุดหน้าที่" })
   }
   if (canReadHrAttendance(roles)) {
     tabs.push({ href: "/hr/attendance", label: "บันทึกเวลา" })

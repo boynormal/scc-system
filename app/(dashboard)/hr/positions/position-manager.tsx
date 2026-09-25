@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassCard, GlassDialog, GlassInput } from "@/components/glass"
 import { Badge } from "@/components/ui/badge"
-import type { PositionTreeNode } from "@/modules/hr"
+import type { DutyCatalogCategory, PositionTreeNode } from "@/modules/hr"
+import { DutyPicker } from "../duty-picker"
 
 type BranchOpt = { id: string; name: string; code: string }
 type DeptOpt = { id: string; name: string; code: string | null }
@@ -26,6 +27,7 @@ type FormState = {
   headcount: string
   sortOrder: string
   responsibilities: string
+  dutyItemIds: string[]
   isActive: boolean
 }
 
@@ -37,6 +39,7 @@ const emptyForm: FormState = {
   headcount: "1",
   sortOrder: "0",
   responsibilities: "",
+  dutyItemIds: [],
   isActive: true,
 }
 
@@ -66,12 +69,14 @@ export function PositionManager({
   branchId,
   departments,
   view,
+  dutyCatalog,
   perms,
 }: {
   branches: BranchOpt[]
   branchId: string
   departments: DeptOpt[]
   view: View | null
+  dutyCatalog: DutyCatalogCategory[]
   perms: { canCreate: boolean; canUpdate: boolean; canDelete: boolean }
 }) {
   const router = useRouter()
@@ -110,6 +115,7 @@ export function PositionManager({
       headcount: String(node.headcount),
       sortOrder: String(node.sortOrder),
       responsibilities: node.responsibilities ?? "",
+      dutyItemIds: node.dutyItemIds,
       isActive: node.isActive,
     })
     setErr(null)
@@ -142,6 +148,7 @@ export function PositionManager({
       headcount,
       sortOrder,
       responsibilities: form.responsibilities,
+      dutyItemIds: form.dutyItemIds,
       ...(editing ? { isActive: form.isActive } : { branchId }),
     }
     const res = await fetch(editing ? `/api/hr/positions/${editing.id}` : "/api/hr/positions", {
@@ -382,17 +389,28 @@ export function PositionManager({
               onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
             />
           </div>
+          <div className="space-y-1.5">
+            <span className="text-sm font-medium text-foreground">หน้าที่จากสมุดหน้าที่</span>
+            <DutyPicker
+              catalog={dutyCatalog}
+              selected={form.dutyItemIds}
+              onChange={(ids) => setForm({ ...form, dutyItemIds: ids })}
+            />
+            <span className="text-xs text-muted-foreground">
+              เป็นชุดตั้งต้น คนที่ได้ตำแหน่งนี้ใหม่จะถูกติ๊กชุดนี้ให้ก่อน แล้วปรับรายคนได้
+            </span>
+          </div>
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-foreground">หน้าที่ความรับผิดชอบ</span>
+            <span className="text-sm font-medium text-foreground">ข้อเฉพาะตำแหน่งนี้</span>
             <textarea
               className={fieldClass}
-              rows={6}
+              rows={4}
               maxLength={5000}
               value={form.responsibilities}
               onChange={(e) => setForm({ ...form, responsibilities: e.target.value })}
-              placeholder={"บรรทัดละ 1 ข้อ\nกำกับดูแลสายการผลิต\nรายงานผลผลิตรายวัน"}
+              placeholder={"บรรทัดละ 1 ข้อ\nข้อที่ไม่มีในสมุดหน้าที่"}
             />
-            <span className="text-xs text-muted-foreground">บรรทัดละ 1 ข้อ</span>
+            <span className="text-xs text-muted-foreground">บรรทัดละ 1 ข้อ — ใช้กับข้อที่มีแค่ตำแหน่งนี้</span>
           </label>
           {editing && (
             <label className="flex items-center gap-2 text-sm text-foreground">

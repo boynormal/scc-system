@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { getPersonnel } from "@/modules/hr"
+import { getPersonnel, groupDutyItems, splitLines } from "@/modules/hr"
 import { Badge } from "@/components/ui/badge"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 import { PersonnelDeleteButton } from "../personnel-delete-button"
@@ -92,6 +92,28 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     { label: "บัญชีผู้ใช้", value: formatUser(row.user) },
   ]
 
+  const seatsByBranch = new Map<string, typeof row.positionAssignments>()
+  for (const seat of row.positionAssignments) {
+    const list = seatsByBranch.get(seat.position.branchId)
+    if (list) list.push(seat)
+    else seatsByBranch.set(seat.position.branchId, [seat])
+  }
+  const branchOrder = [
+    ...assignedBranches.map((branch) => branch.id),
+    ...[...seatsByBranch.keys()].filter((bid) => !branchCodeById.has(bid)),
+  ]
+  const dutySections = branchOrder
+    .filter((bid) => seatsByBranch.has(bid))
+    .map((bid) => ({
+      branch: assignedBranches.find((branch) => branch.id === bid) ?? null,
+      seats: seatsByBranch.get(bid)!.map((seat) => ({
+        id: seat.id,
+        position: seat.position.code ? `${seat.position.name} (${seat.position.code})` : seat.position.name,
+        groups: groupDutyItems(seat.dutyItems.map((link) => link.dutyItem)),
+        extra: splitLines(seat.extraDuties),
+      })),
+    }))
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -135,6 +157,60 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
           ))}
         </dl>
       </GlassCard>
+
+      {dutySections.length > 0 && (
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>หน้าที่ที่ดูแล</GlassCardTitle>
+          </GlassCardHeader>
+          <div className="space-y-4">
+            {dutySections.map((section) => (
+              <div key={section.branch?.id ?? "other"} className="space-y-2">
+                {dutySections.length > 1 && section.branch && (
+                  <p className="text-sm font-semibold text-foreground">
+                    {section.branch.code}
+                    <span className="ml-1.5 font-normal text-muted-foreground">{section.branch.name}</span>
+                  </p>
+                )}
+                {section.seats.map((seat) => (
+                  <div key={seat.id} className="rounded-lg border border-border px-3 py-2">
+                    <p className="text-sm font-medium text-foreground">{seat.position}</p>
+                    {seat.groups.length === 0 && seat.extra.length === 0 ? (
+                      <p className="mt-1 text-xs italic text-muted-foreground">ยังไม่ได้ติ๊กรายการ</p>
+                    ) : (
+                      <div className="mt-1 space-y-1.5">
+                        {seat.groups.map((group) => (
+                          <div key={group.categoryId}>
+                            <p className="text-xs font-semibold text-foreground">{group.category}</p>
+                            <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                              {group.items.map((item) => (
+                                <li key={item.id}>
+                                  {item.name}
+                                  {!item.isActive && <span className="ml-1 text-xs">(ปิดใช้งาน)</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                        {seat.extra.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-foreground">หน้าที่เพิ่มเติม</p>
+                            <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                              {seat.extra.map((line, i) => (
+                                <li key={i}>{line}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { assertDutyItemsAllowed } from "./duty-links"
 
 /** ความลึกของสายบังคับบัญชาที่ยอมให้มีได้ — กันผังลึกเกินอ่านและกันวงกลมโดยพลาด */
 export const MAX_POSITION_DEPTH = 10
@@ -40,6 +41,8 @@ const positionFieldsSchema = z.object({
   headcount: z.number().int().min(0).max(9999).optional(),
   sortOrder: z.number().int().min(-9999).max(9999).optional(),
   responsibilities: nullableText(5000),
+  /** ส่งมาเมื่อไหร่แทนทั้งชุด ไม่ส่งคือคงชุดเดิม */
+  dutyItemIds: z.array(z.string().uuid()).max(300).optional(),
 })
 
 export const createPositionSchema = positionFieldsSchema.extend({
@@ -65,6 +68,8 @@ export type PositionRow = {
   sortOrder: number
   headcount: number
   responsibilities: string | null
+  /** ชุดตั้งต้นจากสมุดหน้าที่ — ใช้เติมให้คนที่เพิ่งได้ตำแหน่งนี้ */
+  dutyItemIds: string[]
   isActive: boolean
   /** คนที่นั่งอยู่จริง — นับเฉพาะบุคลากรที่ยังใช้งานและไม่ถูกลบ */
   occupantCount: number
@@ -82,6 +87,7 @@ export type PositionOption = {
   code: string | null
   parentId: string | null
   depth: number
+  dutyItemIds: string[]
 }
 
 /**
@@ -304,6 +310,7 @@ const positionSelect = {
   responsibilities: true,
   isActive: true,
   department: { select: { id: true, name: true, code: true } },
+  dutyItems: { select: { dutyItemId: true } },
 } satisfies Prisma.PositionSelect
 
 type RawPosition = {
@@ -318,6 +325,7 @@ type RawPosition = {
   responsibilities: string | null
   isActive: boolean
   department: { id: string; name: string; code: string | null } | null
+  dutyItems?: { dutyItemId: string }[]
 }
 
 function toRow(raw: RawPosition, occupantCount: number): PositionRow {
@@ -332,6 +340,7 @@ function toRow(raw: RawPosition, occupantCount: number): PositionRow {
     sortOrder: raw.sortOrder,
     headcount: raw.headcount,
     responsibilities: raw.responsibilities,
+    dutyItemIds: (raw.dutyItems ?? []).map((link) => link.dutyItemId),
     isActive: raw.isActive,
     occupantCount,
     vacancy: Math.max(0, raw.headcount - occupantCount),
@@ -482,6 +491,7 @@ export async function listPositionOptions(
       code: node.code,
       parentId: node.parentId,
       depth: node.depth,
+      dutyItemIds: node.dutyItemIds,
     })),
   }
 }
@@ -533,6 +543,11 @@ export async function createPosition(
   if (input.code) {
     await assertCodeFree(db, { branchId: branch.id, code: input.code })
   }
+  const dutyItemIds = await assertDutyItemsAllowed(db, {
+    companyId: params.companyId,
+    dutyItemIds: input.dutyItemIds ?? [],
+    alreadyLinked: [],
+  })
 
   const raw = (await db.position.create({
     data: {
@@ -544,6 +559,9 @@ export async function createPosition(
       headcount: input.headcount ?? 1,
       sortOrder: input.sortOrder ?? 0,
       responsibilities: input.responsibilities,
+      ...(dutyItemIds.length > 0
+        ? { dutyItems: { create: dutyItemIds.map((dutyItemId) => ({ dutyItemId })) } }
+        : {}),
     },
     select: positionSelect,
   })) as RawPosition
@@ -560,6 +578,7 @@ export async function createPosition(
       parentId: raw.parentId,
       departmentId: raw.departmentId,
       headcount: raw.headcount,
+      ...(dutyItemIds.length > 0 ? { dutyItemIds } : {}),
     },
     audit: params.audit,
   })
@@ -592,10 +611,12 @@ export async function updatePosition(
       headcount: true,
       sortOrder: true,
       isActive: true,
+      dutyItems: { select: { dutyItemId: true } },
     },
   })
   if (!existing) throw new NotFoundError("ไม่พบตำแหน่ง")
   assertBranchPermission(params.roles, existing.branchId, "update")
+  const oldDutyItemIds = (existing.dutyItems ?? []).map((link) => link.dutyItemId)
 
   const input = params.input
   const parentChanged = input.parentId !== undefined && input.parentId !== existing.parentId
@@ -636,6 +657,22 @@ export async function updatePosition(
   if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder
   if (input.responsibilities !== undefined) data.responsibilities = input.responsibilities
   if (input.isActive !== undefined) data.isActive = input.isActive
+  let newDutyItemIds: string[] | null = null
+  if (input.dutyItemIds !== undefined) {
+    newDutyItemIds = await assertDutyItemsAllowed(db, {
+      companyId: params.companyId,
+      dutyItemIds: input.dutyItemIds,
+      alreadyLinked: oldDutyItemIds,
+    })
+    data.dutyItems = {
+      deleteMany: {},
+      create: newDutyItemIds.map((dutyItemId) => ({ dutyItemId })),
+    }
+  }
+  const dutiesChanged =
+    newDutyItemIds !== null &&
+    (newDutyItemIds.length !== oldDutyItemIds.length ||
+      newDutyItemIds.some((id) => !oldDutyItemIds.includes(id)))
 
   const raw = (await db.position.update({
     where: { id: existing.id },
@@ -656,6 +693,7 @@ export async function updatePosition(
       departmentId: existing.departmentId,
       headcount: existing.headcount,
       isActive: existing.isActive,
+      ...(dutiesChanged ? { dutyItemIds: oldDutyItemIds } : {}),
     },
     newValues: {
       name: raw.name,
@@ -664,6 +702,7 @@ export async function updatePosition(
       departmentId: raw.departmentId,
       headcount: raw.headcount,
       isActive: raw.isActive,
+      ...(dutiesChanged ? { dutyItemIds: newDutyItemIds } : {}),
     },
     audit: params.audit,
   })

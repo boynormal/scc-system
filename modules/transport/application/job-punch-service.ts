@@ -49,6 +49,7 @@ async function loadJob(db: PrismaClient, params: { id: string; companyId: string
     where: { id: params.id, companyId: params.companyId },
     include: {
       stops: { orderBy: { sequence: "asc" } },
+      branch: { select: { name: true } },
       punches: { orderBy: { recordedAt: "asc" } },
       assignment: {
         include: {
@@ -97,6 +98,12 @@ function toView(job: Awaited<ReturnType<typeof loadJob>>) {
     jobNumber: job.jobNumber,
     status: job.status,
     branchId: job.branchId,
+    branchName: job.branch.name,
+    cargoType: job.cargoType,
+    vehiclePlate: job.assignment?.vehicle.plateNumber ?? null,
+    driverName: job.assignment
+      ? `${job.assignment.driver.firstName} ${job.assignment.driver.lastName}`.trim()
+      : null,
     driverUserId: job.assignment?.driver.userId ?? null,
     stops,
     punches,

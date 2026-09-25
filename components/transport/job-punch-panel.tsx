@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Calendar, Clock, Gauge, MapPin, Play, Route } from "lucide-react"
+import { toPng } from "html-to-image"
+import { Calendar, Clock, Download, MapPin, Play, Route } from "lucide-react"
 import {
   describeLegFlag,
   kindsForStop,
@@ -100,6 +101,10 @@ function readPosition() {
 export function JobPunchPanel({
   jobId,
   jobNumber,
+  vehiclePlate,
+  driverName,
+  cargoType,
+  branchName,
   stops,
   punches,
   legs,
@@ -109,6 +114,10 @@ export function JobPunchPanel({
 }: {
   jobId: string
   jobNumber: string
+  vehiclePlate: string | null
+  driverName: string | null
+  cargoType: string | null
+  branchName: string
   stops: Stop[]
   punches: Punch[]
   legs: Leg[]
@@ -117,9 +126,12 @@ export function JobPunchPanel({
   canRecord: boolean
 }) {
   const router = useRouter()
+  const cardRef = useRef<HTMLDivElement>(null)
   const busyRef = useRef(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savingImage, setSavingImage] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [nowMs, setNowMs] = useState(() => Date.now())
   const bookends = usesTripBookends(punches)
   const orderedStops = [...stops].sort((a, b) => a.sequence - b.sequence)
@@ -195,6 +207,27 @@ export function JobPunchPanel({
     }
   }
 
+  const downloadImage = async () => {
+    if (!cardRef.current || savingImage) return
+    setSavingImage(true)
+    setImageError(null)
+    try {
+      const dataUrl = await toPng(cardRef.current, {
+        pixelRatio: 2,
+        cacheBust: true,
+        filter: (node) => !(node instanceof HTMLElement && node.dataset.punchDownload != null),
+      })
+      const link = document.createElement("a")
+      link.href = dataUrl
+      link.download = `${jobNumber}.png`
+      link.click()
+    } catch {
+      setImageError("สร้างรูปไม่สำเร็จ")
+    } finally {
+      setSavingImage(false)
+    }
+  }
+
   const statusLine = !next
     ? "บันทึกครบทุกช่วงเวลาแล้ว"
     : canRecord && cooling
@@ -204,28 +237,53 @@ export function JobPunchPanel({
         : "เปิดดูได้อย่างเดียว"
 
   return (
-    <div className="overflow-hidden rounded-3xl bg-slate-50 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
+    <div ref={cardRef} className="overflow-hidden rounded-3xl bg-slate-50 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
       <header className="relative overflow-hidden bg-gradient-to-br from-[#163e73] via-[#1d5aa8] to-[#3b8fd4] px-4 pb-5 pt-4 text-white">
         <MapPin className="pointer-events-none absolute -right-2 top-6 h-24 w-24 text-white/10" />
         <MapPin className="pointer-events-none absolute right-10 top-2 h-10 w-10 text-white/15" />
-        <div className="relative flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="relative mt-1 h-10 w-8 shrink-0">
-              <MapPin className="absolute left-0 top-0 h-5 w-5" />
-              <MapPin className="absolute left-3 top-4 h-5 w-5 text-white/80" />
-            </div>
+        <div className="relative">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm text-white/80">{jobNumber}</p>
+              <p className="text-sm font-medium text-white/80">{jobNumber}</p>
               <h1 className="text-lg font-bold leading-tight">บันทึกเวลาและเลขไมล์</h1>
-              <p className="mt-0.5 text-sm text-white/80">{statusLine}</p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              {headerWhen ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-medium">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatWhen(headerWhen)}
+                </div>
+              ) : null}
+              <div data-punch-download="" className="flex flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => void downloadImage()}
+                  disabled={savingImage}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-medium hover:bg-white/25 disabled:opacity-60"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {savingImage ? "กำลังสร้างรูป" : "ดาวน์โหลดรูป"}
+                </button>
+                {imageError ? <p className="text-[11px] text-red-100">{imageError}</p> : null}
+              </div>
             </div>
           </div>
-          {headerWhen ? (
-            <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-medium">
-              <Calendar className="h-3.5 w-3.5" />
-              {formatWhen(headerWhen)}
-            </div>
-          ) : null}
+          <dl className="mt-3 grid grid-cols-2 gap-1.5">
+            {(
+              [
+                ["รถ", vehiclePlate || "—"],
+                ["คนขับ", driverName || "—"],
+                ["สินค้า", cargoType || "—"],
+                ["สาขา", branchName],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="flex min-w-0 items-baseline gap-1 rounded-lg bg-white/10 px-2 py-1.5 text-xs">
+                <dt className="shrink-0 text-white/70">{label} :</dt>
+                <dd className="min-w-0 truncate font-medium">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-2 text-sm text-white/80">{statusLine}</p>
         </div>
       </header>
 
@@ -268,7 +326,7 @@ export function JobPunchPanel({
             place="เริ่มงาน"
             punch={startPunch}
             odometerLabel="เลขไมล์เริ่มต้น"
-            status={legStatus(legs.find((leg) => leg.fromKind === "start"))}
+            leg={legs.find((leg) => leg.fromKind === "start")}
           />
         ) : null}
 
@@ -292,10 +350,8 @@ export function JobPunchPanel({
               inactiveLabel={inactive ? (stop.status === "skipped" ? "ข้ามจุดนี้" : "ยกเลิก") : null}
               rows={rows}
               odometerKm={latestOdometer(rows.map((row) => row.punch))}
-              arriveKm={arrive?.odometerKm ?? null}
-              departKm={depart?.odometerKm ?? null}
               mapHref={mapOf(rows.map((row) => row.punch))}
-              status={legStatus(legs.find((leg) => leg.kind === "dwell" && leg.fromStopId === stop.id))}
+              leg={legs.find((leg) => leg.kind === "dwell" && leg.fromStopId === stop.id)}
             />
           )
         })}
@@ -309,7 +365,7 @@ export function JobPunchPanel({
             place="จบงาน"
             punch={finishPunch}
             odometerLabel="เลขไมล์"
-            status={legStatus(legs.find((leg) => leg.toKind === "finish"))}
+            leg={legs.find((leg) => leg.toKind === "finish")}
           />
         ) : null}
 
@@ -369,7 +425,7 @@ function BookendCard({
   place,
   punch,
   odometerLabel,
-  status,
+  leg,
 }: {
   tone: "green" | "violet"
   icon: "play" | "number"
@@ -378,7 +434,7 @@ function BookendCard({
   place: string
   punch: Punch | undefined
   odometerLabel: string
-  status: LegStatus | null
+  leg: Leg | undefined
 }) {
   const map = punch ? mapsUrl(punch) : null
   return (
@@ -406,11 +462,11 @@ function BookendCard({
             {map ? <MapButton href={map} /> : null}
           </div>
         </div>
-        <div className="flex w-[7.5rem] shrink-0 flex-col gap-2">
-          <OdometerBadge km={punch?.odometerKm ?? null} label={odometerLabel} tone={tone} />
-          <StatusNote status={status} tone={tone} />
-        </div>
       </div>
+      <MetricStrip
+        tone={tone}
+        metrics={legMetrics(leg, punch?.odometerKm ?? null, odometerLabel)}
+      />
     </section>
   )
 }
@@ -423,10 +479,8 @@ function StopCard({
   inactiveLabel,
   rows,
   odometerKm,
-  arriveKm,
-  departKm,
   mapHref,
-  status,
+  leg,
 }: {
   number: number
   title: string
@@ -435,12 +489,9 @@ function StopCard({
   inactiveLabel: string | null
   rows: { kind: "arrive" | "depart"; label: string; punch: Punch | undefined }[]
   odometerKm: number | null
-  arriveKm: number | null
-  departKm: number | null
   mapHref: string | null
-  status: LegStatus | null
+  leg: Leg | undefined
 }) {
-  const splitKm = arriveKm != null && departKm != null && arriveKm !== departKm
   return (
     <section className={cn("rounded-2xl p-4 ring-1", toneCard("blue"))}>
       <div className="flex items-start justify-between gap-3">
@@ -479,86 +530,109 @@ function StopCard({
             {mapHref ? <MapButton href={mapHref} /> : null}
           </div>
         </div>
-        {inactiveLabel ? null : (
-          <div className="flex w-[7.5rem] shrink-0 flex-col gap-2">
-            <OdometerBadge
-              km={odometerKm}
-              label="เลขไมล์"
-              tone="blue"
-              caption={splitKm && arriveKm != null ? `ถึง ${arriveKm.toLocaleString()}` : null}
-            />
-            <StatusNote status={status} tone="blue" />
-          </div>
-        )}
       </div>
+      {inactiveLabel ? null : (
+        <DwellStrip minutes={leg?.kind === "dwell" ? leg.minutes : null} odometerKm={odometerKm} over={leg?.flag === "long_dwell"} />
+      )}
     </section>
   )
 }
 
-type LegStatus = { lines: string[]; abnormal: boolean }
+type LegMetrics = {
+  minutes: number | null
+  km: number | null
+  average: number | null
+  odometerKm: number | null
+  odometerLabel: string
+  warning: string | null
+}
 
 function averageSpeed(leg: Leg) {
   if (leg.km == null || leg.minutes <= 0) return null
   return Math.round((leg.km / (leg.minutes / 60)) * 10) / 10
 }
 
-function legStatus(leg: Leg | undefined): LegStatus | null {
-  if (!leg) return null
+function legMetrics(leg: Leg | undefined, odometerKm: number | null, odometerLabel: string): LegMetrics {
+  if (!leg) {
+    return { minutes: null, km: null, average: null, odometerKm, odometerLabel, warning: null }
+  }
   if (leg.kind === "dwell") {
-    const over = leg.flag === "long_dwell"
     return {
-      abnormal: over,
-      lines: [
-        `จอดรับส่ง ${leg.minutes} นาที`,
-        over ? `เกินเกณฑ์ ${LEG_MAX_DWELL_MINUTES} นาที` : `ภายในเกณฑ์ ${LEG_MAX_DWELL_MINUTES} นาที`,
-      ],
+      minutes: leg.minutes,
+      km: leg.km,
+      average: null,
+      odometerKm,
+      odometerLabel,
+      warning: leg.flag === "long_dwell" ? `จอดเกินเกณฑ์ ${LEG_MAX_DWELL_MINUTES} นาที` : null,
     }
   }
-  const kmText = leg.km != null ? `${leg.km.toLocaleString()} กม.` : "ยังไม่มีเลขไมล์"
-  const speed = averageSpeed(leg)
-  const lines = [`ใช้เวลา ${leg.minutes} นาที · ${kmText}`]
-  if (speed != null) lines.push(`เฉลี่ย ${speed.toLocaleString()} กม./ชม.`)
-  if (leg.flag === "slow_travel") lines.push(`ต่ำกว่าเกณฑ์ ${LEG_MIN_AVERAGE_SPEED_KMH} กม./ชม.`)
-  return { lines, abnormal: leg.flag === "slow_travel" }
+  return {
+    minutes: leg.minutes,
+    km: leg.km,
+    average: averageSpeed(leg),
+    odometerKm,
+    odometerLabel,
+    warning: leg.flag === "slow_travel" ? `ต่ำกว่าเกณฑ์ ${LEG_MIN_AVERAGE_SPEED_KMH} กม./ชม.` : null,
+  }
 }
 
-function StatusNote({ status, tone }: { status: LegStatus | null; tone: Tone }) {
-  if (!status) return null
+function DwellStrip({
+  minutes,
+  odometerKm,
+  over,
+}: {
+  minutes: number | null
+  odometerKm: number | null
+  over?: boolean
+}) {
   return (
-    <div
-      className={cn(
-        "rounded-xl px-2 py-2 text-center text-[11px] font-medium leading-snug",
-        status.abnormal
-          ? "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300"
-          : cn(toneSoft(tone), toneText(tone))
-      )}
-    >
-      {status.lines.map((line, index) => (
-        <p key={index}>{line}</p>
-      ))}
+    <div className="mt-3">
+      <div className={cn("rounded-2xl px-3 py-3 text-center", over ? "bg-red-50 dark:bg-red-950/50" : toneSoft("blue"))}>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">จอดรับส่ง</p>
+        <p className={cn("text-lg font-bold leading-tight", over ? "text-red-700 dark:text-red-300" : toneText("blue"))}>
+          {minutes != null ? `${minutes.toLocaleString()} นาที` : "—"}
+        </p>
+        {odometerKm != null ? (
+          <p className="mt-0.5 text-[10px] leading-tight text-slate-500">เลขไมล์ {odometerKm.toLocaleString()}</p>
+        ) : null}
+      </div>
+      {minutes != null ? (
+        <p className={cn("mt-2 text-center text-xs font-semibold", over ? "text-red-600" : "text-slate-500")}>
+          {over ? `จอดเกินเกณฑ์ ${LEG_MAX_DWELL_MINUTES} นาที` : `ภายในเกณฑ์ ${LEG_MAX_DWELL_MINUTES} นาที`}
+        </p>
+      ) : null}
     </div>
   )
 }
 
-function OdometerBadge({
-  km,
-  label,
-  tone,
-  caption,
-}: {
-  km: number | null
-  label: string
-  tone: Tone
-  caption?: string | null
-}) {
+function MetricStrip({ metrics, tone }: { metrics: LegMetrics; tone: Tone }) {
+  const cells = [
+    { label: "เวลา", value: metrics.minutes != null ? `${metrics.minutes.toLocaleString()} นาที` : "—", hint: null },
+    {
+      label: "กิโล",
+      value: metrics.km != null ? `${metrics.km.toLocaleString()} กม.` : "—",
+      hint: metrics.odometerKm != null ? `${metrics.odometerLabel} ${metrics.odometerKm.toLocaleString()}` : null,
+    },
+    {
+      label: "เฉลี่ย",
+      value: metrics.average != null ? `${metrics.average.toLocaleString()} กม./ชม.` : "—",
+      hint: null,
+    },
+  ]
   return (
-    <div className={cn("w-full rounded-2xl px-2 py-2 text-center", toneSoft(tone))}>
-      <Gauge className={cn("mx-auto h-4 w-4", toneText(tone))} />
-      <p className="mt-0.5 text-[10px] leading-tight text-slate-500 dark:text-slate-400">{label}</p>
-      <p className={cn("text-sm font-bold leading-tight", toneText(tone))}>
-        {km != null ? `${km.toLocaleString()} กม.` : "—"}
-      </p>
-      {caption ? <p className="text-[10px] text-slate-500">{caption}</p> : null}
+    <div className="mt-3">
+      <div className={cn("grid grid-cols-3 gap-2 rounded-2xl p-2", toneSoft(tone))}>
+        {cells.map((cell) => (
+          <div key={cell.label} className="min-w-0 px-1 py-1 text-center">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">{cell.label}</p>
+            <p className={cn("text-lg font-bold leading-tight", toneText(tone))}>{cell.value}</p>
+            {cell.hint ? <p className="mt-0.5 text-[10px] leading-tight text-slate-500">{cell.hint}</p> : null}
+          </div>
+        ))}
+      </div>
+      {metrics.warning ? (
+        <p className="mt-2 text-center text-xs font-semibold text-red-600">{metrics.warning}</p>
+      ) : null}
     </div>
   )
 }

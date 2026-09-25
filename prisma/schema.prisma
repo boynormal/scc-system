@@ -886,6 +886,7 @@ model Position {
   parent     Position?   @relation("PositionHierarchy", fields: [parentId], references: [id])
   children   Position[]  @relation("PositionHierarchy")
   personnel  Personnel[]
+  personnelSeats PersonnelPosition[]
 
   @@unique([branchId, code], map: "positions_branch_code_unique")
   @@index([branchId])
@@ -925,6 +926,7 @@ model Personnel {
    * สาขาที่พนักงานสามารถลงเวลา/ทำงานได้ (หนึ่งคน — หลายสาขา)
    */
   branchAssignments PersonnelBranch[]
+  positionAssignments PersonnelPosition[]
 
   @@unique([companyId, rosterNo], map: "personnel_company_roster_unique")
   @@index([companyId])
@@ -948,6 +950,20 @@ model PersonnelBranch {
   @@unique([personnelId, branchId], map: "personnel_branch_unique")
   @@index([branchId])
   @@map("personnel_branches")
+}
+
+model PersonnelPosition {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  personnelId String   @map("personnel_id") @db.Uuid
+  positionId  String   @map("position_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  personnel Personnel @relation(fields: [personnelId], references: [id], onDelete: Cascade)
+  position  Position  @relation(fields: [positionId], references: [id], onDelete: Restrict)
+
+  @@unique([personnelId, positionId], map: "personnel_position_unique")
+  @@index([positionId])
+  @@map("personnel_positions")
 }
 
 model AttendanceImportBatch {

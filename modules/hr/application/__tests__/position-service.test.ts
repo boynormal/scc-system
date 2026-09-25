@@ -88,7 +88,7 @@ function buildChain(length: number): RawPos[] {
 function createDb(opts: {
   branch?: { id: string; code: string; name: string } | null
   positions?: RawPos[]
-  people?: { positionId: string | null }[]
+  people?: { positionId: string | null; positionIds?: string[] }[]
   department?: { id: string; branchId: string } | null
   childCount?: number
   personnelCount?: number
@@ -153,6 +153,33 @@ function createDb(opts: {
     personnel: {
       findMany: vi.fn().mockResolvedValue(opts.people ?? []),
       count: vi.fn().mockResolvedValue(opts.personnelCount ?? 0),
+    },
+    personnelPosition: {
+      findMany: vi.fn(
+        async (args: {
+          where?: {
+            positionId?: { in?: string[] }
+            personnel?: { companyId?: string; deletedAt?: null; isActive?: boolean }
+          }
+        }) => {
+        const ids = args?.where?.positionId?.in
+        const seats: { positionId: string }[] = []
+        for (const person of opts.people ?? []) {
+          const assigned = person.positionIds ?? (person.positionId ? [person.positionId] : [])
+          for (const positionId of assigned) {
+            if (!ids || ids.includes(positionId)) seats.push({ positionId })
+          }
+        }
+        return seats
+      }),
+      count: vi.fn(async (args: { where?: { positionId?: string } }) => {
+        if (opts.personnelCount !== undefined) return opts.personnelCount
+        const id = args?.where?.positionId
+        return (opts.people ?? []).filter((person) => {
+          const assigned = person.positionIds ?? (person.positionId ? [person.positionId] : [])
+          return id ? assigned.includes(id) : false
+        }).length
+      }),
     },
     auditLog: { create: vi.fn().mockResolvedValue({}) },
   }
@@ -250,6 +277,26 @@ describe("listPositions", () => {
     expect(data.totals).toEqual({ positions: 2, headcount: 4, occupied: 2, vacancy: 2 })
   })
 
+  it("counts one person toward every position they hold", async () => {
+    const db = createDb({
+      positions: [
+        pos({ id: POS_ROOT, name: "กรรมการผู้จัดการ", headcount: 1 }),
+        pos({ id: POS_CHILD, name: "ผู้จัดการฝ่ายผลิต", parentId: POS_ROOT, headcount: 1 }),
+      ],
+      people: [{ positionId: POS_ROOT, positionIds: [POS_ROOT, POS_CHILD] }],
+    })
+
+    const { data } = await listPositions(asDb(db), {
+      companyId: CID,
+      roles: managerA,
+      branchId: BRANCH_A,
+    })
+
+    expect(data.tree[0]!.occupantCount).toBe(1)
+    expect(data.tree[0]!.children[0]!.occupantCount).toBe(1)
+    expect(data.totals.occupied).toBe(2)
+  })
+
   it("hides inactive positions unless includeInactive is set", async () => {
     const positions = [
       pos({ id: POS_ROOT, name: "root" }),
@@ -280,9 +327,9 @@ describe("listPositions", () => {
 
     await listPositions(asDb(db), { companyId: CID, roles: managerA, branchId: BRANCH_A })
 
-    const where = db.personnel.findMany.mock.calls[0]![0].where
-    expect(where.deletedAt).toBeNull()
-    expect(where.isActive).toBe(true)
+    const where = db.personnelPosition.findMany.mock.calls[0]![0].where
+    expect(where?.personnel).toEqual({ companyId: CID, deletedAt: null, isActive: true })
+    expect(where?.positionId).toEqual({ in: [POS_ROOT] })
   })
 
   it("rejects a caller with no HR read at all", async () => {
@@ -707,7 +754,7 @@ describe("deletePosition", () => {
 
     await deletePosition(asDb(db), { companyId: CID, roles: adminRoles, id: POS_ROOT })
 
-    expect(db.personnel.count).toHaveBeenCalledWith({ where: { positionId: POS_ROOT } })
+    expect(db.personnelPosition.count).toHaveBeenCalledWith({ where: { positionId: POS_ROOT } })
   })
 
   it("is Forbidden for a Manager without delete rights", async () => {

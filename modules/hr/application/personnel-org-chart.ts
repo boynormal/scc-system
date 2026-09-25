@@ -2,14 +2,19 @@ import { z } from "zod"
 import type { Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, ValidationError } from "@/lib/errors"
 import { getBranchIds, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { canReadPersonnel } from "./personnel-service"
+import { canReadPersonnel, personnelLegalName } from "./personnel-service"
 
 const uuidSchema = z.string().uuid()
 
 export type OrgChartOccupant = {
   id: string
   rosterNo: string
+  /** ชื่อจริงและนามสกุล หรือชื่อที่แสดงเมื่อไม่มีชื่อจริง */
   displayName: string
+  /** ชื่อที่แสดงเดิม ใช้ค้นหา */
+  knownAs: string
+  firstName: string | null
+  lastName: string | null
   jobGroup: string | null
   isActive: boolean
 }
@@ -61,16 +66,28 @@ type PersonRaw = {
   id: string
   rosterNo: string
   displayName: string
+  firstName?: string | null
+  lastName?: string | null
   jobGroup: string | null
   isActive: boolean
   positionId: string | null
+  positionAssignments?: { positionId: string }[]
+}
+
+function seatIds(person: PersonRaw): string[] {
+  const assigned = person.positionAssignments?.map((row) => row.positionId) ?? []
+  if (assigned.length > 0) return assigned
+  return person.positionId ? [person.positionId] : []
 }
 
 function toOccupant(row: PersonRaw): OrgChartOccupant {
   return {
     id: row.id,
     rosterNo: row.rosterNo,
-    displayName: row.displayName,
+    displayName: personnelLegalName(row),
+    knownAs: row.displayName,
+    firstName: row.firstName ?? null,
+    lastName: row.lastName ?? null,
     jobGroup: row.jobGroup,
     isActive: row.isActive,
   }
@@ -212,6 +229,7 @@ export async function getPersonnelOrgChart(
     {
       OR: [
         { position: { branchId } },
+        { positionAssignments: { some: { position: { branchId } } } },
         { department: { branchId } },
         { branchId, positionId: null, departmentId: null },
       ],
@@ -250,9 +268,12 @@ export async function getPersonnelOrgChart(
         id: true,
         rosterNo: true,
         displayName: true,
+        firstName: true,
+        lastName: true,
         jobGroup: true,
         isActive: true,
         positionId: true,
+        positionAssignments: { select: { positionId: true } },
       },
       orderBy: { displayName: "asc" },
     }),
@@ -264,13 +285,16 @@ export async function getPersonnelOrgChart(
 
   for (const person of people as PersonRaw[]) {
     const occupant = toOccupant(person)
-    if (person.positionId && positionIds.has(person.positionId)) {
-      const list = occupantsByPosition.get(person.positionId)
-      if (list) list.push(occupant)
-      else occupantsByPosition.set(person.positionId, [occupant])
+    const seats = seatIds(person).filter((id) => positionIds.has(id))
+    if (seats.length === 0) {
+      unplaced.push(occupant)
       continue
     }
-    unplaced.push(occupant)
+    for (const positionId of seats) {
+      const list = occupantsByPosition.get(positionId)
+      if (list) list.push(occupant)
+      else occupantsByPosition.set(positionId, [occupant])
+    }
   }
 
   const roots = buildOrgChartTree(positions as PositionRaw[], occupantsByPosition)
@@ -305,6 +329,9 @@ function matchesOccupant(occupant: OrgChartOccupant, search: string): boolean {
   const q = search.toLowerCase()
   return (
     occupant.displayName.toLowerCase().includes(q) ||
+    occupant.knownAs.toLowerCase().includes(q) ||
+    (occupant.firstName?.toLowerCase().includes(q) ?? false) ||
+    (occupant.lastName?.toLowerCase().includes(q) ?? false) ||
     occupant.rosterNo.toLowerCase().includes(q) ||
     (occupant.jobGroup?.toLowerCase().includes(q) ?? false)
   )

@@ -2,7 +2,7 @@ import { z } from "zod"
 import type { Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, ValidationError } from "@/lib/errors"
 import { getBranchIds, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { canReadPersonnel } from "./personnel-service"
+import { canReadPersonnel, personnelLegalName } from "./personnel-service"
 
 const uuidSchema = z.string().uuid()
 
@@ -33,13 +33,15 @@ function toCard(row: {
   id: string
   rosterNo: string
   displayName: string
+  firstName?: string | null
+  lastName?: string | null
   jobGroup: string | null
   isActive: boolean
 }): PersonnelOrgCard {
   return {
     id: row.id,
     rosterNo: row.rosterNo,
-    displayName: row.displayName,
+    displayName: personnelLegalName(row),
     jobGroup: row.jobGroup,
     isActive: row.isActive,
   }
@@ -98,6 +100,8 @@ export async function getPersonnelOrgView(
     andParts.push({
       OR: [
         { displayName: { contains: search, mode: "insensitive" } },
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
         { rosterNo: { contains: search, mode: "insensitive" } },
         { jobGroup: { contains: search, mode: "insensitive" } },
       ],
@@ -120,6 +124,8 @@ export async function getPersonnelOrgView(
         id: true,
         rosterNo: true,
         displayName: true,
+        firstName: true,
+        lastName: true,
         jobGroup: true,
         isActive: true,
         departmentId: true,

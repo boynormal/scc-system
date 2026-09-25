@@ -70,6 +70,10 @@ type PersonRow = {
   department: { id: string; name: string; code: string | null; branchId: string } | null
   positionId: string | null
   position: { id: string; name: string; code: string | null; branchId: string } | null
+  positionAssignments: Array<{
+    positionId: string
+    position: { id: string; name: string; code: string | null; branchId: string }
+  }>
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -115,6 +119,7 @@ function personRow(over: Partial<PersonRow> = {}): PersonRow {
     department: null,
     positionId: null,
     position: null,
+    positionAssignments: [],
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -133,6 +138,14 @@ function matchPersonnel(where: Record<string, unknown> | undefined, row: PersonR
   if (typeof where.companyId === "string" && row.companyId !== where.companyId) return false
   if (typeof where.departmentId === "string" && row.departmentId !== where.departmentId) return false
   if (typeof where.positionId === "string" && row.positionId !== where.positionId) return false
+  if (where.positionAssignments && typeof where.positionAssignments === "object") {
+    const some = (where.positionAssignments as { some?: { positionId?: string } }).some
+    if (some?.positionId) {
+      const hit =
+        row.positionAssignments.some((a) => a.positionId === some.positionId) || row.positionId === some.positionId
+      if (!hit) return false
+    }
+  }
   if (where.deletedAt === null && row.deletedAt) return false
   if (where.isActive === true || where.isActive === false) {
     if (row.isActive !== where.isActive) return false
@@ -280,6 +293,41 @@ function fakeDb(state: FakeState = {}): PrismaClient {
         if (branchWhere?.companyId && row.companyId !== branchWhere.companyId) return null
         if (branchWhere?.deletedAt === null && branch?.deletedAt) return null
         return { id: row.id, branchId: row.branchId, isActive: row.isActive }
+      },
+      findMany: async ({ where }: { where: Record<string, unknown> }) => {
+        const ids = (where.id as { in?: string[] } | undefined)?.in
+        return positions
+          .filter((row) => {
+            if (ids && !ids.includes(row.id)) return false
+            if (where.isActive === true && !row.isActive) return false
+            const branchWhere = where.branch as { companyId?: string; deletedAt?: null } | undefined
+            const branch = branches[row.branchId]
+            if (branchWhere?.companyId && row.companyId !== branchWhere.companyId) return false
+            if (branchWhere?.deletedAt === null && branch?.deletedAt) return false
+            return true
+          })
+          .map((row) => ({ id: row.id, branchId: row.branchId, isActive: row.isActive }))
+      },
+    },
+    personnelPosition: {
+      deleteMany: async ({ where }: { where: { personnelId: string } }) => {
+        const person = people.find((p) => p.id === where.personnelId)
+        if (person) person.positionAssignments = []
+        return { count: 0 }
+      },
+      createMany: async ({ data }: { data: { personnelId: string; positionId: string }[] }) => {
+        for (const item of data) {
+          const person = people.find((p) => p.id === item.personnelId)
+          if (!person) continue
+          const pos = positions.find((p) => p.id === item.positionId)
+          person.positionAssignments.push({
+            positionId: item.positionId,
+            position: pos
+              ? { id: pos.id, name: pos.name, code: pos.code, branchId: pos.branchId }
+              : { id: item.positionId, name: item.positionId, code: null, branchId: "" },
+          })
+        }
+        return { count: data.length }
       },
     },
     personnelBranch: {
@@ -722,6 +770,42 @@ describe("personnel position", () => {
     })
     const created = await createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
     expect(created.positionId).toBe(POS_A)
+  })
+
+  it("saves every selected position and keeps the first id on the legacy column", async () => {
+    const db = fakeDb({ positions })
+    const parsed = createPersonnelSchema.parse({
+      rosterNo: "024",
+      displayName: "สองตำแหน่ง",
+      branchIds: [BRANCH_A, BRANCH_B],
+      positionIds: [POS_A, POS_B],
+    })
+    const created = await createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
+    expect(created.positionId).toBe(POS_A)
+    expect(created.positionAssignments.map((row) => row.positionId)).toEqual([POS_A, POS_B])
+  })
+
+  it("drops only the positions of a removed branch", async () => {
+    const db = fakeDb({
+      positions,
+      people: [
+        personRow({
+          positionId: POS_A,
+          positionAssignments: [
+            { positionId: POS_A, position: { id: POS_A, name: "ผู้จัดการฝ่ายผลิต", code: "MGR", branchId: BRANCH_A } },
+            { positionId: POS_B, position: { id: POS_B, name: "หัวหน้าคลัง", code: "WH1", branchId: BRANCH_B } },
+          ],
+        }),
+      ],
+    })
+    const result = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ branchIds: [BRANCH_B] }),
+    })
+    expect(result.data.positionId).toBe(POS_B)
+    expect(result.data.positionAssignments.map((row) => row.positionId)).toEqual([POS_B])
   })
 
   it("rejects a position whose branch is not assigned", async () => {

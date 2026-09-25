@@ -38,6 +38,7 @@ const personnelFieldsSchema = z.object({
     .nullable()
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),
+  positionIds: z.array(z.string().uuid()).max(20).optional(),
 })
 
 function refinePrimaryBranch(
@@ -112,6 +113,13 @@ const personnelInclude = {
   branch: { select: { id: true, name: true, code: true } },
   department: { select: { id: true, name: true, code: true, branchId: true } },
   position: { select: { id: true, name: true, code: true, branchId: true } },
+  positionAssignments: {
+    select: {
+      positionId: true,
+      position: { select: { id: true, name: true, code: true, branchId: true } },
+    },
+    orderBy: { createdAt: "asc" as const },
+  },
   user: { select: { id: true, firstName: true, lastName: true, username: true, email: true } },
   branchAssignments: {
     include: { branch: { select: { name: true, code: true, id: true } } },
@@ -157,20 +165,61 @@ async function assertDepartmentAllowed(
   }
 }
 
-async function assertPositionAllowed(
+async function assertPositionsAllowed(
   db: PrismaClient | Prisma.TransactionClient,
   companyId: string,
-  positionId: string,
+  positionIds: string[],
   assignedBranchIds: string[]
 ) {
-  const position = await db.position.findFirst({
-    where: { id: positionId, isActive: true, branch: { companyId, deletedAt: null } },
+  if (positionIds.length === 0) return
+  const rows = await db.position.findMany({
+    where: { id: { in: positionIds }, isActive: true, branch: { companyId, deletedAt: null } },
     select: { id: true, branchId: true },
   })
-  if (!position) throw new ValidationError("ตำแหน่งไม่ถูกต้อง")
-  if (!assignedBranchIds.includes(position.branchId)) {
+  if (rows.length !== positionIds.length) throw new ValidationError("ตำแหน่งไม่ถูกต้อง")
+  if (rows.some((row) => !assignedBranchIds.includes(row.branchId))) {
     throw new ValidationError("ตำแหน่งต้องอยู่ในสาขาที่เลือก")
   }
+}
+
+async function replacePersonnelPositions(
+  tx: Prisma.TransactionClient,
+  personnelId: string,
+  positionIds: string[]
+) {
+  await tx.personnelPosition.deleteMany({ where: { personnelId } })
+  if (positionIds.length === 0) return
+  await tx.personnelPosition.createMany({
+    data: positionIds.map((positionId) => ({ personnelId, positionId })),
+  })
+}
+
+function firstPositionId(positionIds: string[]) {
+  return positionIds[0] ?? null
+}
+
+function requestedPositionIds(input: {
+  positionIds?: string[]
+  positionId?: string | null
+}): string[] | undefined {
+  if (input.positionIds !== undefined) return [...new Set(input.positionIds)]
+  if (input.positionId !== undefined) return input.positionId ? [input.positionId] : []
+  return undefined
+}
+
+export function personnelLegalName(person: {
+  firstName?: string | null
+  lastName?: string | null
+  displayName: string
+}): string {
+  const legal = [person.firstName, person.lastName]
+    .map((part) => part?.trim() ?? "")
+    .filter((part) => part.length > 0)
+    .join(" ")
+  const knownAs = person.displayName.trim()
+  if (!legal) return knownAs
+  if (!knownAs || knownAs === legal) return legal
+  return `${legal} (${knownAs})`
 }
 
 async function findLivePersonnel(
@@ -324,7 +373,12 @@ export async function listPersonnel(
     andParts.push({ departmentId: departmentIdParam })
   }
   if (positionIdParam) {
-    andParts.push({ positionId: positionIdParam })
+    andParts.push({
+      OR: [
+        { positionId: positionIdParam },
+        { positionAssignments: { some: { positionId: positionIdParam } } },
+      ],
+    })
   }
 
   const where: Prisma.PersonnelWhereInput = {
@@ -372,16 +426,16 @@ export async function createPersonnel(
     notes,
     userId,
     departmentId,
-    positionId,
   } = input
 
   const resolvedBranchIds = resolveBranchIdList(input)
   const primary = resolvePrimaryFromList(resolvedBranchIds, primaryBranchId ?? null) ?? branchId ?? null
+  const positionIds = requestedPositionIds(input) ?? []
 
   await assertBranchesAllowed(db, companyId, resolvedBranchIds, roles)
   if (userId) await assertUserLinkAllowed(db, companyId, userId)
   if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId, resolvedBranchIds)
-  if (positionId) await assertPositionAllowed(db, companyId, positionId, resolvedBranchIds)
+  await assertPositionsAllowed(db, companyId, positionIds, resolvedBranchIds)
 
   if (resolvedBranchIds.length === 0 && !isAdminInAnyBranch(roles)) {
     const allowed = getBranchIds(roles)
@@ -405,9 +459,10 @@ export async function createPersonnel(
           notes: notes?.trim() || null,
           userId: userId ?? null,
           departmentId: departmentId ?? null,
-          positionId: positionId ?? null,
+          positionId: firstPositionId(positionIds),
         },
       })
+      await replacePersonnelPositions(tx, created.id, positionIds)
       if (resolvedBranchIds.length > 0) {
         await replacePersonnelBranchesFromIds(
           tx,
@@ -497,28 +552,30 @@ export async function updatePersonnel(
     data.departmentId = nextDepartmentId
   }
 
-  // กฎเดียวกับแผนก: ย้ายสาขาแล้วตำแหน่งไม่ valid ให้เคลียร์ FK ไม่เก็บประวัติ
-  let nextPositionId = input.positionId !== undefined ? input.positionId : existing.positionId
-  if (nextPositionId) {
-    if (input.positionId) {
-      await assertPositionAllowed(db, companyId, nextPositionId, nextBranchIds)
-    } else {
+  const explicitPositionIds = requestedPositionIds(input)
+  let nextPositionIds: string[]
+  if (explicitPositionIds !== undefined) {
+    await assertPositionsAllowed(db, companyId, explicitPositionIds, nextBranchIds)
+    nextPositionIds = explicitPositionIds
+  } else {
+    const assigned = existing.positionAssignments.map((row) => row.positionId)
+    const seed = assigned.length > 0 ? assigned : existing.positionId ? [existing.positionId] : []
+    const kept: string[] = []
+    for (const positionId of seed) {
       const position = await db.position.findFirst({
-        where: { id: nextPositionId, branch: { companyId } },
+        where: { id: positionId, branch: { companyId } },
         select: { branchId: true, isActive: true },
       })
-      if (!position || !position.isActive || !nextBranchIds.includes(position.branchId)) {
-        nextPositionId = null
-      }
+      if (position && position.isActive && nextBranchIds.includes(position.branchId)) kept.push(positionId)
     }
+    nextPositionIds = kept
   }
-  if (input.positionId !== undefined || nextPositionId !== existing.positionId) {
-    data.positionId = nextPositionId
-  }
+  data.positionId = firstPositionId(nextPositionIds)
 
   try {
     return await db.$transaction(async (tx) => {
       await tx.personnel.update({ where: { id: existing.id }, data })
+      await replacePersonnelPositions(tx, existing.id, nextPositionIds)
       if (resolvedBranchIds) {
         await replacePersonnelBranchesFromIds(
           tx,

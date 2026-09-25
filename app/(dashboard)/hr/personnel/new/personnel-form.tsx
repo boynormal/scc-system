@@ -24,7 +24,7 @@ export type PersonnelFormInitial = {
   isActive: boolean
   userId: string | null
   departmentId: string | null
-  positionId: string | null
+  positionIds: string[]
   branchIds: string[]
   primaryBranchId: string | null
 }
@@ -62,7 +62,7 @@ export function HrPersonnelForm({
   const [notes, setNotes] = useState(initial?.notes ?? "")
   const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "")
   const [departments, setDepartments] = useState<DeptOpt[]>([])
-  const [positionId, setPositionId] = useState(initial?.positionId ?? "")
+  const [positionIds, setPositionIds] = useState<string[]>(initial?.positionIds ?? [])
   const [positions, setPositions] = useState<PositionOpt[]>([])
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>(() => {
     if (initial?.branchIds.length) return initial.branchIds
@@ -73,6 +73,13 @@ export function HrPersonnelForm({
   )
 
   const selectedSet = useMemo(() => new Set(selectedBranchIds), [selectedBranchIds])
+  const selectedBranches = useMemo(
+    () =>
+      selectedBranchIds
+        .map((id) => branches.find((branch) => branch.id === id))
+        .filter((branch): branch is BranchOpt => Boolean(branch)),
+    [selectedBranchIds, branches]
+  )
   const hasExtra =
     Boolean(initial?.firstName || initial?.lastName || initial?.idCardNo || initial?.address || initial?.notes || initial?.userId)
 
@@ -105,7 +112,7 @@ export function HrPersonnelForm({
   useEffect(() => {
     if (selectedBranchIds.length === 0) {
       setPositions([])
-      setPositionId("")
+      setPositionIds([])
       return
     }
     const qs = selectedBranchIds.map((id) => `branchId=${encodeURIComponent(id)}`).join("&")
@@ -114,7 +121,7 @@ export function HrPersonnelForm({
       .then((json) => {
         const rows = (json.data ?? []) as PositionOpt[]
         setPositions(rows)
-        setPositionId((prev) => (prev && rows.some((p) => p.id === prev) ? prev : ""))
+        setPositionIds((prev) => prev.filter((id) => rows.some((p) => p.id === id)))
       })
   }, [selectedBranchIds])
 
@@ -148,6 +155,10 @@ export function HrPersonnelForm({
     })
   }
 
+  function togglePosition(id: string) {
+    setPositionIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErr(null)
@@ -168,7 +179,7 @@ export function HrPersonnelForm({
       isActive,
       userId: userId || null,
       departmentId: departmentId || null,
-      positionId: positionId || null,
+      positionIds,
     }
     const url = mode === "edit" && personnelId ? `/api/hr/personnel/${personnelId}` : "/api/hr/personnel"
     const res = await fetch(url, {
@@ -217,7 +228,7 @@ export function HrPersonnelForm({
             )}
           </div>
           <GlassInput
-            label="ชื่อแสดง"
+            label="ชื่อเรียก"
             name="displayName"
             required
             value={displayName}
@@ -296,29 +307,59 @@ export function HrPersonnelForm({
             }
             options={[
               { value: "", label: "— ไม่ระบุแผนก —" },
-              ...departments.map((d) => ({
-                value: d.id,
-                label: d.code ? `${d.name} (${d.code})` : d.name,
-              })),
+              ...departments.map((d) => {
+                const name = d.code ? `${d.name} (${d.code})` : d.name
+                const branch = branches.find((item) => item.id === d.branchId)
+                const label = selectedBranchIds.length > 1 && branch ? `${name} · ${branch.code}` : name
+                return { value: d.id, label }
+              }),
             ]}
           />
-          <Select
-            label="ตำแหน่ง"
-            value={positionId}
-            onChange={(e) => setPositionId(e.target.value)}
-            hint={
-              selectedBranchIds.length === 0
-                ? "เลือกสาขาก่อน จึงจะเห็นตำแหน่งของสาขานั้น"
-                : "ไม่บังคับ — จัดต้นไม้ตำแหน่งได้ที่แท็บตำแหน่ง"
-            }
-            options={[
-              { value: "", label: "— ไม่ระบุตำแหน่ง —" },
-              ...positions.map((p) => ({
-                value: p.id,
-                label: `${"— ".repeat(p.depth)}${p.code ? `${p.name} (${p.code})` : p.name}`,
-              })),
-            ]}
-          />
+          <div className="sm:col-span-2">
+            <p className="text-sm font-medium text-foreground">ตำแหน่ง</p>
+            {selectedBranches.length === 0 ? (
+              <p className="mt-0.5 text-xs text-muted-foreground">เลือกสาขาก่อน จึงจะเห็นตำแหน่งของสาขานั้น</p>
+            ) : (
+              <div className="mt-2 space-y-3">
+                <p className="text-xs text-muted-foreground">ไม่บังคับ — ติ๊กได้หลายตำแหน่งในแต่ละสาขา</p>
+                {selectedBranches.map((branch) => {
+                  const rows = positions.filter((position) => position.branchId === branch.id)
+                  return (
+                    <div key={branch.id} className="rounded-lg border border-border px-3 py-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {branch.code}
+                        <span className="ml-1.5 font-normal text-muted-foreground">{branch.name}</span>
+                      </p>
+                      {rows.length === 0 ? (
+                        <p className="mt-1 text-xs text-muted-foreground">สาขานี้ยังไม่มีตำแหน่ง</p>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {rows.map((p) => {
+                            const selected = positionIds.includes(p.id)
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => togglePosition(p.id)}
+                                className={`rounded-lg border px-3 py-2 text-left text-sm ${
+                                  selected
+                                    ? "border-blue-300 bg-blue-50 text-blue-900"
+                                    : "border-border bg-background text-foreground hover:bg-muted/60"
+                                }`}
+                              >
+                                {"— ".repeat(p.depth)}
+                                {p.code ? `${p.name} (${p.code})` : p.name}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </GlassFormSection>
 

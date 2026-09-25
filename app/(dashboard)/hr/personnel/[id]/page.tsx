@@ -48,9 +48,30 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
         ? `${row.branch.code} — ${row.branch.name}`
         : "—"
 
+  const assignedBranches =
+    row.branchAssignments.length > 0
+      ? row.branchAssignments.map((item) => item.branch)
+      : row.branch
+        ? [row.branch]
+        : []
+  const branchCodeById = new Map(assignedBranches.map((branch) => [branch.id, branch.code]))
+
+  function formatPosition(position: { name: string; code: string | null; branchId: string }) {
+    const name = position.code ? `${position.name} (${position.code})` : position.name
+    if (assignedBranches.length <= 1) return name
+    const code = branchCodeById.get(position.branchId)
+    return code ? `${code} — ${name}` : name
+  }
+
+  const positionLabel = row.positionAssignments.length
+    ? row.positionAssignments.map((item) => formatPosition(item.position)).join(", ")
+    : row.position
+      ? formatPosition(row.position)
+      : "—"
+
   const fields: { label: string; value: string }[] = [
     { label: "รหัสรายชื่อ", value: row.rosterNo },
-    { label: "ชื่อแสดง", value: row.displayName },
+    { label: "ชื่อเรียก", value: row.displayName },
     { label: "กลุ่มงาน", value: row.jobGroup ?? "—" },
     { label: "ชื่อจริง", value: row.firstName ?? "—" },
     { label: "นามสกุล", value: row.lastName ?? "—" },
@@ -67,14 +88,7 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
           : row.department.name
         : "—",
     },
-    {
-      label: "ตำแหน่ง",
-      value: row.position
-        ? row.position.code
-          ? `${row.position.name} (${row.position.code})`
-          : row.position.name
-        : "—",
-    },
+    { label: "ตำแหน่ง", value: positionLabel },
     { label: "บัญชีผู้ใช้", value: formatUser(row.user) },
   ]
 

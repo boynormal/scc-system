@@ -40,6 +40,8 @@ function person(over: {
   departmentId?: string | null
   department?: { id: string; isActive: boolean; branchId: string } | null
   displayName?: string
+  firstName?: string | null
+  lastName?: string | null
   rosterNo?: string
   jobGroup?: string | null
   isActive?: boolean
@@ -50,6 +52,8 @@ function person(over: {
     id: over.id ?? PERSON_1,
     rosterNo: over.rosterNo ?? "001",
     displayName: over.displayName ?? "สมชาย",
+    firstName: over.firstName ?? null,
+    lastName: over.lastName ?? null,
     jobGroup: over.jobGroup === undefined ? "พนักงาน" : over.jobGroup,
     isActive: over.isActive ?? true,
     departmentId,
@@ -169,6 +173,18 @@ describe("getPersonnelOrgView", () => {
     ])
     expect(result.data.departments[0]?.personnel).toEqual([])
     expect(result.data.totals.unassigned).toBe(1)
+  })
+
+  it("shows first and last name on the department card", async () => {
+    const db = createDb({
+      people: [person({ displayName: "ชื่อเล่น", firstName: "สมชาย", lastName: "ใจดี" })],
+    })
+    const result = await getPersonnelOrgView(asDb(db), {
+      companyId: CID,
+      roles: adminRoles,
+      branchId: BRANCH_A,
+    })
+    expect(result.data.departments[0]?.personnel[0]?.displayName).toBe("สมชาย ใจดี (ชื่อเล่น)")
   })
 
   it("does not show departmentId null + branchId null on a branch view", async () => {

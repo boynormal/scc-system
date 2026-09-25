@@ -16,6 +16,9 @@ function matches(node: OrgChartNode, query: string): boolean {
   return node.occupants.some(
     (o) =>
       o.displayName.toLowerCase().includes(q) ||
+      o.knownAs.toLowerCase().includes(q) ||
+      (o.firstName?.toLowerCase().includes(q) ?? false) ||
+      (o.lastName?.toLowerCase().includes(q) ?? false) ||
       o.rosterNo.toLowerCase().includes(q) ||
       (o.jobGroup?.toLowerCase().includes(q) ?? false)
   )

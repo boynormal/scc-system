@@ -409,17 +409,14 @@ async function occupantCounts(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>()
   if (params.positionIds.length === 0) return counts
-  const rows = await db.personnel.findMany({
+  const rows = await db.personnelPosition.findMany({
     where: {
-      companyId: params.companyId,
-      deletedAt: null,
-      isActive: true,
       positionId: { in: params.positionIds },
+      personnel: { companyId: params.companyId, deletedAt: null, isActive: true },
     },
     select: { positionId: true },
   })
   for (const row of rows) {
-    if (!row.positionId) continue
     counts.set(row.positionId, (counts.get(row.positionId) ?? 0) + 1)
   }
   return counts
@@ -703,7 +700,7 @@ export async function deletePosition(
 
   const [childCount, personnelCount] = await Promise.all([
     db.position.count({ where: { parentId: existing.id } }),
-    db.personnel.count({ where: { positionId: existing.id } }),
+    db.personnelPosition.count({ where: { positionId: existing.id } }),
   ])
 
   if (childCount > 0 || personnelCount > 0) {

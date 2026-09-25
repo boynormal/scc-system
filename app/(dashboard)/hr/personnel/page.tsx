@@ -110,7 +110,7 @@ export default async function HrPersonnelPage(props: {
                 <thead>
                   <tr className="border-b border-border bg-muted text-left text-muted-foreground">
                     <th className="p-3 font-medium">รหัสรายชื่อ</th>
-                    <th className="p-3 font-medium">ชื่อแสดง</th>
+                    <th className="p-3 font-medium">ชื่อเรียก</th>
                     <th className="p-3 font-medium">กลุ่มงาน</th>
                     <th className="p-3 font-medium">แผนก</th>
                     <th className="p-3 font-medium">สาขา</th>

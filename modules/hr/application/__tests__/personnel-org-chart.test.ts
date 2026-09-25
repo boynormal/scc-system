@@ -67,18 +67,24 @@ function pos(over: Partial<PosRaw> & { id: string; name: string }): PosRaw {
 function person(over: {
   id?: string
   displayName?: string
+  firstName?: string | null
+  lastName?: string | null
   rosterNo?: string
   jobGroup?: string | null
   isActive?: boolean
   positionId?: string | null
+  positionAssignments?: { positionId: string }[]
 }) {
   return {
     id: over.id ?? PERSON_1,
     rosterNo: over.rosterNo ?? "001",
     displayName: over.displayName ?? "สมชาย",
+    firstName: over.firstName ?? null,
+    lastName: over.lastName ?? null,
     jobGroup: over.jobGroup === undefined ? "ผลิต" : over.jobGroup,
     isActive: over.isActive ?? true,
     positionId: over.positionId === undefined ? null : over.positionId,
+    positionAssignments: over.positionAssignments ?? [],
   }
 }
 
@@ -113,6 +119,9 @@ const occupant = (over: Partial<OrgChartOccupant> = {}): OrgChartOccupant => ({
   id: PERSON_1,
   rosterNo: "001",
   displayName: "สมชาย",
+  knownAs: "สมชาย",
+  firstName: null,
+  lastName: null,
   jobGroup: "ผลิต",
   isActive: true,
   ...over,
@@ -264,6 +273,73 @@ describe("getPersonnelOrgChart", () => {
     })
   })
 
+  it("places one person under every selected position", async () => {
+    const db = createDb({
+      positions: [
+        pos({ id: POS_ROOT, name: "กรรมการผู้จัดการ", headcount: 1 }),
+        pos({ id: POS_CHILD, name: "ผู้จัดการฝ่ายผลิต", parentId: POS_ROOT, headcount: 1 }),
+      ],
+      people: [
+        person({
+          id: PERSON_1,
+          positionId: POS_ROOT,
+          positionAssignments: [{ positionId: POS_ROOT }, { positionId: POS_CHILD }],
+        }),
+      ],
+    })
+
+    const { data } = await getPersonnelOrgChart(asDb(db), {
+      companyId: CID,
+      roles: managerA,
+      branchId: BRANCH_A,
+    })
+
+    expect(data.roots[0]!.occupants.map((o) => o.id)).toEqual([PERSON_1])
+    expect(data.roots[0]!.children[0]!.occupants.map((o) => o.id)).toEqual([PERSON_1])
+    expect(data.unplaced).toEqual([])
+    expect(data.totals.occupied).toBe(2)
+    expect(data.totals.vacancy).toBe(0)
+  })
+
+  it("shows the legal name and still matches the display name", async () => {
+    const db = createDb({
+      positions: [pos({ id: POS_ROOT, name: "กรรมการผู้จัดการ", headcount: 1 })],
+      people: [
+        person({
+          positionId: POS_ROOT,
+          displayName: "ชื่อเล่น",
+          firstName: "สมชาย",
+          lastName: "ใจดี",
+        }),
+      ],
+    })
+
+    const { data } = await getPersonnelOrgChart(asDb(db), {
+      companyId: CID,
+      roles: managerA,
+      branchId: BRANCH_A,
+    })
+
+    expect(data.roots[0]!.occupants[0]!.displayName).toBe("สมชาย ใจดี (ชื่อเล่น)")
+    expect(matchesOrgChartSearch(data.roots[0]!, "ชื่อเล่น")).toBe(true)
+    expect(matchesOrgChartSearch(data.roots[0]!, "ใจดี")).toBe(true)
+  })
+
+  it("falls back to the display name when first and last name are blank", async () => {
+    const db = createDb({
+      positions: [pos({ id: POS_ROOT, name: "กรรมการผู้จัดการ", headcount: 1 })],
+      people: [person({ positionId: POS_ROOT, displayName: "ชื่อเล่น", firstName: "  ", lastName: null })],
+    })
+
+    const { data } = await getPersonnelOrgChart(asDb(db), {
+      companyId: CID,
+      roles: managerA,
+      branchId: BRANCH_A,
+    })
+
+    expect(data.roots[0]!.occupants[0]!.displayName).toBe("ชื่อเล่น")
+  })
+
   it("treats a person pointing at a filtered-out position as unplaced", async () => {
     const db = createDb({
       positions: [pos({ id: POS_ROOT, name: "เปิด" })],
@@ -360,6 +436,7 @@ describe("getPersonnelOrgChart", () => {
     const scope = db.personnel.findMany.mock.calls[0]![0].where.AND[0].OR
     expect(scope).toEqual([
       { position: { branchId: BRANCH_A } },
+      { positionAssignments: { some: { position: { branchId: BRANCH_A } } } },
       { department: { branchId: BRANCH_A } },
       { branchId: BRANCH_A, positionId: null, departmentId: null },
     ])

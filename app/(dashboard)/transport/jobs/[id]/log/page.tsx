@@ -34,6 +34,10 @@ export default async function TransportJobLogPage({
         <JobPunchPanel
           jobId={id}
           jobNumber={view.jobNumber}
+          vehiclePlate={view.vehiclePlate}
+          driverName={view.driverName}
+          cargoType={view.cargoType}
+          branchName={view.branchName}
           stops={view.stops}
           punches={view.punches.map((punch) => ({
             ...punch,

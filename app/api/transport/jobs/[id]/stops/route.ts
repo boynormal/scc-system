@@ -46,6 +46,7 @@ export const PUT = withAuth<Ctx>(async (req, ctx, session) => {
     jobId: id,
     companyId: session.user.companyId as string,
     roles: session.user.roles as never,
+    userId: session.user.id as string,
     input: parsed.data,
   })
   return Response.json({ data })

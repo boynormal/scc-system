@@ -39,6 +39,7 @@ function createMockDb() {
     driver: { findFirst: vi.fn(), update: vi.fn() },
     transportJob: { findFirst: vi.fn(), update: vi.fn() },
     jobAssignment: { upsert: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
+    auditLog: { create: vi.fn().mockResolvedValue({}) },
     $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   }
 }

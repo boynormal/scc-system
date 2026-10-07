@@ -1,5 +1,6 @@
 export * from "./application/vehicle-service"
 export * from "./application/driver-service"
+export * from "./application/job-audit"
 export * from "./application/job-service"
 export * from "./application/overview-service"
 export * from "./application/assignment-service"

@@ -87,6 +87,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "External BI dashboards (Scrapee)",
   },
   {
+    id: "hub",
+    label: "HUB",
+    order: 42,
+    icon: "Network",
+    description: "Internal social hub",
+  },
+  {
     id: "iot_control",
     label: "IoT Control",
     order: 45,

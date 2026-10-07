@@ -194,6 +194,7 @@ export function JobStopsEditor({ stops, onChange, disabled, className }: Props) 
                 value={stop.customerId}
                 onChange={(customerId, customer) => handleStopCustomer(idx, customerId, customer)}
                 placeholder="— เลือกลูกค้า/ปลายทาง —"
+                disabled={disabled}
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

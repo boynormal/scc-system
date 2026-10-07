@@ -130,6 +130,16 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     accent: "from-sky-500 to-blue-700 shadow-sky-600/30",
     iconKey: "LayoutDashboard",
   },
+  {
+    id: "hub",
+    labelTh: "HUB",
+    labelEn: "HUB",
+    description: "โซเชียลภายใน",
+    departmentIds: ["hub"],
+    order: 11,
+    accent: "from-indigo-500 to-violet-700 shadow-indigo-600/30",
+    iconKey: "Network",
+  },
 ]
 
 export const PRODUCT_LINE_BY_ID: Record<string, ProductLineDef> = Object.fromEntries(

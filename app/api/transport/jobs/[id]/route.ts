@@ -24,6 +24,7 @@ export const PUT = withAuth<Ctx>(async (req, ctx, session) => {
   const data = await updateJob(prisma, {
     id,
     companyId: session.user.companyId as string,
+    userId: session.user.id as string,
     roles: session.user.roles as never,
     input: parsed.data,
   })
@@ -36,6 +37,7 @@ export const DELETE = withAuth<Ctx>(async (_req, ctx, session) => {
     jobId: id,
     companyId: session.user.companyId as string,
     roles: session.user.roles as never,
+    userId: session.user.id as string,
   })
   return Response.json({ data })
 })

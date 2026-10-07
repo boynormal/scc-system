@@ -10,6 +10,7 @@ export const POST = withAuth<Ctx>(async (_req, ctx, session) => {
     jobId: id,
     companyId: session.user.companyId as string,
     roles: session.user.roles as never,
+    userId: session.user.id as string,
   })
   return Response.json({ data })
 })

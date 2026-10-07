@@ -74,6 +74,9 @@
     "transport_master_data": "ข้อมูลพื้นฐาน",
     "sec_dashboards": "Dashboard",
     "dashboards_scrapee": "Scrapee",
+    "sec_hub": "HUB",
+    "hub": "HUB",
+    "pm_check": "PM CHECK",
     "sec_iot": "ควบคุม IoT",
     "iot_queue_ticket": "ควบคุมบัตรคิว",
     "iot_queue_issue": "ออกบัตรคิว",
@@ -256,6 +259,10 @@
     "st_RETIRED": "ปลดระวาง",
     "st_DISPOSED": "จำหน่าย",
     "codeOccupied": "รหัสทะเบียนนี้มีอยู่แล้วในบริษัท"
+  },
+  "pmCheck": {
+    "title": "PM CHECK",
+    "empty": "การตรวจ PM จะอิงรายการสินทรัพย์ ยังไม่มีแบบฟอร์มบันทึกผล"
   },
   "transport": {
     "overviewTitle": "ภาพรวมขนส่ง",

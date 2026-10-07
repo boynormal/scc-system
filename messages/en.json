@@ -74,6 +74,9 @@
     "transport_master_data": "Master data",
     "sec_dashboards": "Dashboard",
     "dashboards_scrapee": "Scrapee",
+    "sec_hub": "HUB",
+    "hub": "HUB",
+    "pm_check": "PM CHECK",
     "sec_iot": "IoT control",
     "iot_queue_ticket": "Queue ticket control",
     "iot_queue_issue": "Issue queue ticket",
@@ -256,6 +259,10 @@
     "st_RETIRED": "Retired",
     "st_DISPOSED": "Disposed",
     "codeOccupied": "This register code already exists in the company"
+  },
+  "pmCheck": {
+    "title": "PM CHECK",
+    "empty": "PM checks will use the asset register. There is no result form yet."
   },
   "transport": {
     "overviewTitle": "Transport overview",

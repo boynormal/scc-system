@@ -2,7 +2,7 @@ import { z } from "zod"
 import type { PrismaClient, TransportJobStatus, TransportJobPriority, AttachmentStage } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
-import { hasPermission, isAdminInAnyBranch, getBranchIds, type UserRole } from "@/lib/permissions"
+import { type UserRole } from "@/lib/permissions"
 import { cancelJob, performAssignment } from "./assignment-service"
 import { getBangkokDateRange } from "./transport-date-utils"
 import {
@@ -10,7 +10,8 @@ import {
   resolveJobListGroup,
   statusFilterForGroup,
 } from "@/shared/transport/job-status-groups"
-import { nextTransportDocumentNo } from "./transport-document-no"
+import { writeJobAudit } from "./job-audit"
+import { canTransportJobs } from "./transport-job-access"
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -44,6 +45,7 @@ export const createJobSchema = z
   })
 
 export const updateJobSchema = z.object({
+  branchId: z.string().uuid().optional(),
   customerId: z.string().uuid().nullable().optional(),
   customerName: z.string().max(255).nullable().optional(),
   jobType: z.string().max(100).optional(),
@@ -194,10 +196,7 @@ function buildJobListWhere(params: JobListFilters) {
 }
 
 function canReadTransportJobsInAnyBranch(roles: UserRole[]) {
-  return (
-    isAdminInAnyBranch(roles) ||
-    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "transport_jobs", "read"))
-  )
+  return canTransportJobs(roles, "read")
 }
 
 const jobListInclude = {
@@ -309,10 +308,7 @@ export async function getJobById(
     include: jobDetailInclude,
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "read")
-  if (!canRead) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "read")) throw new ForbiddenError()
   return job
 }
 
@@ -333,10 +329,12 @@ export async function createJob(
   db: PrismaClient,
   params: { companyId: string; userId: string; roles: UserRole[]; input: CreateJobInput }
 ) {
-  const canCreate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, params.input.branchId, "transport_jobs", "create")
-  if (!canCreate) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "create")) throw new ForbiddenError()
+  const branch = await db.branch.findFirst({
+    where: { id: params.input.branchId, companyId: params.companyId },
+    select: { id: true },
+  })
+  if (!branch) throw new ValidationError("ไม่พบสาขาในบริษัทนี้")
 
   const { stops, vehicleId, driverId, ...jobData } = params.input
 
@@ -393,18 +391,36 @@ export async function createJob(
 
 export async function updateJob(
   db: PrismaClient,
-  params: { id: string; companyId: string; roles: UserRole[]; input: UpdateJobInput }
+  params: { id: string; companyId: string; userId?: string; roles: UserRole[]; input: UpdateJobInput }
 ) {
   const job = await db.transportJob.findFirst({
     where: { id: params.id, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
 
-  return db.transportJob.update({ where: { id: params.id }, data: params.input })
+  if (params.input.branchId && params.input.branchId !== job.branchId) {
+    const branch = await db.branch.findFirst({
+      where: { id: params.input.branchId, companyId: params.companyId },
+      select: { id: true },
+    })
+    if (!branch) throw new ValidationError("ไม่พบสาขาในบริษัทนี้")
+  }
+
+  const updated = await db.transportJob.update({ where: { id: params.id }, data: params.input })
+  const branchChanged = Boolean(params.input.branchId && params.input.branchId !== job.branchId)
+  await writeJobAudit(db, {
+    userId: params.userId,
+    jobId: params.id,
+    action: "update",
+    event: branchChanged ? "JOB_BRANCH" : "JOB_UPDATE",
+    oldValues: branchChanged ? { branchId: job.branchId } : undefined,
+    newValues: {
+      summary: branchChanged ? "ย้ายสาขา" : "แก้ไขข้อมูลใบงาน",
+      ...(branchChanged ? { branchId: params.input.branchId } : {}),
+    },
+  })
+  return updated
 }
 
 /** Soft-cancel — delegates to cancelJob (frees fleet when scheduled today). */
@@ -427,10 +443,7 @@ export async function listStops(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "read")
-  if (!canRead) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "read")) throw new ForbiddenError()
 
   return db.jobStop.findMany({
     where: { jobId: params.jobId },
@@ -451,10 +464,7 @@ export async function addStop(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
 
   return db.jobStop.create({ data: { ...params.input, jobId: params.jobId } })
 }
@@ -473,10 +483,7 @@ export async function updateStop(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
 
   const stop = await db.jobStop.findFirst({ where: { id: params.stopId, jobId: params.jobId } })
   if (!stop) throw new NotFoundError("Stop not found")
@@ -502,10 +509,7 @@ export async function deleteStop(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
 
   if (job.status === "completed" || job.status === "cancelled") {
     throw new ValidationError("Cannot modify stops on a completed or cancelled job")
@@ -541,6 +545,7 @@ export async function syncJobStops(
     jobId: string
     companyId: string
     roles: UserRole[]
+    userId?: string
     input: z.infer<typeof syncJobStopsSchema>
   }
 ) {
@@ -548,10 +553,7 @@ export async function syncJobStops(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
 
   if (job.status === "completed" || job.status === "cancelled") {
     throw new ValidationError("Cannot modify stops on a completed or cancelled job")
@@ -562,7 +564,7 @@ export async function syncJobStops(
     throw new ValidationError("At least one stop is required")
   }
 
-  return db.$transaction(async (tx) => {
+  const stops = await db.$transaction(async (tx) => {
     const existing = await tx.jobStop.findMany({ where: { jobId: params.jobId } })
     const existingById = new Map(existing.map((s) => [s.id, s]))
     const keepIds = new Set(payload.map((s) => s.id).filter((id): id is string => Boolean(id)))
@@ -600,6 +602,14 @@ export async function syncJobStops(
       orderBy: { sequence: "asc" },
     })
   })
+  await writeJobAudit(db, {
+    userId: params.userId,
+    jobId: params.jobId,
+    action: "update",
+    event: "JOB_STOPS",
+    newValues: { summary: "แก้ไขจุดแวะ" },
+  })
+  return stops
 }
 
 export async function listAttachments(
@@ -610,10 +620,7 @@ export async function listAttachments(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canRead =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "read")
-  if (!canRead) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "read")) throw new ForbiddenError()
 
   return db.jobAttachment.findMany({
     where: { jobId: params.jobId, ...(params.stage ? { stage: params.stage } : {}) },
@@ -635,10 +642,7 @@ export async function createAttachment(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  const canUpdate =
-    isAdminInAnyBranch(params.roles) ||
-    hasPermission(params.roles, job.branchId, "transport_jobs", "update")
-  if (!canUpdate) throw new ForbiddenError()
+  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
 
   return db.jobAttachment.create({
     data: {

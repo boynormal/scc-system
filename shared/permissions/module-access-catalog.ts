@@ -94,7 +94,7 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     moduleId: "assets",
     label: "ทะเบียนสินทรัพย์",
     anyOfResources: ["assets"],
-    navModuleIds: ["assets"],
+    navModuleIds: ["assets", "pm_check"],
   },
   {
     moduleId: "finance",
@@ -120,6 +120,12 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
       "iot_barrier_gate",
       "iot_metal_detector",
     ],
+  },
+  {
+    moduleId: "hub",
+    label: "HUB",
+    anyOfResources: ["dashboards"],
+    navModuleIds: ["hub"],
   },
   {
     moduleId: "dashboards",

@@ -100,50 +100,67 @@ function CustomerFormRows({
   return (
     <>
       <tr className="bg-cyan-50/50">
-        <td className="px-4 py-3">
+        <td className="px-3 py-3 align-middle">
           <GlassInput
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="ชื่อลูกค้า/ปลายทาง *"
-            className="h-8 border-cyan-300"
+            className="h-10 border-cyan-300"
           />
         </td>
-        <td className="px-4 py-3">
+        <td className="px-3 py-3 align-middle">
           <GlassInput
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
             placeholder="ที่อยู่"
-            className="h-8 border-cyan-300"
+            className="h-10 border-cyan-300"
           />
         </td>
-        <td className="px-4 py-3 align-top text-muted-foreground text-xs">กำหนดด้านล่าง</td>
-        <td className="px-4 py-3">
+        <td className="px-3 py-3 align-middle" />
+        <td className="px-3 py-3 align-middle">
           <GlassInput
             value={form.contactName}
             onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
             placeholder="ผู้ติดต่อ"
-            className="h-8 border-cyan-300"
+            className="h-10 border-cyan-300"
           />
         </td>
-        <td className="px-4 py-3 align-top">
+        <td className="px-3 py-3 align-middle">
           <GlassInput
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
             placeholder="เบอร์โทร"
-            className="h-8 border-cyan-300"
+            className="h-10 border-cyan-300"
           />
         </td>
-        <td className="min-w-0 px-4 py-3 align-top">
-          <DetailsField value={form.details} onChange={(details) => setForm((f) => ({ ...f, details }))} />
+        <td className="min-w-0 px-3 py-3 align-middle">
+          <DetailsField
+            value={form.details}
+            onChange={(details) => setForm((f) => ({ ...f, details }))}
+            rows={1}
+            className="h-10 min-h-10 resize-none py-2"
+          />
         </td>
-        <td className="px-4 py-3 align-top">-</td>
-        <td className="px-4 py-3 text-right space-x-2 align-top">
-          <button type="button" onClick={onCancel} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background">
-            <X className="w-4 h-4" />
-          </button>
-          <button type="button" onClick={onSave} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded">
-            <Save className="w-4 h-4" />
-          </button>
+        <td className="px-3 py-3 align-middle text-muted-foreground">-</td>
+        <td className="px-3 py-3 align-middle">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="inline-flex h-10 items-center gap-1 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <X className="h-4 w-4" />
+              ปิด
+            </button>
+            <button
+              type="button"
+              onClick={onSave}
+              className="inline-flex h-10 items-center gap-1 rounded-lg bg-cyan-600 px-3 text-sm font-medium text-white hover:bg-cyan-700"
+            >
+              <Save className="h-4 w-4" />
+              บันทึก
+            </button>
+          </div>
         </td>
       </tr>
       <tr className="bg-cyan-50/30">
@@ -309,12 +326,12 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
               <tr>
                 <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ชื่อลูกค้า/ปลายทาง</th>
                 <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ที่อยู่</th>
-                <th className="w-36 px-4 py-3 font-semibold text-muted-foreground">พิกัด</th>
+                <th className="w-24 px-3 py-3 font-semibold text-muted-foreground">พิกัด</th>
                 <th className="w-32 px-4 py-3 font-semibold text-muted-foreground">ผู้ติดต่อ</th>
-                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">เบอร์โทร</th>
+                <th className="w-40 px-4 py-3 font-semibold text-muted-foreground">เบอร์โทร</th>
                 <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground w-20">สถานะ</th>
-                <th className="px-4 py-3 w-24"></th>
+                <th className="w-44 px-3 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -343,14 +360,14 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                     <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={item.address ?? ""}>
                       {item.address ?? "—"}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-3 py-3 align-top">
                       <CustomerLocationDisplay
                         latitude={decimalToNumber(item.latitude)}
                         longitude={decimalToNumber(item.longitude)}
                       />
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{item.contactName ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground align-top">{item.phone ?? "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground align-top">{item.phone ?? "—"}</td>
                     <td className="px-4 py-3 align-top max-w-xs">
                       <DetailsDisplay value={item.details} />
                     </td>

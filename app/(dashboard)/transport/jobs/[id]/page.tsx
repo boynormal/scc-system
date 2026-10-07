@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
-import { getJobById, getJobPunchView } from "@/modules/transport"
+import { getJobById, getJobPunchView, listJobHistory } from "@/modules/transport"
 import { describeLegFlag, legEndpointLabel } from "@/modules/transport/application/job-punch-rules"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { StopTimeline } from "@/components/transport/stop-timeline"
@@ -38,6 +38,7 @@ export default async function TransportJobDetailPage({
       userId: session.user.id as string,
       roles,
     }).catch(() => null)
+    const history = await listJobHistory(prisma, id)
     const stopName = (stopId: string) =>
       punchView?.stops.find((stop) => stop.id === stopId)?.customerName ?? "จุด"
     const endpoint = (kind: "start" | "finish" | "arrive" | "depart", stopId: string | null) =>
@@ -172,6 +173,24 @@ export default async function TransportJobDetailPage({
               </div>
             ) : null}
           </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">ประวัติการดำเนินการ</h3>
+          {history.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ยังไม่มีประวัติ</p>
+          ) : (
+            <ol className="space-y-3">
+              {history.map((item) => (
+                <li key={item.id} className="text-sm">
+                  <p className="font-medium text-foreground">{item.summary || item.event}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.actor} · {new Date(item.at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </div>
     )

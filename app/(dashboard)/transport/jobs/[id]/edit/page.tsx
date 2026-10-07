@@ -20,9 +20,11 @@ import {
 import type { TransportJobStatus } from "@prisma/client"
 
 type LookupOption = { id: string; name: string }
+type BranchOption = { id: string; name: string; code?: string | null }
 
 type JobForm = {
   jobNumber: string
+  branchId: string
   customerId: string
   customerName: string
   jobType: string
@@ -82,7 +84,7 @@ export default function EditTransportJobPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<JobForm | null>(null)
-  const [branchId, setBranchId] = useState<string | null>(null)
+  const [branches, setBranches] = useState<BranchOption[]>([])
   const [assignment, setAssignment] = useState<CurrentAssignment>(null)
   const [stops, setStops] = useState<JobStopForm[]>([emptyJobStop()])
   const [jobTypes, setJobTypes] = useState<LookupOption[]>([])
@@ -91,9 +93,11 @@ export default function EditTransportJobPage() {
 
   useEffect(() => {
     Promise.all([
+      fetch("/api/settings/branches").then((r) => r.json()),
       fetch("/api/transport/master-data/job-types?activeOnly=1").then((r) => r.json()),
       fetch("/api/transport/master-data/cargo-types?activeOnly=1").then((r) => r.json()),
-    ]).then(([jobTypesJson, cargoTypesJson]) => {
+    ]).then(([branchesJson, jobTypesJson, cargoTypesJson]) => {
+      setBranches(branchesJson.data ?? [])
       setJobTypes(jobTypesJson.data ?? [])
       setCargoTypes(cargoTypesJson.data ?? [])
     })
@@ -110,6 +114,7 @@ export default function EditTransportJobPage() {
       const j = json.data
       setForm({
         jobNumber: j.jobNumber,
+        branchId: j.branchId ?? "",
         customerId: j.customerId ?? "",
         customerName: j.customerName ?? "",
         jobType: j.jobType,
@@ -119,7 +124,6 @@ export default function EditTransportJobPage() {
         status: j.status,
         notes: j.notes ?? "",
       })
-      setBranchId(j.branchId ?? null)
       setAssignment(mapAssignment(j.assignment))
 
       const loadedStops: JobStopForm[] = (j.stops ?? []).map(
@@ -192,6 +196,7 @@ export default function EditTransportJobPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          branchId: form.branchId,
           customerId: form.customerId || null,
           customerName: form.customerName || undefined,
           jobType: form.jobType,
@@ -289,10 +294,28 @@ export default function EditTransportJobPage() {
           <h2 className="text-sm font-semibold text-foreground">ข้อมูลใบงาน</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">สาขา *</label>
+              <select
+                required
+                disabled={readOnly}
+                value={form.branchId}
+                onChange={(e) => setForm((f) => f && { ...f, branchId: e.target.value })}
+                className={selectClass}
+              >
+                <option value="">-- เลือกสาขา --</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}{b.code ? ` (${b.code})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">ชื่อลูกค้า</label>
               <CustomerPicker
                 value={form.customerId}
                 onChange={handleHeaderCustomer}
+                disabled={readOnly}
               />
             </div>
             <div>
@@ -362,10 +385,10 @@ export default function EditTransportJobPage() {
         </div>
       </form>
 
-      {branchId && (
+      {form.branchId && (
         <AssignJobForm
           jobId={jobId}
-          branchId={branchId}
+          branchId={form.branchId}
           jobStatus={form.status}
           currentAssignment={assignment}
           onAssignmentChange={fetchJob}

@@ -108,7 +108,7 @@ export function CustomerLocationDisplay({
 
   return (
     <div className="space-y-1">
-      <p className="font-mono text-[11px] text-foreground">{formatLatLng(latitude, longitude)}</p>
+      <p className="break-all font-mono text-[11px] leading-snug text-foreground">{formatLatLng(latitude, longitude)}</p>
       <a
         href={googleMapsUrl(latitude, longitude)}
         target="_blank"

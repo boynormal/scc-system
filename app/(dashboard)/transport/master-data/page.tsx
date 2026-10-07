@@ -37,7 +37,7 @@ const TABS = [
     id: "customers",
     label: "ลูกค้า/ปลายทาง",
     addLabel: "เพิ่มลูกค้า/ปลายทาง",
-    searchPlaceholder: "ค้นหาลูกค้า / ที่อยู่ / ผู้ติดต่อ...",
+    searchPlaceholder: "ค้นหาชื่อ / ที่อยู่ / ผู้ติดต่อ / รายละเอียด...",
   },
   {
     id: "vehicles",

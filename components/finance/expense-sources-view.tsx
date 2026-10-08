@@ -18,6 +18,7 @@ import {
   GlassTableRow,
 } from "@/components/glass"
 import { FinancePageHeader } from "./finance-page-header"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import { NEW_EXPENSE_SOURCES_KEY, type PrefillPayload } from "./expense-form-page"
 import type { ExpenseSourceRow, FinancePerms, LineDraft, Option } from "./expense-types"
 import { FIN_GLASS_PANEL, SOURCE_TYPE_LABELS, formatBaht } from "./finance-theme"
@@ -47,15 +48,6 @@ const HAS_EXPENSE_BTN =
 const NO_EXPENSE_BTN =
   "rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:bg-transparent dark:text-slate-300 dark:hover:bg-white/10"
 const TABLE_ACTION_BTN = "h-8 shrink-0 whitespace-nowrap px-2.5"
-
-function branchChipClass(active: boolean) {
-  return cn(
-    "rounded-full border px-3.5 py-1.5 text-sm font-medium",
-    active
-      ? "border-emerald-400 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-200"
-      : "border-slate-300 bg-white/80 text-muted-foreground hover:text-foreground dark:border-white/15 dark:bg-transparent"
-  )
-}
 
 function sourceToLine(row: ExpenseSourceRow): LineDraft {
   const locked = row.amount != null && row.amount > 0
@@ -255,30 +247,19 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {branches.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">สาขา</span>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className={branchChipClass(branchId === "")}
-            onClick={() => selectBranch("")}
-          >
-            ทั้งหมด ({rows.length})
-          </Button>
-          {branches.map((b) => (
-            <Button
-              key={b.id}
-              type="button"
-              size="sm"
-              variant="outline"
-              className={branchChipClass(branchId === b.id)}
-              onClick={() => selectBranch(b.id)}
-            >
-              {b.name} ({branchCounts.get(b.id) ?? 0})
-            </Button>
-          ))}
-        </div>
+        <SubTabs
+          aria-label="สาขา"
+          activeKey={branchId || "all"}
+          onChange={(id) => selectBranch(id === "all" ? "" : id)}
+          items={[
+            { key: "all", label: "ทั้งหมด", count: rows.length },
+            ...branches.map((b) => ({
+              key: b.id,
+              label: b.name,
+              count: branchCounts.get(b.id) ?? 0,
+            })),
+          ]}
+        />
       )}
       {differentBranch && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">

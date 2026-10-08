@@ -2,8 +2,8 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useDeferredValue, useEffect, useMemo, useState } from "react"
-import { LayoutGrid, Search, Star, X, type LucideIcon } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { LayoutGrid, Star, X, type LucideIcon } from "lucide-react"
 import type { LauncherAppItem } from "@/shared/navigation/flattenNav"
 import type { NavIconKey } from "@/shared/navigation/moduleRegistry"
 import { DEPARTMENT_BY_ID } from "@/shared/navigation/departmentRegistry"
@@ -18,8 +18,6 @@ import {
   skinFor,
 } from "@/shared/navigation/launcherClientState"
 import { NAV_ICON_MAP } from "@/components/layout/nav-icon-map"
-import { APP_BRAND } from "@/shared/branding"
-import { CompanyBrandMark } from "@/components/brand/company-brand-mark"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
@@ -100,7 +98,6 @@ export function IpadLauncher({
   moduleImageOverrides = {},
   appearance = "light",
   weatherBranches = [],
-  logoUrl,
 }: {
   apps: LauncherAppItem[]
   pinnedModuleIds: string[]
@@ -111,12 +108,9 @@ export function IpadLauncher({
   moduleImageOverrides?: Record<string, string>
   appearance?: AppAppearance
   weatherBranches?: WeatherBranchOption[]
-  logoUrl?: string | null
 }) {
   const isDark = appearance === "dark"
   const t = useTranslations("apps")
-  const [search, setSearch] = useState("")
-  const deferredSearch = useDeferredValue(search)
   const [favorites, setFavorites] = useState<string[]>([])
   const [lastRecentId, setLastRecentId] = useState<string | null>(null)
   const [dockNotice, setDockNotice] = useState<string | null>(null)
@@ -192,15 +186,6 @@ export function IpadLauncher({
       .filter((x) => x.sections.length > 0)
   }, [departmentOrderOverrides, grouped, hiddenDepartments])
 
-  const deferredQuery = deferredSearch.trim().toLowerCase()
-  const isSearching = deferredQuery.length > 0
-  const searchResults = useMemo(() => {
-    if (!isSearching) return []
-    return apps
-      .filter((app) => !hiddenDepartments.has(app.departmentId) && app.searchText.includes(deferredQuery))
-      .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
-  }, [apps, deferredQuery, hiddenDepartments, isSearching])
-
   /** Dock: company pins then user favorites only (stable order, no usage fill). */
   const dockApps = useMemo(() => {
     const ids = buildDockOrderedIds(pinnedModuleIds, favorites, availableIds)
@@ -220,80 +205,22 @@ export function IpadLauncher({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(100,116,139,0.12)_100%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(2,6,23,0.35)_100%)]" />
 
       <div className="relative z-10 mx-auto h-full max-w-6xl overflow-y-auto px-4 pb-40 pt-6 sm:px-8 sm:pt-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <CompanyBrandMark logoUrl={logoUrl} size="md" alt={APP_BRAND.name} />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground dark:text-white/55">{APP_BRAND.launcherBadge}</p>
-              <h1 className="text-2xl font-black text-foreground drop-shadow-sm sm:text-3xl dark:text-white">{APP_BRAND.name}</h1>
-            </div>
-          </div>
+        <LauncherClockWeather branches={weatherBranches} />
 
-          <div className="flex items-center gap-3">
-            <label className="relative block w-full sm:w-72">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground dark:text-white/70" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("searchPlaceholder")}
-                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-10 pr-4 text-sm text-foreground shadow-sm outline-none backdrop-blur-md transition placeholder:text-muted-foreground focus:border-white focus:bg-white focus:ring-4 focus:ring-white/20 dark:border-white/20 dark:bg-slate-950/30 dark:text-white dark:placeholder:text-white/55 dark:focus:border-white/40 dark:focus:bg-slate-950/45"
-                aria-label={t("searchPlaceholder")}
-              />
-            </label>
-            <Link
-              href="/app2"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/70 bg-white/80 px-3.5 py-2.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:bg-white dark:border-white/20 dark:bg-slate-950/30 dark:text-white dark:hover:bg-slate-950/45"
-              title="มุมมองการ์ด"
-            >
-              <LayoutGrid className="h-4 w-4" />
-              <span className="hidden sm:inline">มุมมองการ์ด</span>
-            </Link>
-          </div>
+        <div className="mt-10 grid grid-cols-3 gap-x-4 gap-y-10 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+          {lines.map(({ line, sections }) => (
+            <FolderIcon
+              key={line.id}
+              line={line}
+              iconOverrides={productLineIconOverrides}
+              imageOverrides={productLineImageOverrides}
+              totalApps={sections.reduce((n, s) => n + s.apps.length, 0)}
+              onOpen={() => setOpenLineId(line.id)}
+            />
+          ))}
         </div>
 
-        <LauncherClockWeather className="mt-5" branches={weatherBranches} />
-
-        {isSearching ? (
-          <div className="mt-10">
-            {searchResults.length === 0 ? (
-              <div className="rounded-[1.75rem] border border-white/60 bg-white/50 px-6 py-14 text-center text-foreground backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white/80">
-                <p className="font-semibold">{t("noResults")}</p>
-                <p className="mt-1 text-sm text-muted-foreground dark:text-white/60">{t("noResultsHint")}</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-x-4 gap-y-8 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                {searchResults.map((app) => (
-                  <IosIcon
-                    key={app.moduleId}
-                    app={app}
-                    isPinned={combinedPinned.has(app.moduleId)}
-                    onToggleFavorite={toggleFavorite}
-                    onOpen={() => markOpen(app.moduleId)}
-                    dark={!isDark}
-                    imageUrl={moduleImageOverrides[app.moduleId]}
-                    pinLabel={t("pin")}
-                    unpinLabel={t("unpin")}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mt-10 grid grid-cols-3 gap-x-4 gap-y-10 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-            {lines.map(({ line, sections }) => (
-              <FolderIcon
-                key={line.id}
-                line={line}
-                iconOverrides={productLineIconOverrides}
-                imageOverrides={productLineImageOverrides}
-                totalApps={sections.reduce((n, s) => n + s.apps.length, 0)}
-                onOpen={() => setOpenLineId(line.id)}
-              />
-            ))}
-          </div>
-        )}
-
-        {!isSearching && lines.length === 0 && (
+        {lines.length === 0 && (
           <div className="mt-10 rounded-[1.75rem] border border-white/60 bg-white/50 px-6 py-12 text-center text-sm text-foreground backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white/80">
             ไม่มีโมดูลที่แสดงได้ตามสิทธิ์หรือการตั้งค่าปัจจุบัน
           </div>

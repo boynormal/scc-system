@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput, GlassTabs } from "@/components/glass"
+import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import { CategoryLinkedMachinesDialog } from "@/components/settings/category-linked-machines-dialog"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
 
@@ -307,11 +308,11 @@ export function MaintenanceMasterData() {
         </p>
       </div>
 
-      <GlassTabs
-        items={TABS}
-        value={activeTab}
-        onChange={(id) => setActiveTab(id as "categories" | "maintenance-types")}
+      <SubTabs
         aria-label="ข้อมูลพื้นฐานงานซ่อมบำรุง"
+        activeKey={activeTab}
+        onChange={(id) => setActiveTab(id as "categories" | "maintenance-types")}
+        items={TABS.map((item) => ({ key: item.id, label: item.label }))}
       />
 
       <div>

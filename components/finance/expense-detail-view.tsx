@@ -14,7 +14,8 @@ import {
   Plus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { GlassCard, GlassDialog, GlassTabs } from "@/components/glass"
+import { GlassCard, GlassDialog } from "@/components/glass"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import { cn, formatDate, formatDateTime } from "@/lib/utils"
 import type { ExpenseAttachmentDto, ExpenseDto, ExpenseLineDto, FinancePerms } from "./expense-types"
 import {
@@ -415,12 +416,11 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
         <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      <GlassTabs
+      <SubTabs
         aria-label="ส่วนของบิลค่าใช้จ่าย"
-        className="mb-0 mt-0"
-        items={TABS}
-        value={tab}
+        activeKey={tab}
         onChange={setTab}
+        items={TABS.map((item) => ({ key: item.id, label: item.label }))}
       />
 
       {tab === "overview" && (

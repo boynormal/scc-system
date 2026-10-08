@@ -1,7 +1,10 @@
+import { cookies } from "next/headers"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import type { UserRole } from "@/lib/permissions"
+import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
+import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import {
   canManageHrPositions,
   canReadHrAttendance,
@@ -33,10 +36,15 @@ export default async function HrLayout({ children }: { children: React.ReactNode
     redirect("/")
   }
 
+  const cookieStore = await cookies()
+  const isDark = resolveAppearance(cookieStore.get(APPEARANCE_COOKIE)?.value) === "dark"
+
   return (
-    <div>
-      <HrModuleTabs tabs={tabs} />
-      {children}
-    </div>
+    <ModuleBackdrop isDark={isDark}>
+      <div className="space-y-6">
+        <HrModuleTabs tabs={tabs} />
+        {children}
+      </div>
+    </ModuleBackdrop>
   )
 }

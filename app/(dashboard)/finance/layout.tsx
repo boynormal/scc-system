@@ -1,7 +1,10 @@
+import { cookies } from "next/headers"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import type { UserRole } from "@/lib/permissions"
+import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
+import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { canFinance } from "./finance-access"
 import { FinanceModuleTabs } from "./finance-module-tabs"
 
@@ -23,12 +26,15 @@ export default async function FinanceLayout({ children }: { children: React.Reac
     canMasters && { href: "/finance/master-data", label: "ข้อมูลพื้นฐาน", exact: false },
   ].filter(Boolean) as { href: string; label: string; exact: boolean }[]
 
+  const cookieStore = await cookies()
+  const isDark = resolveAppearance(cookieStore.get(APPEARANCE_COOKIE)?.value) === "dark"
+
   return (
-    <div className="flex min-w-0 flex-col">
-      <div className="shrink-0">
+    <ModuleBackdrop isDark={isDark}>
+      <div className="space-y-6">
         <FinanceModuleTabs tabs={tabs} />
+        <div className="min-w-0">{children}</div>
       </div>
-      <div className="min-w-0">{children}</div>
-    </div>
+    </ModuleBackdrop>
   )
 }

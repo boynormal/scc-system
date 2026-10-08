@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { dataPanelClassName } from "@/components/shell/data-panel"
 import type { CalendarJob } from "@/app/api/transport/calendar/route"
 import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
 import { JobPopover, PRIORITY_CONFIG } from "./JobPopover"
@@ -43,7 +44,7 @@ export function MonthCalendar({ year, month, jobs }: Props) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <div className={cn(dataPanelClassName, "flex h-full min-h-0 flex-col")}>
       {/* Day headers */}
       <div className="grid shrink-0 grid-cols-7 border-b border-border bg-muted">
         {DAY_LABELS.map((d, i) => (

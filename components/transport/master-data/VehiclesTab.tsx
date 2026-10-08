@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { GlassCard, GlassInput } from "@/components/glass"
+import { GlassInput } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { VehicleStatusBadge } from "@/components/transport/vehicle-status-badge"
 import {
   fetchGpsVehicles,
@@ -240,7 +241,7 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
               ))}
             </select>
             {editSelectedGps && (
-              <p className="text-[10px] text-muted-foreground font-mono">IMEI: {editSelectedGps.imei}</p>
+              <p className="text-[10px] text-foreground font-mono">IMEI: {editSelectedGps.imei}</p>
             )}
           </div>
         )}
@@ -250,7 +251,7 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
       </td>
       <td className="px-4 py-3 align-top">-</td>
       <td className="px-4 py-3 text-right space-x-2 align-top">
-        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
         <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded"><Save className="w-4 h-4" /></button>
       </td>
     </>
@@ -267,11 +268,11 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
   return (
     <div className="space-y-4">
       {/* Unlinked GPS plates (IMEI not assigned to any master vehicle) */}
-      <GlassCard className="p-4">
+      <DataPanel className="p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-foreground">ทะเบียน GPS ที่ยังไม่ถูกผูก</h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-foreground">
               {gpsLoading
                 ? "กำลังโหลดข้อมูล GPS..."
                 : linkableGps.length === 0
@@ -283,7 +284,7 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
             type="button"
             onClick={loadGps}
             disabled={gpsLoading}
-            className="text-xs text-muted-foreground underline hover:text-foreground disabled:opacity-50"
+            className="text-xs text-foreground underline hover:text-foreground disabled:opacity-50"
           >
             รีเฟรช GPS
           </button>
@@ -309,23 +310,23 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
             ))}
           </div>
         )}
-      </GlassCard>
+      </DataPanel>
 
-      <GlassCard padding="none">
+      <DataPanel padding="none">
         <div className="min-w-0 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">สาขา</th>
-                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">ทะเบียน</th>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ชื่อรถ</th>
-                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">ประเภท</th>
-                <th className="w-28 px-4 py-3 font-semibold text-muted-foreground">น้ำหนักรถเปล่า (กก.)</th>
-                <th className="w-32 px-4 py-3 font-semibold text-muted-foreground">น้ำหนักรวมสูงสุด (กก.)</th>
-                <th className="w-32 px-4 py-3 font-semibold text-muted-foreground">GPS (IMEI)</th>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สถานะ</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">สาขา</th>
+                <th className="w-28 px-4 py-3 font-semibold text-foreground">ทะเบียน</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">ชื่อรถ</th>
+                <th className="w-28 px-4 py-3 font-semibold text-foreground">ประเภท</th>
+                <th className="w-28 px-4 py-3 font-semibold text-foreground">น้ำหนักรถเปล่า (กก.)</th>
+                <th className="w-32 px-4 py-3 font-semibold text-foreground">น้ำหนักรวมสูงสุด (กก.)</th>
+                <th className="w-32 px-4 py-3 font-semibold text-foreground">GPS (IMEI)</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">รายละเอียด</th>
+                <th className="px-4 py-3 font-semibold text-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
             </thead>
@@ -336,12 +337,12 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
                   <tr key={item.id} className="bg-cyan-50/50">{renderForm(item.id, item.gpsDeviceId)}</tr>
                 ) : (
                   <tr key={item.id} className={`hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}>
-                    <td className="px-4 py-3 text-muted-foreground">{item.branch.name}</td>
+                    <td className="px-4 py-3 text-foreground">{item.branch.name}</td>
                     <td className="px-4 py-3 font-mono font-medium">{item.plateNumber}</td>
                     <td className="px-4 py-3 text-foreground">{item.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{item.vehicleType}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{item.maxWeightKg ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{item.loadCapacityKg ?? "—"}</td>
+                    <td className="px-4 py-3 text-foreground">{item.vehicleType}</td>
+                    <td className="px-4 py-3 text-foreground">{item.maxWeightKg ?? "—"}</td>
+                    <td className="px-4 py-3 text-foreground">{item.loadCapacityKg ?? "—"}</td>
                     <td className="px-4 py-3">
                       {item.gpsDeviceId ? (
                         <span className="font-mono text-xs text-foreground">{item.gpsDeviceId}</span>
@@ -372,11 +373,11 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
                           <button
                             type="button"
                             onClick={() => startEditVehicle(item)}
-                            className="p-1.5 text-muted-foreground hover:text-cyan-600"
+                            className="p-1.5 text-foreground hover:text-cyan-600"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600">
+                          <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-foreground hover:text-red-600">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
@@ -391,14 +392,14 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
               )}
               {data.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-10 text-center text-foreground">
                     ยังไม่มีข้อมูล
                   </td>
                 </tr>
               )}
               {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-10 text-center text-foreground">
                     ไม่พบรายการที่ตรงกับคำค้น
                   </td>
                 </tr>
@@ -407,7 +408,7 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
           </table>
           </div>
         </div>
-      </GlassCard>
+      </DataPanel>
     </div>
   )
 }

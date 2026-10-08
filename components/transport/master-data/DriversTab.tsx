@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, Fragment, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2, ChevronDown, ChevronRight } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
+import { GlassButton, GlassInput } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { includesSearch, isAutoDriverCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
@@ -263,7 +264,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
         </select>
       </td>
       <td className="w-24 px-3 py-3 text-right align-top space-x-2">
-        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
         <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded"><Save className="w-4 h-4" /></button>
       </td>
     </>
@@ -301,7 +302,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
               onChange={(e) => setEditForm((f) => ({ ...f, pin: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
               className="h-8 border-cyan-300"
             />
-            <p className="mt-1 text-xs text-muted-foreground">คนขับเข้าสู่ระบบด้วยเบอร์โทรและรหัสนี้</p>
+            <p className="mt-1 text-xs text-foreground">คนขับเข้าสู่ระบบด้วยเบอร์โทรและรหัสนี้</p>
           </div>
           <p className="mb-2 text-sm font-semibold text-foreground">รายละเอียด</p>
           <DetailsField
@@ -327,7 +328,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
         </div>
         <div className="min-w-0">
           <p className="mb-1.5 text-sm font-semibold text-foreground">เข้าสู่ระบบ</p>
-          <p className="text-sm text-muted-foreground">{item.userId ? "ใช้เบอร์โทรเป็นชื่อเข้าใช้" : "ยังไม่ตั้งรหัส"}</p>
+          <p className="text-sm text-foreground">{item.userId ? "ใช้เบอร์โทรเป็นชื่อเข้าใช้" : "ยังไม่ตั้งรหัส"}</p>
           <p className="mb-1.5 mt-3 text-sm font-semibold text-foreground">รายละเอียด</p>
           <DetailsDisplay value={item.notes} expanded />
         </div>
@@ -360,7 +361,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
           </GlassButton>
         </div>
       )}
-      <GlassCard padding="none">
+      <DataPanel padding="none">
         <div className="min-w-0 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
@@ -376,11 +377,11 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
             <thead className="bg-muted border-b border-border">
               <tr>
                 <th className="w-10 px-2 py-3"></th>
-                <th className={`${colBranch} font-semibold text-muted-foreground`}>สาขา</th>
-                <th className={`${colFirstName} font-semibold text-muted-foreground`}>ชื่อ</th>
-                <th className={`${colLastName} font-semibold text-muted-foreground`}>นามสกุล</th>
-                <th className={`${colPhone} font-semibold text-muted-foreground`}>โทรศัพท์</th>
-                <th className={`${colVehicle} font-semibold text-muted-foreground`} title="รถที่ใช้งานประจำของคนขับ">รถประจำ</th>
+                <th className={`${colBranch} font-semibold text-foreground`}>สาขา</th>
+                <th className={`${colFirstName} font-semibold text-foreground`}>ชื่อ</th>
+                <th className={`${colLastName} font-semibold text-foreground`}>นามสกุล</th>
+                <th className={`${colPhone} font-semibold text-foreground`}>โทรศัพท์</th>
+                <th className={`${colVehicle} font-semibold text-foreground`} title="รถที่ใช้งานประจำของคนขับ">รถประจำ</th>
                 <th className="w-24 px-3 py-3"></th>
               </tr>
             </thead>
@@ -407,7 +408,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
                         <button
                           type="button"
                           onClick={() => toggleExpanded(item.id)}
-                          className="p-1 text-muted-foreground hover:text-muted-foreground rounded"
+                          className="p-1 text-foreground hover:text-foreground rounded"
                           aria-label={isExpanded(item.id) ? "หุบรายละเอียด" : "ขยายรายละเอียด"}
                         >
                           {isExpanded(item.id) ? (
@@ -417,11 +418,11 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
                           )}
                         </button>
                       </td>
-                      <td className={`${colBranch} truncate align-top text-muted-foreground`} title={item.branch.name}>{item.branch.name}</td>
+                      <td className={`${colBranch} truncate align-top text-foreground`} title={item.branch.name}>{item.branch.name}</td>
                       <td className={`${colFirstName} truncate align-top`}>{item.firstName}</td>
                       <td className={`${colLastName} truncate align-top`}>{item.lastName}</td>
-                      <td className={`${colPhone} whitespace-nowrap align-top text-muted-foreground`}>{item.phone ?? "—"}</td>
-                      <td className={`${colVehicle} truncate align-top text-muted-foreground`} title={item.assignedVehicle?.plateNumber ?? undefined}>{item.assignedVehicle?.plateNumber ?? "—"}</td>
+                      <td className={`${colPhone} whitespace-nowrap align-top text-foreground`}>{item.phone ?? "—"}</td>
+                      <td className={`${colVehicle} truncate align-top text-foreground`} title={item.assignedVehicle?.plateNumber ?? undefined}>{item.assignedVehicle?.plateNumber ?? "—"}</td>
                       <td className="w-24 space-x-2 px-3 py-3 text-right align-top">
                         {item.isActive ? (
                           <>
@@ -431,11 +432,11 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
                                 setEditingId(item.id)
                                 setEditForm(driverToForm(item))
                               }}
-                              className="p-1.5 text-muted-foreground hover:text-cyan-600"
+                              className="p-1.5 text-foreground hover:text-cyan-600"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600">
+                            <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-foreground hover:text-red-600">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </>
@@ -456,14 +457,14 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
               )}
               {data.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={MAIN_COL_COUNT} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={MAIN_COL_COUNT} className="px-4 py-10 text-center text-foreground">
                     ยังไม่มีข้อมูล
                   </td>
                 </tr>
               )}
               {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={MAIN_COL_COUNT} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={MAIN_COL_COUNT} className="px-4 py-10 text-center text-foreground">
                     ไม่พบรายการที่ตรงกับคำค้น
                   </td>
                 </tr>
@@ -472,7 +473,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
           </table>
           </div>
         </div>
-      </GlassCard>
+      </DataPanel>
     </div>
   )
 }

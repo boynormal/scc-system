@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2, RotateCcw, Plus } from "lucide-react"
-import { GlassCard, GlassInput } from "@/components/glass"
+import { GlassInput } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
@@ -224,7 +225,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
           <div className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-4">
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">ลำดับ</label>
+                <label className="mb-1 block text-xs text-foreground">ลำดับ</label>
                 <GlassInput
                   type="number"
                   min={0}
@@ -234,7 +235,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs text-muted-foreground">ประเภทรถ *</label>
+                <label className="mb-1 block text-xs text-foreground">ประเภทรถ *</label>
                 <GlassInput
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
@@ -243,7 +244,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">จำนวนล้อ *</label>
+                <label className="mb-1 block text-xs text-foreground">จำนวนล้อ *</label>
                 <select
                   value={editForm.wheelCount}
                   onChange={(e) => setWheelCount(e.target.value)}
@@ -258,7 +259,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-muted-foreground">รายละเอียด</label>
+              <label className="mb-1 block text-xs text-foreground">รายละเอียด</label>
               <DetailsField
                 value={editForm.details}
                 onChange={(details) => setEditForm((f) => ({ ...f, details }))}
@@ -289,7 +290,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
               <div className="space-y-2">
                 {editForm.wheelLayout.map((axle, axleIdx) => (
                   <div key={`edit-axle-${axleIdx}`} className="flex flex-wrap items-center gap-2">
-                    <span className="w-16 text-xs text-muted-foreground">เพลา {axleIdx + 1}</span>
+                    <span className="w-16 text-xs text-foreground">เพลา {axleIdx + 1}</span>
                     <GlassInput
                       type="number"
                       min={1}
@@ -298,7 +299,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                       onChange={(e) => updateAxleSize(axleIdx, Number(e.target.value) || 1)}
                       className="h-8 w-20"
                     />
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-foreground">
                       ตำแหน่ง: {axle.join(", ")}
                     </span>
                     {editForm.wheelLayout.length > 1 && (
@@ -313,7 +314,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-foreground">
                 รวม {editForm.wheelLayout.flat().length} / {editForm.wheelCount} ล้อ — เปลี่ยนจำนวนล้อต่อเพลาแล้วระบบจะจัดเลขตำแหน่งใหม่ 1..N
               </p>
             </div>
@@ -321,7 +322,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
-                className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-foreground hover:bg-muted"
               >
                 <X className="h-4 w-4" />
                 ยกเลิก
@@ -352,17 +353,17 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
 
   return (
     <div className="space-y-4">
-      <GlassCard padding="none">
+      <DataPanel padding="none">
         <div className="min-w-0 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="w-20 px-4 py-3 font-semibold text-muted-foreground">ลำดับ</th>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ประเภทรถ</th>
-                <th className="w-24 px-4 py-3 font-semibold text-muted-foreground">จำนวนล้อ</th>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สถานะ</th>
+                <th className="w-20 px-4 py-3 font-semibold text-foreground">ลำดับ</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">ประเภทรถ</th>
+                <th className="w-24 px-4 py-3 font-semibold text-foreground">จำนวนล้อ</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">รายละเอียด</th>
+                <th className="px-4 py-3 font-semibold text-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-32"></th>
               </tr>
             </thead>
@@ -376,7 +377,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                     key={item.id}
                     className={`hover:bg-muted/60 transition-colors ${!item.isActive ? "opacity-50" : ""}`}
                   >
-                    <td className="px-4 py-3 text-muted-foreground align-top">{item.sortOrder}</td>
+                    <td className="px-4 py-3 text-foreground align-top">{item.sortOrder}</td>
                     <td className="px-4 py-3 font-medium text-foreground align-top">{item.name}</td>
                     <td className="px-4 py-3 align-top">{item.wheelCount ?? "—"}</td>
                     <td className="px-4 py-3 align-top max-w-xs">
@@ -387,7 +388,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                         className={`text-xs px-2 py-0.5 rounded-full ${
                           item.isActive
                             ? "bg-green-100 text-green-700"
-                            : "bg-muted text-muted-foreground"
+                            : "bg-muted text-foreground"
                         }`}
                       >
                         {item.isActive ? "ใช้งาน" : "ปิด"}
@@ -399,14 +400,14 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                           <button
                             type="button"
                             onClick={() => startEdit(item)}
-                            className="p-1.5 text-muted-foreground hover:text-cyan-600 transition-colors"
+                            className="p-1.5 text-foreground hover:text-cyan-600 transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeactivate(item.id)}
-                            className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors"
+                            className="p-1.5 text-foreground hover:text-red-600 transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -426,14 +427,14 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
               )}
               {data.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-4 py-10 text-center text-foreground">
                     ยังไม่มีข้อมูล
                   </td>
                 </tr>
               )}
               {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-4 py-10 text-center text-foreground">
                     ไม่พบรายการที่ตรงกับคำค้น
                   </td>
                 </tr>
@@ -442,7 +443,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
           </table>
           </div>
         </div>
-      </GlassCard>
+      </DataPanel>
     </div>
   )
 }

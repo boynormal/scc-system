@@ -1,8 +1,11 @@
+import { cookies } from "next/headers"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import type { UserRole } from "@/lib/permissions"
 import { getBranchIds, hasPermission, isAdminInAnyBranch } from "@/lib/permissions"
+import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
+import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { TransportModuleTabs } from "./transport-module-tabs"
 
 function canRead(roles: UserRole[], resource: "transport_jobs" | "transport_vehicles" | "transport_drivers") {
@@ -40,12 +43,15 @@ export default async function TransportLayout({ children }: { children: React.Re
     canRead(roles, "transport_jobs") && { href: "/transport/calendar", label: "ปฏิทิน", exact: false },
   ].filter(Boolean) as { href: string; label: string; exact: boolean }[]
 
+  const cookieStore = await cookies()
+  const isDark = resolveAppearance(cookieStore.get(APPEARANCE_COOKIE)?.value) === "dark"
+
   return (
-    <div className="flex min-w-0 flex-col">
-      <div className="shrink-0">
+    <ModuleBackdrop isDark={isDark}>
+      <div className="space-y-6">
         <TransportModuleTabs tabs={tabs} />
+        <div className="min-w-0">{children}</div>
       </div>
-      <div className="min-w-0">{children}</div>
-    </div>
+    </ModuleBackdrop>
   )
 }

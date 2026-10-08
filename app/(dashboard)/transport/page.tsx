@@ -33,8 +33,8 @@ export default async function TransportDashboardPage() {
     <div className="min-w-0 space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-foreground">ภาพรวมขนส่ง</h1>
-          <p className="mt-0.5 text-sm text-slate-600 dark:text-muted-foreground">
+          <h1 className="text-lg font-semibold text-foreground">ภาพรวมขนส่ง</h1>
+          <p className="mt-0.5 text-sm text-foreground">
             สรุปปฏิบัติการวันนี้ ({todayLabel}) — ฟลีทร่วมทั้งบริษัท · งาน/ซ่อมตามสาขาที่เข้าถึง
           </p>
         </div>

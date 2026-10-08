@@ -1,8 +1,7 @@
-export const FIN_GLASS_PANEL =
-  "border-slate-300/70 bg-white/80 shadow-[0_10px_32px_rgb(15_23_42/0.12)] backdrop-blur-xl backdrop-saturate-150 dark:border-white/15 dark:bg-slate-900/40 dark:shadow-[0_16px_48px_rgb(0_0_0/0.35)]"
+import { surfaceFieldClass, surfacePanelClass } from "@/components/shell/surface"
 
-export const FIN_GLASS_FIELD =
-  "border-slate-300 bg-white/90 backdrop-blur-sm dark:border-white/15 dark:bg-slate-950/35"
+export const FIN_GLASS_PANEL = surfacePanelClass
+export const FIN_GLASS_FIELD = surfaceFieldClass
 
 export type ExpenseStatus = "DRAFT" | "PENDING" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED"
 

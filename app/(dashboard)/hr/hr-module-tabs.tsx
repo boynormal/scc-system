@@ -1,6 +1,6 @@
 "use client"
 
-import { GlassTabs } from "@/components/glass"
+import { ModuleTabs } from "@/components/shell/module-tabs"
 
 export type HrTabDef = { href: string; label: string }
 
@@ -8,11 +8,10 @@ export function HrModuleTabs({ tabs }: { tabs: HrTabDef[] }) {
   if (tabs.length < 2) return null
 
   return (
-    <GlassTabs
+    <ModuleTabs
       aria-label="บุคลากรและเวลา"
-      className="border-b border-border"
       items={tabs.map((tab) => ({
-        id: tab.href,
+        key: tab.href,
         href: tab.href,
         label: tab.label,
       }))}

@@ -15,7 +15,8 @@ import {
   Filter,
   Pencil,
 } from "lucide-react"
-import { GlassButton, GlassCard } from "@/components/glass"
+import { GlassButton } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { RepairStatusBadge, type RepairStatus } from "@/components/transport/repairs/RepairStatusBadge"
 import { ReportRepairModal } from "@/components/transport/repairs/ReportRepairModal"
 import { EditRepairModal } from "@/components/transport/repairs/EditRepairModal"
@@ -417,9 +418,9 @@ export function RepairsPageClient() {
       ) : error ? (
         <ErrorState title={t("loadFailed")} description={error} onRetry={() => void load()} />
       ) : items.length === 0 ? (
-        <GlassCard className="p-8 text-center text-sm text-muted-foreground">
+        <DataPanel className="p-8 text-center text-sm text-muted-foreground">
           {t("repairsEmpty")}
-        </GlassCard>
+        </DataPanel>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {items.map((item) => {
@@ -436,7 +437,7 @@ export function RepairsPageClient() {
                 : null
 
             return (
-            <GlassCard
+            <DataPanel
               key={item.id}
               padding="none"
               className="flex h-full flex-col overflow-hidden"
@@ -626,7 +627,7 @@ export function RepairsPageClient() {
                   )}
                 </div>
               </div>
-            </GlassCard>
+            </DataPanel>
             )
           })}
         </div>

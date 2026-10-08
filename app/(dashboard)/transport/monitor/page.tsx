@@ -8,6 +8,7 @@ import { VehicleGpsRow } from "@/components/transport/gps/VehicleGpsRow"
 import { VehicleGpsCard } from "@/components/transport/gps/VehicleGpsCard"
 import { RefreshCw, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DataPanel } from "@/components/shell/data-panel"
 import {
   TransportSearchField,
   TransportSegmentedTabs,
@@ -144,7 +145,7 @@ export default function TransportMonitorPage() {
         const v = vehicles.find((x) => x.id === selectedId)
         if (!v) return null
         return (
-          <div className="rounded-xl border border-cyan-200 bg-card p-4 shadow-sm dark:border-cyan-800">
+          <DataPanel className="border-cyan-200 p-4 dark:border-cyan-800">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">รายละเอียดรถที่เลือก</span>
               <button
@@ -155,12 +156,12 @@ export default function TransportMonitorPage() {
               </button>
             </div>
             <VehicleGpsCard vehicle={v} />
-          </div>
+          </DataPanel>
         )
       })()}
 
       {/* Table — horizontal scroll inside card when columns exceed viewport */}
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <DataPanel className="min-w-0">
         {error ? (
           <div className="px-6 py-10 text-center text-sm text-red-500">{error}</div>
         ) : loading ? (
@@ -168,7 +169,7 @@ export default function TransportMonitorPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px] text-sm">
-              <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left">ทะเบียน</th>
                   <th className="px-4 py-3 text-left">ความพร้อม</th>
@@ -202,7 +203,7 @@ export default function TransportMonitorPage() {
             </table>
           </div>
         )}
-      </div>
+      </DataPanel>
     </div>
   )
 }

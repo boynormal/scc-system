@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { surfacePanelClass, surfaceTableHeadClass, surfaceTableRowClass } from "@/components/shell/surface"
 import { GlassSurface } from "./glass-surface"
 
 export function GlassTable({
@@ -9,7 +10,7 @@ export function GlassTable({
   className?: string
 }) {
   return (
-    <GlassSurface intensity="default" className={cn("overflow-hidden rounded-glass", className)}>
+    <GlassSurface intensity="default" className={cn("overflow-hidden rounded-glass", surfacePanelClass, className)}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">{children}</table>
       </div>
@@ -26,10 +27,7 @@ export function GlassTableHeader({
 }) {
   return (
     <thead
-      className={cn(
-        "sticky top-0 z-10 border-b border-glass bg-glass-strong backdrop-blur-glass",
-        className
-      )}
+      className={cn("sticky top-0 z-10 border-b", surfaceTableHeadClass, className)}
     >
       {children}
     </thead>
@@ -53,10 +51,7 @@ export function GlassTableRow({
 }: React.ComponentProps<"tr">) {
   return (
     <tr
-      className={cn(
-        "bg-white/40 transition-colors hover:bg-white/70 dark:bg-slate-950/20 dark:hover:bg-slate-950/40",
-        className
-      )}
+      className={cn(surfaceTableRowClass, className)}
       {...props}
     >
       {children}

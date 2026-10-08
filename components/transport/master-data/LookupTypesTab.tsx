@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { GlassCard, GlassInput } from "@/components/glass"
+import { GlassInput } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
@@ -136,7 +137,7 @@ export function LookupTypesTab({
       </td>
       <td className="px-4 py-3 align-top">-</td>
       <td className="px-4 py-3 text-right space-x-2 align-top">
-        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded bg-background">
+        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-foreground hover:text-foreground rounded bg-background">
           <X className="w-4 h-4" />
         </button>
         <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded">
@@ -154,16 +155,16 @@ export function LookupTypesTab({
   }
   return (
     <div className="space-y-4">
-      <GlassCard padding="none">
+      <DataPanel padding="none">
         <div className="min-w-0 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-20">ลำดับ</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">{nameLabel}</th>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-24">สถานะ</th>
+                <th className="px-4 py-3 font-semibold text-foreground w-20">ลำดับ</th>
+                <th className="px-4 py-3 font-semibold text-foreground">{nameLabel}</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">รายละเอียด</th>
+                <th className="px-4 py-3 font-semibold text-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-32"></th>
               </tr>
             </thead>
@@ -177,11 +178,11 @@ export function LookupTypesTab({
                     renderFormCells(item.id)
                   ) : (
                     <>
-                      <td className="px-4 py-3 text-muted-foreground align-top">{item.sortOrder}</td>
+                      <td className="px-4 py-3 text-foreground align-top">{item.sortOrder}</td>
                       <td className="px-4 py-3 font-medium text-foreground align-top">{item.name}</td>
                       <td className="px-4 py-3 align-top max-w-xs"><DetailsDisplay value={item.details} /></td>
                       <td className="px-4 py-3 align-top">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.isActive ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.isActive ? "bg-green-100 text-green-700" : "bg-muted text-foreground"}`}>
                           {item.isActive ? "ใช้งาน" : "ปิด"}
                         </span>
                       </td>
@@ -198,11 +199,11 @@ export function LookupTypesTab({
                                   sortOrder: String(item.sortOrder),
                                 })
                               }}
-                              className="p-1.5 text-muted-foreground hover:text-cyan-600 transition-colors"
+                              className="p-1.5 text-foreground hover:text-cyan-600 transition-colors"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors">
+                            <button type="button" onClick={() => handleDeactivate(item.id)} className="p-1.5 text-foreground hover:text-red-600 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </>
@@ -218,14 +219,14 @@ export function LookupTypesTab({
               ))}
               {data.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-10 text-center text-foreground">
                     ยังไม่มีข้อมูล
                   </td>
                 </tr>
               )}
               {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-10 text-center text-foreground">
                     ไม่พบรายการที่ตรงกับคำค้น
                   </td>
                 </tr>
@@ -234,7 +235,7 @@ export function LookupTypesTab({
           </table>
           </div>
         </div>
-      </GlassCard>
+      </DataPanel>
     </div>
   )
 }

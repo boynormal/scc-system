@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Edit2, Trash2, Save, Search, X, Loader2 } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput, GlassTabs } from "@/components/glass"
+import { GlassButton, GlassInput } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
+import { ModuleTabs } from "@/components/shell/module-tabs"
 
 // ─── SUPPLIERS ────────────────────────────────────────────────────────────────
 
@@ -241,7 +243,7 @@ function SuppliersTab() {
           เพิ่มซัพพลายเออร์
         </GlassButton>
       </div>
-      <GlassCard padding="none">
+      <DataPanel padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[760px]">
             <thead className="bg-muted border-b border-border">
@@ -335,7 +337,7 @@ function SuppliersTab() {
             </tbody>
           </table>
         </div>
-      </GlassCard>
+      </DataPanel>
       <p className="text-xs text-muted-foreground">
         รหัสซัพพลายเออร์สร้างอัตโนมัติเท่านั้น (ไม่ซ้ำทั้งระบบ · รูปแบบ S-XXXXXXXXXXXX)
       </p>
@@ -433,7 +435,7 @@ function UnitsTab() {
           เพิ่มหน่วย
         </GlassButton>
       </div>
-      <GlassCard padding="none">
+      <DataPanel padding="none">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border bg-muted">
             <tr>
@@ -553,7 +555,7 @@ function UnitsTab() {
             ))}
           </tbody>
         </table>
-      </GlassCard>
+      </DataPanel>
     </div>
   )
 }
@@ -577,11 +579,11 @@ export function PartnersManager() {
         </p>
       </div>
 
-      <GlassTabs
-        items={TABS}
-        value={activeTab}
-        onChange={(id) => setActiveTab(id as "suppliers" | "units")}
+      <ModuleTabs
         aria-label="คู่ค้าและหน่วยนับ"
+        activeKey={activeTab}
+        onChange={(id) => setActiveTab(id as "suppliers" | "units")}
+        items={TABS.map((item) => ({ key: item.id, label: item.label }))}
       />
 
       <div>

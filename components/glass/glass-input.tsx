@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { surfaceFieldClass } from "@/components/shell/surface"
 import { forwardRef } from "react"
 
 interface GlassInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -34,8 +35,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
             {...props}
             className={cn(
               "w-full rounded-lg border text-sm text-foreground placeholder:text-muted-foreground/80 transition-colors",
-              // Solid field + input rim — avoid border-glass (maps to glass fill, invisible on cards)
-              "border-input bg-background dark:border-slate-500 dark:bg-slate-950/55",
+              surfaceFieldClass,
               "focus:border-transparent focus:outline-none focus:ring-2 focus:ring-glass-ring",
               icon ? "py-2 pl-9 pr-3" : "px-3 py-2",
               error

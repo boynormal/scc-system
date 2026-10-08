@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { dataPanelClassName } from "@/components/shell/data-panel"
 import type { TransportJobPriority, TransportRepairStatus } from "@prisma/client"
 import { RepairStatusBadge } from "@/components/transport/repairs/RepairStatusBadge"
 import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
@@ -34,15 +35,15 @@ export function OverviewLists({
 }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-border dark:bg-card">
+      <section className={dataPanelClassName}>
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-border">
-          <h2 className="text-sm font-semibold text-slate-800 dark:text-foreground">รอมอบหมาย</h2>
+          <h2 className="text-sm font-semibold text-foreground">รอมอบหมาย</h2>
           <Link href="/transport/jobs" className="text-xs font-medium text-cyan-700 hover:text-cyan-800 dark:text-cyan-300">
             ดูทั้งหมด →
           </Link>
         </div>
         {pendingJobs.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">ไม่มีใบงานรอมอบหมาย</p>
+          <p className="px-4 py-8 text-center text-sm text-foreground">ไม่มีใบงานรอมอบหมาย</p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-border">
             {pendingJobs.map((job) => (
@@ -53,11 +54,11 @@ export function OverviewLists({
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-cyan-700 dark:text-cyan-300">{job.jobNumber}</p>
-                    <p className="truncate text-sm text-slate-600 dark:text-muted-foreground">
+                    <p className="truncate text-sm text-foreground">
                       {job.customerName ?? "—"}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right text-xs text-muted-foreground">
+                  <div className="shrink-0 text-right text-xs text-foreground">
                     <p>{PRIORITY_LABEL[job.priority] ?? job.priority}</p>
                     {job.scheduledDate ? <p className="mt-0.5">{formatBangkokYmd(job.scheduledDate)}</p> : null}
                   </div>
@@ -68,24 +69,24 @@ export function OverviewLists({
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-border dark:bg-card">
+      <section className={dataPanelClassName}>
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-border">
-          <h2 className="text-sm font-semibold text-slate-800 dark:text-foreground">ซ่อมเปิด</h2>
+          <h2 className="text-sm font-semibold text-foreground">ซ่อมเปิด</h2>
           <Link href="/transport/repairs" className="text-xs font-medium text-cyan-700 hover:text-cyan-800 dark:text-cyan-300">
             ดูทั้งหมด →
           </Link>
         </div>
         {openRepairs.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">ไม่มีรายการซ่อมเปิด</p>
+          <p className="px-4 py-8 text-center text-sm text-foreground">ไม่มีรายการซ่อมเปิด</p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-border">
             {openRepairs.map((repair) => (
               <li key={repair.id} className="flex items-start justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="font-mono text-sm font-semibold text-slate-900 dark:text-foreground">
+                  <p className="font-mono text-sm font-semibold text-foreground">
                     {repair.vehicle.plateNumber}
                   </p>
-                  <p className="truncate text-sm text-slate-600 dark:text-muted-foreground">{repair.symptom}</p>
+                  <p className="truncate text-sm text-foreground">{repair.symptom}</p>
                 </div>
                 <RepairStatusBadge status={repair.status} />
               </li>

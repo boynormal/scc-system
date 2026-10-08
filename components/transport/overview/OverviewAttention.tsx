@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { AlertTriangle, CalendarDays, ClipboardList, Wrench } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { dataPanelClassName } from "@/components/shell/data-panel"
 
 type Item = {
   href: string
@@ -14,22 +15,22 @@ type Item = {
 
 const TONE: Record<Item["tone"], { idle: string; hot: string; icon: string }> = {
   amber: {
-    idle: "border-slate-200 bg-white text-slate-600 dark:border-border dark:bg-card dark:text-muted-foreground",
+    idle: cn(dataPanelClassName, "text-foreground shadow-none"),
     hot: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
     icon: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200",
   },
   cyan: {
-    idle: "border-slate-200 bg-white text-slate-600 dark:border-border dark:bg-card dark:text-muted-foreground",
+    idle: cn(dataPanelClassName, "text-foreground shadow-none"),
     hot: "border-cyan-300 bg-cyan-50 text-cyan-900 dark:border-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-100",
     icon: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-200",
   },
   red: {
-    idle: "border-slate-200 bg-white text-slate-600 dark:border-border dark:bg-card dark:text-muted-foreground",
+    idle: cn(dataPanelClassName, "text-foreground shadow-none"),
     hot: "border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100",
     icon: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-200",
   },
   slate: {
-    idle: "border-slate-200 bg-white text-slate-600 dark:border-border dark:bg-card dark:text-muted-foreground",
+    idle: cn(dataPanelClassName, "text-foreground shadow-none"),
     hot: "border-slate-300 bg-slate-100 text-slate-900 dark:border-border dark:bg-muted dark:text-foreground",
     icon: "bg-slate-200 text-slate-700 dark:bg-muted dark:text-foreground",
   },
@@ -83,7 +84,7 @@ export function OverviewAttention({
 
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-foreground">ต้องทำ</h2>
+      <h2 className="mb-3 text-sm font-semibold text-foreground">ต้องทำ</h2>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => {
           const hot = item.value > 0
@@ -97,15 +98,15 @@ export function OverviewAttention({
                 hot ? tone.hot : tone.idle
               )}
             >
-              <div className={cn("rounded-lg p-2", hot ? tone.icon : "bg-slate-100 text-slate-500 dark:bg-muted dark:text-muted-foreground")}>
+              <div className={cn("rounded-lg p-2", hot ? tone.icon : "bg-muted text-foreground")}>
                 {item.icon}
               </div>
               <div className="min-w-0 flex-1">
-                <p className={cn("text-3xl font-bold tabular-nums tracking-tight", !hot && "opacity-70")}>
+                <p className="text-3xl font-bold tabular-nums tracking-tight">
                   {item.value}
                 </p>
                 <p className="mt-0.5 text-sm font-semibold">{item.label}</p>
-                <p className="mt-0.5 text-xs opacity-70">{item.hint}</p>
+                <p className="mt-0.5 text-xs">{item.hint}</p>
               </div>
             </Link>
           )

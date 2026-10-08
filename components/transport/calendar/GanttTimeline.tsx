@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { cn } from "@/lib/utils"
+import { dataPanelClassName } from "@/components/shell/data-panel"
 import type { CalendarJob } from "@/app/api/transport/calendar/route"
 import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
 import { JobPopover, PRIORITY_CONFIG, STATUS_LABEL } from "./JobPopover"
@@ -284,7 +285,7 @@ export function GanttTimeline({ weekStart, jobs, vehicles: allVehicles, onAssign
         </p>
       )}
 
-      <div className="rounded-xl border border-border bg-card shadow-sm">
+      <div className={dataPanelClassName}>
         <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
             <col className="w-36" />

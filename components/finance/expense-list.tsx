@@ -29,12 +29,11 @@ import type {
 import {
   EXPENSE_STATUS_BADGE,
   EXPENSE_STATUS_LABELS,
-  FIN_GLASS_FIELD,
-  FIN_GLASS_PANEL,
   formatBaht,
   sourceModuleLabel,
   type ExpenseStatus,
 } from "./finance-theme"
+import { surfaceFieldClass, surfacePanelClass } from "@/components/shell/surface"
 import { ExpenseStatusBadge } from "./finance-page-header"
 
 const STAT_CARDS: { status: ExpenseStatus; hint: string }[] = [
@@ -163,46 +162,46 @@ export function ExpenseList({
               value={String(summary.counts[card.status])}
               hint={`${card.hint} · ${formatBaht(summary.totals[card.status])}`}
               icon={Receipt}
-              className={FIN_GLASS_PANEL}
+              className={surfacePanelClass}
             />
           </button>
         ))}
       </div>
 
-      <GlassCard className={cn("flex flex-wrap items-end gap-3 rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
+      <GlassCard className={cn("flex flex-wrap items-end gap-3 rounded-[1.5rem] shadow-none", surfacePanelClass)}>
         <GlassInput
           label="ตั้งแต่วันที่"
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className={FIN_GLASS_FIELD}
+          className={surfaceFieldClass}
         />
         <GlassInput
           label="ถึงวันที่"
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className={FIN_GLASS_FIELD}
+          className={surfaceFieldClass}
         />
         <Select
           label="สาขา"
           value={branchId}
           onChange={(e) => setBranchId(e.target.value)}
-          className={cn("min-w-[10rem]", FIN_GLASS_FIELD)}
+          className={cn("min-w-[10rem]", surfaceFieldClass)}
           options={[{ value: "", label: "ทั้งหมด" }, ...branches.map((b) => ({ value: b.id, label: b.name }))]}
         />
         <Select
           label="ประเภท"
           value={expenseTypeId}
           onChange={(e) => setExpenseTypeId(e.target.value)}
-          className={cn("min-w-[10rem]", FIN_GLASS_FIELD)}
+          className={cn("min-w-[10rem]", surfaceFieldClass)}
           options={[{ value: "", label: "ทั้งหมด" }, ...types.map((t) => ({ value: t.id, label: t.name }))]}
         />
         <Select
           label="หน่วยงาน"
           value={costCenterId}
           onChange={(e) => setCostCenterId(e.target.value)}
-          className={cn("min-w-[10rem]", FIN_GLASS_FIELD)}
+          className={cn("min-w-[10rem]", surfaceFieldClass)}
           options={[
             { value: "", label: "ทั้งหมด" },
             ...costCenters.map((c) => ({ value: c.id, label: c.name })),
@@ -212,7 +211,7 @@ export function ExpenseList({
           label="กระบวนการ"
           value={processId}
           onChange={(e) => setProcessId(e.target.value)}
-          className={cn("min-w-[10rem]", FIN_GLASS_FIELD)}
+          className={cn("min-w-[10rem]", surfaceFieldClass)}
           options={[
             { value: "", label: "ทั้งหมด" },
             { value: "none", label: "ไม่ระบุ Process" },
@@ -223,7 +222,7 @@ export function ExpenseList({
           label="สถานะ"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className={cn("min-w-[10rem]", FIN_GLASS_FIELD)}
+          className={cn("min-w-[10rem]", surfaceFieldClass)}
           options={[
             { value: "", label: "ทั้งหมด" },
             ...(Object.keys(EXPENSE_STATUS_LABELS) as ExpenseStatus[]).map((s) => ({
@@ -237,7 +236,7 @@ export function ExpenseList({
           <span className="relative block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
-              className={cn("block w-full rounded-lg border py-2 pl-9 pr-3 text-sm", FIN_GLASS_FIELD)}
+              className={cn("block w-full rounded-lg border py-2 pl-9 pr-3 text-sm", surfaceFieldClass)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="เลขที่ / รายละเอียด / วัตถุต้นทุน"
@@ -248,7 +247,7 @@ export function ExpenseList({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {items.length === 0 && !error ? (
-        <GlassCard className={cn("flex flex-col items-center justify-center py-12 text-center", FIN_GLASS_PANEL)}>
+        <GlassCard className={cn("flex flex-col items-center justify-center py-12 text-center", surfacePanelClass)}>
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-700 backdrop-blur-sm dark:bg-emerald-400/15 dark:text-emerald-200">
             <Receipt className="h-7 w-7" />
           </span>
@@ -266,8 +265,8 @@ export function ExpenseList({
           )}
         </GlassCard>
       ) : (
-        <GlassTable className={cn("rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
-          <GlassTableHeader className="border-slate-200/80 bg-white/70 dark:border-white/10 dark:bg-white/5">
+        <GlassTable className="rounded-[1.5rem] shadow-none">
+          <GlassTableHeader>
             <tr>
               <GlassTableHead className="w-[14%] whitespace-nowrap">เลขที่</GlassTableHead>
               <GlassTableHead className="w-[10%] whitespace-nowrap">วันที่</GlassTableHead>
@@ -282,7 +281,7 @@ export function ExpenseList({
             {items.map((item) => (
               <GlassTableRow
                 key={item.id}
-                className="cursor-pointer bg-white/50 hover:bg-white/80 dark:bg-transparent dark:hover:bg-white/5"
+                className="cursor-pointer"
                 onClick={() => router.push(`/finance/expenses/${item.id}`)}
               >
                 <GlassTableCell className="whitespace-nowrap font-medium text-foreground">

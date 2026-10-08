@@ -22,6 +22,7 @@ import { APP_BRAND } from "@/shared/branding"
 import { CompanyBrandMark } from "@/components/brand/company-brand-mark"
 import type { AppAppearance } from "@/shared/navigation/companyNavPreferences"
 import { cn } from "@/lib/utils"
+import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { useTranslations } from "next-intl"
 import { LauncherClockWeather, type WeatherBranchOption } from "@/components/apps/launcher-clock-weather"
 
@@ -211,19 +212,10 @@ export function IpadLauncher({
   const openLine = lines.find((x) => x.line.id === openLineId) ?? null
 
   return (
-    <div
-      className={cn(
-        "relative h-full min-h-[32rem] overflow-hidden bg-gradient-to-br [font-family:'Noto_Sans_Thai','IBM_Plex_Sans_Thai',sans-serif]",
-        isDark
-          ? "from-[#050816] via-[#111b45] to-[#34235d]"
-          : "from-[#dff4ff] via-[#e8e7ff] to-[#fce7f3]",
-        isDark && "dark"
-      )}
+    <ModuleBackdrop
+      isDark={isDark}
+      className="h-full min-h-[32rem] [font-family:'Noto_Sans_Thai','IBM_Plex_Sans_Thai',sans-serif]"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_12%,rgba(14,165,233,0.24),transparent_28%),radial-gradient(circle_at_86%_10%,rgba(244,114,182,0.22),transparent_28%),radial-gradient(circle_at_52%_92%,rgba(139,92,246,0.20),transparent_35%)] dark:bg-[radial-gradient(circle_at_14%_12%,rgba(59,130,246,0.28),transparent_28%),radial-gradient(circle_at_86%_10%,rgba(192,132,252,0.22),transparent_30%),radial-gradient(circle_at_52%_92%,rgba(236,72,153,0.14),transparent_35%)]" />
-      <div className="pointer-events-none absolute -left-24 -top-24 h-[26rem] w-[26rem] rounded-full bg-cyan-300/20 blur-3xl dark:bg-blue-500/15" />
-      <div className="pointer-events-none absolute -right-24 top-4 h-[28rem] w-[28rem] rounded-full bg-rose-300/20 blur-3xl dark:bg-violet-500/15" />
-      <div className="pointer-events-none absolute bottom-[-10rem] left-1/3 h-[26rem] w-[26rem] rounded-full bg-violet-300/15 blur-3xl dark:bg-fuchsia-500/10" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(100,116,139,0.12)_100%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(2,6,23,0.35)_100%)]" />
 
@@ -356,7 +348,7 @@ export function IpadLauncher({
           onClose={() => setOpenLineId(null)}
         />
       )}
-    </div>
+    </ModuleBackdrop>
   )
 }
 

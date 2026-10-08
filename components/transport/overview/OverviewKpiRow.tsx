@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { CheckCircle2, Truck, UserRound, Wrench, PlayCircle, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { dataPanelClassName } from "@/components/shell/data-panel"
 
 type Kpi = {
   label: string
@@ -72,18 +73,18 @@ export function OverviewKpiRow({
 
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-foreground">สถานะฟลีท & งานวันนี้</h2>
+      <h2 className="mb-3 text-sm font-semibold text-foreground">สถานะฟลีท & งานวันนี้</h2>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
         {items.map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm dark:border-border dark:bg-card"
+            className={cn(dataPanelClassName, "px-3 py-3")}
           >
-            <div className={cn("mb-2 inline-flex items-center gap-1.5 text-xs font-medium", item.className)}>
-              {item.icon}
+            <div className="mb-2 inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
+              <span className={item.className}>{item.icon}</span>
               {item.label}
             </div>
-            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-foreground">{item.value}</p>
+            <p className="text-2xl font-bold tabular-nums text-foreground">{item.value}</p>
           </div>
         ))}
       </div>

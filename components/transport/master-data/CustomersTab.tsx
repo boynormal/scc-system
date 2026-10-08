@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
+import { GlassButton, GlassInput } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { includesSearch, isAutoCustomerCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import {
@@ -141,7 +142,7 @@ function CustomerFormRows({
             className="h-10 min-h-10 resize-none py-2"
           />
         </td>
-        <td className="px-3 py-3 align-middle text-muted-foreground">-</td>
+        <td className="px-3 py-3 align-middle text-foreground">-</td>
         <td className="px-3 py-3 align-middle">
           <div className="flex items-center justify-end gap-2">
             <button
@@ -318,19 +319,19 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
           </GlassButton>
         </div>
       )}
-      <GlassCard padding="none">
+      <DataPanel padding="none">
         <div className="min-w-0 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] text-left text-sm">
             <thead className="bg-muted border-b border-border">
               <tr>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ชื่อลูกค้า/ปลายทาง</th>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">ที่อยู่</th>
-                <th className="w-24 px-3 py-3 font-semibold text-muted-foreground">พิกัด</th>
-                <th className="w-32 px-4 py-3 font-semibold text-muted-foreground">ผู้ติดต่อ</th>
-                <th className="w-40 px-4 py-3 font-semibold text-muted-foreground">เบอร์โทร</th>
-                <th className="min-w-0 px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-20">สถานะ</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">ชื่อลูกค้า/ปลายทาง</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">ที่อยู่</th>
+                <th className="w-24 px-3 py-3 font-semibold text-foreground">พิกัด</th>
+                <th className="w-32 px-4 py-3 font-semibold text-foreground">ผู้ติดต่อ</th>
+                <th className="w-40 px-4 py-3 font-semibold text-foreground">เบอร์โทร</th>
+                <th className="min-w-0 px-4 py-3 font-semibold text-foreground">รายละเอียด</th>
+                <th className="px-4 py-3 font-semibold text-foreground w-20">สถานะ</th>
                 <th className="w-44 px-3 py-3"></th>
               </tr>
             </thead>
@@ -357,7 +358,7 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                 ) : (
                   <tr key={item.id} className={`hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}>
                     <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={item.address ?? ""}>
+                    <td className="px-4 py-3 text-foreground max-w-xs truncate" title={item.address ?? ""}>
                       {item.address ?? "—"}
                     </td>
                     <td className="px-3 py-3 align-top">
@@ -366,14 +367,14 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                         longitude={decimalToNumber(item.longitude)}
                       />
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{item.contactName ?? "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground align-top">{item.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-foreground">{item.contactName ?? "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-foreground align-top">{item.phone ?? "—"}</td>
                     <td className="px-4 py-3 align-top max-w-xs">
                       <DetailsDisplay value={item.details} />
                     </td>
                     <td className="px-4 py-3 align-top">
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${item.isActive ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}
+                        className={`text-xs px-2 py-0.5 rounded-full ${item.isActive ? "bg-green-100 text-green-700" : "bg-muted text-foreground"}`}
                       >
                         {item.isActive ? "ใช้งาน" : "ปิด"}
                       </span>
@@ -384,14 +385,14 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                           <button
                             type="button"
                             onClick={() => startEdit(item)}
-                            className="p-1.5 text-muted-foreground hover:text-cyan-600"
+                            className="p-1.5 text-foreground hover:text-cyan-600"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeactivate(item.id)}
-                            className="p-1.5 text-muted-foreground hover:text-red-600"
+                            className="p-1.5 text-foreground hover:text-red-600"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -411,14 +412,14 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
               )}
               {data.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-foreground">
                     ยังไม่มีข้อมูล
                   </td>
                 </tr>
               )}
               {data.length > 0 && filtered.length === 0 && editingId !== "new" && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-foreground">
                     ไม่พบรายการที่ตรงกับคำค้น
                   </td>
                 </tr>
@@ -427,7 +428,7 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
           </table>
           </div>
         </div>
-      </GlassCard>
+      </DataPanel>
     </div>
   )
 }

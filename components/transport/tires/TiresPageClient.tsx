@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Filter, Loader2, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react"
-import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
+import { GlassButton, GlassInput } from "@/components/glass"
+import { DataPanel } from "@/components/shell/data-panel"
 import { WheelLayoutDiagram } from "@/components/transport/WheelLayoutDiagram"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
@@ -449,7 +450,7 @@ export function TiresPageClient() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="mb-1 block text-[11px] text-muted-foreground">จากวันที่</label>
+                      <label className="mb-1 block text-[11px] text-foreground">จากวันที่</label>
                       <input
                         type="date"
                         value={draftFrom}
@@ -458,7 +459,7 @@ export function TiresPageClient() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-muted-foreground">ถึงวันที่</label>
+                      <label className="mb-1 block text-[11px] text-foreground">ถึงวันที่</label>
                       <input
                         type="date"
                         value={draftTo}
@@ -468,7 +469,7 @@ export function TiresPageClient() {
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] text-muted-foreground">รถ</label>
+                    <label className="mb-1 block text-[11px] text-foreground">รถ</label>
                     <select
                       value={draftVehicle}
                       onChange={(e) => setDraftVehicle(e.target.value)}
@@ -487,7 +488,7 @@ export function TiresPageClient() {
                     <button
                       type="button"
                       onClick={clearFilters}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-muted"
                     >
                       ล้าง
                     </button>
@@ -504,16 +505,16 @@ export function TiresPageClient() {
             disabled={loading}
             title={t("refresh")}
             aria-label={t("refresh")}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="rounded-lg p-2 text-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </button>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground sm:hidden">{filterSummary}</p>
+        <p className="mt-1 text-xs text-foreground sm:hidden">{filterSummary}</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <GlassCard className="space-y-4 h-fit">
+        <DataPanel padding="md" className="space-y-4 h-fit">
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm font-semibold">
               {editingId ? "แก้ไขรายการยาง" : "บันทึกรายการใหม่"}
@@ -522,7 +523,7 @@ export function TiresPageClient() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                className="inline-flex items-center gap-1 text-xs text-foreground hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
                 ยกเลิกแก้ไข
@@ -530,7 +531,7 @@ export function TiresPageClient() {
             )}
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">รถ *</label>
+            <label className="mb-1 block text-xs text-foreground">รถ *</label>
             <select
               value={formVehicleId}
               onChange={(e) => {
@@ -548,7 +549,7 @@ export function TiresPageClient() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">วันที่ *</label>
+            <label className="mb-1 block text-xs text-foreground">วันที่ *</label>
             <GlassInput
               type="date"
               value={workDate}
@@ -557,7 +558,7 @@ export function TiresPageClient() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">ยอดอ้างอิง (บาท)</label>
+            <label className="mb-1 block text-xs text-foreground">ยอดอ้างอิง (บาท)</label>
             <GlassInput
               value={cost}
               onChange={(e) => setCost(e.target.value)}
@@ -567,7 +568,7 @@ export function TiresPageClient() {
           </div>
           {Number(cost.replace(/,/g, "")) > 0 ? (
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">วิธีจ่าย</label>
+            <label className="mb-1 block text-xs text-foreground">วิธีจ่าย</label>
             <div className="flex gap-4 text-sm">
               <label className="inline-flex items-center gap-2">
                 <input
@@ -591,7 +592,7 @@ export function TiresPageClient() {
           </div>
           ) : null}
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">หมายเหตุ</label>
+            <label className="mb-1 block text-xs text-foreground">หมายเหตุ</label>
             <GlassInput
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -599,7 +600,7 @@ export function TiresPageClient() {
             />
           </div>
           <div className="rounded-lg border border-border p-3 space-y-3">
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-foreground">
               ตำแหน่งล้อ{" "}
               {wheels.length > 0
                 ? `(เลือกแล้ว: ${formatPositions(wheels)})`
@@ -622,11 +623,11 @@ export function TiresPageClient() {
               />
             )}
             {!formVehicleId && !layoutLoading && (
-              <p className="text-sm text-muted-foreground">เลือกรถเพื่อแสดงแผนผัง</p>
+              <p className="text-sm text-foreground">เลือกรถเพื่อแสดงแผนผัง</p>
             )}
             {wheels.length > 0 && (
               <div className="space-y-2 border-t border-border pt-3">
-                <div className="text-xs font-medium text-muted-foreground">ประเภทงานต่อล้อ</div>
+                <div className="text-xs font-medium text-foreground">ประเภทงานต่อล้อ</div>
                 {normalizeWheelsList(wheels).map((w) => (
                   <div key={w.position} className="flex items-center gap-2">
                     <span className="w-14 shrink-0 text-sm font-medium">ล้อ {w.position}</span>
@@ -663,22 +664,22 @@ export function TiresPageClient() {
           >
             {editingId ? "บันทึกการแก้ไข" : "บันทึก"}
           </GlassButton>
-        </GlassCard>
+        </DataPanel>
 
         <div className="space-y-4 min-w-0">
-          <GlassCard padding="none">
+          <DataPanel padding="none">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left min-w-[820px]">
                 <thead className="bg-muted border-b border-border">
                   <tr>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">เอกสาร</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">รถ</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">ตำแหน่ง</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">ประเภท</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">ยอดอ้างอิง</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">วิธีจ่าย</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">หมายเหตุ</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">เอกสาร</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">วันที่</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">รถ</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">ตำแหน่ง</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">ประเภท</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">ยอดอ้างอิง</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">วิธีจ่าย</th>
+                    <th className="px-4 py-3 font-semibold text-foreground">หมายเหตุ</th>
                     <th className="px-4 py-3 w-24"></th>
                   </tr>
                 </thead>
@@ -704,7 +705,7 @@ export function TiresPageClient() {
                   )}
                   {!loading && !error && items.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">
+                      <td colSpan={9} className="px-4 py-10 text-center text-foreground">
                         {t("tiresEmpty")}
                       </td>
                     </tr>
@@ -728,7 +729,7 @@ export function TiresPageClient() {
                           <td className="px-4 py-3">{formatWorkDate(row.workDate)}</td>
                           <td className="px-4 py-3">
                             <div className="font-medium">{row.vehicle.plateNumber}</div>
-                            <div className="text-xs text-muted-foreground">{row.vehicle.name}</div>
+                            <div className="text-xs text-foreground">{row.vehicle.name}</div>
                           </td>
                           <td className="px-4 py-3">{formatPositions(rowWheels) || "—"}</td>
                           <td className="px-4 py-3">{summarizeWorkTypes(rowWheels) || "—"}</td>
@@ -740,7 +741,7 @@ export function TiresPageClient() {
                           </td>
                           <td className="max-w-[180px] px-4 py-3">
                             <span
-                              className="line-clamp-2 text-muted-foreground"
+                              className="line-clamp-2 text-foreground"
                               title={row.notes ?? undefined}
                             >
                               {row.notes?.trim() ? row.notes : "—"}
@@ -751,7 +752,7 @@ export function TiresPageClient() {
                               <button
                                 type="button"
                                 onClick={() => startEdit(row)}
-                                className="p-1.5 text-muted-foreground hover:text-cyan-700"
+                                className="p-1.5 text-foreground hover:text-cyan-700"
                                 title="แก้ไข"
                               >
                                 <Pencil className="h-4 w-4" />
@@ -759,7 +760,7 @@ export function TiresPageClient() {
                               <button
                                 type="button"
                                 onClick={() => handleDelete(row.id)}
-                                className="p-1.5 text-muted-foreground hover:text-red-600"
+                                className="p-1.5 text-foreground hover:text-red-600"
                                 title="ลบ"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -772,7 +773,7 @@ export function TiresPageClient() {
                 </tbody>
               </table>
             </div>
-          </GlassCard>
+          </DataPanel>
         </div>
       </div>
     </div>

@@ -32,7 +32,7 @@ export function DetailsField({
 }
 
 export function DetailsDisplay({ value, expanded }: { value: string | null | undefined; expanded?: boolean }) {
-  if (!value?.trim()) return <span className="text-sm text-muted-foreground">—</span>
+  if (!value?.trim()) return <span className="text-sm text-foreground">—</span>
   return (
     <span
       className={cn("text-sm text-foreground whitespace-pre-wrap", !expanded && "line-clamp-2")}

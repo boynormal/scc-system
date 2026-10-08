@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassInput } from "@/components/glass"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import {
   GlassCard,
   GlassTable,
@@ -722,32 +723,16 @@ export function ExpenseReportsView() {
           <h2 className="text-lg font-bold text-foreground">รายละเอียดเชิงวิเคราะห์</h2>
           <p className="text-sm text-muted-foreground">กดรายการเพื่อเจาะไปยังบิลต้นทาง</p>
         </div>
-        <div className="inline-flex rounded-xl border border-slate-200/80 bg-white/70 p-1 dark:border-white/10 dark:bg-white/5">
-          <button
-            type="button"
-            onClick={() => setDetailView("breakdown")}
-            className={cn(
-              "rounded-lg px-4 py-2 text-xs font-medium transition",
-              detailView === "breakdown"
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            แยกตามมิติ
-          </button>
-          <button
-            type="button"
-            onClick={() => setDetailView("matrix")}
-            className={cn(
-              "rounded-lg px-4 py-2 text-xs font-medium transition",
-              detailView === "matrix"
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            ตารางไขว้
-          </button>
-        </div>
+        <SubTabs
+          size="sm"
+          aria-label="มุมมองรายละเอียด"
+          activeKey={detailView}
+          onChange={(id) => setDetailView(id as "breakdown" | "matrix")}
+          items={[
+            { key: "breakdown", label: "แยกตามมิติ" },
+            { key: "matrix", label: "ตารางไขว้" },
+          ]}
+        />
       </div>
 
       {detailView === "breakdown" ? (

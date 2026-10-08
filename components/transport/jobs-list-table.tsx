@@ -1,11 +1,12 @@
 import Link from "next/link"
+import { DataPanel } from "@/components/shell/data-panel"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { JobRowActions } from "@/components/transport/job-row-actions"
 import type { listJobs } from "@/modules/transport"
 
 const PRIORITY_LABEL: Record<string, string> = { low: "ต่ำ", normal: "ปกติ", high: "สูง", urgent: "ด่วน" }
 const PRIORITY_COLOR: Record<string, string> = {
-  low: "text-muted-foreground",
+  low: "text-foreground",
   normal: "text-foreground",
   high: "text-amber-600 font-semibold",
   urgent: "text-red-600 font-bold",
@@ -24,10 +25,10 @@ function formatScheduledDate(value: Date | string | null | undefined) {
 
 export function JobsListTable({ items }: Props) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <DataPanel className="min-w-0">
       <div className="overflow-x-auto">
       <table className="w-full min-w-[1100px] text-sm">
-        <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-foreground">
           <tr>
             <th className="px-4 py-3 text-left">เลขใบงาน</th>
             <th className="px-4 py-3 text-left">รถ / คนขับ</th>
@@ -44,7 +45,7 @@ export function JobsListTable({ items }: Props) {
         <tbody className="divide-y divide-border">
           {items.length === 0 ? (
             <tr>
-              <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
+              <td colSpan={10} className="px-4 py-10 text-center text-foreground">
                 ไม่พบใบงาน
               </td>
             </tr>
@@ -59,30 +60,30 @@ export function JobsListTable({ items }: Props) {
                     {job.jobNumber}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className="px-4 py-3 text-foreground">
                   {job.assignment ? (
                     <div>
                       <div>{job.assignment.vehicle.plateNumber}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-foreground">
                         {job.assignment.driver.firstName} {job.assignment.driver.lastName}
                       </div>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-foreground">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="font-medium text-foreground">
                     {job.customerName ?? job.customer?.name ?? "—"}
                   </div>
-                  <div className="text-xs text-muted-foreground">{job.jobType}</div>
+                  <div className="text-xs text-foreground">{job.jobType}</div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{job.cargoType ?? "—"}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                <td className="px-4 py-3 text-foreground">{job.cargoType ?? "—"}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-foreground">
                   {formatScheduledDate(job.scheduledDate)}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{job.branch.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">{job._count.stops}</td>
+                <td className="px-4 py-3 text-foreground">{job.branch.name}</td>
+                <td className="px-4 py-3 text-foreground">{job._count.stops}</td>
                 <td className={`px-4 py-3 text-xs ${PRIORITY_COLOR[job.priority] ?? ""}`}>
                   {PRIORITY_LABEL[job.priority] ?? job.priority}
                 </td>
@@ -98,6 +99,6 @@ export function JobsListTable({ items }: Props) {
         </tbody>
       </table>
       </div>
-    </div>
+    </DataPanel>
   )
 }

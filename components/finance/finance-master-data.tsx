@@ -18,6 +18,7 @@ import {
   GlassTableRow,
 } from "@/components/glass"
 import { FinancePageHeader } from "./finance-page-header"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import { FIN_GLASS_PANEL } from "./finance-theme"
 import type {
   CostCenterRow,
@@ -152,21 +153,12 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
         }
       />
 
-      <div className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200/70 bg-white/50 p-1 dark:border-white/10 dark:bg-white/5">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={cn(
-              "rounded-lg px-4 py-1.5 text-sm font-medium transition",
-              tab === t.key ? "bg-emerald-600 text-white shadow" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <SubTabs
+        aria-label="ข้อมูลพื้นฐานการเงิน"
+        activeKey={tab}
+        onChange={(id) => setTab(id as Tab)}
+        items={TABS.map((item) => ({ key: item.key, label: item.label }))}
+      />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

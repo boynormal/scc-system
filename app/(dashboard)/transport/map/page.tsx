@@ -12,8 +12,8 @@ import type { GpsVehicleData } from "@/app/api/transport/gps/route"
 import { RefreshCw, AlertTriangle, CloudSun, List, ListCollapse } from "lucide-react"
 import {
   TransportSearchField,
-  TransportSegmentedTabs,
 } from "@/components/transport/toolbar"
+import { cn } from "@/lib/utils"
 import { WEATHER_DEFAULT_COORDS } from "@/shared/weather/windy-url"
 
 const POLL_INTERVAL = 45_000
@@ -119,7 +119,7 @@ export default function TransportMapPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t("vehiclesTitle")}</h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-foreground">
                 {vehicles.length} คัน · กำลังวิ่ง {movingCount} คัน
               </p>
             </div>
@@ -144,18 +144,14 @@ export default function TransportMapPage() {
               </button>
             </div>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-foreground">
             {lastFetch ? `อัปเดต ${lastFetch.toLocaleTimeString("th-TH")}` : "กำลังโหลด..."}
             {" · "}รีเฟรชใน {countdown}s
           </p>
 
           {/* Availability filter */}
-          <TransportSegmentedTabs
-            size="sm"
-            className="mt-2 flex w-full"
-            activeKey={availabilityFilter}
-            onChange={(key) => setAvailabilityFilter(key as AvailabilityFilter)}
-            items={(
+          <div className="mt-2 flex w-full flex-nowrap gap-0.5 overflow-x-auto rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-border dark:bg-muted">
+            {(
               [
                 { key: "all" as const, label: t("filterAll"), count: vehicles.length },
                 { key: "available" as const, label: "ว่าง", count: availableCount },
@@ -163,12 +159,26 @@ export default function TransportMapPage() {
                 { key: "maintenance" as const, label: "ซ่อม", count: maintenanceCount },
                 { key: "unmatched" as const, label: "ไม่ match", count: unmatchedCount },
               ] as const
-            ).map((f) => ({
-              key: f.key,
-              label: f.label,
-              count: f.count > 0 ? f.count : undefined,
-            }))}
-          />
+            ).map((item) => {
+              const active = availabilityFilter === item.key
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setAvailabilityFilter(item.key)}
+                  className={cn(
+                    "inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-md px-1.5 py-1 text-[11px] font-semibold",
+                    active
+                      ? "bg-white text-slate-950 shadow-sm dark:bg-background dark:text-foreground"
+                      : "text-slate-950 hover:bg-white/80 dark:text-foreground dark:hover:bg-background/70"
+                  )}
+                >
+                  <span className="truncate">{item.label}</span>
+                  {item.count > 0 ? <span className="tabular-nums">{item.count}</span> : null}
+                </button>
+              )
+            })}
+          </div>
 
           <TransportSearchField
             className="mt-2 w-full max-w-none"

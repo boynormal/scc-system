@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, ValidationError } from "@/lib/errors"
 import { getBranchIds, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 import { canReadPersonnel, personnelLegalName } from "./personnel-service"
 import { dutyItemRefSelect, groupDutyItems, splitLines, type DutyGroup, type DutyItemRef } from "./duty-groups"
 
@@ -229,7 +230,11 @@ export async function getPersonnelOrgChart(
   })
   if (!branch) throw new ValidationError("Invalid branch")
 
-  if (!isAdminInAnyBranch(params.roles) && !getBranchIds(params.roles).includes(branchId)) {
+  if (
+    !(await readBranchSharing(db, params.companyId)).personnel.view &&
+    !isAdminInAnyBranch(params.roles) &&
+    !getBranchIds(params.roles).includes(branchId)
+  ) {
     throw new ForbiddenError("ไม่มีสิทธิ์ในสาขาที่เลือก")
   }
 

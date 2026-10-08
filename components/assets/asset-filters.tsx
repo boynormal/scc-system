@@ -57,13 +57,13 @@ export function AssetFilters({ branches }: { branches: BranchOption[] }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="w-full rounded-lg border border-border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
       <select
         defaultValue={searchParams.get("branchId") || ""}
         onChange={(e) => handleFilter("branchId", e.target.value)}
-        className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         {branches.map((b) => (
@@ -75,7 +75,7 @@ export function AssetFilters({ branches }: { branches: BranchOption[] }) {
       <select
         defaultValue={searchParams.get("type") || ""}
         onChange={(e) => handleFilter("type", e.target.value)}
-        className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         <option value="VEHICLE">{t("type_VEHICLE")}</option>
@@ -84,7 +84,7 @@ export function AssetFilters({ branches }: { branches: BranchOption[] }) {
       <select
         defaultValue={searchParams.get("ownership") || ""}
         onChange={(e) => handleFilter("ownership", e.target.value)}
-        className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         <option value="COMPANY">{t("own_COMPANY")}</option>
@@ -94,7 +94,7 @@ export function AssetFilters({ branches }: { branches: BranchOption[] }) {
       <select
         defaultValue={searchParams.get("status") || ""}
         onChange={(e) => handleFilter("status", e.target.value)}
-        className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         <option value="REGISTERED">{t("st_REGISTERED")}</option>

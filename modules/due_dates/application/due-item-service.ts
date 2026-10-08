@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 import {
   assertStartBeforeEnd,
   DUE_ALERT_LEVELS,
@@ -64,14 +65,15 @@ async function assertBranchAllowed(
   db: PrismaClient,
   companyId: string,
   branchId: string,
-  roles: UserRole[]
+  roles: UserRole[],
+  shared = false
 ) {
   const branch = await db.branch.findFirst({
     where: { id: branchId, companyId, deletedAt: null, isActive: true },
     select: { id: true },
   })
   if (!branch) throw new ValidationError("สาขาไม่ถูกต้อง")
-  if (!isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
+  if (!shared && !isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
     throw new ForbiddenError("ไม่มีสิทธิ์ในสาขาที่เลือก")
   }
 }
@@ -79,9 +81,10 @@ async function assertBranchAllowed(
 function itemWhere(
   companyId: string,
   roles: UserRole[],
-  branchId?: string | null
+  branchId?: string | null,
+  companyWide = false
 ): Prisma.DueItemWhereInput {
-  const isAdmin = isAdminInAnyBranch(roles)
+  const isAdmin = isAdminInAnyBranch(roles) || companyWide
   const allowed = getBranchIds(roles)
   const base: Prisma.DueItemWhereInput = { companyId }
   if (branchId) {
@@ -154,7 +157,8 @@ export async function listDueItems(
   }
 ) {
   if (!canDueDates(params.roles, "read")) throw new ForbiddenError()
-  const where: Prisma.DueItemWhereInput = itemWhere(params.companyId, params.roles, params.branchId)
+  const shareView = (await readBranchSharing(db, params.companyId)).due_dates.view
+  const where: Prisma.DueItemWhereInput = itemWhere(params.companyId, params.roles, params.branchId, shareView)
   const ownerUserId = optionalUuid(params.ownerUserId)
   if (ownerUserId) where.ownerUserId = ownerUserId
   if (params.status && STATUSES.includes(params.status as (typeof STATUSES)[number])) {
@@ -188,8 +192,9 @@ export async function getDueItem(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   if (!canDueDates(params.roles, "read")) throw new ForbiddenError()
+  const shareView = (await readBranchSharing(db, params.companyId)).due_dates.view
   const row = await db.dueItem.findFirst({
-    where: { id: params.id, ...itemWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...itemWhere(params.companyId, params.roles, null, shareView) },
     include: itemInclude,
   })
   if (!row) throw new NotFoundError("ไม่พบรายการ")
@@ -206,7 +211,8 @@ export async function createDueItem(
   }
 ) {
   if (!canDueDates(params.roles, "create")) throw new ForbiddenError()
-  await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles)
+  const shareCreate = (await readBranchSharing(db, params.companyId)).due_dates.create
+  await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles, shareCreate)
   const startDate = parseDateOnly(params.input.startDate)
   const endDate = parseDateOnly(params.input.endDate)
   assertStartBeforeEnd(startDate, endDate)
@@ -236,13 +242,14 @@ export async function updateDueItem(
   }
 ) {
   if (!canDueDates(params.roles, "update")) throw new ForbiddenError()
+  const shareEdit = (await readBranchSharing(db, params.companyId)).due_dates.edit
   const existing = await db.dueItem.findFirst({
-    where: { id: params.id, ...itemWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...itemWhere(params.companyId, params.roles, null, shareEdit) },
     select: { id: true, startDate: true, endDate: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
   if (params.input.branchId) {
-    await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles)
+    await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles, shareEdit)
   }
   const startDate = params.input.startDate ? parseDateOnly(params.input.startDate) : existing.startDate
   const endDate = params.input.endDate ? parseDateOnly(params.input.endDate) : existing.endDate
@@ -270,8 +277,9 @@ export async function closeDueItem(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   if (!canDueDates(params.roles, "update")) throw new ForbiddenError()
+  const shareEdit = (await readBranchSharing(db, params.companyId)).due_dates.edit
   const existing = await db.dueItem.findFirst({
-    where: { id: params.id, ...itemWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...itemWhere(params.companyId, params.roles, null, shareEdit) },
     select: { id: true, status: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
@@ -288,8 +296,9 @@ export async function reopenDueItem(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   if (!canDueDates(params.roles, "update")) throw new ForbiddenError()
+  const shareEdit = (await readBranchSharing(db, params.companyId)).due_dates.edit
   const existing = await db.dueItem.findFirst({
-    where: { id: params.id, ...itemWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...itemWhere(params.companyId, params.roles, null, shareEdit) },
     select: { id: true, status: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
@@ -312,8 +321,9 @@ export async function renewDueItem(
   }
 ) {
   if (!canDueDates(params.roles, "update")) throw new ForbiddenError()
+  const shareEdit = (await readBranchSharing(db, params.companyId)).due_dates.edit
   const existing = await db.dueItem.findFirst({
-    where: { id: params.id, ...itemWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...itemWhere(params.companyId, params.roles, null, shareEdit) },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
   const startDate = parseDateOnly(params.input.startDate)
@@ -345,10 +355,11 @@ export async function getDueSummary(
   params: { companyId: string; roles: UserRole[]; branchId?: string | null; ownerUserId?: string | null }
 ) {
   if (!canDueDates(params.roles, "read")) throw new ForbiddenError()
+  const shareView = (await readBranchSharing(db, params.companyId)).due_dates.view
   const ownerUserId = optionalUuid(params.ownerUserId)
   const rows = await db.dueItem.findMany({
     where: {
-      ...itemWhere(params.companyId, params.roles, params.branchId),
+      ...itemWhere(params.companyId, params.roles, params.branchId, shareView),
       status: "open",
       ...(ownerUserId ? { ownerUserId } : {}),
     },
@@ -390,7 +401,9 @@ export async function listAccessibleBranches(
   params: { companyId: string; roles: UserRole[] }
 ) {
   if (!canDueDates(params.roles, "read")) throw new ForbiddenError()
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const share = await readBranchSharing(db, params.companyId)
+  const isAdmin =
+    isAdminInAnyBranch(params.roles) || share.due_dates.view || share.due_dates.create || share.due_dates.edit
   const allowed = getBranchIds(params.roles)
   const branches = await db.branch.findMany({
     where: {

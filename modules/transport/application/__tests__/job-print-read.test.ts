@@ -28,12 +28,15 @@ const JOB = {
   branchId: "branch-b",
 }
 
-function asDb(findFirst: ReturnType<typeof vi.fn>): PrismaClient {
-  return { transportJob: { findFirst } } as unknown as PrismaClient
+function asDb(findFirst: ReturnType<typeof vi.fn>, settings: unknown = null): PrismaClient {
+  return {
+    transportJob: { findFirst },
+    company: { findUnique: vi.fn().mockResolvedValue({ settings }) },
+  } as unknown as PrismaClient
 }
 
 describe("getJobById vs getJobByIdForPrint", () => {
-  it("getJobById forbids a reader of another branch", async () => {
+  it("allows a reader of another branch while transport view sharing stays on", async () => {
     const findFirst = vi.fn().mockResolvedValue(JOB)
     await expect(
       getJobById(asDb(findFirst), {
@@ -41,7 +44,7 @@ describe("getJobById vs getJobByIdForPrint", () => {
         companyId: "company-1",
         roles: [jobsReader("branch-a")],
       })
-    ).rejects.toThrow(ForbiddenError)
+    ).resolves.toEqual(JOB)
   })
 
   it("getJobByIdForPrint allows a reader of another branch", async () => {
@@ -53,6 +56,25 @@ describe("getJobById vs getJobByIdForPrint", () => {
         roles: [jobsReader("branch-a")],
       })
     ).resolves.toEqual(JOB)
+  })
+
+  it("forbids another branch when transport view sharing is off", async () => {
+    const findFirst = vi.fn().mockResolvedValue(JOB)
+    const db = asDb(findFirst, { branchSharing: { transport_jobs: { view: false } } })
+    await expect(
+      getJobById(db, {
+        id: "job-1",
+        companyId: "company-1",
+        roles: [jobsReader("branch-a")],
+      })
+    ).rejects.toThrow(ForbiddenError)
+    await expect(
+      getJobByIdForPrint(db, {
+        id: "job-1",
+        companyId: "company-1",
+        roles: [jobsReader("branch-a")],
+      })
+    ).rejects.toThrow(ForbiddenError)
   })
 
   it("getJobByIdForPrint forbids a user without transport_jobs read", async () => {

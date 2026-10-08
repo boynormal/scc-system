@@ -12,6 +12,7 @@ import {
   canReadSettingsMasterData,
   canReadSettingsRoles,
   canReadSettingsUsers,
+  canUpdateSettingsBranchSharing,
 } from "@/lib/hr-settings-nav-access"
 import { SettingsHub } from "./settings-hub"
 import packageJson from "@/package.json"
@@ -27,6 +28,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
     roles: canReadSettingsRoles(roles),
     masterData: canReadSettingsMasterData(roles),
     homeScreen: canReadSettingsHomeScreen(roles),
+    branchSharing: canUpdateSettingsBranchSharing(roles),
   }
 
   if (!Object.values(access).some(Boolean)) {

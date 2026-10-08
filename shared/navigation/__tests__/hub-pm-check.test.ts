@@ -28,7 +28,7 @@ describe("HUB and PM CHECK launchers", () => {
   it("registers PM CHECK under the asset register", () => {
     const pm = findLink("pm_check")
     expect(pm).toBeDefined()
-    expect(pm?.href).toBe("/pm-check")
+    expect(pm?.href).toBe("/assets?tab=pm-check")
     expect(isExternalHref(pm!.href)).toBe(false)
     expect(pm?.permission).toEqual({ resource: "assets", action: "read" })
     expect(pm?.launcher?.departmentId).toBe("asset_register")

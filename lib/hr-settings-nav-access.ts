@@ -55,3 +55,7 @@ export function canReadSettingsHomeScreen(roles: UserRole[]) {
     getBranchIds(roles).some((bid) => hasPermission(roles, bid, "settings", "read"))
   )
 }
+
+export function canUpdateSettingsBranchSharing(roles: UserRole[]) {
+  return getBranchIds(roles).some((bid) => hasPermission(roles, bid, "settings", "update"))
+}

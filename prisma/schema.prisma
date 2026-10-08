@@ -701,6 +701,7 @@ model Supplier {
   phone        String?  @db.VarChar(20)
   email        String?  @db.VarChar(255)
   address      String?
+  details      String?  @db.Text
   leadTimeDays Int?     @map("lead_time_days") @db.SmallInt
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz

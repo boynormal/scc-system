@@ -51,3 +51,8 @@ export {
   updateNavPreferences,
   updateNavPreferencesSchema,
 } from "./application/nav-preference-service"
+export {
+  getBranchSharing,
+  updateBranchSharing,
+  updateBranchSharingSchema,
+} from "./application/branch-sharing-service"

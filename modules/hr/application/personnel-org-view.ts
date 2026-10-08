@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, ValidationError } from "@/lib/errors"
 import { getBranchIds, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 import { canReadPersonnel, personnelLegalName } from "./personnel-service"
 
 const uuidSchema = z.string().uuid()
@@ -74,7 +75,7 @@ export async function getPersonnelOrgView(
   })
   if (!branch) throw new ValidationError("Invalid branch")
 
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const isAdmin = isAdminInAnyBranch(params.roles) || (await readBranchSharing(db, params.companyId)).personnel.view
   if (!isAdmin && !getBranchIds(params.roles).includes(branchId)) {
     throw new ForbiddenError("ไม่มีสิทธิ์ในสาขาที่เลือก")
   }

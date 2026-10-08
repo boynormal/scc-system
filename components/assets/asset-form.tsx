@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 import { GlassForm, GlassFormActions, GlassInput } from "@/components/glass"
 import type { AssetDto } from "./asset-types"
 
@@ -40,11 +40,15 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
       })
   }, [asset, branchId])
 
-  async function suggestCode() {
-    const res = await fetch("/api/assets/next-code")
-    const json = await res.json().catch(() => ({}))
-    if (res.ok && json.data?.code) setCode(json.data.code)
-  }
+  useEffect(() => {
+    if (asset) return
+    void fetch("/api/assets/next-code")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data?.code) setCode(json.data.code)
+      })
+      .catch(() => {})
+  }, [asset])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -91,22 +95,13 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
         options={branches.map((b) => ({ value: b.id, label: b.name }))}
       />
       <div className="space-y-1.5">
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <GlassInput
-              label={t("code")}
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="AST-2026-00001"
-            />
-          </div>
-          {!asset && (
-            <Button type="button" variant="outline" onClick={() => void suggestCode()}>
-              {t("codeSuggest")}
-            </Button>
-          )}
-        </div>
+        <GlassInput
+          label={t("code")}
+          required
+          readOnly
+          value={code}
+          placeholder="AST-2026-00001"
+        />
         <p className="text-xs text-muted-foreground">{t("codeHint")}</p>
       </div>
       <GlassInput label={t("name")} required value={name} onChange={(e) => setName(e.target.value)} />

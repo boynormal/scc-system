@@ -2,6 +2,7 @@ import { z } from "zod"
 import { Prisma, type PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { permissionCoversBranch, readBranchSharing, type BranchShareAction } from "@/shared/permissions/branch-sharing"
 import { generateExpenseNo } from "./generate-expense-no"
 import { getTransportCostSourcesByIds, isLockedReferenceAmount } from "@/modules/transport"
 import {
@@ -153,8 +154,17 @@ function canExpenses(roles: UserRole[], action: ExpenseAction): boolean {
   )
 }
 
-function assertExpensePermission(roles: UserRole[], branchId: string, action: ExpenseAction) {
-  if (!hasPermission(roles, branchId, "expenses", action)) {
+async function assertExpensePermission(
+  db: PrismaClient,
+  companyId: string,
+  roles: UserRole[],
+  branchId: string,
+  action: ExpenseAction
+) {
+  const key: BranchShareAction =
+    action === "update" ? "edit" : action === "read" ? "view" : action
+  const shared = (await readBranchSharing(db, companyId)).finance[key]
+  if (!permissionCoversBranch(roles, "expenses", action, branchId, shared)) {
     throw new ForbiddenError("ไม่มีสิทธิ์ในสาขาของรายการนี้")
   }
 }
@@ -248,14 +258,15 @@ async function assertBranchAllowed(
   db: PrismaClient,
   companyId: string,
   branchId: string,
-  roles: UserRole[]
+  roles: UserRole[],
+  shared = false
 ) {
   const branch = await db.branch.findFirst({
     where: { id: branchId, companyId, deletedAt: null, isActive: true },
     select: { id: true },
   })
   if (!branch) throw new ValidationError("สาขาไม่ถูกต้อง")
-  if (!isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
+  if (!shared && !isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
     throw new ForbiddenError("ไม่มีสิทธิ์ในสาขาที่เลือก")
   }
 }
@@ -769,12 +780,21 @@ function isUniqueViolation(err: unknown): boolean {
 
 // ─── Query helpers ───────────────────────────────────────────────────────────
 
+async function expenseCompanyWide(
+  db: PrismaClient,
+  companyId: string,
+  action: BranchShareAction
+): Promise<boolean> {
+  return (await readBranchSharing(db, companyId)).finance[action]
+}
+
 function expenseWhere(
   companyId: string,
   roles: UserRole[],
-  branchId?: string | null
+  branchId?: string | null,
+  companyWide = false
 ): Prisma.ExpenseWhereInput {
-  const isAdmin = isAdminInAnyBranch(roles)
+  const isAdmin = isAdminInAnyBranch(roles) || companyWide
   const allowed = getBranchIds(roles)
   const base: Prisma.ExpenseWhereInput = { companyId, deletedAt: null }
   if (branchId) {
@@ -966,7 +986,8 @@ export async function listExpenses(
   }
 ) {
   if (!canExpenses(params.roles, "read")) throw new ForbiddenError()
-  const where: Prisma.ExpenseWhereInput = expenseWhere(params.companyId, params.roles, params.branchId)
+  const shareView = (await readBranchSharing(db, params.companyId)).finance.view
+  const where: Prisma.ExpenseWhereInput = expenseWhere(params.companyId, params.roles, params.branchId, shareView)
   const and: Prisma.ExpenseWhereInput[] = []
 
   const expenseTypeId = optionalUuid(params.expenseTypeId)
@@ -1029,8 +1050,9 @@ export async function getExpense(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   if (!canExpenses(params.roles, "read")) throw new ForbiddenError()
+  const shareView = (await readBranchSharing(db, params.companyId)).finance.view
   const row = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...expenseWhere(params.companyId, params.roles, null, shareView) },
     include: expenseInclude,
   })
   if (!row) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
@@ -1049,8 +1071,14 @@ export async function createExpense(
     audit?: ExpenseAuditMeta
   }
 ) {
-  assertExpensePermission(params.roles, params.input.branchId, "create")
-  await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles)
+  await assertExpensePermission(db, params.companyId, params.roles, params.input.branchId, "create")
+  await assertBranchAllowed(
+    db,
+    params.companyId,
+    params.input.branchId,
+    params.roles,
+    await expenseCompanyWide(db, params.companyId, "create")
+  )
 
   const lineInputs = coerceLineInputs(params.input)
   if (!lineInputs) throw new ValidationError("ต้องมีอย่างน้อย 1 บรรทัด")
@@ -1173,7 +1201,10 @@ export async function updatePaidExpenseMetadata(
   }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "edit")),
+    },
     include: {
       lines: {
         orderBy: { lineNo: "asc" },
@@ -1205,7 +1236,7 @@ export async function updatePaidExpenseMetadata(
     },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "update")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "update")
   if (existing.status !== "PAID") {
     throw new ValidationError("ใช้ได้เฉพาะบิลที่จ่ายแล้ว")
   }
@@ -1234,7 +1265,7 @@ export async function updatePaidExpenseMetadata(
   if (params.input.expenseDate) {
     const nextMonth = bangkokYearMonth(params.input.expenseDate)
     const prevMonth = bangkokYearMonth(existing.expenseDate)
-    if (nextMonth !== prevMonth && !hasPermission(params.roles, existing.branchId, "expenses", "approve")) {
+    if (nextMonth !== prevMonth && !permissionCoversBranch(params.roles, "expenses", "approve", existing.branchId, await expenseCompanyWide(db, params.companyId, "approve"))) {
       throw new ValidationError("ข้ามเดือนต้องมีสิทธิ์อนุมัติค่าใช้จ่าย")
     }
     nextExpenseDate = parseDateOnly(params.input.expenseDate)
@@ -1432,11 +1463,14 @@ export async function updateExpense(
   }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "edit")),
+    },
     select: { id: true, status: true, branchId: true, vendorId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "update")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "update")
   if (existing.status === "PAID") {
     return updatePaidExpenseMetadata(db, params)
   }
@@ -1444,7 +1478,13 @@ export async function updateExpense(
     throw new ValidationError("แก้ไขได้เฉพาะรายการที่ยังไม่อนุมัติ")
   }
   if (params.input.branchId) {
-    await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles)
+    await assertBranchAllowed(
+      db,
+      params.companyId,
+      params.input.branchId,
+      params.roles,
+      await expenseCompanyWide(db, params.companyId, "edit")
+    )
   }
 
   const headerData: Prisma.ExpenseUpdateInput = {
@@ -1553,11 +1593,14 @@ export async function approveExpense(
   }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "approve")),
+    },
     select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "approve")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "approve")
   if (existing.status !== "DRAFT" && existing.status !== "PENDING") {
     throw new ValidationError("อนุมัติได้เฉพาะรายการที่รอดำเนินการ")
   }
@@ -1590,11 +1633,14 @@ export async function rejectExpense(
   }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "approve")),
+    },
     select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "approve")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "approve")
   if (existing.status === "PAID") {
     throw new ValidationError("ไม่สามารถปฏิเสธรายการที่จ่ายแล้ว")
   }
@@ -1628,11 +1674,14 @@ export async function markExpensePaid(
   }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "edit")),
+    },
     select: { id: true, status: true, paymentMethod: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "update")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "update")
   if (existing.status !== "APPROVED") {
     throw new ValidationError("ทำเครื่องหมายจ่ายได้เฉพาะรายการที่อนุมัติแล้ว")
   }
@@ -1674,7 +1723,10 @@ export async function unpayExpense(
   }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "approve")),
+    },
     select: {
       id: true,
       status: true,
@@ -1685,7 +1737,7 @@ export async function unpayExpense(
     },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "approve")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "approve")
   if (existing.status !== "PAID") {
     throw new ValidationError("ยกเลิกการจ่ายได้เฉพาะรายการที่จ่ายแล้ว")
   }
@@ -1733,11 +1785,14 @@ export async function deleteExpense(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "delete")),
+    },
     select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "delete")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "delete")
   if (existing.status === "PAID") {
     throw new ValidationError("ไม่สามารถลบรายการที่จ่ายแล้ว")
   }
@@ -1782,11 +1837,14 @@ export async function addExpenseAttachment(
   }
 ) {
   const existing = await db.expense.findFirst({
-    where: { id: params.id, ...expenseWhere(params.companyId, params.roles) },
+    where: {
+      id: params.id,
+      ...expenseWhere(params.companyId, params.roles, null, await expenseCompanyWide(db, params.companyId, "edit")),
+    },
     select: { id: true, status: true, branchId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
-  assertExpensePermission(params.roles, existing.branchId, "update")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, "update")
   if (existing.status === "CANCELLED") {
     throw new ValidationError("ไม่สามารถแนบไฟล์กับบิลที่ยกเลิกแล้ว")
   }
@@ -1825,8 +1883,9 @@ export async function getExpenseSummary(
   params: { companyId: string; roles: UserRole[]; branchId?: string | null }
 ) {
   if (!canExpenses(params.roles, "read")) throw new ForbiddenError()
+  const shareView = (await readBranchSharing(db, params.companyId)).finance.view
   const rows = await db.expense.findMany({
-    where: expenseWhere(params.companyId, params.roles, params.branchId),
+    where: expenseWhere(params.companyId, params.roles, params.branchId, shareView),
     select: { status: true, netAmount: true },
     take: 5000,
   })
@@ -1858,7 +1917,9 @@ export async function listExpenseBranches(
   params: { companyId: string; roles: UserRole[] }
 ) {
   if (!canExpenses(params.roles, "read")) throw new ForbiddenError()
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const share = await readBranchSharing(db, params.companyId)
+  const isAdmin =
+    isAdminInAnyBranch(params.roles) || share.finance.view || share.finance.create || share.finance.edit
   const allowed = getBranchIds(params.roles)
   const branches = await db.branch.findMany({
     where: {

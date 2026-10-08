@@ -251,7 +251,7 @@ describe("createAsset", () => {
       companyId: CID,
       roles: adminRoles,
       userId: USER_ID,
-      input: validCreate,
+      input: { ...validCreate, code: "USER-TYPED" },
     })
     expect(result.data.code).toBe("AST-2026-00001")
     expect(result.data.status).toBe("REGISTERED")

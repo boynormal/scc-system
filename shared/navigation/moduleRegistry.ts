@@ -139,7 +139,7 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
       {
         type: "link",
         key: "pm_check",
-        href: "/pm-check",
+        href: "/assets?tab=pm-check",
         label: "pm_check",
         icon: "ScanLine",
         permission: { resource: "assets", action: "read" },

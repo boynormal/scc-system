@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client"
 import { ForbiddenError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 import {
   getTransportCostSourcesByIds,
   listTransportCostSources,
@@ -98,7 +99,8 @@ export async function listUnlinkedExpenseSources(
 ) {
   if (!canExpensesRead(params.roles)) throw new ForbiddenError()
 
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const shareView = (await readBranchSharing(db, params.companyId)).finance.view
+  const isAdmin = isAdminInAnyBranch(params.roles) || shareView
   let branchIds: string[] | null = isAdmin ? null : getBranchIds(params.roles)
   if (params.branchId) {
     if (!isAdmin && !getBranchIds(params.roles).includes(params.branchId)) {

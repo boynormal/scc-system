@@ -2,6 +2,7 @@ import { z } from "zod"
 import { Prisma, type PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 
 export const ASSET_TYPES = ["VEHICLE", "MACHINE"] as const
 export const ASSET_STATUSES = ["REGISTERED", "ACTIVE", "IDLE", "RETIRED", "DISPOSED"] as const
@@ -11,7 +12,7 @@ const DEFAULT_PAGE_SIZE = 50
 
 export const createAssetSchema = z.object({
   branchId: z.string().uuid(),
-  code: z.string().trim().min(1).max(50),
+  code: z.string().trim().max(50).optional(),
   name: z.string().trim().min(1).max(255),
   type: z.enum(ASSET_TYPES),
   status: z.enum(ASSET_STATUSES).optional(),
@@ -94,14 +95,15 @@ async function assertBranchAllowed(
   db: PrismaClient,
   companyId: string,
   branchId: string,
-  roles: UserRole[]
+  roles: UserRole[],
+  shared = false
 ) {
   const branch = await db.branch.findFirst({
     where: { id: branchId, companyId, deletedAt: null, isActive: true },
     select: { id: true },
   })
   if (!branch) throw new ValidationError("สาขาไม่ถูกต้อง")
-  if (!isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
+  if (!shared && !isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
     throw new ForbiddenError("ไม่มีสิทธิ์ในสาขาที่เลือก")
   }
 }
@@ -122,9 +124,10 @@ async function assertSupplierAllowed(
 function assetWhere(
   companyId: string,
   roles: UserRole[],
-  branchId?: string | null
+  branchId?: string | null,
+  companyWide = false
 ): Prisma.AssetWhereInput {
-  const isAdmin = isAdminInAnyBranch(roles)
+  const isAdmin = isAdminInAnyBranch(roles) || companyWide
   const allowed = getBranchIds(roles)
   const base: Prisma.AssetWhereInput = { companyId, deletedAt: null }
   if (branchId) {
@@ -189,7 +192,13 @@ export async function listAssets(
   }
 ) {
   if (!canAssets(params.roles, "read")) throw new ForbiddenError()
-  const where: Prisma.AssetWhereInput = assetWhere(params.companyId, params.roles, params.branchId)
+  const share = await readBranchSharing(db, params.companyId)
+  const where: Prisma.AssetWhereInput = assetWhere(
+    params.companyId,
+    params.roles,
+    params.branchId,
+    share.assets.view
+  )
   if (params.type && ASSET_TYPES.includes(params.type as (typeof ASSET_TYPES)[number])) {
     where.type = params.type as (typeof ASSET_TYPES)[number]
   }
@@ -238,8 +247,9 @@ export async function getAsset(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   if (!canAssets(params.roles, "read")) throw new ForbiddenError()
+  const share = await readBranchSharing(db, params.companyId)
   const row = await db.asset.findFirst({
-    where: { id: params.id, ...assetWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...assetWhere(params.companyId, params.roles, null, share.assets.view) },
     include: assetInclude,
   })
   if (!row) throw new NotFoundError("ไม่พบรายการ")
@@ -256,15 +266,20 @@ export async function createAsset(
   }
 ) {
   if (!canAssets(params.roles, "create")) throw new ForbiddenError()
-  await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles)
+  const share = await readBranchSharing(db, params.companyId)
+  await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles, share.assets.create)
   await assertSupplierAllowed(db, params.companyId, params.input.supplierId)
   const acquiredAt = params.input.acquiredAt ? parseDateOnly(params.input.acquiredAt) : null
+  const nextCode = await suggestNextAssetCode(db, {
+    companyId: params.companyId,
+    roles: params.roles,
+  })
   try {
     const row = await db.asset.create({
       data: {
         companyId: params.companyId,
         branchId: params.input.branchId,
-        code: params.input.code,
+        code: nextCode.data.code,
         name: params.input.name,
         type: params.input.type,
         status: params.input.status ?? "REGISTERED",
@@ -295,13 +310,14 @@ export async function updateAsset(
   }
 ) {
   if (!canAssets(params.roles, "update")) throw new ForbiddenError()
+  const share = await readBranchSharing(db, params.companyId)
   const existing = await db.asset.findFirst({
-    where: { id: params.id, ...assetWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...assetWhere(params.companyId, params.roles, null, share.assets.edit) },
     select: { id: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
   if (params.input.branchId) {
-    await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles)
+    await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles, share.assets.edit)
   }
   if (params.input.supplierId !== undefined) {
     await assertSupplierAllowed(db, params.companyId, params.input.supplierId)
@@ -309,7 +325,6 @@ export async function updateAsset(
 
   const data: Prisma.AssetUpdateInput = {}
   if (params.input.branchId) data.branch = { connect: { id: params.input.branchId } }
-  if (params.input.code !== undefined) data.code = params.input.code
   if (params.input.name !== undefined) data.name = params.input.name
   if (params.input.type !== undefined) data.type = params.input.type
   if (params.input.status !== undefined) data.status = params.input.status
@@ -344,8 +359,9 @@ export async function deleteAsset(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   if (!canAssets(params.roles, "delete")) throw new ForbiddenError()
+  const share = await readBranchSharing(db, params.companyId)
   const existing = await db.asset.findFirst({
-    where: { id: params.id, ...assetWhere(params.companyId, params.roles) },
+    where: { id: params.id, ...assetWhere(params.companyId, params.roles, null, share.assets.delete) },
     select: { id: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
@@ -386,7 +402,8 @@ export async function listAccessibleBranches(
   params: { companyId: string; roles: UserRole[] }
 ) {
   if (!canAssets(params.roles, "read")) throw new ForbiddenError()
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const share = await readBranchSharing(db, params.companyId)
+  const isAdmin = isAdminInAnyBranch(params.roles) || share.assets.view || share.assets.create || share.assets.edit
   const allowed = getBranchIds(params.roles)
   const branches = await db.branch.findMany({
     where: {

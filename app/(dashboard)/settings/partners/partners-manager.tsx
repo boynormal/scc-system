@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
+import { Plus, Edit2, Trash2, Save, Search, X, Loader2 } from "lucide-react"
 import { GlassButton, GlassCard, GlassInput, GlassTabs } from "@/components/glass"
-import { SupplierLinkedPartsDialog } from "@/components/settings/supplier-linked-parts-dialog"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
 
 // ─── SUPPLIERS ────────────────────────────────────────────────────────────────
@@ -16,9 +15,8 @@ type SupplierRow = {
   phone: string | null
   email: string | null
   address: string | null
-  leadTimeDays: number | null
+  details: string | null
   isActive: boolean
-  _count: { spareParts: number }
 }
 
 const emptySupplierForm = {
@@ -27,7 +25,7 @@ const emptySupplierForm = {
   phone: "",
   email: "",
   address: "",
-  leadTimeDays: "",
+  details: "",
   isActive: true,
 }
 
@@ -37,11 +35,7 @@ function SuppliersTab() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState(() => ({ ...emptySupplierForm }))
-  const [partsDialog, setPartsDialog] = useState<{
-    supplierId: string
-    supplierCode: string
-    supplierName: string
-  } | null>(null)
+  const [search, setSearch] = useState("")
 
   const loadData = async () => {
     setLoading(true)
@@ -56,20 +50,13 @@ function SuppliersTab() {
   }, [])
 
   const payloadFromForm = () => {
-    const lt =
-      editForm.leadTimeDays === ""
-        ? null
-        : (() => {
-            const n = Number(editForm.leadTimeDays)
-            return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null
-          })()
     return {
       name: editForm.name.trim(),
       contactName: editForm.contactName.trim() || null,
       phone: editForm.phone.trim() || null,
       email: editForm.email.trim() || null,
       address: editForm.address.trim() || null,
-      leadTimeDays: lt,
+      details: editForm.details.trim() || null,
       isActive: editForm.isActive,
     }
   }
@@ -128,7 +115,7 @@ function SuppliersTab() {
       phone: item.phone ?? "",
       email: item.email ?? "",
       address: item.address ?? "",
-      leadTimeDays: item.leadTimeDays != null ? String(item.leadTimeDays) : "",
+      details: item.details ?? "",
       isActive: item.isActive,
     })
   }
@@ -191,15 +178,14 @@ function SuppliersTab() {
           type="email"
         />
       </div>
-      <div>
-        <label className="mb-1 block text-xs text-muted-foreground">วันรอของ (Lead time)</label>
-        <GlassInput
-          value={editForm.leadTimeDays}
-          onChange={(e) => setEditForm((f) => ({ ...f, leadTimeDays: e.target.value }))}
-          className="h-9"
-          type="number"
-          min={0}
-          placeholder="วัน"
+      <div className="sm:col-span-2">
+        <label className="mb-1 block text-xs text-muted-foreground">รายละเอียด</label>
+        <textarea
+          value={editForm.details}
+          onChange={(e) => setEditForm((f) => ({ ...f, details: e.target.value }))}
+          rows={3}
+          placeholder="รายละเอียด"
+          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
       </div>
       <div className="sm:col-span-2">
@@ -224,9 +210,27 @@ function SuppliersTab() {
     </div>
   )
 
+  const query = search.trim().toLowerCase()
+  const visible = query
+    ? data.filter((item) =>
+        [item.name, item.contactName, item.phone, item.details].some((value) =>
+          (value ?? "").toLowerCase().includes(query)
+        )
+      )
+    : data
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <GlassInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาชื่อ / ผู้ติดต่อ / โทรศัพท์ / รายละเอียด..."
+            icon={<Search className="h-4 w-4" />}
+            className="h-10"
+          />
+        </div>
         <GlassButton
           onClick={() => {
             setEditingId("new")
@@ -246,8 +250,7 @@ function SuppliersTab() {
                 <th className="px-4 py-3 font-semibold text-muted-foreground">ชื่อ</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground">ผู้ติดต่อ</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground">โทร</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Lead (วัน)</th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground w-[140px]">อะไหล่</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">รายละเอียด</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
                 <th className="px-4 py-3 w-28"></th>
               </tr>
@@ -255,7 +258,7 @@ function SuppliersTab() {
             <tbody className="divide-y divide-border">
               {editingId === "new" && (
                 <tr className="bg-blue-50/50">
-                  <td colSpan={8} className="px-4 py-4">
+                  <td colSpan={7} className="px-4 py-4">
                     {formGrid}
                     <div className="flex justify-end gap-2 mt-4">
                       <GlassButton variant="outline" type="button" onClick={() => setEditingId(null)}>
@@ -268,10 +271,17 @@ function SuppliersTab() {
                   </td>
                 </tr>
               )}
-              {data.map((item) => (
+              {visible.length === 0 && editingId !== "new" ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    ไม่พบซัพพลายเออร์
+                  </td>
+                </tr>
+              ) : null}
+              {visible.map((item) => (
                 <tr key={item.id} className="hover:bg-muted/60 transition-colors">
                   {editingId === item.id ? (
-                    <td colSpan={8} className="px-4 py-4 bg-blue-50/30">
+                    <td colSpan={7} className="px-4 py-4 bg-blue-50/30">
                       {formGrid}
                       <div className="flex justify-end gap-2 mt-4">
                         <GlassButton variant="outline" type="button" onClick={() => setEditingId(null)}>
@@ -288,32 +298,10 @@ function SuppliersTab() {
                       <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{item.contactName ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{item.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">
-                        {item.leadTimeDays != null ? item.leadTimeDays : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground align-top">
-                        {item._count.spareParts === 0 ? (
-                          <span className="text-muted-foreground">—</span>
-                        ) : (
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-sm font-semibold text-foreground tabular-nums">
-                              {item._count.spareParts} รายการ
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPartsDialog({
-                                  supplierId: item.id,
-                                  supplierCode: item.code,
-                                  supplierName: item.name,
-                                })
-                              }
-                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline text-left w-fit"
-                            >
-                              ดูรายการอะไหล่
-                            </button>
-                          </div>
-                        )}
+                      <td className="max-w-[16rem] px-4 py-3 text-muted-foreground">
+                        <span className="block truncate" title={item.details ?? undefined}>
+                          {item.details ?? "—"}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -349,16 +337,8 @@ function SuppliersTab() {
         </div>
       </GlassCard>
       <p className="text-xs text-muted-foreground">
-        รหัสซัพพลายเออร์สร้างอัตโนมัติเท่านั้น (ไม่ซ้ำทั้งระบบ · รูปแบบ S-XXXXXXXXXXXX) · หน้าเพิ่มอะไหล่แสดงเฉพาะซัพพลายเออร์ที่เปิดใช้งาน · รายชื่ออะไหล่จำนวนมากเปิดในหน้าต่างพร้อมช่องค้นหา
+        รหัสซัพพลายเออร์สร้างอัตโนมัติเท่านั้น (ไม่ซ้ำทั้งระบบ · รูปแบบ S-XXXXXXXXXXXX)
       </p>
-
-      <SupplierLinkedPartsDialog
-        open={partsDialog != null}
-        onClose={() => setPartsDialog(null)}
-        supplierId={partsDialog?.supplierId ?? null}
-        supplierCode={partsDialog?.supplierCode ?? ""}
-        supplierName={partsDialog?.supplierName ?? ""}
-      />
     </div>
   )
 }

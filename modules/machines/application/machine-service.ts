@@ -1,6 +1,7 @@
 import { z } from "zod"
 import type { PrismaClient } from "@prisma/client"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { permissionCoversBranch, readBranchSharing } from "@/shared/permissions/branch-sharing"
 
 async function assertDepartmentOnMachineBranch(
   db: PrismaClient,
@@ -80,10 +81,13 @@ export async function listMachines(
     return { error: "Forbidden" as const, status: 403 as const }
   }
 
+  const share = await readBranchSharing(db, params.companyId)
+  const open = isAdminInAnyBranch(params.roles) || share.machines.view
+
   const base = { deletedAt: null, branch: { companyId: params.companyId } }
   let branchFilter: { branchId: string } | { branchId: { in: string[] } } | Record<string, never> = {}
 
-  if (isAdminInAnyBranch(params.roles)) {
+  if (open) {
     if (params.branchId) {
       const inCompany = await db.branch.findFirst({
         where: { id: params.branchId, companyId: params.companyId, deletedAt: null, isActive: true },
@@ -155,7 +159,8 @@ export async function createMachine(
     select: { id: true },
   })
   if (!branchOk) return { error: "Invalid branch" as const, status: 400 as const }
-  if (!hasPermission(params.roles, branchId, "machines", "create")) {
+  const shareCreate = (await readBranchSharing(db, params.companyId)).machines.create
+  if (!permissionCoversBranch(params.roles, "machines", "create", branchId, shareCreate)) {
     return { error: "Forbidden" as const, status: 403 as const }
   }
   if (params.input.departmentId) {

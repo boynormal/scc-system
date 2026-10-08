@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Moon,
   Search,
+  Share2,
   ShieldCheck,
   Sun,
   Users,
@@ -30,6 +31,7 @@ type HubAccess = {
   roles: boolean
   masterData: boolean
   homeScreen: boolean
+  branchSharing: boolean
 }
 
 type HubEntry = {
@@ -120,6 +122,16 @@ export function SettingsHub({
         description: t("rolesDesc"),
         icon: ShieldCheck,
         keywords: ["roles", "สิทธิ์", "rbac", "permission"],
+      })
+    }
+    if (access.branchSharing) {
+      adminEntries.push({
+        id: "branch-sharing",
+        href: "/settings/branch-sharing",
+        label: t("branchSharingTitle"),
+        description: t("branchSharingDesc"),
+        icon: Share2,
+        keywords: ["branch", "สาขา", "share", "ร่วม", "ข้ามสาขา"],
       })
     }
     if (access.masterData) {
@@ -222,7 +234,6 @@ export function SettingsHub({
     <div className="w-full space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-foreground">{t("hubTitle")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("hubDesc")}</p>
       </div>
 
       <GlassInput

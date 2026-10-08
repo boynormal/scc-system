@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { ExpenseSourceModule, Prisma, PrismaClient } from "@prisma/client"
 import { ForbiddenError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 
 const REPORT_STATUSES = ["DRAFT", "PENDING", "APPROVED", "PAID"] as const
 const EXCLUDED_STATUSES = ["CANCELLED", "REJECTED"] as const
@@ -48,9 +49,10 @@ function optionalUuid(value?: string | null): string | null {
 export function reportWhere(
   companyId: string,
   roles: UserRole[],
-  branchId?: string | null
+  branchId?: string | null,
+  companyWide = false
 ): Prisma.ExpenseWhereInput {
-  const isAdmin = isAdminInAnyBranch(roles)
+  const isAdmin = isAdminInAnyBranch(roles) || companyWide
   const allowed = getBranchIds(roles)
   const base: Prisma.ExpenseWhereInput = {
     companyId,
@@ -348,7 +350,8 @@ export async function getExpenseReport(
   }
 ) {
   if (!canExpensesRead(params.roles)) throw new ForbiddenError()
-  const where = reportWhere(params.companyId, params.roles, params.branchId)
+  const shareView = (await readBranchSharing(db, params.companyId)).finance.view
+  const where = reportWhere(params.companyId, params.roles, params.branchId, shareView)
 
   if (params.dateFrom?.trim() || params.dateTo?.trim()) {
     const range: Prisma.DateTimeFilter = {}

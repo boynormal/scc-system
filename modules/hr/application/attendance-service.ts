@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 import { parseTimeSheetXlsBuffer } from "./parse-timesheet-xls"
 import { ensurePersonnelBranch } from "./personnel-branch-utils"
 
@@ -52,7 +53,8 @@ export async function listAttendanceEntries(
   }
 
   let branchFilter: { branchId: string } | { branchId: { in: string[] } } | Record<string, never> = {}
-  if (isAdminInAnyBranch(roles)) {
+  const shareView = (await readBranchSharing(db, companyId)).personnel.view
+  if (isAdminInAnyBranch(roles) || shareView) {
     if (branchIdParam) {
       const ok = await db.branch.findFirst({
         where: { id: branchIdParam, companyId, deletedAt: null, isActive: true },
@@ -114,7 +116,11 @@ export async function deleteAttendanceEntry(
   })
   if (!row) throw new NotFoundError("ไม่พบข้อมูล")
 
-  if (!isAdminInAnyBranch(params.roles) && !getBranchIds(params.roles).includes(row.branchId)) {
+  if (
+    !(await readBranchSharing(db, params.companyId)).personnel.delete &&
+    !isAdminInAnyBranch(params.roles) &&
+    !getBranchIds(params.roles).includes(row.branchId)
+  ) {
     throw new ForbiddenError()
   }
 
@@ -141,7 +147,11 @@ export async function deleteAttendanceByDay(
   })
   if (!branch) throw new ValidationError("สาขาไม่ถูกต้อง")
 
-  if (!isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
+  if (
+    !(await readBranchSharing(db, companyId)).personnel.delete &&
+    !isAdminInAnyBranch(roles) &&
+    !getBranchIds(roles).includes(branchId)
+  ) {
     throw new ForbiddenError()
   }
 
@@ -182,7 +192,11 @@ export async function importAttendanceFromXls(
   })
   if (!branch) throw new ValidationError("Invalid branch")
 
-  if (!isAdminInAnyBranch(roles) && !getBranchIds(roles).includes(branchId)) {
+  if (
+    !(await readBranchSharing(db, companyId)).personnel.create &&
+    !isAdminInAnyBranch(roles) &&
+    !getBranchIds(roles).includes(branchId)
+  ) {
     throw new ForbiddenError()
   }
 

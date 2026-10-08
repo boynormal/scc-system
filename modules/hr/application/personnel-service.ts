@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { PrismaClient, Prisma } from "@prisma/client"
 import { AppError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { readBranchSharing, type BranchShareAction } from "@/shared/permissions/branch-sharing"
 import { replacePersonnelBranchesFromIds } from "./personnel-branch-utils"
 import { dutyItemRefSelect } from "./duty-groups"
 import { assertDutyItemsAllowed } from "./duty-links"
@@ -309,12 +310,17 @@ export function personnelLegalName(person: {
   return `${legal} (${knownAs})`
 }
 
+async function personnelShared(db: PrismaClient, companyId: string, action: BranchShareAction) {
+  return (await readBranchSharing(db, companyId)).personnel[action]
+}
+
 async function findLivePersonnel(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; id: string }
+  params: { companyId: string; roles: UserRole[]; id: string },
+  action: BranchShareAction = "view"
 ) {
   const allowed = getBranchIds(params.roles)
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const isAdmin = isAdminInAnyBranch(params.roles) || (await personnelShared(db, params.companyId, action))
   const branchScope = personnelBranchWhereForRoles(isAdmin, allowed, null)
   const row = await db.personnel.findFirst({
     where: {
@@ -345,7 +351,8 @@ async function assertBranchesAllowed(
   db: PrismaClient,
   companyId: string,
   branchIds: string[],
-  roles: UserRole[]
+  roles: UserRole[],
+  shared = false
 ): Promise<void> {
   if (branchIds.length === 0) return
   const rows = await db.branch.findMany({
@@ -355,7 +362,7 @@ async function assertBranchesAllowed(
   if (rows.length !== branchIds.length) {
     throw new ValidationError("สาขาไม่ถูกต้อง")
   }
-  if (!isAdminInAnyBranch(roles)) {
+  if (!shared && !isAdminInAnyBranch(roles)) {
     const allowed = new Set(getBranchIds(roles))
     for (const id of branchIds) {
       if (!allowed.has(id)) {
@@ -434,7 +441,7 @@ export async function listPersonnel(
   }
 
   const allowed = getBranchIds(roles)
-  const isAdmin = isAdminInAnyBranch(roles)
+  const isAdmin = isAdminInAnyBranch(roles) || (await personnelShared(db, companyId, "view"))
   const branchScope = personnelBranchWhereForRoles(isAdmin, allowed, branchIdParam)
 
   if (branchScope === null && branchIdParam && !isAdmin) {
@@ -519,7 +526,13 @@ export async function createPersonnel(
   const primary = resolvePrimaryFromList(resolvedBranchIds, primaryBranchId ?? null) ?? branchId ?? null
   const positionIds = requestedPositionIds(input) ?? []
 
-  await assertBranchesAllowed(db, companyId, resolvedBranchIds, roles)
+  await assertBranchesAllowed(
+    db,
+    companyId,
+    resolvedBranchIds,
+    roles,
+    await personnelShared(db, companyId, "create")
+  )
   if (userId) await assertUserLinkAllowed(db, companyId, userId)
   if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId, resolvedBranchIds)
   await assertPositionsAllowed(db, companyId, positionIds, resolvedBranchIds)
@@ -589,11 +602,11 @@ export async function updatePersonnel(
   const { companyId, roles, id, input } = params
   if (!canUpdatePersonnel(roles)) throw new ForbiddenError()
 
-  const existing = await findLivePersonnel(db, { companyId, roles, id })
+  const existing = await findLivePersonnel(db, { companyId, roles, id }, "edit")
 
   const resolvedBranchIds = resolveBranchIdListFromUpdate(input)
   if (resolvedBranchIds) {
-    await assertBranchesAllowed(db, companyId, resolvedBranchIds, roles)
+    await assertBranchesAllowed(db, companyId, resolvedBranchIds, roles, await personnelShared(db, companyId, "edit"))
   }
   if (input.userId) {
     await assertUserLinkAllowed(db, companyId, input.userId, existing.id)
@@ -702,7 +715,7 @@ export async function deletePersonnel(
   params: { companyId: string; roles: UserRole[]; id: string }
 ) {
   if (!canDeletePersonnel(params.roles)) throw new ForbiddenError()
-  const existing = await findLivePersonnel(db, params)
+  const existing = await findLivePersonnel(db, params, "delete")
   const row = await db.personnel.update({
     where: { id: existing.id },
     data: { deletedAt: new Date(), isActive: false },
@@ -736,7 +749,9 @@ export async function listAccessiblePersonnelBranches(
   params: { companyId: string; roles: UserRole[] }
 ) {
   if (!canReadPersonnel(params.roles)) throw new ForbiddenError()
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const share = await readBranchSharing(db, params.companyId)
+  const isAdmin =
+    isAdminInAnyBranch(params.roles) || share.personnel.view || share.personnel.create || share.personnel.edit
   const allowed = getBranchIds(params.roles)
   const branches = await db.branch.findMany({
     where: {
@@ -756,7 +771,8 @@ export async function listPersonnelDepartments(
   params: { companyId: string; roles: UserRole[]; branchIds?: string[] | null }
 ) {
   if (!canReadPersonnel(params.roles)) throw new ForbiddenError()
-  const isAdmin = isAdminInAnyBranch(params.roles)
+  const shareView = (await readBranchSharing(db, params.companyId)).personnel.view
+  const isAdmin = isAdminInAnyBranch(params.roles) || shareView
   const allowed = getBranchIds(params.roles)
   const requested = params.branchIds?.filter(Boolean) ?? []
   const scope = isAdmin ? requested : requested.filter((id) => allowed.includes(id))

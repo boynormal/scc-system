@@ -3,7 +3,7 @@ import type { PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { type UserRole } from "@/lib/permissions"
 import { writeJobAudit } from "./job-audit"
-import { canTransportJobs } from "./transport-job-access"
+import { transportJobAllowed } from "./transport-job-access"
 import { ACTIVE_JOB_STATUSES } from "@/shared/transport/job-status-groups"
 import { isScheduledTodayBangkok } from "./transport-date-utils"
 import { vehicleHasOpenInRepair } from "./repair-service"
@@ -197,7 +197,9 @@ export async function getAssignment(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "read")) throw new ForbiddenError()
+  if (!(await transportJobAllowed(db, { companyId: params.companyId, roles: params.roles, action: "read", branchId: job.branchId }))) {
+    throw new ForbiddenError()
+  }
 
   return db.jobAssignment.findUnique({
     where: { jobId: params.jobId },
@@ -226,7 +228,9 @@ export async function assignJob(
   if (job.status === "completed" || job.status === "cancelled") {
     throw new ValidationError("Cannot assign a completed or cancelled job")
   }
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  if (!(await transportJobAllowed(db, { companyId: params.companyId, roles: params.roles, action: "update", branchId: job.branchId }))) {
+    throw new ForbiddenError()
+  }
 
   const assignment = await performAssignment(db, {
     jobId: params.jobId,
@@ -257,7 +261,9 @@ export async function completeJob(
   if (job.status === "completed") throw new ValidationError("งานนี้จบแล้ว")
   if (job.status === "cancelled") throw new ValidationError("งานนี้ถูกยกเลิกแล้ว")
 
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  if (!(await transportJobAllowed(db, { companyId: params.companyId, roles: params.roles, action: "update", branchId: job.branchId }))) {
+    throw new ForbiddenError()
+  }
 
   if (job.assignment) {
     const endTime = job.assignment.endTime ?? new Date()
@@ -322,7 +328,9 @@ export async function cancelJob(
   if (job.status === "completed") throw new ValidationError("งานนี้จบแล้ว — ไม่สามารถยกเลิกได้")
   if (job.status === "cancelled") throw new ValidationError("งานนี้ถูกยกเลิกแล้ว")
 
-  if (!canTransportJobs(params.roles, "delete")) throw new ForbiddenError()
+  if (!(await transportJobAllowed(db, { companyId: params.companyId, roles: params.roles, action: "delete", branchId: job.branchId }))) {
+    throw new ForbiddenError()
+  }
 
   if (job.assignment) {
     const markAvailable = isScheduledTodayBangkok(job.scheduledDate)
@@ -432,7 +440,9 @@ export async function reopenJob(
     throw new ValidationError("เปิดงานอีกครั้งได้เฉพาะใบงานที่เสร็จสิ้นหรือยกเลิกแล้ว")
   }
 
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  if (!(await transportJobAllowed(db, { companyId: params.companyId, roles: params.roles, action: "update", branchId: job.branchId }))) {
+    throw new ForbiddenError()
+  }
 
   if (!job.assignment) {
     await db.transportJob.update({
@@ -519,7 +529,9 @@ export async function unassignJob(
   })
   if (!job) throw new NotFoundError("Job not found")
   if (!job.assignment) throw new NotFoundError("No assignment found for this job")
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  if (!(await transportJobAllowed(db, { companyId: params.companyId, roles: params.roles, action: "update", branchId: job.branchId }))) {
+    throw new ForbiddenError()
+  }
 
   const markAvailable = isScheduledTodayBangkok(job.scheduledDate)
   if (markAvailable) {

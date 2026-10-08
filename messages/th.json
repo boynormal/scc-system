@@ -296,7 +296,6 @@
   },
   "settings": {
     "hubTitle": "ศูนย์ตั้งค่า",
-    "hubDesc": "ค้นหาและสลับหน้าตั้งค่า — งานผู้ดูแลเปิดจาก Sidebar ได้เช่นกัน",
     "hubSectionAdmin": "ผู้ดูแลระบบ",
     "hubSectionPlatform": "แพลตฟอร์ม",
     "hubSectionAbout": "เกี่ยวกับ",
@@ -329,7 +328,29 @@
     "searchEmpty": "ไม่พบการตั้งค่าที่ตรงกับ “{query}”",
     "iconsCustomized": "ปรับแล้ว {count} รายการ",
     "iconsDefault": "ไอคอนเริ่มต้น",
-    "versionLabel": "เวอร์ชัน {version}"
+    "versionLabel": "เวอร์ชัน {version}",
+    "branchSharingTitle": "ใช้ข้อมูลร่วมข้ามสาขา",
+    "branchSharingDesc": "สวิตช์ไม่ได้แทนสิทธิ์เดิม ผู้ใช้ต้องมีสิทธิ์การกระทำนั้นอย่างน้อยหนึ่งสาขา แล้วสวิตช์จึงขยายไปทุกสาขาในบริษัท",
+    "branchSharingLoading": "กำลังโหลด...",
+    "branchSharingLoadError": "โหลดการตั้งค่าไม่สำเร็จ",
+    "branchSharingSaveError": "บันทึกไม่สำเร็จ",
+    "branchSharingModule": {
+      "transport_jobs": "ใบงานขนส่ง",
+      "assets": "สินทรัพย์",
+      "machines": "เครื่องจักร",
+      "work_orders": "ใบสั่งงาน",
+      "due_dates": "วันครบกำหนด",
+      "finance": "การเงิน",
+      "personnel": "บุคลากร"
+    },
+    "branchSharingColumnItem": "รายการ",
+    "branchSharingAction": {
+      "view": "การมองเห็น",
+      "edit": "การแก้ไข",
+      "delete": "การลบรายการ",
+      "create": "การสร้างรายการในสาขาอื่น",
+      "approve": "การอนุมัติ"
+    }
   },
   "notifications": {
     "title": "การแจ้งเตือน",

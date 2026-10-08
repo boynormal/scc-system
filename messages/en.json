@@ -296,7 +296,6 @@
   },
   "settings": {
     "hubTitle": "Settings center",
-    "hubDesc": "Search and switch settings pages — admin items are also available from the Sidebar",
     "hubSectionAdmin": "Administration",
     "hubSectionPlatform": "Platform",
     "hubSectionAbout": "About",
@@ -329,7 +328,29 @@
     "searchEmpty": "No settings match “{query}”",
     "iconsCustomized": "{count} customized",
     "iconsDefault": "Default icons",
-    "versionLabel": "Version {version}"
+    "versionLabel": "Version {version}",
+    "branchSharingTitle": "Share data across branches",
+    "branchSharingDesc": "A switch does not replace existing permissions. The user must already have that action on at least one branch before it applies company-wide.",
+    "branchSharingLoading": "Loading...",
+    "branchSharingLoadError": "Could not load settings",
+    "branchSharingSaveError": "Could not save",
+    "branchSharingModule": {
+      "transport_jobs": "Transport jobs",
+      "assets": "Assets",
+      "machines": "Machines",
+      "work_orders": "Work orders",
+      "due_dates": "Due dates",
+      "finance": "Finance",
+      "personnel": "Personnel"
+    },
+    "branchSharingColumnItem": "Item",
+    "branchSharingAction": {
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "create": "Create in another branch",
+      "approve": "Approve"
+    }
   },
   "notifications": {
     "title": "Notifications",

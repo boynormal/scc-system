@@ -91,6 +91,7 @@ export const updateSupplierSchema = z.object({
   phone: z.unknown().optional(),
   email: z.unknown().optional(),
   address: z.unknown().optional(),
+  details: z.unknown().optional(),
   leadTimeDays: z.unknown().optional(),
   isActive: z.boolean().optional(),
 })
@@ -523,6 +524,7 @@ export async function listSuppliers(
         phone: true,
         email: true,
         address: true,
+        details: true,
         leadTimeDays: true,
         isActive: true,
         _count: { select: { spareParts: true } },
@@ -562,6 +564,7 @@ export async function createSupplier(
         phone: emptyToNull(params.input.phone),
         email: emptyToNull(params.input.email),
         address: emptyToNull(params.input.address),
+        details: emptyToNull(params.input.details),
         leadTimeDays: parseLeadTime(params.input.leadTimeDays),
         isActive: params.input.isActive === false ? false : true,
       },
@@ -595,6 +598,7 @@ export async function updateSupplier(
   if (params.input.phone !== undefined) data.phone = emptyToNull(params.input.phone)
   if (params.input.email !== undefined) data.email = emptyToNull(params.input.email)
   if (params.input.address !== undefined) data.address = emptyToNull(params.input.address)
+  if (params.input.details !== undefined) data.details = emptyToNull(params.input.details)
   if (params.input.leadTimeDays !== undefined) data.leadTimeDays = parseLeadTime(params.input.leadTimeDays)
   if (typeof params.input.isActive === "boolean") data.isActive = params.input.isActive
 
@@ -615,19 +619,34 @@ export async function updateSupplier(
 export async function deleteSupplier(db: PrismaClient, params: { id: string; companyId: string }) {
   const existing = await db.supplier.findFirst({
     where: { id: params.id, companyId: params.companyId },
-    include: { _count: { select: { spareParts: true } } },
+    include: {
+      _count: {
+        select: {
+          spareParts: true,
+          assets: { where: { deletedAt: null } },
+          expenses: { where: { deletedAt: null } },
+        },
+      },
+    },
   })
   if (!existing) return { error: { message: "Supplier not found" }, status: 404 as const }
 
-  if (existing._count.spareParts > 0) {
-    return {
-      error: { message: `Cannot delete supplier because ${existing._count.spareParts} spare parts still use it` },
-      status: 400 as const,
-    }
+  const usage = supplierUsageMessage(existing._count)
+  if (usage) {
+    return { error: { message: usage }, status: 400 as const }
   }
 
   await db.supplier.delete({ where: { id: params.id } })
   return { success: true }
+}
+
+function supplierUsageMessage(counts: { spareParts: number; assets: number; expenses: number }): string | null {
+  const parts: string[] = []
+  if (counts.spareParts > 0) parts.push(`อะไหล่ ${counts.spareParts} รายการ`)
+  if (counts.assets > 0) parts.push(`สินทรัพย์ ${counts.assets} รายการ`)
+  if (counts.expenses > 0) parts.push(`บิลการเงิน ${counts.expenses} รายการ`)
+  if (parts.length === 0) return null
+  return `ลบไม่ได้ เพราะซัพพลายเออร์นี้ยังถูกใช้โดย${parts.join(" และ ")}`
 }
 
 export async function getSupplierSpareParts(db: PrismaClient, params: { id: string; companyId: string }) {

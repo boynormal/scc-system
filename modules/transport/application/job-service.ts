@@ -11,7 +11,7 @@ import {
   statusFilterForGroup,
 } from "@/shared/transport/job-status-groups"
 import { writeJobAudit } from "./job-audit"
-import { canTransportJobs } from "./transport-job-access"
+import { canTransportJobs, transportJobAllowed, transportJobListBranchIds } from "./transport-job-access"
 import { nextTransportDocumentNo } from "./transport-document-no"
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -142,6 +142,8 @@ async function generateJobNumber(db: PrismaClient, companyId: string): Promise<s
 type JobListFilters = {
   companyId: string
   branchId?: string | null
+  /** When set, list only these branches. Null means the company-wide view is already allowed. */
+  branchIds?: string[] | null
   status?: TransportJobStatus | null
   statusGroup?: JobListGroup | null
   priority?: TransportJobPriority | null
@@ -172,7 +174,15 @@ function buildJobListWhere(params: JobListFilters) {
 
   return {
     companyId: params.companyId,
-    ...(params.branchId ? { branchId: params.branchId } : {}),
+    ...(params.branchId
+      ? { branchId: params.branchId }
+      : params.branchIds
+        ? {
+            branchId: {
+              in: params.branchIds.length ? params.branchIds : ["00000000-0000-0000-0000-000000000000"],
+            },
+          }
+        : {}),
     ...(group ? statusFilterForGroup(group) : params.status ? { status: params.status } : {}),
     ...(params.priority ? { priority: params.priority } : {}),
     ...(contains
@@ -198,6 +208,21 @@ function buildJobListWhere(params: JobListFilters) {
 
 function canReadTransportJobsInAnyBranch(roles: UserRole[]) {
   return canTransportJobs(roles, "read")
+}
+
+async function assertOnJob(
+  db: PrismaClient,
+  params: { companyId: string; roles: UserRole[] },
+  action: "read" | "update" | "delete" | "create",
+  branchId: string
+) {
+  const allowed = await transportJobAllowed(db, {
+    companyId: params.companyId,
+    roles: params.roles,
+    action,
+    branchId,
+  })
+  if (!allowed) throw new ForbiddenError()
 }
 
 const jobListInclude = {
@@ -241,10 +266,13 @@ export async function countJobsByGroup(
 ): Promise<Record<JobListGroup, number>> {
   const canRead = canReadTransportJobsInAnyBranch(params.roles)
   if (!canRead) throw new ForbiddenError()
+  const limited = await transportJobListBranchIds(db, params.companyId, params.roles)
+  if (limited && params.branchId && !limited.includes(params.branchId)) throw new ForbiddenError()
 
   const base = {
     companyId: params.companyId,
     branchId: params.branchId ?? undefined,
+    branchIds: params.branchId ? null : limited,
     priority: params.priority ?? undefined,
     search: params.search ?? undefined,
   }
@@ -283,8 +311,10 @@ export async function listJobs(
 ) {
   const canRead = canReadTransportJobsInAnyBranch(params.roles)
   if (!canRead) throw new ForbiddenError()
+  const limited = await transportJobListBranchIds(db, params.companyId, params.roles)
+  if (limited && params.branchId && !limited.includes(params.branchId)) throw new ForbiddenError()
 
-  const where = buildJobListWhere(params)
+  const where = buildJobListWhere({ ...params, branchIds: params.branchId ? null : limited })
 
   const [total, items] = await Promise.all([
     db.transportJob.count({ where }),
@@ -309,7 +339,7 @@ export async function getJobById(
     include: jobDetailInclude,
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "read")) throw new ForbiddenError()
+  await assertOnJob(db, params, "read", job.branchId)
   return job
 }
 
@@ -322,7 +352,7 @@ export async function getJobByIdForPrint(
     include: jobDetailInclude,
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canReadTransportJobsInAnyBranch(params.roles)) throw new ForbiddenError()
+  await assertOnJob(db, params, "read", job.branchId)
   return job
 }
 
@@ -330,7 +360,7 @@ export async function createJob(
   db: PrismaClient,
   params: { companyId: string; userId: string; roles: UserRole[]; input: CreateJobInput }
 ) {
-  if (!canTransportJobs(params.roles, "create")) throw new ForbiddenError()
+  await assertOnJob(db, params, "create", params.input.branchId)
   const branch = await db.branch.findFirst({
     where: { id: params.input.branchId, companyId: params.companyId },
     select: { id: true },
@@ -398,7 +428,7 @@ export async function updateJob(
     where: { id: params.id, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  await assertOnJob(db, params, "update", job.branchId)
 
   if (params.input.branchId && params.input.branchId !== job.branchId) {
     const branch = await db.branch.findFirst({
@@ -406,6 +436,7 @@ export async function updateJob(
       select: { id: true },
     })
     if (!branch) throw new ValidationError("ไม่พบสาขาในบริษัทนี้")
+    await assertOnJob(db, params, "update", params.input.branchId)
   }
 
   const updated = await db.transportJob.update({ where: { id: params.id }, data: params.input })
@@ -444,7 +475,7 @@ export async function listStops(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "read")) throw new ForbiddenError()
+  await assertOnJob(db, params, "read", job.branchId)
 
   return db.jobStop.findMany({
     where: { jobId: params.jobId },
@@ -465,7 +496,7 @@ export async function addStop(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  await assertOnJob(db, params, "update", job.branchId)
 
   return db.jobStop.create({ data: { ...params.input, jobId: params.jobId } })
 }
@@ -484,7 +515,7 @@ export async function updateStop(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  await assertOnJob(db, params, "update", job.branchId)
 
   const stop = await db.jobStop.findFirst({ where: { id: params.stopId, jobId: params.jobId } })
   if (!stop) throw new NotFoundError("Stop not found")
@@ -510,7 +541,7 @@ export async function deleteStop(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  await assertOnJob(db, params, "update", job.branchId)
 
   if (job.status === "completed" || job.status === "cancelled") {
     throw new ValidationError("Cannot modify stops on a completed or cancelled job")
@@ -554,7 +585,7 @@ export async function syncJobStops(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  await assertOnJob(db, params, "update", job.branchId)
 
   if (job.status === "completed" || job.status === "cancelled") {
     throw new ValidationError("Cannot modify stops on a completed or cancelled job")
@@ -621,7 +652,7 @@ export async function listAttachments(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "read")) throw new ForbiddenError()
+  await assertOnJob(db, params, "read", job.branchId)
 
   return db.jobAttachment.findMany({
     where: { jobId: params.jobId, ...(params.stage ? { stage: params.stage } : {}) },
@@ -643,7 +674,7 @@ export async function createAttachment(
     where: { id: params.jobId, companyId: params.companyId },
   })
   if (!job) throw new NotFoundError("Job not found")
-  if (!canTransportJobs(params.roles, "update")) throw new ForbiddenError()
+  await assertOnJob(db, params, "update", job.branchId)
 
   return db.jobAttachment.create({
     data: {

@@ -68,7 +68,7 @@ export function OverviewAttention({
       href: "/transport/repairs",
       label: "แจ้งซ่อมเปิด",
       value: openRepairs,
-      hint: "แจ้งซ่อม + กำลังซ่อม + ตรวจสอบ",
+      hint: "แจ้งซ่อม + กำลังซ่อม",
       tone: "red",
       icon: <Wrench className="h-5 w-5" />,
     },

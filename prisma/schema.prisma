@@ -1120,6 +1120,7 @@ enum TransportJobPriority {
 enum TransportRepairStatus {
   reported
   in_repair
+  /// Retired. Existing rows are migrated to closed. The app no longer writes this value.
   inspection
   closed
   cancelled

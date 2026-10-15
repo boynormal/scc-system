@@ -12,7 +12,6 @@ import type { TransportRepairStatus } from "@prisma/client"
 const VALID_STATUSES = new Set<TransportRepairStatus>([
   "reported",
   "in_repair",
-  "inspection",
   "closed",
   "cancelled",
 ])

@@ -38,9 +38,8 @@ export const createRepairSchema = z
 
 export type CreateRepairInput = z.infer<typeof createRepairSchema>
 
-const OPEN_STATUSES: TransportRepairStatus[] = ["reported", "in_repair", "inspection"]
-/** Block new create only while vehicle has an active repair queue — inspection alone is allowed. */
-const BLOCK_CREATE_STATUSES: TransportRepairStatus[] = ["reported", "in_repair"]
+/** Open queue is แจ้งซ่อม and กำลังซ่อม. Closed repairs are the finance-source queue. */
+const OPEN_STATUSES: TransportRepairStatus[] = ["reported", "in_repair"]
 const LIST_TAKE_LIMIT = 300
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -176,7 +175,7 @@ export async function listRepairs(
   }
 }
 
-/** Counts for open-queue tabs (แจ้งซ่อม / กำลังซ่อม / ตรวจสอบ); ignores date range. */
+/** Counts for open-queue tabs (แจ้งซ่อม / กำลังซ่อม); ignores date range. */
 export async function countOpenRepairsByStatus(
   db: PrismaClient,
   params: {
@@ -185,7 +184,7 @@ export async function countOpenRepairsByStatus(
     vehicleId?: string | null
     branchId?: string | null
   }
-): Promise<{ reported: number; in_repair: number; inspection: number }> {
+): Promise<{ reported: number; in_repair: number }> {
   const accessibleBranchIds = getBranchIds(params.roles).filter((bid) =>
     hasPermission(params.roles, bid, "transport_vehicles", "read")
   )
@@ -213,9 +212,9 @@ export async function countOpenRepairsByStatus(
     _count: { _all: true },
   })
 
-  const counts = { reported: 0, in_repair: 0, inspection: 0 }
+  const counts = { reported: 0, in_repair: 0 }
   for (const g of groups) {
-    if (g.status === "reported" || g.status === "in_repair" || g.status === "inspection") {
+    if (g.status === "reported" || g.status === "in_repair") {
       counts[g.status] = g._count._all
     }
   }
@@ -259,14 +258,14 @@ export async function createRepair(
     where: {
       vehicleId: vehicle.id,
       companyId: params.companyId,
-      status: { in: BLOCK_CREATE_STATUSES },
+      status: { in: OPEN_STATUSES },
     },
     select: { id: true, status: true },
   })
   if (openExisting) {
     const msg =
       openExisting.status === "in_repair"
-        ? "รถคันนี้กำลังซ่อมอยู่แล้ว — ส่งตรวจสอบหรือจัดการใบเดิมก่อน"
+        ? "รถคันนี้กำลังซ่อมอยู่แล้ว — ซ่อมเสร็จหรือจัดการใบเดิมก่อน"
         : "รถคันนี้มีใบแจ้งซ่อมที่ยังไม่ปิด — เข้าซ่อมหรือยกเลิกใบเดิมก่อน"
     throw new ValidationError(msg)
   }
@@ -355,6 +354,7 @@ export async function startRepair(
   return updated
 }
 
+/** Inspection is retired. Close from in_repair so the ticket enters /finance/sources. */
 export async function markRepairInspection(
   db: PrismaClient,
   params: { id: string; companyId: string; userId: string; roles: UserRole[] }
@@ -364,23 +364,7 @@ export async function markRepairInspection(
   })
   if (!repair) throw new NotFoundError("Repair log not found")
   await assertVehiclePermission(params.roles, repair.branchId, "update")
-
-  if (repair.status !== "in_repair") {
-    throw new ValidationError("ส่งตรวจสอบได้เฉพาะใบที่กำลังซ่อมเท่านั้น")
-  }
-
-  const [updated] = await db.$transaction([
-    db.transportRepairLog.update({
-      where: { id: repair.id },
-      data: { status: "inspection" },
-      include: repairInclude,
-    }),
-    db.transportVehicle.update({
-      where: { id: repair.vehicleId },
-      data: { currentStatus: "available" },
-    }),
-  ])
-  return updated
+  throw new ValidationError("สถานะตรวจสอบถูกยกเลิกแล้ว — ซ่อมเสร็จจากใบที่กำลังซ่อม")
 }
 
 export async function closeRepair(
@@ -399,8 +383,8 @@ export async function closeRepair(
   if (!repair) throw new NotFoundError("Repair log not found")
   await assertVehiclePermission(params.roles, repair.branchId, "update")
 
-  if (repair.status !== "inspection") {
-    throw new ValidationError("ปิดงานได้เฉพาะใบที่สถานะตรวจสอบเท่านั้น")
+  if (repair.status !== "in_repair") {
+    throw new ValidationError("ซ่อมเสร็จได้เฉพาะใบที่กำลังซ่อมเท่านั้น")
   }
 
   if (params.repairCost != null && (Number.isNaN(params.repairCost) || params.repairCost < 0)) {
@@ -472,7 +456,7 @@ export const updateRepairSchema = z
     notes: z.string().max(2000).nullable().optional(),
     repairCost: z.number().min(0).nullable().optional(),
     paymentMethod: paymentMethodSchema.nullable().optional(),
-    status: z.enum(["reported", "in_repair", "inspection", "closed", "cancelled"]).optional(),
+    status: z.enum(["reported", "in_repair", "closed", "cancelled"]).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.repairCost != null && data.repairCost > 0 && data.paymentMethod === null) {
@@ -528,8 +512,8 @@ export async function updateRepair(
   const nextPayment =
     input.paymentMethod !== undefined ? input.paymentMethod : repair.paymentMethod
   if (nextStatus === "closed") {
-    if (statusChanged && repair.status !== "inspection") {
-      throw new ValidationError("ปิดงานได้เฉพาะใบที่สถานะตรวจสอบเท่านั้น")
+    if (statusChanged && repair.status !== "in_repair") {
+      throw new ValidationError("ซ่อมเสร็จได้เฉพาะใบที่กำลังซ่อมเท่านั้น")
     }
     assertReferenceAmountIfPresent({
       repairCost: nextCost,
@@ -547,11 +531,7 @@ export async function updateRepair(
     nextBranchId = vehicle.branchId
   }
 
-  if (
-    nextStatus === "reported" ||
-    nextStatus === "in_repair" ||
-    nextStatus === "inspection"
-  ) {
+  if (nextStatus === "reported" || nextStatus === "in_repair") {
     await assertNoOtherOpenRepair(db, {
       companyId: params.companyId,
       vehicleId: nextVehicleId,
@@ -580,11 +560,6 @@ export async function updateRepair(
       statusData.closedById = null
       statusData.closedAt = null
     } else if (nextStatus === "in_repair") {
-      statusData.startedById = repair.startedById ?? params.userId
-      statusData.startedAt = repair.startedAt ?? now
-      statusData.closedById = null
-      statusData.closedAt = null
-    } else if (nextStatus === "inspection") {
       statusData.startedById = repair.startedById ?? params.userId
       statusData.startedAt = repair.startedAt ?? now
       statusData.closedById = null
@@ -636,7 +611,7 @@ export async function updateRepair(
 }
 
 export const revertRepairSchema = z.object({
-  to: z.enum(["reported", "in_repair", "inspection"]),
+  to: z.enum(["reported", "in_repair"]),
 })
 
 export type RevertRepairInput = z.infer<typeof revertRepairSchema>
@@ -666,7 +641,7 @@ export async function revertRepair(
     companyId: string
     userId: string
     roles: UserRole[]
-    to: "reported" | "in_repair" | "inspection"
+    to: "reported" | "in_repair"
   }
 ) {
   const repair = await db.transportRepairLog.findFirst({
@@ -713,13 +688,24 @@ export async function revertRepair(
     })
   }
 
-  // inspection → in_repair
-  if (params.to === "in_repair" && repair.status === "inspection") {
+  // closed → in_repair (vehicle goes back to maintenance)
+  if (params.to === "in_repair" && repair.status === "closed") {
+    await assertNoOtherOpenRepair(db, {
+      companyId: params.companyId,
+      vehicleId: repair.vehicleId,
+      excludeId: repair.id,
+    })
     await assertNoActiveJobToday(db, params.companyId, repair.vehicleId)
     const [updated] = await db.$transaction([
       db.transportRepairLog.update({
         where: { id: repair.id },
-        data: { status: "in_repair" },
+        data: {
+          status: "in_repair",
+          closedById: null,
+          closedAt: null,
+          startedById: repair.startedById ?? params.userId,
+          startedAt: repair.startedAt ?? new Date(),
+        },
         include: repairInclude,
       }),
       db.transportVehicle.update({
@@ -728,26 +714,6 @@ export async function revertRepair(
       }),
     ])
     return updated
-  }
-
-  // closed → inspection (vehicle stays available)
-  if (params.to === "inspection" && repair.status === "closed") {
-    await assertNoOtherOpenRepair(db, {
-      companyId: params.companyId,
-      vehicleId: repair.vehicleId,
-      excludeId: repair.id,
-    })
-    return db.transportRepairLog.update({
-      where: { id: repair.id },
-      data: {
-        status: "inspection",
-        closedById: null,
-        closedAt: null,
-        startedById: repair.startedById ?? params.userId,
-        startedAt: repair.startedAt ?? new Date(),
-      },
-      include: repairInclude,
-    })
   }
 
   throw new ValidationError(

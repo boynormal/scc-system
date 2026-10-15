@@ -623,7 +623,6 @@ export async function deleteSupplier(db: PrismaClient, params: { id: string; com
       _count: {
         select: {
           spareParts: true,
-          assets: { where: { deletedAt: null } },
           expenses: { where: { deletedAt: null } },
         },
       },
@@ -640,10 +639,9 @@ export async function deleteSupplier(db: PrismaClient, params: { id: string; com
   return { success: true }
 }
 
-function supplierUsageMessage(counts: { spareParts: number; assets: number; expenses: number }): string | null {
+function supplierUsageMessage(counts: { spareParts: number; expenses: number }): string | null {
   const parts: string[] = []
   if (counts.spareParts > 0) parts.push(`อะไหล่ ${counts.spareParts} รายการ`)
-  if (counts.assets > 0) parts.push(`สินทรัพย์ ${counts.assets} รายการ`)
   if (counts.expenses > 0) parts.push(`บิลการเงิน ${counts.expenses} รายการ`)
   if (parts.length === 0) return null
   return `ลบไม่ได้ เพราะซัพพลายเออร์นี้ยังถูกใช้โดย${parts.join(" และ ")}`

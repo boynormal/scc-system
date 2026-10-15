@@ -8,7 +8,13 @@ import { Search } from "lucide-react"
 
 type BranchOption = { id: string; name: string }
 
-export function AssetFilters({ branches }: { branches: BranchOption[] }) {
+export function AssetFilters({
+  branches,
+  types,
+}: {
+  branches: BranchOption[]
+  types: BranchOption[]
+}) {
   const t = useTranslations("assets")
   const router = useRouter()
   const pathname = usePathname()
@@ -78,8 +84,11 @@ export function AssetFilters({ branches }: { branches: BranchOption[] }) {
         className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
-        <option value="VEHICLE">{t("type_VEHICLE")}</option>
-        <option value="MACHINE">{t("type_MACHINE")}</option>
+        {types.map((row) => (
+          <option key={row.id} value={row.id}>
+            {row.name}
+          </option>
+        ))}
       </select>
       <select
         defaultValue={searchParams.get("ownership") || ""}

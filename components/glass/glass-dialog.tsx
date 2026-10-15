@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { GlassSurface } from "./glass-surface"
@@ -34,10 +35,10 @@ export function GlassDialog({
     }
   }, [open, onOpenChange])
 
-  if (!open) return null
+  if (!open || typeof document === "undefined") return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-slate-900/20 backdrop-blur-md dark:bg-slate-950/35"
         role="presentation"
@@ -81,6 +82,7 @@ export function GlassDialog({
           <div className="px-5 py-4">{children}</div>
         </div>
       </GlassSurface>
-    </div>
+    </div>,
+    document.body
   )
 }

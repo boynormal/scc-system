@@ -19,6 +19,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
   if (!session) notFound()
   const { id } = await params
   const t = await getTranslations("assets")
+  const pm = await getTranslations("pmCheck")
   const roles = session.user.roles as UserRole[]
   let asset
   try {
@@ -42,13 +43,12 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
   const rows: { label: string; value: string }[] = [
     { label: t("code"), value: asset.code },
     { label: t("name"), value: asset.name },
-    { label: t("type"), value: t(`type_${asset.type}`) },
+    { label: t("type"), value: asset.typeName },
     { label: t("ownership"), value: t(`own_${asset.ownership}`) },
     { label: t("status"), value: t(`st_${asset.status}`) },
     { label: t("branch"), value: asset.branchName },
     { label: t("serialNumber"), value: asset.serialNumber ?? "—" },
-    { label: t("locationDetail"), value: asset.locationDetail ?? "—" },
-    { label: t("supplier"), value: asset.supplierName ?? t("supplierNone") },
+    { label: t("details"), value: asset.details ?? "—" },
     { label: t("acquiredAt"), value: asset.acquiredAt ?? "—" },
   ]
 
@@ -63,6 +63,11 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
           <p className="mt-0.5 text-sm text-muted-foreground">{asset.code}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link href={`/assets/${asset.id}/pm`}>
+            <Button type="button" variant="outline">
+              {pm("openPm")}
+            </Button>
+          </Link>
           {canUpdate && (
             <Link href={`/assets/${asset.id}/edit`}>
               <Button type="button" variant="outline">

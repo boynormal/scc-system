@@ -96,11 +96,6 @@ enum AuditAction {
   restore
 }
 
-enum AssetType {
-  VEHICLE
-  MACHINE
-}
-
 enum AssetStatus {
   REGISTERED
   ACTIVE
@@ -157,6 +152,8 @@ model Company {
   units                   Unit[]
   financeSourceReviews    FinanceSourceReview[]
   assets                  Asset[]
+  assetRegisterTypes      AssetRegisterType[]
+  assetPmPlans            AssetPmPlan[]
   dutyCategories          DutyCategory[]
 
   @@map("companies")
@@ -709,7 +706,6 @@ model Supplier {
   company    Company     @relation(fields: [companyId], references: [id])
   spareParts SparePart[]
   expenses   Expense[]
-  assets     Asset[]
 
   // Phase B: code no longer globally unique — this composite is now the sole
   // enforced constraint (allocateUniqueSupplierCode in master-data-service.ts
@@ -1936,12 +1932,11 @@ model Asset {
   branchId       String         @map("branch_id") @db.Uuid
   code           String         @db.VarChar(50)
   name           String         @db.VarChar(255)
-  type           AssetType
+  typeId         String         @map("type_id") @db.Uuid
   status         AssetStatus    @default(REGISTERED)
   ownership      AssetOwnership
   serialNumber   String?        @map("serial_number") @db.VarChar(100)
-  locationDetail String?        @map("location_detail") @db.VarChar(255)
-  supplierId     String?        @map("supplier_id") @db.Uuid
+  details        String?        @db.Text
   acquiredAt     DateTime?      @map("acquired_at") @db.Date
   isActive       Boolean        @default(true) @map("is_active")
   createdBy      String?        @map("created_by") @db.Uuid
@@ -1949,16 +1944,95 @@ model Asset {
   updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt      DateTime?      @map("deleted_at") @db.Timestamptz
 
-  company  Company   @relation(fields: [companyId], references: [id])
-  branch   Branch    @relation(fields: [branchId], references: [id])
-  supplier Supplier? @relation(fields: [supplierId], references: [id])
-  creator  User?     @relation("AssetCreatedBy", fields: [createdBy], references: [id])
+  company  Company            @relation(fields: [companyId], references: [id])
+  branch   Branch             @relation(fields: [branchId], references: [id])
+  type     AssetRegisterType  @relation(fields: [typeId], references: [id])
+  creator  User?              @relation("AssetCreatedBy", fields: [createdBy], references: [id])
+  pmPlan   AssetPmPlan?
 
   @@unique([companyId, code])
   @@index([companyId])
   @@index([branchId])
-  @@index([type])
+  @@index([typeId])
   @@index([status])
   @@index([ownership])
   @@map("assets")
+}
+
+model AssetRegisterType {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+  assets  Asset[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("asset_register_types")
+}
+
+// PM checklist on the asset register. QR opens /pm/[publicToken] without a session.
+model AssetPmPlan {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId      String   @unique @map("asset_id") @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  intervalDays Int      @default(30) @map("interval_days")
+  isActive     Boolean  @default(true) @map("is_active")
+  publicToken  String   @unique @map("public_token") @db.VarChar(64)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  asset   Asset          @relation(fields: [assetId], references: [id])
+  company Company        @relation(fields: [companyId], references: [id])
+  items   AssetPmItem[]
+  rounds  AssetPmRound[]
+
+  @@index([companyId])
+  @@map("asset_pm_plans")
+}
+
+model AssetPmItem {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId   String @map("plan_id") @db.Uuid
+  sequence Int    @db.SmallInt
+  name     String @db.VarChar(255)
+
+  plan    AssetPmPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  results AssetPmResult[]
+
+  @@index([planId])
+  @@map("asset_pm_items")
+}
+
+model AssetPmRound {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId     String   @map("plan_id") @db.Uuid
+  recordedAt DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+
+  plan    AssetPmPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  results AssetPmResult[]
+
+  @@index([planId, recordedAt])
+  @@map("asset_pm_rounds")
+}
+
+model AssetPmResult {
+  id       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roundId  String      @map("round_id") @db.Uuid
+  itemId   String?     @map("item_id") @db.Uuid
+  sequence Int         @db.SmallInt
+  itemName String      @map("item_name") @db.VarChar(255)
+  status   CheckStatus
+  remark   String?
+
+  round AssetPmRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  item  AssetPmItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([roundId])
+  @@map("asset_pm_results")
 }

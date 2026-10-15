@@ -10,22 +10,29 @@ import type { AssetDto } from "./asset-types"
 
 type Option = { id: string; name: string }
 
-export function AssetForm({ asset }: { asset?: AssetDto }) {
+export function AssetForm({
+  asset,
+  onSaved,
+  onCancel,
+}: {
+  asset?: AssetDto
+  onSaved?: () => void
+  onCancel?: () => void
+}) {
   const t = useTranslations("assets")
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [branches, setBranches] = useState<Option[]>([])
-  const [suppliers, setSuppliers] = useState<Option[]>([])
+  const [types, setTypes] = useState<Option[]>([])
   const [branchId, setBranchId] = useState(asset?.branchId ?? "")
   const [code, setCode] = useState(asset?.code ?? "")
   const [name, setName] = useState(asset?.name ?? "")
-  const [type, setType] = useState(asset?.type ?? "VEHICLE")
+  const [typeId, setTypeId] = useState(asset?.typeId ?? "")
   const [ownership, setOwnership] = useState(asset?.ownership ?? "COMPANY")
   const [status, setStatus] = useState(asset?.status ?? "REGISTERED")
   const [serialNumber, setSerialNumber] = useState(asset?.serialNumber ?? "")
-  const [locationDetail, setLocationDetail] = useState(asset?.locationDetail ?? "")
-  const [supplierId, setSupplierId] = useState(asset?.supplierId ?? "")
+  const [details, setDetails] = useState(asset?.details ?? "")
   const [acquiredAt, setAcquiredAt] = useState(asset?.acquiredAt ?? "")
 
   useEffect(() => {
@@ -33,10 +40,15 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
       .then((r) => r.json())
       .then((json) => {
         const branchRows = (json.data?.branches ?? []) as Option[]
-        const supplierRows = (json.data?.suppliers ?? []) as Option[]
+        const typeRows = (json.data?.types ?? []) as Option[]
         setBranches(branchRows)
-        setSuppliers(supplierRows)
+        setTypes(
+          asset?.typeId && !typeRows.some((row) => row.id === asset.typeId)
+            ? [{ id: asset.typeId, name: asset.typeName }, ...typeRows]
+            : typeRows
+        )
         if (!asset && !branchId && branchRows[0]) setBranchId(branchRows[0].id)
+        if (!asset && !typeId && typeRows[0]) setTypeId(typeRows[0].id)
       })
   }, [asset, branchId])
 
@@ -58,12 +70,11 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
       branchId,
       code,
       name,
-      type,
+      typeId,
       ownership,
       status,
       serialNumber: serialNumber || null,
-      locationDetail: locationDetail || null,
-      supplierId: supplierId || null,
+      details: details || null,
       acquiredAt: acquiredAt || null,
     }
     const res = await fetch(asset ? `/api/assets/${asset.id}` : "/api/assets", {
@@ -77,13 +88,18 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
       setError(typeof json.error === "string" ? json.error : json.error?.message ?? t("loadFailed"))
       return
     }
+    if (onSaved) {
+      onSaved()
+      router.refresh()
+      return
+    }
     const id = asset?.id ?? json.data?.id
     router.push(id ? `/assets/${id}` : "/assets")
     router.refresh()
   }
 
   return (
-    <GlassForm surfaced onSubmit={onSubmit} className="max-w-xl">
+    <GlassForm surfaced={!onSaved} onSubmit={onSubmit} className={onSaved ? undefined : "max-w-xl"}>
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
@@ -108,12 +124,9 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
       <Select
         label={t("type")}
         required
-        value={type}
-        onChange={(e) => setType(e.target.value as AssetDto["type"])}
-        options={[
-          { value: "VEHICLE", label: t("type_VEHICLE") },
-          { value: "MACHINE", label: t("type_MACHINE") },
-        ]}
+        value={typeId}
+        onChange={(e) => setTypeId(e.target.value)}
+        options={types.map((row) => ({ value: row.id, label: row.name }))}
       />
       <Select
         label={t("ownership")}
@@ -144,20 +157,20 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
         value={serialNumber}
         onChange={(e) => setSerialNumber(e.target.value)}
       />
-      <GlassInput
-        label={t("locationDetail")}
-        value={locationDetail}
-        onChange={(e) => setLocationDetail(e.target.value)}
-      />
-      <Select
-        label={t("supplier")}
-        value={supplierId}
-        onChange={(e) => setSupplierId(e.target.value)}
-        options={[
-          { value: "", label: t("supplierNone") },
-          ...suppliers.map((s) => ({ value: s.id, label: s.name })),
-        ]}
-      />
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium text-foreground" htmlFor="asset-details">
+          {t("details")}
+        </label>
+        <textarea
+          id="asset-details"
+          value={details}
+          maxLength={2000}
+          rows={4}
+          onChange={(e) => setDetails(e.target.value)}
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+        />
+        <p className="text-xs text-muted-foreground">{t("detailsHint")}</p>
+      </div>
       <div className="space-y-1.5">
         <GlassInput
           label={t("acquiredAt")}
@@ -168,7 +181,7 @@ export function AssetForm({ asset }: { asset?: AssetDto }) {
         <p className="text-xs text-muted-foreground">{t("acquiredHint")}</p>
       </div>
       <GlassFormActions>
-        <Button type="button" variant="outline" onClick={() => router.back()}>
+        <Button type="button" variant="outline" onClick={() => (onCancel ? onCancel() : router.back())}>
           {t("cancel")}
         </Button>
         <Button type="submit" disabled={saving}>

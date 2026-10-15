@@ -6,7 +6,6 @@ import type { UserRole } from "@/lib/permissions"
 import {
   ASSET_OWNERSHIPS,
   ASSET_STATUSES,
-  ASSET_TYPES,
   createAsset,
   createAssetSchema,
   deleteAsset,
@@ -22,7 +21,7 @@ const CID = "00000000-0000-0000-0000-0000000000cc"
 const CID_B = "00000000-0000-0000-0000-0000000000bb"
 const BRANCH_A = "11111111-1111-1111-1111-111111111111"
 const BRANCH_B = "22222222-2222-2222-2222-222222222222"
-const SUPPLIER_A = "33333333-3333-3333-3333-333333333333"
+const TYPE_ID = "66666666-6666-4666-8666-666666666666"
 const USER_ID = "44444444-4444-4444-4444-444444444444"
 const ASSET_ID = "55555555-5555-5555-5555-555555555555"
 
@@ -56,12 +55,12 @@ function serializedRow(over: Record<string, unknown> = {}) {
     branchId: BRANCH_A,
     code: "AST-2026-00001",
     name: "Dump truck 01",
-    type: "VEHICLE",
+    typeId: TYPE_ID,
+    type: { id: TYPE_ID, name: "ยานพาหนะ", isActive: true },
     status: "REGISTERED",
     ownership: "COMPANY",
     serialNumber: null,
-    locationDetail: null,
-    supplierId: null,
+    details: null,
     acquiredAt: null,
     isActive: true,
     createdBy: USER_ID,
@@ -69,7 +68,6 @@ function serializedRow(over: Record<string, unknown> = {}) {
     updatedAt: now,
     deletedAt: null,
     branch: { id: BRANCH_A, name: "HQ" },
-    supplier: null,
     creator: { id: USER_ID, firstName: "Ada", lastName: "Admin" },
     ...over,
   }
@@ -152,7 +150,7 @@ function fakeDb(state: FakeState = {}): PrismaClient {
         const row = serializedRow({
           ...data,
           branch: { id: data.branchId, name: "HQ" },
-          supplier: data.supplierId ? { id: data.supplierId, name: "Vendor" } : null,
+          type: { id: data.typeId, name: "ยานพาหนะ", isActive: true },
         })
         state.created = row
         assets.push(row)
@@ -166,6 +164,9 @@ function fakeDb(state: FakeState = {}): PrismaClient {
         return row
       },
     },
+    assetRegisterType: {
+      findFirst: async () => ({ id: TYPE_ID, isActive: true }),
+    },
   } as unknown as PrismaClient
 }
 
@@ -173,23 +174,21 @@ const validCreate = {
   branchId: BRANCH_A,
   code: "AST-2026-00001",
   name: "Dump truck 01",
-  type: "VEHICLE" as const,
+  typeId: TYPE_ID,
   ownership: "COMPANY" as const,
   serialNumber: null,
-  locationDetail: null,
-  supplierId: null,
+  details: null,
   acquiredAt: null,
 }
 
 describe("asset enums", () => {
-  it("exposes Phase 1 type, status, and ownership values only", () => {
-    expect(ASSET_TYPES).toEqual(["VEHICLE", "MACHINE"])
+  it("exposes status and ownership values", () => {
     expect(ASSET_STATUSES).toEqual(["REGISTERED", "ACTIVE", "IDLE", "RETIRED", "DISPOSED"])
     expect(ASSET_OWNERSHIPS).toEqual(["COMPANY", "LEASED", "EXTERNAL"])
   })
 
-  it("rejects IT / EQUIPMENT / BUILDING types and ops statuses", () => {
-    expect(createAssetSchema.safeParse({ ...validCreate, type: "IT" }).success).toBe(false)
+  it("rejects an invalid type id and ops statuses", () => {
+    expect(createAssetSchema.safeParse({ ...validCreate, typeId: "nope" }).success).toBe(false)
     expect(createAssetSchema.safeParse({ ...validCreate, status: "under_maintenance" }).success).toBe(false)
     expect(createAssetSchema.safeParse({ ...validCreate, ownership: "OWNED" }).success).toBe(false)
   })
@@ -255,7 +254,8 @@ describe("createAsset", () => {
     })
     expect(result.data.code).toBe("AST-2026-00001")
     expect(result.data.status).toBe("REGISTERED")
-    expect(result.data.type).toBe("VEHICLE")
+    expect(result.data.typeId).toBe(TYPE_ID)
+    expect(result.data.typeName).toBe("ยานพาหนะ")
     expect(state.created).toMatchObject({ companyId: CID, branchId: BRANCH_A })
   })
 
@@ -291,34 +291,6 @@ describe("createAsset", () => {
     })
     await expect(
       createAsset(db, { companyId: CID, roles: adminRoles, userId: USER_ID, input: validCreate })
-    ).rejects.toBeInstanceOf(ValidationError)
-  })
-
-  it("rejects a supplier from another company or an inactive supplier", async () => {
-    const dbWrongCompany = fakeDb({
-      branches: { [BRANCH_A]: { companyId: CID, isActive: true, deletedAt: null } },
-      suppliers: { [SUPPLIER_A]: { companyId: CID_B, isActive: true } },
-    })
-    await expect(
-      createAsset(dbWrongCompany, {
-        companyId: CID,
-        roles: adminRoles,
-        userId: USER_ID,
-        input: { ...validCreate, supplierId: SUPPLIER_A },
-      })
-    ).rejects.toBeInstanceOf(ValidationError)
-
-    const dbInactive = fakeDb({
-      branches: { [BRANCH_A]: { companyId: CID, isActive: true, deletedAt: null } },
-      suppliers: { [SUPPLIER_A]: { companyId: CID, isActive: false } },
-    })
-    await expect(
-      createAsset(dbInactive, {
-        companyId: CID,
-        roles: adminRoles,
-        userId: USER_ID,
-        input: { ...validCreate, supplierId: SUPPLIER_A },
-      })
     ).rejects.toBeInstanceOf(ValidationError)
   })
 

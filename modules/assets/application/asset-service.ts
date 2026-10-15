@@ -3,8 +3,8 @@ import { Prisma, type PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { readBranchSharing } from "@/shared/permissions/branch-sharing"
+import { listAssetRegisterTypes } from "./asset-type-service"
 
-export const ASSET_TYPES = ["VEHICLE", "MACHINE"] as const
 export const ASSET_STATUSES = ["REGISTERED", "ACTIVE", "IDLE", "RETIRED", "DISPOSED"] as const
 export const ASSET_OWNERSHIPS = ["COMPANY", "LEASED", "EXTERNAL"] as const
 
@@ -14,7 +14,7 @@ export const createAssetSchema = z.object({
   branchId: z.string().uuid(),
   code: z.string().trim().max(50).optional(),
   name: z.string().trim().min(1).max(255),
-  type: z.enum(ASSET_TYPES),
+  typeId: z.string().uuid(),
   status: z.enum(ASSET_STATUSES).optional(),
   ownership: z.enum(ASSET_OWNERSHIPS),
   serialNumber: z
@@ -24,19 +24,12 @@ export const createAssetSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v ? v : null)),
-  locationDetail: z
+  details: z
     .string()
     .trim()
-    .max(255)
+    .max(2000)
     .optional()
     .nullable()
-    .transform((v) => (v ? v : null)),
-  supplierId: z
-    .string()
-    .uuid()
-    .optional()
-    .nullable()
-    .or(z.literal(""))
     .transform((v) => (v ? v : null)),
   acquiredAt: z
     .string()
@@ -108,20 +101,21 @@ async function assertBranchAllowed(
   }
 }
 
-async function assertSupplierAllowed(
+async function assertAssetType(
   db: PrismaClient,
   companyId: string,
-  supplierId: string | null | undefined
+  typeId: string,
+  currentTypeId?: string
 ) {
-  if (!supplierId) return
-  const supplier = await db.supplier.findFirst({
-    where: { id: supplierId, companyId, isActive: true },
-    select: { id: true },
+  const row = await db.assetRegisterType.findFirst({
+    where: { id: typeId, companyId },
+    select: { id: true, isActive: true },
   })
-  if (!supplier) throw new ValidationError("ผู้ขายไม่ถูกต้อง")
+  if (!row) throw new ValidationError("ประเภทไม่ถูกต้อง")
+  if (!row.isActive && typeId !== currentTypeId) throw new ValidationError("ประเภทนี้ปิดใช้งานแล้ว")
 }
 
-function assetWhere(
+export function assetWhere(
   companyId: string,
   roles: UserRole[],
   branchId?: string | null,
@@ -147,7 +141,7 @@ function assetWhere(
 
 const assetInclude = {
   branch: { select: { id: true, name: true } },
-  supplier: { select: { id: true, name: true } },
+  type: { select: { id: true, name: true, isActive: true } },
   creator: { select: { id: true, firstName: true, lastName: true } },
 } satisfies Prisma.AssetInclude
 
@@ -159,13 +153,12 @@ function serializeAsset(row: Prisma.AssetGetPayload<{ include: typeof assetInclu
     branchName: row.branch.name,
     code: row.code,
     name: row.name,
-    type: row.type,
+    typeId: row.typeId,
+    typeName: row.type.name,
     status: row.status,
     ownership: row.ownership,
     serialNumber: row.serialNumber,
-    locationDetail: row.locationDetail,
-    supplierId: row.supplierId,
-    supplierName: row.supplier?.name ?? null,
+    details: row.details,
     acquiredAt: isoDate(row.acquiredAt),
     isActive: row.isActive,
     createdById: row.createdBy,
@@ -199,8 +192,8 @@ export async function listAssets(
     params.branchId,
     share.assets.view
   )
-  if (params.type && ASSET_TYPES.includes(params.type as (typeof ASSET_TYPES)[number])) {
-    where.type = params.type as (typeof ASSET_TYPES)[number]
+  if (params.type && z.string().uuid().safeParse(params.type).success) {
+    where.typeId = params.type
   }
   if (params.status && ASSET_STATUSES.includes(params.status as (typeof ASSET_STATUSES)[number])) {
     where.status = params.status as (typeof ASSET_STATUSES)[number]
@@ -268,7 +261,7 @@ export async function createAsset(
   if (!canAssets(params.roles, "create")) throw new ForbiddenError()
   const share = await readBranchSharing(db, params.companyId)
   await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles, share.assets.create)
-  await assertSupplierAllowed(db, params.companyId, params.input.supplierId)
+  await assertAssetType(db, params.companyId, params.input.typeId)
   const acquiredAt = params.input.acquiredAt ? parseDateOnly(params.input.acquiredAt) : null
   const nextCode = await suggestNextAssetCode(db, {
     companyId: params.companyId,
@@ -281,12 +274,11 @@ export async function createAsset(
         branchId: params.input.branchId,
         code: nextCode.data.code,
         name: params.input.name,
-        type: params.input.type,
+        typeId: params.input.typeId,
         status: params.input.status ?? "REGISTERED",
         ownership: params.input.ownership,
         serialNumber: params.input.serialNumber ?? null,
-        locationDetail: params.input.locationDetail ?? null,
-        supplierId: params.input.supplierId ?? null,
+        details: params.input.details ?? null,
         acquiredAt,
         isActive: params.input.isActive ?? true,
         createdBy: params.userId,
@@ -313,29 +305,24 @@ export async function updateAsset(
   const share = await readBranchSharing(db, params.companyId)
   const existing = await db.asset.findFirst({
     where: { id: params.id, ...assetWhere(params.companyId, params.roles, null, share.assets.edit) },
-    select: { id: true },
+    select: { id: true, typeId: true },
   })
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
   if (params.input.branchId) {
     await assertBranchAllowed(db, params.companyId, params.input.branchId, params.roles, share.assets.edit)
   }
-  if (params.input.supplierId !== undefined) {
-    await assertSupplierAllowed(db, params.companyId, params.input.supplierId)
+  if (params.input.typeId) {
+    await assertAssetType(db, params.companyId, params.input.typeId, existing.typeId)
   }
 
   const data: Prisma.AssetUpdateInput = {}
   if (params.input.branchId) data.branch = { connect: { id: params.input.branchId } }
   if (params.input.name !== undefined) data.name = params.input.name
-  if (params.input.type !== undefined) data.type = params.input.type
+  if (params.input.typeId !== undefined) data.type = { connect: { id: params.input.typeId } }
   if (params.input.status !== undefined) data.status = params.input.status
   if (params.input.ownership !== undefined) data.ownership = params.input.ownership
   if (params.input.serialNumber !== undefined) data.serialNumber = params.input.serialNumber
-  if (params.input.locationDetail !== undefined) data.locationDetail = params.input.locationDetail
-  if (params.input.supplierId !== undefined) {
-    data.supplier = params.input.supplierId
-      ? { connect: { id: params.input.supplierId } }
-      : { disconnect: true }
-  }
+  if (params.input.details !== undefined) data.details = params.input.details
   if (params.input.acquiredAt !== undefined) {
     data.acquiredAt = params.input.acquiredAt ? parseDateOnly(params.input.acquiredAt) : null
   }
@@ -436,14 +423,16 @@ export async function getAssetFormOptions(
   db: PrismaClient,
   params: { companyId: string; roles: UserRole[] }
 ) {
-  const [branches, suppliers] = await Promise.all([
+  const [branches, suppliers, types] = await Promise.all([
     listAccessibleBranches(db, params),
     listActiveSuppliers(db, params),
+    listAssetRegisterTypes(db, params),
   ])
   return {
     data: {
       branches: branches.data,
       suppliers: suppliers.data,
+      types: types.data.filter((row) => row.isActive),
     },
   }
 }

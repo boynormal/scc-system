@@ -29,6 +29,9 @@ export function isDriverAllowedPath(pathname: string) {
     pathname.startsWith("/api/transport/driver-job") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
+    pathname === "/pm" ||
+    pathname.startsWith("/pm/") ||
+    pathname.startsWith("/api/pm/") ||
     isDriverLogPath(pathname) ||
     PUNCH_API.test(pathname)
   )

@@ -5,12 +5,20 @@ import { DRIVER_JOB_COOKIE, driverHomePath, isDriverAllowedPath, isDriverLogPath
 
 const PUBLIC_PATHS = ["/login", "/api/auth"]
 
+function isPublicPath(pathname: string) {
+  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) return true
+  // /pm-check stays behind login. Only the QR form and its API are public.
+  if (pathname === "/pm" || pathname.startsWith("/pm/")) return true
+  if (pathname.startsWith("/api/pm/")) return true
+  return false
+}
+
 const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const { nextUrl } = req
   const session = req.auth
-  const isPublic = PUBLIC_PATHS.some((p) => nextUrl.pathname.startsWith(p))
+  const isPublic = isPublicPath(nextUrl.pathname)
 
   if (!session && !isPublic) {
     const loginUrl = new URL("/login", nextUrl)

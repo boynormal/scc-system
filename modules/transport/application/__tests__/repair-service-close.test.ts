@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import type { PrismaClient } from "@prisma/client"
 import type { UserRole } from "@/lib/permissions"
-import { closeRepair } from "@/modules/transport/application/repair-service"
+import { closeRepair, markRepairInspection } from "@/modules/transport/application/repair-service"
 
 function adminRole(branchId = "branch-1"): UserRole {
   return { branchId, branchName: "HQ", roleName: "Admin", permissions: null }
@@ -28,7 +28,7 @@ const REPAIR = {
   companyId: COMPANY_ID,
   branchId: "branch-1",
   vehicleId: "vehicle-1",
-  status: "inspection",
+  status: "in_repair",
   repairCost: null,
   paymentMethod: null,
 }
@@ -48,7 +48,46 @@ describe("closeRepair", () => {
     })
 
     expect(result).toEqual(closed)
-    expect(db.$transaction).toHaveBeenCalled()
+    expect(db.transportRepairLog.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "closed" }),
+      })
+    )
+    expect(db.transportVehicle.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { currentStatus: "available" },
+      })
+    )
+  })
+
+  it("rejects inspection because that status is retired", async () => {
+    const db = createMockDb()
+    db.transportRepairLog.findFirst.mockResolvedValue({ ...REPAIR, status: "inspection" })
+
+    await expect(
+      closeRepair(asDb(db), {
+        id: REPAIR.id,
+        companyId: COMPANY_ID,
+        userId: USER_ID,
+        roles: [adminRole()],
+      })
+    ).rejects.toThrow(/กำลังซ่อม/)
+    expect(db.$transaction).not.toHaveBeenCalled()
+  })
+
+  it("rejects the retired inspect action", async () => {
+    const db = createMockDb()
+    db.transportRepairLog.findFirst.mockResolvedValue(REPAIR)
+
+    await expect(
+      markRepairInspection(asDb(db), {
+        id: REPAIR.id,
+        companyId: COMPANY_ID,
+        userId: USER_ID,
+        roles: [adminRole()],
+      })
+    ).rejects.toThrow(/สถานะตรวจสอบถูกยกเลิก/)
+    expect(db.$transaction).not.toHaveBeenCalled()
   })
 
   it("rejects when amount is set without payment method", async () => {

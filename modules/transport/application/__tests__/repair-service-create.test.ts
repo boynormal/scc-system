@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
 import type { PrismaClient } from "@prisma/client"
-import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { createRepair } from "@/modules/transport/application/repair-service"
 
@@ -39,7 +38,7 @@ const baseParams = {
 }
 
 describe("createRepair", () => {
-  it("allows create when the only open repair is inspection", async () => {
+  it("allows create when the vehicle has no reported or in-repair ticket", async () => {
     const db = createMockDb()
     db.transportVehicle.findFirst.mockResolvedValue(VEHICLE)
     db.transportRepairLog.findFirst.mockResolvedValue(null) // no reported/in_repair

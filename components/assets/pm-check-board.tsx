@@ -36,18 +36,18 @@ const statusClass: Record<PmBoardRow["dueStatus"], string> = {
 
 export async function PmCheckBoard({
   rows,
-  summary,
   page,
   total,
   pageSize,
   canUpdate,
+  query,
 }: {
   rows: PmBoardRow[]
-  summary: { overdue: number; due: number; ok: number }
   page: number
   total: number
   pageSize: number
   canUpdate: boolean
+  query?: Record<string, string | undefined>
 }) {
   const t = await getTranslations("pmCheck")
   const assetsT = await getTranslations("assets")
@@ -70,26 +70,11 @@ export async function PmCheckBoard({
     )
   }
 
-  const counts = [
-    { key: "overdue" as const, className: "border-red-200 bg-red-50 text-red-800" },
-    { key: "due" as const, className: "border-amber-200 bg-amber-50 text-amber-900" },
-    { key: "ok" as const, className: "border-emerald-200 bg-emerald-50 text-emerald-900" },
-  ]
-
   const headClass = "border-b border-[#cbd5e1] bg-[#e2e8f0] px-4 py-3 text-left text-xs font-semibold text-[#0f172a]"
   const cellClass = "border-b border-[#e2e8f0] bg-[#ffffff] px-4 py-3 text-sm text-[#0f172a]"
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        {counts.map((item) => (
-          <div key={item.key} className={`rounded-xl border px-4 py-3 ${item.className}`}>
-            <p className="text-2xl font-bold">{summary[item.key]}</p>
-            <p className="text-sm font-medium">{t(`status_${item.key}`)}</p>
-          </div>
-        ))}
-      </div>
-      <div className="overflow-x-auto rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
+    <div className="overflow-x-auto rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
         <table className="w-full min-w-[760px] border-separate border-spacing-0 text-sm">
           <thead>
             <tr>
@@ -135,9 +120,8 @@ export async function PmCheckBoard({
           page={page}
           totalPages={totalPages}
           total={total}
-          query={{ tab: "pm-check" }}
+          query={query}
         />
-      </div>
     </div>
   )
 }

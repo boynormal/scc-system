@@ -300,14 +300,25 @@ const boardInclude = {
 
 export async function listAssetPmBoard(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; page?: number; now?: Date }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    page?: number
+    now?: Date
+    branchId?: string | null
+    typeId?: string | null
+    search?: string | null
+  }
 ) {
   if (!canAssets(params.roles, "read")) throw new ForbiddenError()
   const share = await readBranchSharing(db, params.companyId)
   const where: Prisma.AssetPmPlanWhereInput = {
     companyId: params.companyId,
     isActive: true,
-    asset: assetWhere(params.companyId, params.roles, null, share.assets.view),
+    asset: withPmCalendarAssetFilters(
+      assetWhere(params.companyId, params.roles, params.branchId, share.assets.view),
+      { typeId: params.typeId, search: params.search }
+    ),
   }
   const page = params.page && params.page > 0 ? params.page : 1
   const rows = await db.assetPmPlan.findMany({

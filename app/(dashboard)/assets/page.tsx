@@ -64,7 +64,18 @@ export default async function AssetsListPage(props: {
     const canUpdatePm =
       isAdminInAnyBranch(roles) ||
       getBranchIds(roles).some((bid) => hasPermission(roles, bid, "assets", "update"))
-    const board = await listAssetPmBoard(prisma, { companyId, roles, page })
+    const [board, branches, types] = await Promise.all([
+      listAssetPmBoard(prisma, {
+        companyId,
+        roles,
+        page,
+        branchId: searchParams.branchId,
+        typeId: searchParams.type,
+        search: searchParams.search,
+      }),
+      listAccessibleBranches(prisma, { companyId, roles }),
+      listAssetRegisterTypes(prisma, { companyId, roles, activeOnly: true }),
+    ])
     return (
       <ModuleBackdrop isDark={isDark}>
         <div className="relative z-10 space-y-6">
@@ -73,13 +84,27 @@ export default async function AssetsListPage(props: {
             <h1 className="text-2xl font-bold text-foreground">{pm("title")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{pm("desc")}</p>
           </div>
+          <Suspense fallback={<div className="h-12 w-full animate-pulse rounded-xl bg-[#e2e8f0]" />}>
+            <PmCalendarFilters
+              key={`${searchParams.branchId ?? ""}-${searchParams.type ?? ""}-${searchParams.search ?? ""}`}
+              tab="pm-check"
+              branches={branches.data}
+              types={types.data}
+              summary={board.summary}
+            />
+          </Suspense>
           <PmCheckBoard
             rows={board.data}
-            summary={board.summary}
             page={board.page}
             total={board.total}
             pageSize={board.pageSize}
             canUpdate={canUpdatePm}
+            query={{
+              tab: "pm-check",
+              search: searchParams.search,
+              branchId: searchParams.branchId,
+              type: searchParams.type,
+            }}
           />
         </div>
       </ModuleBackdrop>
@@ -128,30 +153,33 @@ export default async function AssetsListPage(props: {
           <Suspense fallback={<div className="h-12 w-full animate-pulse rounded-xl bg-[#e2e8f0]" />}>
             <PmCalendarFilters
               key={`${searchParams.branchId ?? ""}-${searchParams.type ?? ""}-${searchParams.search ?? ""}`}
+              nowrap
               branches={branches.data}
               types={types.data}
               year={calendar.year}
               month={calendar.month}
+              trailing={
+                <div className="flex w-full items-center justify-between gap-2 lg:w-auto lg:justify-start lg:gap-3">
+                  <Link
+                    href={href(prev)}
+                    className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-900"
+                  >
+                    {pm("prevMonth")}
+                  </Link>
+                  <div className="flex min-w-0 items-baseline justify-center gap-2">
+                    <h1 className="truncate text-base font-bold leading-none text-foreground lg:text-xl">{pm("calendarTitle")}</h1>
+                    <p className="shrink-0 text-base font-bold leading-none text-[#1d4ed8] lg:text-xl">{monthLabel}</p>
+                  </div>
+                  <Link
+                    href={href(next)}
+                    className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-900"
+                  >
+                    {pm("nextMonth")}
+                  </Link>
+                </div>
+              }
             />
           </Suspense>
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-            <Link
-              href={href(prev)}
-              className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-900"
-            >
-              {pm("prevMonth")}
-            </Link>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-foreground">{pm("calendarTitle")}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">{monthLabel}</p>
-            </div>
-            <Link
-              href={href(next)}
-              className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-900"
-            >
-              {pm("nextMonth")}
-            </Link>
-          </div>
           {calendar.rows.length === 0 ? (
             <EmptyState icon={ClipboardList} title={pm("calendarEmpty")} />
           ) : (

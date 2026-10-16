@@ -94,7 +94,7 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     moduleId: "assets",
     label: "ทะเบียนสินทรัพย์",
     anyOfResources: ["assets"],
-    navModuleIds: ["assets", "pm_check"],
+    navModuleIds: ["assets", "pm_check", "pm_calendar"],
   },
   {
     moduleId: "finance",

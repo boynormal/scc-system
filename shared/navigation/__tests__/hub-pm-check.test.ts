@@ -33,4 +33,12 @@ describe("HUB and PM CHECK launchers", () => {
     expect(pm?.permission).toEqual({ resource: "assets", action: "read" })
     expect(pm?.launcher?.departmentId).toBe("asset_register")
   })
+
+  it("registers the PM calendar under the asset register", () => {
+    const calendar = findLink("pm_calendar")
+    expect(calendar).toBeDefined()
+    expect(calendar?.href).toBe("/assets?tab=pm-calendar")
+    expect(calendar?.permission).toEqual({ resource: "assets", action: "read" })
+    expect(calendar?.launcher?.departmentId).toBe("asset_register")
+  })
 })

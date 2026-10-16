@@ -148,6 +148,18 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
         keywords: ["pm", "check", "ตรวจ", "สินทรัพย์", "asset"],
         launcher: { departmentId: "asset_register", capabilityId: "pm_check" },
       },
+      {
+        type: "link",
+        key: "pm_calendar",
+        href: "/assets?tab=pm-calendar",
+        label: "pm_calendar",
+        icon: "CalendarDays",
+        permission: { resource: "assets", action: "read" },
+        moduleId: "pm_calendar",
+        order: 2,
+        keywords: ["pm", "calendar", "ปฏิทิน", "ตรวจ", "สินทรัพย์", "asset"],
+        launcher: { departmentId: "asset_register", capabilityId: "pm_calendar" },
+      },
     ],
   },
   {

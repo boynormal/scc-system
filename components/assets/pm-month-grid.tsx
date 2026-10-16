@@ -125,6 +125,7 @@ export function PmMonthGrid({
       </div>
 
       <GlassDialog
+        solid
         open={open !== null}
         onOpenChange={(next) => {
           if (!next) setOpen(null)

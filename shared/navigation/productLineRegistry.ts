@@ -122,7 +122,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
   },
   {
     id: "dashboards",
-    labelTh: "Dashboard",
+    labelTh: "สรุปข้อมูลสำคัญ ตัวชี้วัด",
     labelEn: "Dashboard",
     description: "Scrapee · แดชบอร์ดภายนอก",
     departmentIds: ["dashboards"],
@@ -132,7 +132,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
   },
   {
     id: "hub",
-    labelTh: "HUB",
+    labelTh: "ศูนย์รวมประกาศ",
     labelEn: "HUB",
     description: "โซเชียลภายใน",
     departmentIds: ["hub"],

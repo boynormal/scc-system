@@ -12,7 +12,7 @@ import { AssetForm } from "./asset-form"
 import type { AssetDto } from "./asset-types"
 
 const itemClass =
-  "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-foreground outline-none data-[highlighted]:bg-muted/60"
+  "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-[#0f172a] outline-none data-[highlighted]:bg-[#e2e8f0]"
 
 export function AssetRowActions({
   asset,
@@ -67,7 +67,7 @@ export function AssetRowActions({
     <div className="flex flex-col items-end">
       <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenu.Trigger
-          className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          className="inline-flex items-center gap-1 rounded-lg border border-[#334155] bg-[#1e293b] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#0f172a]"
         >
           {t("manage")}
           <ChevronDown className="h-3.5 w-3.5" />
@@ -76,7 +76,7 @@ export function AssetRowActions({
           <DropdownMenu.Content
             align="end"
             sideOffset={4}
-            className="z-50 min-w-[11rem] rounded-lg border border-border bg-card p-1 shadow-lg"
+            className="z-50 min-w-[11rem] rounded-lg border border-[#cbd5e1] bg-[#ffffff] p-1 shadow-lg"
           >
             <DropdownMenu.Item className={itemClass} onSelect={() => openDialog("detail")}>
               <Eye className="h-3.5 w-3.5" />
@@ -116,6 +116,7 @@ export function AssetRowActions({
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
 
       <GlassDialog
+        solid
         open={dialog === "detail"}
         onOpenChange={(open) => setDialog(open ? "detail" : null)}
         title={t("detailTitle")}
@@ -132,6 +133,7 @@ export function AssetRowActions({
       </GlassDialog>
 
       <GlassDialog
+        solid
         open={dialog === "edit"}
         onOpenChange={(open) => setDialog(open ? "edit" : null)}
         title={t("editData")}

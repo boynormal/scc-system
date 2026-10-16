@@ -63,13 +63,13 @@ export function AssetFilters({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-[#94a3b8] bg-[#ffffff] py-2 pl-9 pr-3 text-sm text-[#0f172a] placeholder:text-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
       <select
         defaultValue={searchParams.get("branchId") || ""}
         onChange={(e) => handleFilter("branchId", e.target.value)}
-        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-[#94a3b8] bg-[#ffffff] px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         {branches.map((b) => (
@@ -81,7 +81,7 @@ export function AssetFilters({
       <select
         defaultValue={searchParams.get("type") || ""}
         onChange={(e) => handleFilter("type", e.target.value)}
-        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-[#94a3b8] bg-[#ffffff] px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         {types.map((row) => (
@@ -93,7 +93,7 @@ export function AssetFilters({
       <select
         defaultValue={searchParams.get("ownership") || ""}
         onChange={(e) => handleFilter("ownership", e.target.value)}
-        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-[#94a3b8] bg-[#ffffff] px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         <option value="COMPANY">{t("own_COMPANY")}</option>
@@ -103,7 +103,7 @@ export function AssetFilters({
       <select
         defaultValue={searchParams.get("status") || ""}
         onChange={(e) => handleFilter("status", e.target.value)}
-        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="rounded-lg border border-[#94a3b8] bg-[#ffffff] px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">{t("filterAll")}</option>
         <option value="REGISTERED">{t("st_REGISTERED")}</option>
@@ -116,7 +116,7 @@ export function AssetFilters({
         <Link
           href="/assets"
           onClick={() => setSearch("")}
-          className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60"
+          className="rounded-lg border border-[#334155] bg-[#1e293b] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0f172a]"
         >
           {t("clearFilters")}
         </Link>

@@ -15,8 +15,6 @@ import { AssetTypesButton } from "@/components/assets/asset-types-button"
 import { AssetFilters } from "@/components/assets/asset-filters"
 import { AssetRowActions } from "@/components/assets/asset-row-actions"
 import { EmptyState } from "@/components/ui/empty-state"
-import { GlassCard } from "@/components/glass"
-import { DataPanel } from "@/components/shell/data-panel"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { ModuleTabs } from "@/components/shell/module-tabs"
@@ -68,7 +66,7 @@ export default async function AssetsListPage(props: {
     const board = await listAssetPmBoard(prisma, { companyId, roles, page })
     return (
       <ModuleBackdrop isDark={isDark}>
-        <div className="space-y-6">
+        <div className="relative z-10 space-y-6">
           {tabs}
           <div>
             <h1 className="text-2xl font-bold text-foreground">{pm("title")}</h1>
@@ -103,7 +101,7 @@ export default async function AssetsListPage(props: {
 
     return (
       <ModuleBackdrop isDark={isDark}>
-        <div className="space-y-6">
+        <div className="relative z-10 space-y-6">
           {tabs}
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
             <Link
@@ -175,7 +173,7 @@ export default async function AssetsListPage(props: {
 
   return (
     <ModuleBackdrop isDark={isDark}>
-    <div className="space-y-6">
+    <div className="relative z-10 space-y-6">
       {tabs}
       <div className="flex items-center justify-between">
         <div>
@@ -188,13 +186,13 @@ export default async function AssetsListPage(props: {
         </div>
       </div>
 
-      <GlassCard padding="sm">
-        <Suspense fallback={<div className="h-10 w-full animate-pulse rounded-lg bg-muted" />}>
+      <div className="rounded-xl border border-[#cbd5e1] bg-[#ffffff] p-3 shadow-sm">
+        <Suspense fallback={<div className="h-10 w-full animate-pulse rounded-lg bg-[#e2e8f0]" />}>
           <AssetFilters branches={branches.data} types={types.data} />
         </Suspense>
-      </GlassCard>
+      </div>
 
-      <DataPanel>
+      <div className="overflow-hidden rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
         {data.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
@@ -211,43 +209,43 @@ export default async function AssetsListPage(props: {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted">
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <tr className="border-b border-[#cbd5e1] bg-[#e2e8f0]">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("code")}
                     </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("name")}
                     </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("type")}
                     </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("ownership")}
                     </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("branch")}
                     </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("status")}
                     </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("serialNumber")}
                     </th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-[#0f172a]">
                       {t("manage")}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-[#e2e8f0] bg-[#ffffff]">
                   {data.map((asset) => (
-                    <tr key={asset.id} className="transition-colors hover:bg-muted/60">
-                      <td className="px-5 py-3.5 font-semibold text-foreground">{asset.code}</td>
-                      <td className="px-5 py-3.5 text-foreground">{asset.name}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{asset.typeName}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{t(`own_${asset.ownership}`)}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{asset.branchName}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{t(`st_${asset.status}`)}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{asset.serialNumber ?? "—"}</td>
+                    <tr key={asset.id} className="bg-[#ffffff] transition-colors hover:bg-[#f1f5f9]">
+                      <td className="px-5 py-3.5 font-semibold text-[#0f172a]">{asset.code}</td>
+                      <td className="px-5 py-3.5 text-[#0f172a]">{asset.name}</td>
+                      <td className="px-5 py-3.5 text-[#334155]">{asset.typeName}</td>
+                      <td className="px-5 py-3.5 text-[#334155]">{t(`own_${asset.ownership}`)}</td>
+                      <td className="px-5 py-3.5 text-[#334155]">{asset.branchName}</td>
+                      <td className="px-5 py-3.5 text-[#334155]">{t(`st_${asset.status}`)}</td>
+                      <td className="px-5 py-3.5 text-[#334155]">{asset.serialNumber ?? "—"}</td>
                       <td className="px-5 py-3.5">
                         <AssetRowActions asset={asset} canUpdate={canUpdate} canDelete={canDelete} />
                       </td>
@@ -265,7 +263,7 @@ export default async function AssetsListPage(props: {
             />
           </>
         )}
-      </DataPanel>
+      </div>
     </div>
     </ModuleBackdrop>
   )

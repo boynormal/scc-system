@@ -10,6 +10,9 @@ import type { AssetDto } from "./asset-types"
 
 type Option = { id: string; name: string }
 
+const solidField =
+  "border-[#94a3b8] bg-[#ffffff] text-[#0f172a] dark:border-[#94a3b8] dark:bg-[#ffffff] backdrop-blur-none"
+
 export function AssetForm({
   asset,
   onSaved,
@@ -104,6 +107,7 @@ export function AssetForm({
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
       <Select
+        className={solidField}
         label={t("branch")}
         required
         value={branchId}
@@ -112,6 +116,7 @@ export function AssetForm({
       />
       <div className="space-y-1.5">
         <GlassInput
+          className="border-[#94a3b8] bg-[#e2e8f0] text-[#0f172a] dark:border-[#94a3b8] dark:bg-[#e2e8f0] backdrop-blur-none"
           label={t("code")}
           required
           readOnly
@@ -120,8 +125,9 @@ export function AssetForm({
         />
         <p className="text-xs text-muted-foreground">{t("codeHint")}</p>
       </div>
-      <GlassInput label={t("name")} required value={name} onChange={(e) => setName(e.target.value)} />
+      <GlassInput className={solidField} label={t("name")} required value={name} onChange={(e) => setName(e.target.value)} />
       <Select
+        className={solidField}
         label={t("type")}
         required
         value={typeId}
@@ -129,6 +135,7 @@ export function AssetForm({
         options={types.map((row) => ({ value: row.id, label: row.name }))}
       />
       <Select
+        className={solidField}
         label={t("ownership")}
         required
         value={ownership}
@@ -140,6 +147,7 @@ export function AssetForm({
         ]}
       />
       <Select
+        className={solidField}
         label={t("status")}
         required
         value={status}
@@ -153,6 +161,7 @@ export function AssetForm({
         ]}
       />
       <GlassInput
+        className={solidField}
         label={t("serialNumber")}
         value={serialNumber}
         onChange={(e) => setSerialNumber(e.target.value)}
@@ -167,12 +176,13 @@ export function AssetForm({
           maxLength={2000}
           rows={4}
           onChange={(e) => setDetails(e.target.value)}
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+          className={`${solidField} w-full rounded-lg border px-3 py-2 text-sm`}
         />
         <p className="text-xs text-muted-foreground">{t("detailsHint")}</p>
       </div>
       <div className="space-y-1.5">
         <GlassInput
+          className={solidField}
           label={t("acquiredAt")}
           type="date"
           value={acquiredAt}
@@ -181,7 +191,11 @@ export function AssetForm({
         <p className="text-xs text-muted-foreground">{t("acquiredHint")}</p>
       </div>
       <GlassFormActions>
-        <Button type="button" variant="outline" onClick={() => (onCancel ? onCancel() : router.back())}>
+        <Button
+          type="button"
+          variant="outline"
+          className="border-[#334155] bg-[#1e293b] text-white hover:bg-[#0f172a] hover:text-white dark:hover:bg-[#0f172a]"
+          onClick={() => (onCancel ? onCancel() : router.back())}>
           {t("cancel")}
         </Button>
         <Button type="submit" disabled={saving}>

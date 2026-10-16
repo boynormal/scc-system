@@ -11,7 +11,7 @@ import { downloadPmQr, type PmQrSticker } from "@/components/assets/pm-board-qr"
 import { cn } from "@/lib/utils"
 
 const itemClass =
-  "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-foreground outline-none data-[highlighted]:bg-muted/60"
+  "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-[#0f172a] outline-none data-[highlighted]:bg-[#e2e8f0]"
 
 export function PmRowActions({ sticker, canUpdate }: { sticker: PmQrSticker; canUpdate: boolean }) {
   const t = useTranslations("assets")

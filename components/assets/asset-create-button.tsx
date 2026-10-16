@@ -23,7 +23,7 @@ export function AssetCreateButton({ className }: { className?: string }) {
         <Plus className="h-4 w-4" />
         {t("newAsset")}
       </button>
-      <GlassDialog open={open} onOpenChange={setOpen} title={t("newAsset")} className="max-w-xl">
+      <GlassDialog solid open={open} onOpenChange={setOpen} title={t("newAsset")} className="max-w-xl">
         {open && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">{t("codeHint")}</p>

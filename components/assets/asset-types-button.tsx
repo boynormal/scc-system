@@ -80,7 +80,7 @@ export function AssetTypesButton() {
       >
         {t("manageTypes")}
       </button>
-      <GlassDialog open={open} onOpenChange={setOpen} title={t("manageTypes")} className="max-w-lg">
+      <GlassDialog solid open={open} onOpenChange={setOpen} title={t("manageTypes")} className="max-w-lg">
         <form onSubmit={onAdd} className="flex gap-2">
           <input
             value={name}

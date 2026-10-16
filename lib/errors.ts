@@ -36,3 +36,10 @@ export class UnauthorizedError extends AppError {
     this.name = "UnauthorizedError"
   }
 }
+
+export class StorageUnavailableError extends AppError {
+  constructor(message = "ที่เก็บไฟล์ใช้งานไม่ได้ชั่วคราว") {
+    super(message, 503, "STORAGE_UNAVAILABLE")
+    this.name = "StorageUnavailableError"
+  }
+}

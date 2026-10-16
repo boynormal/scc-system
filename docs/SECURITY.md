@@ -46,7 +46,8 @@ Authorization: Bearer <CRON_SECRET>
 | Auth | `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | secret ≥ 32 ตัวอักษร |
 | Cron | `CRON_SECRET` | บังคับบน production ถ้าเปิด cron |
 | GPS | `GPS_API_URL`, `GPS_API_AUTH`, `GPS_ASSET_ID` | **server-only** ห้าม `NEXT_PUBLIC_*` |
-| Storage (ถ้าใช้) | `STORAGE_*` | ดูส่วน Upload |
+| Storage (ถ้าใช้) | `STORAGE_*` | ไม่ถูกใช้แล้ว อย่าใส่ secret ของ SeaweedFS ที่นี่ |
+| SeaweedFS S3 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE`, `S3_REQUEST_TIMEOUT_MS`, `S3_MAX_UPLOAD_BYTES` | **server-only** ห้าม `NEXT_PUBLIC_*` ดู [ops/SEAWEEDFS.md](./ops/SEAWEEDFS.md) |
 | Email | `RESEND_API_KEY` | ถ้าเปิดส่งเมล |
 
 **ห้าม** commit ไฟล์ `.env` หรือ credential จริง
@@ -56,7 +57,9 @@ Authorization: Bearer <CRON_SECRET>
 - API: [`app/api/upload/route.ts`](../app/api/upload/route.ts) — ต้อง login
 - พฤติกรรมปัจจุบัน: เขียนลงดิสก์ใต้ `public/uploads` และ `public/home-screen/...` (WebP ตาม profile)
 - Middleware ยกเว้น `/uploads/` เพื่อให้เสิร์ฟไฟล์ได้โดยไม่ผ่าน redirect login
-- ตัวแปร `STORAGE_*` ใน `.env.example` เป็นโครงสำหรับ object storage — ตรวจโค้ดก่อนสมมติว่าทุกอัปโหลดไป R2/S3 แล้ว
+- ตัวแปร `STORAGE_*` ใน `.env.example` เป็นโครงเก่าที่โค้ดไม่ได้ใช้
+- ใบแนบค่าใช้จ่ายใหม่ไปที่ SeaweedFS ผ่าน `S3_*` และดาวน์โหลดเฉพาะผู้ที่ล็อกอินและมีสิทธิ์อ่านบิลนั้น — ดู [ops/SEAWEEDFS.md](./ops/SEAWEEDFS.md)
+- รูปหน้าแรก รูปใบงาน และไฟล์เก่าใน `public/uploads` ยังเขียน/เสิร์ฟจากดิสก์เหมือนเดิม
 
 ## GPS
 

@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import {
   ArrowLeft,
   Check,
@@ -12,6 +13,7 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GlassCard, GlassDialog } from "@/components/glass"
@@ -112,8 +114,31 @@ function SourceLink({
   )
 }
 
+function formatFileSize(size: number | null): string {
+  if (size == null) return ""
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function apiErrorMessage(
+  json: { error?: unknown; code?: string },
+  status: number,
+  messages: { fallback: string; unavailable: string; denied: string }
+): string {
+  if (status === 403) return messages.denied
+  if (json.code === "STORAGE_UNAVAILABLE") return messages.unavailable
+  if (typeof json.error === "string" && json.error.trim()) return json.error
+  if (json.error && typeof json.error === "object" && "message" in json.error) {
+    const message = (json.error as { message?: unknown }).message
+    if (typeof message === "string" && message.trim()) return message
+  }
+  return messages.fallback
+}
+
 export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; perms: FinancePerms }) {
   const router = useRouter()
+  const tFiles = useTranslations("expenseFiles")
   const [tab, setTab] = useState("overview")
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -237,36 +262,49 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
     try {
       const form = new FormData()
       form.append("file", file)
-      const uploaded = await fetch("/api/upload", { method: "POST", body: form })
-      const uploadedJson = await uploaded.json().catch(() => ({}))
-      if (!uploaded.ok) {
-        setError(
-          typeof uploadedJson.error === "string"
-            ? uploadedJson.error
-            : uploadedJson.error?.message ?? "อัปโหลดไฟล์ไม่สำเร็จ"
-        )
-        return
-      }
-      const data = uploadedJson.data as { fileUrl: string; fileName?: string; fileSize?: number }
-      const res = await fetch(`/api/finance/expenses/${expense.id}/attachments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileUrl: data.fileUrl,
-          fileName: data.fileName ?? file.name,
-          fileSize: data.fileSize ?? file.size,
-        }),
-      })
+      const res = await fetch(`/api/finance/expenses/${expense.id}/files`, { method: "POST", body: form })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(typeof json.error === "string" ? json.error : json.error?.message ?? "บันทึกไฟล์ไม่สำเร็จ")
+        setError(
+          apiErrorMessage(json, res.status, {
+            fallback: tFiles("uploadFailed"),
+            unavailable: tFiles("unavailable"),
+            denied: tFiles("denied"),
+          })
+        )
         return
       }
       setFiles((prev) => [...prev, json.data as ExpenseAttachmentDto])
     } catch {
-      setError("อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองอีกครั้ง")
+      setError(tFiles("uploadFailed"))
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function removeAttachment(attachmentId: string) {
+    setBusy(attachmentId)
+    setError(null)
+    try {
+      const res = await fetch(`/api/finance/expenses/${expense.id}/attachments/${attachmentId}`, {
+        method: "DELETE",
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(
+          apiErrorMessage(json, res.status, {
+            fallback: tFiles("deleteFailed"),
+            unavailable: tFiles("unavailable"),
+            denied: tFiles("denied"),
+          })
+        )
+        return
+      }
+      setFiles((prev) => prev.filter((item) => item.id !== attachmentId))
+    } catch {
+      setError(tFiles("deleteFailed"))
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -632,13 +670,14 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
       {tab === "files" && (
         <GlassCard className={cn("p-5 shadow-none", PANEL)}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-foreground">ไฟล์แนบ</h2>
+            <h2 className="text-sm font-semibold text-foreground">{tFiles("title")}</h2>
             {canAttach && (
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white/90 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted dark:border-white/15 dark:bg-transparent">
                 <Paperclip className="h-3.5 w-3.5" />
-                {uploading ? "กำลังอัปโหลด…" : "แนบไฟล์"}
+                {uploading ? tFiles("uploading") : tFiles("attach")}
                 <input
                   type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
                   className="sr-only"
                   disabled={uploading}
                   onChange={(e) => {
@@ -653,16 +692,34 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
           {files.length === 0 ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Paperclip className="h-4 w-4" />
-              ยังไม่มีไฟล์แนบ
+              {tFiles("empty")}
             </p>
           ) : (
             <ul className="divide-y divide-slate-100 dark:divide-white/10">
               {files.map((file) => (
                 <li key={file.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <span className="font-medium text-foreground">{file.fileName ?? "ไฟล์"}</span>
-                  <a href={file.fileUrl} className="text-blue-600 hover:underline dark:text-blue-400" target="_blank" rel="noreferrer">
-                    เปิดไฟล์
-                  </a>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-foreground">{file.fileName ?? tFiles("unnamed")}</span>
+                    {file.fileSize != null && (
+                      <span className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}</span>
+                    )}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3">
+                    <a href={file.fileUrl} className="text-blue-600 hover:underline dark:text-blue-400" target="_blank" rel="noreferrer">
+                      {tFiles("open")}
+                    </a>
+                    {canAttach && (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 text-red-600 hover:underline disabled:opacity-50 dark:text-red-400"
+                        disabled={busy === file.id}
+                        onClick={() => void removeAttachment(file.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {busy === file.id ? tFiles("removing") : tFiles("remove")}
+                      </button>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>

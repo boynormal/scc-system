@@ -1,6 +1,14 @@
 import { z } from "zod"
 import { Prisma, type PrismaClient } from "@prisma/client"
-import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
+import { ForbiddenError, NotFoundError, StorageUnavailableError, ValidationError } from "@/lib/errors"
+import {
+  buildObjectKey,
+  createObjectStorage,
+  inspectUpload,
+  sha256Hex,
+  type ObjectStorage,
+  S3ConfigError,
+} from "@/modules/storage"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { permissionCoversBranch, readBranchSharing, type BranchShareAction } from "@/shared/permissions/branch-sharing"
 import { generateExpenseNo } from "./generate-expense-no"
@@ -922,9 +930,10 @@ function serializeExpense(row: ExpenseRow) {
     updatedAt: row.updatedAt.toISOString(),
     attachments: row.attachments.map((a) => ({
       id: a.id,
-      fileUrl: a.fileUrl,
+      fileUrl: a.storedFileId ? expenseAttachmentFilePath(row.id, a.id) : a.fileUrl,
       fileName: a.fileName,
       fileSize: a.fileSize,
+      storedFileId: a.storedFileId,
     })),
     lines,
     lineCount: lines.length,
@@ -1872,8 +1881,229 @@ export async function addExpenseAttachment(
       fileUrl: row.fileUrl,
       fileName: row.fileName,
       fileSize: row.fileSize,
+      storedFileId: row.storedFileId,
     },
   }
+}
+
+export function expenseAttachmentFilePath(expenseId: string, attachmentId: string): string {
+  return `/api/finance/expenses/${expenseId}/attachments/${attachmentId}/file`
+}
+
+function resolveObjectStorage(storage?: ObjectStorage): ObjectStorage {
+  if (storage) return storage
+  try {
+    return createObjectStorage()
+  } catch (err) {
+    if (err instanceof S3ConfigError) console.error(err.message)
+    else console.error("s3 config invalid")
+    throw new StorageUnavailableError()
+  }
+}
+
+async function loadExpenseForFile(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    id: string
+    action: "read" | "update"
+  }
+) {
+  const shareAction = params.action === "update" ? "edit" : "view"
+  const existing = await db.expense.findFirst({
+    where: {
+      id: params.id,
+      ...expenseWhere(
+        params.companyId,
+        params.roles,
+        null,
+        await expenseCompanyWide(db, params.companyId, shareAction)
+      ),
+    },
+    select: { id: true, status: true, branchId: true },
+  })
+  if (!existing) throw new NotFoundError("ไม่พบรายการค่าใช้จ่าย")
+  await assertExpensePermission(db, params.companyId, params.roles, existing.branchId, params.action)
+  return existing
+}
+
+export async function uploadExpenseFile(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    id: string
+    originalName: string
+    body: Buffer
+    storage?: ObjectStorage
+  }
+) {
+  const existing = await loadExpenseForFile(db, { ...params, action: "update" })
+  if (existing.status === "CANCELLED") {
+    throw new ValidationError("ไม่สามารถแนบไฟล์กับบิลที่ยกเลิกแล้ว")
+  }
+  const storage = resolveObjectStorage(params.storage)
+  const inspected = inspectUpload(params.body, params.originalName, storage.maxUploadBytes)
+  const { fileId, objectKey } = buildObjectKey({
+    module: "finance",
+    entityType: "expense",
+    recordId: existing.id,
+  })
+  const checksum = sha256Hex(params.body)
+  await storage.putObject({ key: objectKey, body: params.body, contentType: inspected.contentType })
+  try {
+    const row = await db.$transaction(async (tx) => {
+      await tx.storedFile.create({
+        data: {
+          id: fileId,
+          companyId: params.companyId,
+          branchId: existing.branchId,
+          bucket: storage.bucket,
+          objectKey,
+          originalName: inspected.originalName,
+          contentType: inspected.contentType,
+          sizeBytes: params.body.length,
+          sha256: checksum,
+          module: "finance",
+          entityType: "expense",
+          entityId: existing.id,
+          uploadedById: params.userId,
+        },
+      })
+      const created = await tx.expenseAttachment.create({
+        data: {
+          expenseId: existing.id,
+          fileUrl: "pending",
+          fileName: inspected.originalName,
+          fileSize: params.body.length,
+          uploadedBy: params.userId,
+          storedFileId: fileId,
+        },
+      })
+      const fileUrl = expenseAttachmentFilePath(existing.id, created.id)
+      const updated = await tx.expenseAttachment.update({
+        where: { id: created.id },
+        data: { fileUrl },
+      })
+      await tx.auditLog.create({
+        data: {
+          userId: params.userId,
+          tableName: "expense_attachments",
+          recordId: updated.id,
+          action: "create",
+          newValues: {
+            expenseId: existing.id,
+            fileName: updated.fileName,
+            fileSize: updated.fileSize,
+            storedFileId: fileId,
+          },
+        },
+      })
+      return updated
+    })
+    return {
+      data: {
+        id: row.id,
+        fileUrl: row.fileUrl,
+        fileName: row.fileName,
+        fileSize: row.fileSize,
+        storedFileId: row.storedFileId,
+      },
+    }
+  } catch (err) {
+    try {
+      await storage.deleteObject(objectKey)
+    } catch {
+      console.error("stored file cleanup failed", {
+        fileId,
+        expenseId: existing.id,
+        module: "finance",
+      })
+    }
+    throw err
+  }
+}
+
+export async function readExpenseAttachmentFile(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    id: string
+    attachmentId: string
+    storage?: ObjectStorage
+  }
+) {
+  const existing = await loadExpenseForFile(db, { ...params, action: "read" })
+  const attachment = await db.expenseAttachment.findFirst({
+    where: { id: params.attachmentId, expenseId: existing.id },
+    include: { storedFile: true },
+  })
+  const stored = attachment?.storedFile
+  if (
+    !stored ||
+    stored.deletedAt ||
+    stored.companyId !== params.companyId ||
+    stored.entityId !== existing.id ||
+    stored.module !== "finance" ||
+    stored.entityType !== "expense"
+  ) {
+    throw new NotFoundError("ไม่พบไฟล์")
+  }
+  const storage = resolveObjectStorage(params.storage)
+  const bytes = await storage.getObject(stored.objectKey)
+  if (sha256Hex(bytes) !== stored.sha256.trim()) {
+    console.error("stored file checksum mismatch", { fileId: stored.id, module: "finance" })
+    throw new StorageUnavailableError()
+  }
+  return {
+    bytes,
+    contentType: stored.contentType,
+    originalName: stored.originalName,
+    sizeBytes: stored.sizeBytes,
+  }
+}
+
+export async function removeExpenseAttachment(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    id: string
+    attachmentId: string
+  }
+) {
+  const existing = await loadExpenseForFile(db, { ...params, action: "update" })
+  if (existing.status === "CANCELLED") {
+    throw new ValidationError("ไม่สามารถลบไฟล์ของบิลที่ยกเลิกแล้ว")
+  }
+  const attachment = await db.expenseAttachment.findFirst({
+    where: { id: params.attachmentId, expenseId: existing.id },
+    select: { id: true, fileName: true, storedFileId: true },
+  })
+  if (!attachment) throw new NotFoundError("ไม่พบไฟล์")
+  await db.$transaction(async (tx) => {
+    await tx.expenseAttachment.delete({ where: { id: attachment.id } })
+    if (attachment.storedFileId) {
+      await tx.storedFile.update({
+        where: { id: attachment.storedFileId },
+        data: { deletedAt: new Date() },
+      })
+    }
+    await tx.auditLog.create({
+      data: {
+        userId: params.userId,
+        tableName: "expense_attachments",
+        recordId: attachment.id,
+        action: "delete",
+        oldValues: { expenseId: existing.id, fileName: attachment.fileName },
+      },
+    })
+  })
+  return { data: { id: attachment.id } }
 }
 
 // ─── Summary + form option lists ─────────────────────────────────────────────

@@ -449,5 +449,19 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome"
+  },
+  "expenseFiles": {
+    "title": "Attachments",
+    "attach": "Attach file",
+    "uploading": "Uploading…",
+    "empty": "No attachments yet",
+    "open": "Open file",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "unnamed": "File",
+    "uploadFailed": "Could not upload the file",
+    "deleteFailed": "Could not remove the file",
+    "denied": "You do not have permission to manage this file",
+    "unavailable": "File storage is temporarily unavailable"
   }
 }

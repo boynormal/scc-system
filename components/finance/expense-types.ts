@@ -5,6 +5,7 @@ export type ExpenseAttachmentDto = {
   fileUrl: string
   fileName: string | null
   fileSize: number | null
+  storedFileId?: string | null
 }
 
 export type PricingMode = "QTY_PRICE" | "AMOUNT"

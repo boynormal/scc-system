@@ -155,6 +155,7 @@ model Company {
   assetRegisterTypes      AssetRegisterType[]
   assetPmPlans            AssetPmPlan[]
   dutyCategories          DutyCategory[]
+  storedFiles             StoredFile[]
 
   @@map("companies")
 }
@@ -194,6 +195,7 @@ model Branch {
   costCenters             CostCenter[]
   expenses                Expense[]
   assets                  Asset[]
+  storedFiles             StoredFile[]
 
   @@index([companyId])
   @@index([code])
@@ -279,6 +281,7 @@ model User {
   expensesApproved        Expense[]               @relation("ExpenseApprovedBy")
   expensesPaid            Expense[]               @relation("ExpensePaidBy")
   expenseAttachments      ExpenseAttachment[]     @relation("ExpenseAttachmentUploader")
+  storedFilesUploaded     StoredFile[]            @relation("StoredFileUploader")
   financeSourceReviews    FinanceSourceReview[]   @relation("FinanceSourceReviewReviewedBy")
   assetsCreated           Asset[]                 @relation("AssetCreatedBy")
   driverLogin             Driver?                 @relation("DriverLogin")
@@ -1883,19 +1886,53 @@ model ExpenseLine {
 }
 
 model ExpenseAttachment {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  expenseId  String   @map("expense_id") @db.Uuid
-  fileUrl    String   @map("file_url")
-  fileName   String?  @map("file_name") @db.VarChar(255)
-  fileSize   Int?     @map("file_size")
-  uploadedBy String?  @map("uploaded_by") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  expenseId    String   @map("expense_id") @db.Uuid
+  fileUrl      String   @map("file_url")
+  fileName     String?  @map("file_name") @db.VarChar(255)
+  fileSize     Int?     @map("file_size")
+  uploadedBy   String?  @map("uploaded_by") @db.Uuid
+  storedFileId String?  @unique @map("stored_file_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  expense  Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  uploader User?   @relation("ExpenseAttachmentUploader", fields: [uploadedBy], references: [id])
+  expense    Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  uploader   User?       @relation("ExpenseAttachmentUploader", fields: [uploadedBy], references: [id])
+  storedFile StoredFile? @relation(fields: [storedFileId], references: [id])
 
   @@index([expenseId])
   @@map("expense_attachments")
+}
+
+// Bytes live in SeaweedFS. This row is the system of record for object metadata.
+// Soft-delete keeps the object for audit; do not hard-delete from storage in the expense flow.
+model StoredFile {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  branchId     String    @map("branch_id") @db.Uuid
+  bucket       String    @db.VarChar(63)
+  objectKey    String    @map("object_key") @db.VarChar(512)
+  originalName String    @map("original_name") @db.VarChar(255)
+  contentType  String    @map("content_type") @db.VarChar(127)
+  sizeBytes    Int       @map("size_bytes")
+  sha256       String    @db.Char(64)
+  module       String    @db.VarChar(50)
+  entityType   String    @map("entity_type") @db.VarChar(50)
+  entityId     String    @map("entity_id") @db.Uuid
+  uploadedById String    @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  company            Company             @relation(fields: [companyId], references: [id])
+  branch             Branch              @relation(fields: [branchId], references: [id])
+  uploader           User                @relation("StoredFileUploader", fields: [uploadedById], references: [id])
+  expenseAttachments ExpenseAttachment[]
+
+  @@unique([bucket, objectKey])
+  @@index([companyId, module, entityType, entityId])
+  @@index([branchId])
+  @@index([uploadedById])
+  @@map("stored_files")
 }
 
 // Finance-owned review of an operational source. Missing row = PENDING.

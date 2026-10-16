@@ -6,9 +6,20 @@ import { Button } from "@/components/ui/button"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 
-type Status = "pass" | "fail" | "na"
+type Status = "pass" | "fail"
 
-const STATUSES: Status[] = ["pass", "fail", "na"]
+const STATUSES: Status[] = ["pass", "fail"]
+
+const choiceClass: Record<Status, { idle: string; selected: string }> = {
+  pass: {
+    idle: "border-[#34d399] bg-[#d1fae5] text-[#065f46]",
+    selected: "border-[#047857] bg-[#059669] text-white shadow-sm",
+  },
+  fail: {
+    idle: "border-[#fca5a5] bg-[#fee2e2] text-[#991b1b]",
+    selected: "border-[#b91c1c] bg-[#dc2626] text-white shadow-sm",
+  },
+}
 
 export function PmPublicForm({
   token,
@@ -54,60 +65,66 @@ export function PmPublicForm({
 
   if (done) {
     return (
-      <div className="rounded-xl border border-border bg-card px-5 py-8 text-center">
-        <h2 className="text-lg font-semibold text-foreground">{t("submitted")}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{t("submittedHint")}</p>
+      <div className="rounded-xl border border-[#6ee7b7] bg-[#d1fae5] px-5 py-10 text-center">
+        <h2 className="text-lg font-semibold text-[#065f46]">{t("submitted")}</h2>
+        <p className="mt-2 text-sm text-[#047857]">{t("submittedHint")}</p>
       </div>
     )
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-3">
       {items.map((item) => (
-        <fieldset key={item.id} className="rounded-xl border border-border bg-card p-4">
-          <legend className="px-1 text-base font-semibold text-foreground">
-            {item.sequence}. {item.name}
-          </legend>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {STATUSES.map((status) => (
-              <label
-                key={status}
-                className={cn(
-                  "flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-2 py-3 text-sm font-medium",
-                  choices[item.id] === status
-                    ? status === "pass"
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-900"
-                      : status === "fail"
-                        ? "border-red-600 bg-red-50 text-red-900"
-                        : "border-slate-500 bg-slate-100 text-slate-900"
-                    : "border-border text-foreground"
-                )}
-              >
-                <input
-                  type="radio"
-                  name={item.id}
-                  value={status}
-                  required={status === "pass"}
-                  checked={choices[item.id] === status}
-                  onChange={() => setChoices((current) => ({ ...current, [item.id]: status }))}
-                />
-                {t(status)}
-              </label>
-            ))}
+        <section key={item.id} className="rounded-xl border border-[#cbd5e1] bg-[#f8fafc] p-4">
+          <h2 className="flex items-center gap-3 text-base font-semibold text-[#0f172a]">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1e293b] text-xs font-bold text-white">
+              {item.sequence}
+            </span>
+            {item.name}
+          </h2>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {STATUSES.map((status) => {
+              const selected = choices[item.id] === status
+              return (
+                <label
+                  key={status}
+                  className={cn(
+                    "flex min-h-12 cursor-pointer items-center justify-center rounded-lg border px-3 py-3 text-sm font-semibold",
+                    selected ? choiceClass[status].selected : choiceClass[status].idle
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name={item.id}
+                    value={status}
+                    className="sr-only"
+                    checked={selected}
+                    onChange={() => setChoices((current) => ({ ...current, [item.id]: status }))}
+                  />
+                  {t(status)}
+                </label>
+              )
+            })}
           </div>
-          <label className="mt-3 block text-sm text-muted-foreground">
+          <label className="mt-3 block text-sm font-medium text-[#334155]">
             {t("remark")}
             <input
               value={remarks[item.id] ?? ""}
               maxLength={500}
               onChange={(event) => setRemarks((current) => ({ ...current, [item.id]: event.target.value }))}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+              className="mt-1 w-full rounded-lg border border-[#94a3b8] bg-[#ffffff] px-3 py-2 text-sm font-normal text-[#0f172a]"
             />
           </label>
-        </fieldset>
+        </section>
       ))}
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <Button type="submit" loading={saving} className="w-full">
+      {error && (
+        <p className="rounded-lg border border-[#fecaca] bg-[#fee2e2] px-3 py-2 text-sm text-[#991b1b]">{error}</p>
+      )}
+      <Button
+        type="submit"
+        loading={saving}
+        className="h-12 w-full bg-[#1e293b] text-base font-semibold text-white hover:bg-[#0f172a]"
+      >
         {t("submit")}
       </Button>
     </form>

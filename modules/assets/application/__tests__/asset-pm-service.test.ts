@@ -490,4 +490,16 @@ describe("public asset PM round", () => {
     ])
     expect(createPmPublicToken()).toMatch(/^[A-Za-z0-9_-]{43}$/)
   })
+
+  it("rejects a skipped result", async () => {
+    const { db } = fakeDb({ assets: [assetRow()], plans: [planRow()] })
+    await expect(
+      submitPublicAssetPmRound(db, TOKEN, {
+        results: [
+          { itemId: ITEM_1, status: "na", remark: null },
+          { itemId: ITEM_2, status: "pass", remark: null },
+        ],
+      })
+    ).rejects.toBeInstanceOf(ValidationError)
+  })
 })

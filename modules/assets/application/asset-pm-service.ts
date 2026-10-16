@@ -8,6 +8,8 @@ import { assetWhere } from "./asset-service"
 
 export const PM_CHECK_STATUSES = ["pass", "fail", "na"] as const
 export type PmCheckStatus = (typeof PM_CHECK_STATUSES)[number]
+/** New public rounds only. Older rows may still store "na". */
+export const PM_SUBMIT_STATUSES = ["pass", "fail"] as const
 export type AssetPmDueStatus = "due" | "overdue" | "ok" | "inactive"
 
 const BANGKOK = "Asia/Bangkok"
@@ -33,7 +35,7 @@ export const submitAssetPmRoundSchema = z.object({
     .array(
       z.object({
         itemId: z.string().uuid(),
-        status: z.enum(PM_CHECK_STATUSES),
+        status: z.enum(PM_SUBMIT_STATUSES),
         remark: z
           .string()
           .trim()

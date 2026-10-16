@@ -17,6 +17,7 @@ import {
   rotateAssetPmToken,
   submitPublicAssetPmRound,
   upsertAssetPm,
+  withPmCalendarAssetFilters,
 } from "@/modules/assets/application/asset-pm-service"
 
 const CID = "00000000-0000-0000-0000-0000000000cc"
@@ -285,6 +286,25 @@ describe("asset PM schedule", () => {
       start: new Date("2026-09-30T17:00:00.000Z"),
       end: new Date("2026-10-31T17:00:00.000Z"),
       daysInMonth: 31,
+    })
+  })
+
+  it("keeps branch scope and adds type and name search", () => {
+    const filtered = withPmCalendarAssetFilters(
+      { companyId: CID, branchId: BRANCH_A },
+      { typeId: "33333333-3333-4333-8333-333333333333", search: " รถ " }
+    )
+    expect(filtered).toMatchObject({
+      companyId: CID,
+      branchId: BRANCH_A,
+      typeId: "33333333-3333-4333-8333-333333333333",
+      OR: [
+        { code: { contains: "รถ", mode: "insensitive" } },
+        { name: { contains: "รถ", mode: "insensitive" } },
+      ],
+    })
+    expect(withPmCalendarAssetFilters({ companyId: CID }, { typeId: "not-a-uuid", search: "  " })).toEqual({
+      companyId: CID,
     })
   })
 

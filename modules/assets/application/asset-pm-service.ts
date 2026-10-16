@@ -478,9 +478,35 @@ export function summarizePmDayRounds(
   }
 }
 
+export function withPmCalendarAssetFilters(
+  where: Prisma.AssetWhereInput,
+  filters: { typeId?: string | null; search?: string | null }
+): Prisma.AssetWhereInput {
+  const next: Prisma.AssetWhereInput = { ...where }
+  if (filters.typeId && z.string().uuid().safeParse(filters.typeId).success) {
+    next.typeId = filters.typeId
+  }
+  const q = filters.search?.trim()
+  if (q) {
+    next.OR = [
+      { code: { contains: q, mode: "insensitive" } },
+      { name: { contains: q, mode: "insensitive" } },
+    ]
+  }
+  return next
+}
+
 export async function listAssetPmMonth(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; year: number; month: number }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    year: number
+    month: number
+    branchId?: string | null
+    typeId?: string | null
+    search?: string | null
+  }
 ) {
   if (!canAssets(params.roles, "read")) throw new ForbiddenError()
   if (!Number.isInteger(params.year) || params.month < 1 || params.month > 12) {
@@ -492,7 +518,10 @@ export async function listAssetPmMonth(
     where: {
       companyId: params.companyId,
       isActive: true,
-      asset: assetWhere(params.companyId, params.roles, null, share.assets.view),
+      asset: withPmCalendarAssetFilters(
+        assetWhere(params.companyId, params.roles, params.branchId, share.assets.view),
+        { typeId: params.typeId, search: params.search }
+      ),
     },
     include: {
       asset: { select: { id: true, name: true, code: true, branch: { select: { name: true } } } },

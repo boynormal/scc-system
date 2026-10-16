@@ -40,25 +40,14 @@ export function PmMonthGrid({
 
   return (
     <>
-      <div className="mb-3 flex flex-wrap gap-4 text-sm text-slate-800 dark:text-slate-100">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-4 w-4 rounded bg-[#059669]" />
-          {t("pass")}
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-4 w-4 rounded bg-[#facc15]" />
-          {t("fail")}
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-4 w-4 rounded bg-[#cbd5e1]" />
-          {t("calendarNone")}
-        </span>
-      </div>
-      <div className="overflow-x-auto rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
-        <table className="min-w-max border-separate border-spacing-0 bg-[#ffffff] text-xs">
+      <div className="w-full overflow-x-auto rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
+        <table
+          className="w-full table-fixed border-separate border-spacing-0 bg-[#ffffff] text-xs"
+          style={{ minWidth: `calc(11rem + ${daysInMonth} * 2rem)` }}
+        >
           <thead>
             <tr>
-              <th className="sticky left-0 z-20 min-w-44 border-b border-r border-[#cbd5e1] bg-[#e2e8f0] px-3 py-2 text-left text-xs font-semibold text-[#0f172a]">
+              <th className="sticky left-0 z-20 w-44 border-b border-r border-[#cbd5e1] bg-[#e2e8f0] px-3 py-2 text-left text-xs font-semibold text-[#0f172a]">
                 {t("assetColumn")}
               </th>
               {days.map((day) => {
@@ -68,7 +57,7 @@ export function PmMonthGrid({
                 return (
                   <th
                     key={day}
-                    className={`w-9 border-b border-[#cbd5e1] px-1 py-2 text-center font-semibold ${
+                    className={`border-b border-[#cbd5e1] px-0.5 py-2 text-center font-semibold ${
                       isToday
                         ? "bg-[#2563eb] text-white"
                         : sunday
@@ -85,7 +74,7 @@ export function PmMonthGrid({
           <tbody>
             {rows.map((row) => (
               <tr key={row.assetId}>
-                <th className="sticky left-0 z-10 min-w-44 border-b border-r border-[#cbd5e1] bg-[#ffffff] px-3 py-2 text-left font-medium text-[#0f172a]">
+                <th className="sticky left-0 z-10 w-44 border-b border-r border-[#cbd5e1] bg-[#ffffff] px-3 py-2 text-left font-medium text-[#0f172a]">
                   <span className="block truncate">{row.name}</span>
                   <span className="block truncate text-[11px] font-normal text-[#475569]">{row.branchName}</span>
                 </th>
@@ -105,7 +94,7 @@ export function PmMonthGrid({
                         disabled={!cell}
                         aria-label={label}
                         onClick={() => cell && setOpen({ assetName: row.name, day, cell })}
-                        className={`h-7 w-7 rounded ${
+                        className={`block h-8 w-full rounded ${
                           cell?.status === "fail"
                             ? "bg-[#facc15] hover:bg-[#eab308]"
                             : cell?.status === "pass"

@@ -19,6 +19,7 @@ import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-p
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { ModuleTabs } from "@/components/shell/module-tabs"
 import { PmCheckBoard } from "@/components/assets/pm-check-board"
+import { PmCalendarFilters } from "@/components/assets/pm-calendar-filters"
 import { PmMonthGrid } from "@/components/assets/pm-month-grid"
 
 export async function generateMetadata() {
@@ -89,20 +90,50 @@ export default async function AssetsListPage(props: {
     const todayKey = bangkokDateKey(new Date())
     const year = Number(searchParams.year) || Number(todayKey.slice(0, 4))
     const month = Number(searchParams.month) || Number(todayKey.slice(5, 7))
-    const calendar = await listAssetPmMonth(prisma, { companyId, roles, year, month })
+    const [calendar, branches, types] = await Promise.all([
+      listAssetPmMonth(prisma, {
+        companyId,
+        roles,
+        year,
+        month,
+        branchId: searchParams.branchId,
+        typeId: searchParams.type,
+        search: searchParams.search,
+      }),
+      listAccessibleBranches(prisma, { companyId, roles }),
+      listAssetRegisterTypes(prisma, { companyId, roles, activeOnly: true }),
+    ])
     const prev = new Date(year, month - 2, 1)
     const next = new Date(year, month, 1)
     const monthLabel = new Date(year, month - 1, 1).toLocaleDateString("th-TH", {
       month: "long",
       year: "numeric",
     })
-    const href = (date: Date) =>
-      `/assets?tab=pm-calendar&year=${date.getFullYear()}&month=${date.getMonth() + 1}`
+    const href = (date: Date) => {
+      const params = new URLSearchParams({
+        tab: "pm-calendar",
+        year: String(date.getFullYear()),
+        month: String(date.getMonth() + 1),
+      })
+      if (searchParams.search) params.set("search", searchParams.search)
+      if (searchParams.branchId) params.set("branchId", searchParams.branchId)
+      if (searchParams.type) params.set("type", searchParams.type)
+      return `/assets?${params.toString()}`
+    }
 
     return (
       <ModuleBackdrop isDark={isDark}>
         <div className="relative z-10 space-y-6">
           {tabs}
+          <Suspense fallback={<div className="h-12 w-full animate-pulse rounded-xl bg-[#e2e8f0]" />}>
+            <PmCalendarFilters
+              key={`${searchParams.branchId ?? ""}-${searchParams.type ?? ""}-${searchParams.search ?? ""}`}
+              branches={branches.data}
+              types={types.data}
+              year={calendar.year}
+              month={calendar.month}
+            />
+          </Suspense>
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
             <Link
               href={href(prev)}

@@ -4,7 +4,6 @@ import { ForbiddenError, ValidationError } from "@/lib/errors"
 import { getBranchIds, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { readBranchSharing } from "@/shared/permissions/branch-sharing"
 import { canReadPersonnel, personnelLegalName } from "./personnel-service"
-import { dutyItemRefSelect, groupDutyItems, splitLines, type DutyGroup, type DutyItemRef } from "./duty-groups"
 
 const uuidSchema = z.string().uuid()
 
@@ -19,9 +18,6 @@ export type OrgChartOccupant = {
   lastName: string | null
   jobGroup: string | null
   isActive: boolean
-  /** รายการที่คนนี้ดูแลในตำแหน่งของกล่องนี้ — คนเดียวกันต่างกล่องได้ต่างชุด */
-  duties: DutyGroup[]
-  extraDuties: string[]
 }
 
 export type OrgChartNode = {
@@ -30,10 +26,6 @@ export type OrgChartNode = {
   code: string | null
   department: { id: string; name: string; code: string | null } | null
   headcount: number
-  /** ชุดตั้งต้นของตำแหน่งจากสมุดหน้าที่ */
-  duties: DutyGroup[]
-  /** ข้อเฉพาะตำแหน่ง บรรทัดละ 1 ข้อ ตัดบรรทัดว่างออกแล้ว */
-  responsibilities: string[]
   isActive: boolean
   depth: number
   occupants: OrgChartOccupant[]
@@ -64,16 +56,12 @@ type PositionRaw = {
   parentId: string | null
   sortOrder: number
   headcount: number
-  responsibilities: string | null
   isActive: boolean
   department: { id: string; name: string; code: string | null } | null
-  dutyItems?: { dutyItem: DutyItemRef }[]
 }
 
 type SeatRaw = {
   positionId: string
-  extraDuties?: string | null
-  dutyItems?: { dutyItem: DutyItemRef }[]
 }
 
 type PersonRaw = {
@@ -94,7 +82,7 @@ function seats(person: PersonRaw): SeatRaw[] {
   return person.positionId ? [{ positionId: person.positionId }] : []
 }
 
-function toOccupant(row: PersonRaw, seat?: SeatRaw): OrgChartOccupant {
+function toOccupant(row: PersonRaw): OrgChartOccupant {
   return {
     id: row.id,
     rosterNo: row.rosterNo,
@@ -104,13 +92,7 @@ function toOccupant(row: PersonRaw, seat?: SeatRaw): OrgChartOccupant {
     lastName: row.lastName ?? null,
     jobGroup: row.jobGroup,
     isActive: row.isActive,
-    duties: groupDutyItems((seat?.dutyItems ?? []).map((link) => link.dutyItem)),
-    extraDuties: splitLines(seat?.extraDuties),
   }
-}
-
-export function parseResponsibilities(text: string | null): string[] {
-  return splitLines(text)
 }
 
 function comparePositions(a: PositionRaw, b: PositionRaw): number {
@@ -164,8 +146,6 @@ export function buildOrgChartTree(
       code: row.code,
       department: row.department,
       headcount: row.headcount,
-      duties: groupDutyItems((row.dutyItems ?? []).map((link) => link.dutyItem)),
-      responsibilities: parseResponsibilities(row.responsibilities),
       isActive: row.isActive,
       depth,
       occupants,
@@ -202,7 +182,7 @@ export function flattenOrgChart(roots: OrgChartNode[]): OrgChartNode[] {
 }
 
 /**
- * ผังองค์กรต่อสาขา: Position tree + คนที่นั่งแต่ละกล่อง + ตำแหน่งว่าง + JD
+ * ผังองค์กรต่อสาขา: Position tree + คนที่นั่งแต่ละกล่อง + ตำแหน่งว่าง
  *
  * ใช้สิทธิ์ชุดเดียวกับมุมมองแผนก (`getPersonnelOrgView`) — อ่านได้เมื่ออ่านบุคลากรได้
  * และต้องมีสิทธิ์ในสาขานั้น (Admin ข้ามได้)
@@ -269,10 +249,8 @@ export async function getPersonnelOrgChart(
         parentId: true,
         sortOrder: true,
         headcount: true,
-        responsibilities: true,
         isActive: true,
         department: { select: { id: true, name: true, code: true } },
-        dutyItems: { select: { dutyItem: { select: dutyItemRefSelect } } },
       },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
@@ -294,8 +272,6 @@ export async function getPersonnelOrgChart(
         positionAssignments: {
           select: {
             positionId: true,
-            extraDuties: true,
-            dutyItems: { select: { dutyItem: { select: dutyItemRefSelect } } },
           },
         },
       },
@@ -314,7 +290,7 @@ export async function getPersonnelOrgChart(
       continue
     }
     for (const seat of here) {
-      const occupant = toOccupant(person, seat)
+      const occupant = toOccupant(person)
       const list = occupantsByPosition.get(seat.positionId)
       if (list) list.push(occupant)
       else occupantsByPosition.set(seat.positionId, [occupant])
@@ -368,13 +344,5 @@ export function matchesOrgChartSearch(node: OrgChartNode, search: string): boole
   if (node.name.toLowerCase().includes(q)) return true
   if (node.code?.toLowerCase().includes(q)) return true
   if (node.department?.name.toLowerCase().includes(q)) return true
-  if (dutiesMatch(node.duties, node.responsibilities, q)) return true
-  return node.occupants.some((o) => matchesOccupant(o, q) || dutiesMatch(o.duties, o.extraDuties, q))
-}
-
-function dutiesMatch(groups: DutyGroup[], lines: string[], q: string): boolean {
-  return (
-    groups.some((g) => g.items.some((item) => item.name.toLowerCase().includes(q))) ||
-    lines.some((line) => line.toLowerCase().includes(q))
-  )
+  return node.occupants.some((o) => matchesOccupant(o, q))
 }

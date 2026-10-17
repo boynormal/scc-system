@@ -4,8 +4,6 @@ import { AppError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { readBranchSharing, type BranchShareAction } from "@/shared/permissions/branch-sharing"
 import { replacePersonnelBranchesFromIds } from "./personnel-branch-utils"
-import { dutyItemRefSelect } from "./duty-groups"
-import { assertDutyItemsAllowed } from "./duty-links"
 
 const personnelFieldsSchema = z.object({
   branchId: z.string().uuid().nullable().optional(),
@@ -42,13 +40,11 @@ const personnelFieldsSchema = z.object({
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),
   positionIds: z.array(z.string().uuid()).max(20).optional(),
-  /** ส่งมาเมื่อไหร่ใช้แทน positionIds และแทนรายการของที่นั่งที่ส่งมาทั้งชุด */
+  /** ส่งมาเมื่อไหร่ใช้แทน positionIds */
   seats: z
     .array(
       z.object({
         positionId: z.string().uuid(),
-        dutyItemIds: z.array(z.string().uuid()).max(300).default([]),
-        extraDuties: z.string().max(5000).nullable().optional(),
       })
     )
     .max(20)
@@ -141,20 +137,6 @@ const personnelInclude = {
   },
 } satisfies Prisma.PersonnelInclude
 
-const personnelDetailInclude = {
-  ...personnelInclude,
-  positionAssignments: {
-    select: {
-      id: true,
-      positionId: true,
-      extraDuties: true,
-      position: { select: { id: true, name: true, code: true, branchId: true } },
-      dutyItems: { select: { dutyItemId: true, dutyItem: { select: dutyItemRefSelect } } },
-    },
-    orderBy: { createdAt: "asc" as const },
-  },
-} satisfies Prisma.PersonnelInclude
-
 function resolveBranchIdListFromUpdate(body: UpdatePersonnelInput): string[] | undefined {
   if (body.branchIds !== undefined) return [...new Set(body.branchIds)]
   if (body.branchId !== undefined) return body.branchId ? [body.branchId] : []
@@ -210,43 +192,13 @@ async function assertPositionsAllowed(
   }
 }
 
-type SeatPlan = Map<string, { dutyItemIds: string[]; extraDuties: string | null }>
-
 type SeatInput = NonNullable<CreatePersonnelInput["seats"]>
 
-/**
- * ตรวจรายการของแต่ละที่นั่ง — ข้อที่ปิดแล้วคงไว้ได้เฉพาะที่นั่งเดิมที่ติ๊กอยู่
- * ไม่ส่ง seats คืน undefined เพื่อให้ที่นั่งเดิมคงรายการไว้
- */
-async function planSeats(
-  db: PrismaClient,
-  companyId: string,
-  seats: SeatInput | undefined,
-  existingLinks: Map<string, string[]>
-): Promise<SeatPlan | undefined> {
-  if (seats === undefined) return undefined
-  const plan: SeatPlan = new Map()
-  for (const seat of seats) {
-    if (plan.has(seat.positionId)) continue
-    const dutyItemIds = await assertDutyItemsAllowed(db, {
-      companyId,
-      dutyItemIds: seat.dutyItemIds,
-      alreadyLinked: existingLinks.get(seat.positionId) ?? [],
-    })
-    plan.set(seat.positionId, { dutyItemIds, extraDuties: seat.extraDuties?.trim() || null })
-  }
-  return plan
-}
-
-/**
- * เทียบของเดิมแทนการลบทิ้งทั้งหมด — ลบทั้งหมดจะพารายการที่แต่ละคนดูแลหายไปด้วย
- * ที่นั่งที่ถูกเอาออกลบพร้อมรายการของมัน ที่นั่งที่ไม่มีใน plan คงรายการเดิม
- */
+/** ที่นั่งที่ถูกเอาออกจะถูกลบ ที่นั่งเดิมคงไว้ ที่นั่งใหม่ถูกสร้าง */
 async function replacePersonnelPositions(
   tx: Prisma.TransactionClient,
   personnelId: string,
-  positionIds: string[],
-  plan?: SeatPlan
+  positionIds: string[]
 ) {
   const current = await tx.personnelPosition.findMany({
     where: { personnelId },
@@ -257,26 +209,12 @@ async function replacePersonnelPositions(
   if (stale.length > 0) {
     await tx.personnelPosition.deleteMany({ where: { id: { in: stale } } })
   }
-  const seatIdByPosition = new Map(current.map((row) => [row.positionId, row.id]))
+  const existing = new Set(current.map((row) => row.positionId))
   for (const positionId of positionIds) {
-    const seat = plan?.get(positionId)
-    const seatId = seatIdByPosition.get(positionId)
-    const links = seat?.dutyItemIds.map((dutyItemId) => ({ dutyItemId })) ?? []
-    if (!seatId) {
-      await tx.personnelPosition.create({
-        data: {
-          personnelId,
-          positionId,
-          extraDuties: seat?.extraDuties ?? null,
-          ...(links.length > 0 ? { dutyItems: { create: links } } : {}),
-        },
-      })
-    } else if (seat) {
-      await tx.personnelPosition.update({
-        where: { id: seatId },
-        data: { extraDuties: seat.extraDuties, dutyItems: { deleteMany: {}, create: links } },
-      })
-    }
+    if (existing.has(positionId)) continue
+    await tx.personnelPosition.create({
+      data: { personnelId, positionId },
+    })
   }
 }
 
@@ -329,7 +267,7 @@ async function findLivePersonnel(
       deletedAt: null,
       ...(branchScope ? { AND: [branchScope] } : {}),
     },
-    include: personnelDetailInclude,
+    include: personnelInclude,
   })
   if (!row) throw new NotFoundError("ไม่พบรายการ")
   return row
@@ -536,7 +474,6 @@ export async function createPersonnel(
   if (userId) await assertUserLinkAllowed(db, companyId, userId)
   if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId, resolvedBranchIds)
   await assertPositionsAllowed(db, companyId, positionIds, resolvedBranchIds)
-  const seatPlan = await planSeats(db, companyId, input.seats, new Map())
 
   if (resolvedBranchIds.length === 0 && !isAdminInAnyBranch(roles)) {
     const allowed = getBranchIds(roles)
@@ -563,7 +500,7 @@ export async function createPersonnel(
           positionId: firstPositionId(positionIds),
         },
       })
-      await replacePersonnelPositions(tx, created.id, positionIds, seatPlan)
+      await replacePersonnelPositions(tx, created.id, positionIds)
       if (resolvedBranchIds.length > 0) {
         await replacePersonnelBranchesFromIds(
           tx,
@@ -574,7 +511,7 @@ export async function createPersonnel(
       }
       return tx.personnel.findUniqueOrThrow({
         where: { id: created.id },
-        include: personnelDetailInclude,
+        include: personnelInclude,
       })
     })
   } catch (e: unknown) {
@@ -672,18 +609,11 @@ export async function updatePersonnel(
     nextPositionIds = kept
   }
   data.positionId = firstPositionId(nextPositionIds)
-  const existingLinks = new Map(
-    (existing.positionAssignments ?? []).map((seat) => [
-      seat.positionId,
-      (seat.dutyItems ?? []).map((link) => link.dutyItemId),
-    ])
-  )
-  const seatPlan = await planSeats(db, companyId, input.seats, existingLinks)
 
   try {
     return await db.$transaction(async (tx) => {
       await tx.personnel.update({ where: { id: existing.id }, data })
-      await replacePersonnelPositions(tx, existing.id, nextPositionIds, seatPlan)
+      await replacePersonnelPositions(tx, existing.id, nextPositionIds)
       if (resolvedBranchIds) {
         await replacePersonnelBranchesFromIds(
           tx,
@@ -697,7 +627,7 @@ export async function updatePersonnel(
       return {
         data: await tx.personnel.findUniqueOrThrow({
           where: { id: existing.id },
-          include: personnelDetailInclude,
+          include: personnelInclude,
         }),
       }
     })

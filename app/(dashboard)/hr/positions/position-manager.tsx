@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassCard, GlassDialog, GlassInput } from "@/components/glass"
 import { Badge } from "@/components/ui/badge"
-import type { DutyCatalogCategory, PositionTreeNode } from "@/modules/hr"
-import { DutyPicker } from "../duty-picker"
+import type { PositionTreeNode } from "@/modules/hr"
 
 type BranchOpt = { id: string; name: string; code: string }
 type DeptOpt = { id: string; name: string; code: string | null }
@@ -26,8 +25,6 @@ type FormState = {
   departmentId: string
   headcount: string
   sortOrder: string
-  responsibilities: string
-  dutyItemIds: string[]
   isActive: boolean
 }
 
@@ -38,8 +35,6 @@ const emptyForm: FormState = {
   departmentId: "",
   headcount: "1",
   sortOrder: "0",
-  responsibilities: "",
-  dutyItemIds: [],
   isActive: true,
 }
 
@@ -61,22 +56,17 @@ function descendantIds(node: PositionTreeNode): string[] {
   return out
 }
 
-const fieldClass =
-  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-950/55"
-
 export function PositionManager({
   branches,
   branchId,
   departments,
   view,
-  dutyCatalog,
   perms,
 }: {
   branches: BranchOpt[]
   branchId: string
   departments: DeptOpt[]
   view: View | null
-  dutyCatalog: DutyCatalogCategory[]
   perms: { canCreate: boolean; canUpdate: boolean; canDelete: boolean }
 }) {
   const router = useRouter()
@@ -114,8 +104,6 @@ export function PositionManager({
       departmentId: node.departmentId ?? "",
       headcount: String(node.headcount),
       sortOrder: String(node.sortOrder),
-      responsibilities: node.responsibilities ?? "",
-      dutyItemIds: node.dutyItemIds,
       isActive: node.isActive,
     })
     setErr(null)
@@ -147,8 +135,6 @@ export function PositionManager({
       departmentId: form.departmentId,
       headcount,
       sortOrder,
-      responsibilities: form.responsibilities,
-      dutyItemIds: form.dutyItemIds,
       ...(editing ? { isActive: form.isActive } : { branchId }),
     }
     const res = await fetch(editing ? `/api/hr/positions/${editing.id}` : "/api/hr/positions", {
@@ -258,11 +244,6 @@ export function PositionManager({
                       )}
                       {!node.isActive && <Badge variant="outline">ปิด</Badge>}
                     </div>
-                    {node.responsibilities && (
-                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground" style={{ paddingLeft: `${node.depth * 18 + 20}px` }}>
-                        {node.responsibilities.split("\n")[0]}
-                      </p>
-                    )}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{node.department?.name ?? "—"}</td>
                   <td className="px-3 py-2 text-right">{node.headcount}</td>
@@ -389,29 +370,6 @@ export function PositionManager({
               onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
             />
           </div>
-          <div className="space-y-1.5">
-            <span className="text-sm font-medium text-foreground">หน้าที่จากสมุดหน้าที่</span>
-            <DutyPicker
-              catalog={dutyCatalog}
-              selected={form.dutyItemIds}
-              onChange={(ids) => setForm({ ...form, dutyItemIds: ids })}
-            />
-            <span className="text-xs text-muted-foreground">
-              เป็นชุดตั้งต้น คนที่ได้ตำแหน่งนี้ใหม่จะถูกติ๊กชุดนี้ให้ก่อน แล้วปรับรายคนได้
-            </span>
-          </div>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-foreground">ข้อเฉพาะตำแหน่งนี้</span>
-            <textarea
-              className={fieldClass}
-              rows={4}
-              maxLength={5000}
-              value={form.responsibilities}
-              onChange={(e) => setForm({ ...form, responsibilities: e.target.value })}
-              placeholder={"บรรทัดละ 1 ข้อ\nข้อที่ไม่มีในสมุดหน้าที่"}
-            />
-            <span className="text-xs text-muted-foreground">บรรทัดละ 1 ข้อ — ใช้กับข้อที่มีแค่ตำแหน่งนี้</span>
-          </label>
           {editing && (
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input

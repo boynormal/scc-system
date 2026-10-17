@@ -55,7 +55,7 @@ User.employeeCode ≠ Personnel.rosterNo
 - `positions` is branch-scoped like `departments` (`branchId` required, `isActive`, no `deletedAt`)
 - `Position.parentId` = the reporting line; `parent.branchId` must equal `branchId`; no cycles
 - `Position.departmentId?` is a label/filter only — it never becomes a level in the chart
-- `Position.headcount` vs occupants = vacancy; `Position.responsibilities` = JD text, one item per line
+- `Position.headcount` vs occupants = vacancy
 - `Personnel.positionId?` — one position per person; `position.branchId` must be in the person's assigned branches
 - `Personnel.jobGroup` stays; it is not replaced or migrated
 - `Department.parentId` stays unused — one hierarchy only

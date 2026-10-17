@@ -25,26 +25,8 @@ const PRINT_CSS = `
     padding: 0 !important;
     width: auto !important;
   }
-  .org-print-jd {
-    break-before: page;
-  }
-  .org-print-jd-item {
-    break-inside: avoid;
-  }
 }
 `
-
-function flatten(nodes: OrgChartNode[]): OrgChartNode[] {
-  const out: OrgChartNode[] = []
-  const walk = (list: OrgChartNode[]) => {
-    for (const node of list) {
-      out.push(node)
-      walk(node.children)
-    }
-  }
-  walk(nodes)
-  return out
-}
 
 function PrintBox({ node }: { node: OrgChartNode }) {
   const active = node.occupants.filter((o) => o.isActive)
@@ -119,8 +101,6 @@ export function OrgChartPrintView({
     return () => window.clearTimeout(timer)
   }, [autoPrint])
 
-  const withJd = flatten(chart.roots).filter((n) => n.duties.length > 0 || n.responsibilities.length > 0)
-
   return (
     <>
       <style>{PRINT_CSS}</style>
@@ -166,46 +146,6 @@ export function OrgChartPrintView({
               <p className="mt-1 text-[10px] leading-relaxed text-slate-700">
                 {chart.unplaced.map((o) => `${o.displayName} (${o.rosterNo})`).join(" · ")}
               </p>
-            </section>
-          )}
-
-          {withJd.length > 0 && (
-            <section className="org-print-jd mt-6">
-              <h2 className="mb-2 border-b border-slate-300 pb-1 text-sm font-bold">
-                หน้าที่ความรับผิดชอบ
-              </h2>
-              <div className="columns-2 gap-6">
-                {withJd.map((node) => (
-                  <div key={node.id} className="org-print-jd-item mb-3">
-                    <p className="text-[11px] font-bold">
-                      {node.name}
-                      {node.code ? ` (${node.code})` : ""}
-                    </p>
-                    {node.duties.map((group) => (
-                      <div key={group.categoryId} className="mt-0.5">
-                        <p className="text-[10px] font-semibold text-slate-800">{group.category}</p>
-                        <ul className="list-disc pl-4 text-[10px] leading-snug text-slate-700">
-                          {group.items.map((item) => (
-                            <li key={item.id}>{item.name}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                    {node.responsibilities.length > 0 && (
-                      <div className="mt-0.5">
-                        {node.duties.length > 0 && (
-                          <p className="text-[10px] font-semibold text-slate-800">ข้อเฉพาะตำแหน่งนี้</p>
-                        )}
-                        <ol className="list-decimal pl-4 text-[10px] leading-snug text-slate-700">
-                          {node.responsibilities.map((line, i) => (
-                            <li key={i}>{line}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
             </section>
           )}
         </article>

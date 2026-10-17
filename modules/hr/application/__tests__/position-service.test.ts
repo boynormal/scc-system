@@ -54,7 +54,6 @@ type RawPos = {
   name: string
   sortOrder: number
   headcount: number
-  responsibilities: string | null
   isActive: boolean
   department: { id: string; name: string; code: string | null } | null
 }
@@ -67,7 +66,6 @@ function pos(over: Partial<RawPos> & { id: string; name: string }): RawPos {
     code: null,
     sortOrder: 0,
     headcount: 1,
-    responsibilities: null,
     isActive: true,
     department: null,
     ...over,
@@ -129,7 +127,6 @@ function createDb(opts: {
           code: (args.data.code as string | null) ?? null,
           headcount: Number(args.data.headcount ?? 1),
           sortOrder: Number(args.data.sortOrder ?? 0),
-          responsibilities: (args.data.responsibilities as string | null) ?? null,
         })
       ),
       update: vi.fn(async (args: { where: { id: string }; data: Record<string, unknown> }) => {
@@ -194,8 +191,6 @@ describe("buildPositionTree", () => {
     code: null,
     sortOrder: 0,
     headcount: 1,
-    responsibilities: null,
-    dutyItemIds: [],
     isActive: true,
     occupantCount: 0,
     vacancy: 1,
@@ -402,8 +397,8 @@ describe("listPositionOptions", () => {
     })
 
     expect(data).toEqual([
-      { id: POS_ROOT, name: "root", code: null, parentId: null, depth: 0, dutyItemIds: [] },
-      { id: POS_CHILD, name: "child", code: null, parentId: POS_ROOT, depth: 1, dutyItemIds: [] },
+      { id: POS_ROOT, name: "root", code: null, parentId: null, depth: 0 },
+      { id: POS_CHILD, name: "child", code: null, parentId: POS_ROOT, depth: 1 },
     ])
   })
 })
@@ -418,7 +413,7 @@ describe("createPosition", () => {
       companyId: CID,
       roles: managerA,
       userId: "user-1",
-      input: { ...input, code: null, parentId: null, departmentId: null, responsibilities: null },
+      input: { ...input, code: null, parentId: null, departmentId: null },
     })
 
     expect(data.id).toBe(NEW_ID)
@@ -444,7 +439,6 @@ describe("createPosition", () => {
           ...input,
           code: null,
           departmentId: null,
-          responsibilities: null,
           parentId: POS_OTHER_BRANCH,
         },
       })
@@ -463,7 +457,6 @@ describe("createPosition", () => {
           ...input,
           code: null,
           parentId: null,
-          responsibilities: null,
           departmentId: DEPT_B,
         },
       })
@@ -480,7 +473,6 @@ describe("createPosition", () => {
         ...input,
         code: null,
         parentId: null,
-        responsibilities: null,
         departmentId: DEPT_A,
       },
     })
@@ -498,7 +490,6 @@ describe("createPosition", () => {
           ...input,
           parentId: null,
           departmentId: null,
-          responsibilities: null,
           code: "MD",
         },
       })
@@ -517,7 +508,6 @@ describe("createPosition", () => {
           ...input,
           code: null,
           departmentId: null,
-          responsibilities: null,
           parentId: chain[MAX_POSITION_DEPTH - 1]!.id,
         },
       })
@@ -529,7 +519,7 @@ describe("createPosition", () => {
       createPosition(asDb(createDb({})), {
         companyId: CID,
         roles: viewerA,
-        input: { ...input, code: null, parentId: null, departmentId: null, responsibilities: null },
+        input: { ...input, code: null, parentId: null, departmentId: null },
       })
     ).rejects.toBeInstanceOf(ForbiddenError)
   })
@@ -541,7 +531,7 @@ describe("createPosition", () => {
       createPosition(asDb(db), {
         companyId: CID,
         roles: managerB,
-        input: { ...input, code: null, parentId: null, departmentId: null, responsibilities: null },
+        input: { ...input, code: null, parentId: null, departmentId: null },
       })
     ).rejects.toBeInstanceOf(ForbiddenError)
   })
@@ -792,88 +782,3 @@ describe("getPosition", () => {
   })
 })
 
-describe("หน้าที่จากสมุดของตำแหน่ง", () => {
-  const DUTY_ON = "30000000-0000-0000-0000-000000000001"
-  const DUTY_OFF = "30000000-0000-0000-0000-000000000002"
-
-  function withDuties(db: ReturnType<typeof createDb>) {
-    return Object.assign(db, {
-      dutyItem: {
-        findMany: vi.fn(async (args: { where: { id: { in: string[] } } }) =>
-          [
-            { id: DUTY_ON, isActive: true, category: { isActive: true } },
-            { id: DUTY_OFF, isActive: false, category: { isActive: true } },
-          ].filter((row) => args.where.id.in.includes(row.id))
-        ),
-      },
-    })
-  }
-
-  it("ผู้จัดการสาขาที่แก้สมุดไม่ได้ ยังติ๊กรายการให้ตำแหน่งได้", async () => {
-    const db = withDuties(createDb({}))
-    await createPosition(asDb(db), {
-      companyId: CID,
-      roles: managerA,
-      input: {
-        branchId: BRANCH_A,
-        name: "ธุรการ",
-        code: null,
-        parentId: null,
-        departmentId: null,
-        responsibilities: null,
-        dutyItemIds: [DUTY_ON],
-      },
-    })
-    const data = db.position.create.mock.calls[0]![0].data as { dutyItems?: unknown }
-    expect(data.dutyItems).toEqual({ create: [{ dutyItemId: DUTY_ON }] })
-  })
-
-  it("เพิ่มข้อที่ปิดใช้งานแล้วเข้าตำแหน่งใหม่ไม่ได้", async () => {
-    const db = withDuties(createDb({}))
-    await expect(
-      createPosition(asDb(db), {
-        companyId: CID,
-        roles: managerA,
-        input: {
-          branchId: BRANCH_A,
-          name: "ธุรการ",
-          code: null,
-          parentId: null,
-          departmentId: null,
-          responsibilities: null,
-          dutyItemIds: [DUTY_OFF],
-        },
-      })
-    ).rejects.toBeInstanceOf(ValidationError)
-  })
-
-  it("บันทึกตำแหน่งแล้วข้อที่ปิดใช้งานแต่ยังติ๊กอยู่ไม่หาย", async () => {
-    const db = withDuties(
-      createDb({ positions: [{ ...pos({ id: POS_ROOT, name: "ธุรการ" }), dutyItems: [{ dutyItemId: DUTY_OFF }] } as never] })
-    )
-    await updatePosition(asDb(db), {
-      companyId: CID,
-      roles: managerA,
-      id: POS_ROOT,
-      input: { dutyItemIds: [DUTY_OFF, DUTY_ON] },
-    })
-    const data = db.position.update.mock.calls[0]![0].data as { dutyItems?: unknown }
-    expect(data.dutyItems).toEqual({
-      deleteMany: {},
-      create: [{ dutyItemId: DUTY_OFF }, { dutyItemId: DUTY_ON }],
-    })
-  })
-
-  it("ไม่ส่ง dutyItemIds คือคงชุดเดิม", async () => {
-    const db = withDuties(createDb({ positions: [pos({ id: POS_ROOT, name: "ธุรการ" })] }))
-    await updatePosition(asDb(db), {
-      companyId: CID,
-      roles: managerA,
-      id: POS_ROOT,
-      input: { name: "ธุรการอาวุโส" },
-    })
-    const data = db.position.update.mock.calls[0]![0].data as { dutyItems?: unknown }
-    expect(data.dutyItems).toBeUndefined()
-    expect(db.dutyItem.findMany).not.toHaveBeenCalled()
-  })
-})

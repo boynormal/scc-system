@@ -4,7 +4,7 @@ import { withAuth } from "@/lib/api-handler"
 import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
-import { formatDutyText, getPersonnelOrgChart, type OrgChartNode } from "@/modules/hr"
+import { getPersonnelOrgChart, type OrgChartNode } from "@/modules/hr"
 
 type Row = {
   ชั้น: number
@@ -16,8 +16,6 @@ type Row = {
   รหัสรายชื่อ: string
   อัตรากำลัง: number | string
   ว่าง: number | string
-  หน้าที่ความรับผิดชอบ: string
-  รายการที่ดูแล: string
 }
 
 /** หนึ่งแถวต่อคน และตำแหน่งว่างได้หนึ่งแถวเปล่า เพื่อให้กรองใน Excel ได้ตรง */
@@ -31,11 +29,10 @@ function toRows(nodes: OrgChartNode[], parentName: string, out: Row[]): void {
       แผนก: node.department?.name ?? "",
       อัตรากำลัง: node.headcount,
       ว่าง: node.vacancy,
-      หน้าที่ความรับผิดชอบ: formatDutyText(node.duties, node.responsibilities),
     }
 
     if (node.occupants.length === 0) {
-      out.push({ ...base, ชื่อผู้ดำรงตำแหน่ง: "", รหัสรายชื่อ: "", รายการที่ดูแล: "" })
+      out.push({ ...base, ชื่อผู้ดำรงตำแหน่ง: "", รหัสรายชื่อ: "" })
     } else {
       node.occupants.forEach((occupant, index) => {
         out.push({
@@ -45,7 +42,6 @@ function toRows(nodes: OrgChartNode[], parentName: string, out: Row[]): void {
           ว่าง: index === 0 ? node.vacancy : "",
           ชื่อผู้ดำรงตำแหน่ง: occupant.displayName + (occupant.isActive ? "" : " (ปิดใช้งาน)"),
           รหัสรายชื่อ: occupant.rosterNo,
-          รายการที่ดูแล: formatDutyText(occupant.duties, occupant.extraDuties),
         })
       })
     }
@@ -89,8 +85,6 @@ export const GET = withAuth(async (req, _ctx, session) => {
       รหัสรายชื่อ: occupant.rosterNo,
       อัตรากำลัง: "",
       ว่าง: "",
-      หน้าที่ความรับผิดชอบ: "",
-      รายการที่ดูแล: "",
     })
   }
 
@@ -105,8 +99,6 @@ export const GET = withAuth(async (req, _ctx, session) => {
     { wch: 12 },
     { wch: 10 },
     { wch: 8 },
-    { wch: 60 },
-    { wch: 60 },
   ]
   const book = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(book, sheet, "ผังองค์กร")

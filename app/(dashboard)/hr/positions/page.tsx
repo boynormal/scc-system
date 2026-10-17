@@ -12,7 +12,6 @@ import {
 import { canManageHrPositions } from "@/lib/hr-settings-nav-access"
 import {
   listAccessiblePersonnelBranches,
-  listDutyCatalog,
   listPersonnelDepartments,
   listPositions,
 } from "@/modules/hr"
@@ -38,10 +37,7 @@ export default async function HrPositionsPage(props: {
   if (!canManageHrPositions(roles)) redirect("/hr/personnel")
 
   const companyId = session.user.companyId as string
-  const [{ data: branches }, { data: dutyCatalog }] = await Promise.all([
-    listAccessiblePersonnelBranches(prisma, { companyId, roles }),
-    listDutyCatalog(prisma, { companyId, roles, includeInactive: true }),
-  ])
+  const { data: branches } = await listAccessiblePersonnelBranches(prisma, { companyId, roles })
 
   if (!searchParams.branchId && branches[0]) {
     redirect(`/hr/positions?branchId=${branches[0].id}`)
@@ -72,7 +68,7 @@ export default async function HrPositionsPage(props: {
       <div>
         <h1 className="text-2xl font-bold text-foreground">ตำแหน่งและสายบังคับบัญชา</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          จัดต้นไม้ตำแหน่งของแต่ละสาขา กำหนดหัวหน้า อัตรากำลัง และติ๊กหน้าที่จากสมุดหน้าที่
+          จัดต้นไม้ตำแหน่งของแต่ละสาขา กำหนดหัวหน้าและอัตรากำลัง
         </p>
       </div>
 
@@ -95,7 +91,6 @@ export default async function HrPositionsPage(props: {
           branchId={branchId ?? ""}
           departments={departments}
           view={view}
-          dutyCatalog={dutyCatalog}
           perms={{
             canCreate: canWrite(roles, "create"),
             canUpdate: canWrite(roles, "update"),

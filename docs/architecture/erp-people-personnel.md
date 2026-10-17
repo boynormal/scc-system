@@ -218,7 +218,7 @@ Branch → Position (parentId ซ้อนชั้น) → Personnel (positionI
                  └── departmentId? = ป้าย/ตัวกรอง ไม่ใช่ชั้น
 ```
 
-ทำไมลำดับชั้นอยู่บน Position ไม่ใช่บน Personnel: ผังต้องแสดง**ตำแหน่งว่าง**และ **JD** ซึ่งผูกกับตำแหน่ง ไม่ผูกกับคน ถ้าใช้ `supervisorPersonnelId` ตำแหน่งว่างจะแสดงไม่ได้
+ทำไมลำดับชั้นอยู่บน Position ไม่ใช่บน Personnel: ผังต้องแสดง**ตำแหน่งว่าง** ซึ่งผูกกับตำแหน่ง ไม่ผูกกับคน ถ้าใช้ `supervisorPersonnelId` ตำแหน่งว่างจะแสดงไม่ได้
 
 | ช่อง | ความหมาย |
 |---|---|
@@ -226,7 +226,6 @@ Branch → Position (parentId ซ้อนชั้น) → Personnel (positionI
 | `parentId?` | สายบังคับบัญชา; `parent.branchId` ต้องเท่ากับ `branchId`; ห้ามวงกลม; ลึกไม่เกิน 10 |
 | `departmentId?` | ป้าย/ตัวกรองเท่านั้น; `department.branchId` ต้องเท่ากับ `branchId` |
 | `headcount` | อัตราที่วางไว้; ว่าง = `headcount - จำนวนคนที่นั่ง` |
-| `responsibilities?` | JD บรรทัดละ 1 ข้อ แสดงเป็นลิสต์เลข |
 | `isActive` | ปิดใช้งานแทนการลบเมื่อมีลูกหรือมีคนนั่ง |
 
 กฎที่ล็อก:

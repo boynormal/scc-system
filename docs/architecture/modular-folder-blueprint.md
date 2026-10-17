@@ -177,7 +177,8 @@ app/                        # ชั้น adapter เท่านั้น — 
 - `modules/machines/application/machine-asset-service.ts` — แยก images/products/spare-parts ของเครื่องจักรออกจาก `app/api/machines/[id]/**`
 - `modules/iam/application/user-service.ts` — แยก users list/create/detail/update/deactivate ออกจาก `app/api/users/**`
 - `modules/transport/application/*-service.ts` — ครบทั้ง jobs, vehicles, drivers, master-data, assignment ออกจาก `app/api/transport/**` (route เรียกผ่าน `modules/transport` index)
-- `modules/hr/application/personnel-service.ts`, `attendance-service.ts` — แยก personnel + attendance (list/create/delete/import Excel) ออกจาก `app/api/hr/**`; `personnel-branch-utils.ts`, `parse-timesheet-xls.ts` ย้ายเข้าโมดูลเดียวกัน; `lib/personnel-branch-utils.ts` เหลือเป็น re-export wrapper ชั่วคราว
+- `modules/hr/application/personnel-service.ts` — แยก personnel ออกจาก `app/api/hr/**`; `personnel-branch-utils.ts` ย้ายเข้าโมดูลเดียวกัน; `lib/personnel-branch-utils.ts` เหลือเป็น re-export wrapper ชั่วคราว
+- `modules/hr/application/attendance-*.ts` — attendance จาก HIP PremiumTime (2026-10-17 แทน Excel import เดิม) ดู [modules/hr/README.md](../../modules/hr/README.md)
 - `modules/assets/application/asset-service.ts` — ทะเบียนสินทรัพย์ Phase 1 (CRUD + รหัสบริษัท + สาขา/ผู้ขาย) ออกจาก `app/api/assets/**`
 
 สถานะปัจจุบัน:

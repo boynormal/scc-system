@@ -89,13 +89,13 @@ Deferred:
 
 ## สิ่งที่มีอยู่แล้ว (FACT)
 
-ตาราง `personnel` / `personnel_branches` / `attendance_entries` มีใน [`prisma/schema.prisma`](../../prisma/schema.prisma)
+ตาราง `personnel` / `personnel_branches` / `attendance_*` มีใน [`prisma/schema.prisma`](../../prisma/schema.prisma)
 
 | Entity | ตาราง | Owner | หมายเหตุ |
 |---|---|---|---|
 | Personnel | `personnel` | HR | `rosterNo` ไม่ซ้ำต่อบริษัท; `userId?` 1:1 โยงบัญชีในบริษัทเดียวกันได้ (Phase 1) |
 | PersonnelBranch | `personnel_branches` | HR | คนหนึ่งอยู่ได้หลายสาขา; `isPrimary` |
-| Attendance | `attendance_entries` | HR | ผู้บริโภคเดียวของ Personnel วันนี้ |
+| Attendance | `attendance_devices` / `attendance_badges` / `attendance_punches` / `attendance_days` | HR | ซิงค์จาก HIP PremiumTime ต่อสาขา; badge ผูก `personnelId?` — ไม่ใช่สมุดคนซ้ำ |
 | User | `users` | IAM | `employeeCode` คนละช่องกับ `rosterNo` |
 | Driver | `drivers` | Transport | ไม่มี `personnelId` / `userId` |
 | Department | `departments` | Settings | Shared Org ต่อสาขา; วันนี้ผู้บริโภค = Machine; Personnel.departmentId ยังไม่มี |

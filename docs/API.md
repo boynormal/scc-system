@@ -103,7 +103,8 @@ Authorization: Bearer <CRON_SECRET>
 | Master data | `/api/master-data/*` | categories, departments, suppliers, maintenance-types, branches, roles |
 | Settings | `/api/settings/*` | branches, roles, nav-preferences |
 | Users | `/api/users` | IAM |
-| HR | `/api/hr/*` | personnel, attendance (+ import) |
+| HR | `/api/hr/*` | personnel, attendance (days, badges, devices) |
+| Device sync | `/api/device-sync/hip/*` | โปรแกรม HIP Sync สาขา — `Authorization: Bearer <device key>` ไม่ใช้ session (`state`, `batch`) |
 | Transport | `/api/transport/*` | jobs, GPS, vehicles, drivers, calendar, repairs, tires, master-data |
 | Notifications | `/api/notifications` | |
 | Upload | `/api/upload` | ต้อง login; เขียน `public/uploads` / home-screen |

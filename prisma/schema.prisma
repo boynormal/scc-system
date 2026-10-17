@@ -123,39 +123,41 @@ model Company {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  branches                Branch[]
-  users                   User[]
-  roles                   Role[]
-  machineCategories       MachineCategory[]
-  maintenanceTypes        MaintenanceType[]
-  checklistTemplates      ChecklistTemplate[]
-  suppliers               Supplier[]
-  spareParts              SparePart[]
-  personnel               Personnel[]
-  attendanceImportBatches AttendanceImportBatch[]
-  attendanceEntries       AttendanceEntry[]
-  tmsCustomers            TmsCustomer[]
-  transportJobTypes       TransportJobType[]
-  transportCargoTypes     TransportCargoType[]
-  transportVehicleTypes   TransportVehicleType[]
-  transportVehicles       TransportVehicle[]
-  drivers                 Driver[]
-  transportJobs           TransportJob[]
-  transportRepairLogs     TransportRepairLog[]
-  transportTireLogs       TransportTireLog[]
-  dueItems                DueItem[]
-  expenseTypes            ExpenseType[]
-  expenseCategories       ExpenseCategory[]
-  processes               Process[]
-  costCenters             CostCenter[]
-  expenses                Expense[]
-  units                   Unit[]
-  financeSourceReviews    FinanceSourceReview[]
-  assets                  Asset[]
-  assetRegisterTypes      AssetRegisterType[]
-  assetPmPlans            AssetPmPlan[]
-  dutyCategories          DutyCategory[]
-  storedFiles             StoredFile[]
+  branches              Branch[]
+  users                 User[]
+  roles                 Role[]
+  machineCategories     MachineCategory[]
+  maintenanceTypes      MaintenanceType[]
+  checklistTemplates    ChecklistTemplate[]
+  suppliers             Supplier[]
+  spareParts            SparePart[]
+  personnel             Personnel[]
+  attendanceDevices     AttendanceDevice[]
+  attendanceBadges      AttendanceBadge[]
+  attendancePunches     AttendancePunch[]
+  attendanceDays        AttendanceDay[]
+  dutyCategories        DutyCategory[]
+  tmsCustomers          TmsCustomer[]
+  transportJobTypes     TransportJobType[]
+  transportCargoTypes   TransportCargoType[]
+  transportVehicleTypes TransportVehicleType[]
+  transportVehicles     TransportVehicle[]
+  drivers               Driver[]
+  transportJobs         TransportJob[]
+  transportRepairLogs   TransportRepairLog[]
+  transportTireLogs     TransportTireLog[]
+  dueItems              DueItem[]
+  expenseTypes          ExpenseType[]
+  expenseCategories     ExpenseCategory[]
+  processes             Process[]
+  costCenters           CostCenter[]
+  expenses              Expense[]
+  units                 Unit[]
+  financeSourceReviews  FinanceSourceReview[]
+  assets                Asset[]
+  assetRegisterTypes    AssetRegisterType[]
+  assetPmPlans          AssetPmPlan[]
+  storedFiles           StoredFile[]
 
   @@map("companies")
 }
@@ -174,28 +176,30 @@ model Branch {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  company                 Company                 @relation(fields: [companyId], references: [id])
-  departments             Department[]
-  positions               Position[]
-  machines                Machine[]
-  userBranchRoles         UserBranchRole[]
-  workOrders              WorkOrder[]
-  inventory               SparePartInventory[]
-  transactions            SparePartTransaction[]
-  personnel               Personnel[]
-  attendanceImportBatches AttendanceImportBatch[]
-  attendanceEntries       AttendanceEntry[]
-  personnelBranchLinks    PersonnelBranch[]
-  transportVehicles       TransportVehicle[]
-  drivers                 Driver[]
-  transportJobs           TransportJob[]
-  transportRepairLogs     TransportRepairLog[]
-  transportTireLogs       TransportTireLog[]
-  dueItems                DueItem[]
-  costCenters             CostCenter[]
-  expenses                Expense[]
-  assets                  Asset[]
-  storedFiles             StoredFile[]
+  company              Company                @relation(fields: [companyId], references: [id])
+  departments          Department[]
+  positions            Position[]
+  machines             Machine[]
+  userBranchRoles      UserBranchRole[]
+  workOrders           WorkOrder[]
+  inventory            SparePartInventory[]
+  transactions         SparePartTransaction[]
+  personnel            Personnel[]
+  attendanceDevices    AttendanceDevice[]
+  attendanceBadges     AttendanceBadge[]
+  attendancePunches    AttendancePunch[]
+  attendanceDays       AttendanceDay[]
+  personnelBranchLinks PersonnelBranch[]
+  transportVehicles    TransportVehicle[]
+  drivers              Driver[]
+  transportJobs        TransportJob[]
+  transportRepairLogs  TransportRepairLog[]
+  transportTireLogs    TransportTireLog[]
+  dueItems             DueItem[]
+  costCenters          CostCenter[]
+  expenses             Expense[]
+  assets               Asset[]
+  storedFiles          StoredFile[]
 
   @@index([companyId])
   @@index([code])
@@ -248,44 +252,45 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
-  company                 Company                 @relation(fields: [companyId], references: [id])
-  userBranchRoles         UserBranchRole[]        @relation("UserRoles")
-  assignedByRoles         UserBranchRole[]        @relation("AssignedByUser")
-  machinesCreated         Machine[]
-  workOrdersAssigned      WorkOrder[]             @relation("WOAssignedTo")
-  workOrdersCreated       WorkOrder[]             @relation("WOCreatedBy")
-  workOrdersApproved      WorkOrder[]             @relation("WOApprovedBy")
-  workOrderTechnicians    WorkOrderTechnician[]
-  checklistResults        ChecklistResult[]
-  machineImages           MachineImage[]
-  machineDocuments        MachineDocument[]
-  maintenancePlans        MaintenancePlan[]
-  checklistTemplates      ChecklistTemplate[]
-  transactions            SparePartTransaction[]
-  notifications           Notification[]
-  auditLogs               AuditLog[]
-  personnel               Personnel?
-  attendanceImportBatches AttendanceImportBatch[] @relation("AttendanceImportAuthor")
-  transportJobsCreated    TransportJob[]          @relation("TransportJobCreator")
-  jobAssignmentsBy        JobAssignment[]         @relation("JobAssignedBy")
-  jobAttachmentsUploaded  JobAttachment[]         @relation("JobAttachmentUploader")
-  repairsReported         TransportRepairLog[]    @relation("RepairReportedBy")
-  repairsStarted          TransportRepairLog[]    @relation("RepairStartedBy")
-  repairsClosed           TransportRepairLog[]    @relation("RepairClosedBy")
-  tireLogsCreated         TransportTireLog[]      @relation("TireLogCreatedBy")
-  dueItemsOwned           DueItem[]               @relation("DueItemOwner")
-  dueItemsCreated         DueItem[]               @relation("DueItemCreatedBy")
-  dueItemRenewals         DueItemRenewal[]        @relation("DueItemRenewedBy")
-  expensesCreated         Expense[]               @relation("ExpenseCreatedBy")
-  expensesEmployee        Expense[]               @relation("ExpenseEmployee")
-  expensesApproved        Expense[]               @relation("ExpenseApprovedBy")
-  expensesPaid            Expense[]               @relation("ExpensePaidBy")
-  expenseAttachments      ExpenseAttachment[]     @relation("ExpenseAttachmentUploader")
-  storedFilesUploaded     StoredFile[]            @relation("StoredFileUploader")
-  financeSourceReviews    FinanceSourceReview[]   @relation("FinanceSourceReviewReviewedBy")
-  assetsCreated           Asset[]                 @relation("AssetCreatedBy")
-  driverLogin             Driver?                 @relation("DriverLogin")
-  jobStopPunches          JobStopPunch[]          @relation("JobStopPunchRecorder")
+  company                Company                @relation(fields: [companyId], references: [id])
+  userBranchRoles        UserBranchRole[]       @relation("UserRoles")
+  assignedByRoles        UserBranchRole[]       @relation("AssignedByUser")
+  machinesCreated        Machine[]
+  workOrdersAssigned     WorkOrder[]            @relation("WOAssignedTo")
+  workOrdersCreated      WorkOrder[]            @relation("WOCreatedBy")
+  workOrdersApproved     WorkOrder[]            @relation("WOApprovedBy")
+  workOrderTechnicians   WorkOrderTechnician[]
+  checklistResults       ChecklistResult[]
+  machineImages          MachineImage[]
+  machineDocuments       MachineDocument[]
+  maintenancePlans       MaintenancePlan[]
+  checklistTemplates     ChecklistTemplate[]
+  transactions           SparePartTransaction[]
+  notifications          Notification[]
+  auditLogs              AuditLog[]
+  personnel              Personnel?
+  attendanceSyncRuns     AttendanceSyncRun[]    @relation("AttendanceSyncTrigger")
+  attendanceBadgesMapped AttendanceBadge[]      @relation("AttendanceBadgeMapper")
+  transportJobsCreated   TransportJob[]         @relation("TransportJobCreator")
+  jobAssignmentsBy       JobAssignment[]        @relation("JobAssignedBy")
+  jobAttachmentsUploaded JobAttachment[]        @relation("JobAttachmentUploader")
+  repairsReported        TransportRepairLog[]   @relation("RepairReportedBy")
+  repairsStarted         TransportRepairLog[]   @relation("RepairStartedBy")
+  repairsClosed          TransportRepairLog[]   @relation("RepairClosedBy")
+  tireLogsCreated        TransportTireLog[]     @relation("TireLogCreatedBy")
+  dueItemsOwned          DueItem[]              @relation("DueItemOwner")
+  dueItemsCreated        DueItem[]              @relation("DueItemCreatedBy")
+  dueItemRenewals        DueItemRenewal[]       @relation("DueItemRenewedBy")
+  expensesCreated        Expense[]              @relation("ExpenseCreatedBy")
+  expensesEmployee       Expense[]              @relation("ExpenseEmployee")
+  expensesApproved       Expense[]              @relation("ExpenseApprovedBy")
+  expensesPaid           Expense[]              @relation("ExpensePaidBy")
+  expenseAttachments     ExpenseAttachment[]    @relation("ExpenseAttachmentUploader")
+  storedFilesUploaded    StoredFile[]           @relation("StoredFileUploader")
+  financeSourceReviews   FinanceSourceReview[]  @relation("FinanceSourceReviewReviewedBy")
+  assetsCreated          Asset[]                @relation("AssetCreatedBy")
+  driverLogin            Driver?                @relation("DriverLogin")
+  jobStopPunches         JobStopPunch[]         @relation("JobStopPunchRecorder")
 
   // Phase B decision (2026-07-23): email stays globally @unique permanently — login
   // may use email or username; both are globally unique (no company picker).
@@ -862,7 +867,7 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ─── GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (import จาก Excel รูปแบบบันทึกเวลา) ─
+// ─── GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (ซิงค์จาก HIP PremiumTime ต่อสาขา) ─
 
 /// Org node ต่อสาขา (People Phase 3-Org) — ลำดับชั้นองค์กรอยู่ที่ parentId ไม่ใช่ที่ Personnel
 /// departmentId เป็นป้าย/ตัวกรองเท่านั้น ไม่ใช่ชั้นในผัง
@@ -882,13 +887,13 @@ model Position {
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  branch     Branch      @relation(fields: [branchId], references: [id])
-  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  parent     Position?   @relation("PositionHierarchy", fields: [parentId], references: [id])
-  children   Position[]  @relation("PositionHierarchy")
-  personnel  Personnel[]
+  branch         Branch              @relation(fields: [branchId], references: [id])
+  department     Department?         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  parent         Position?           @relation("PositionHierarchy", fields: [parentId], references: [id])
+  children       Position[]          @relation("PositionHierarchy")
+  personnel      Personnel[]
   personnelSeats PersonnelPosition[]
-  dutyItems  PositionDutyItem[]
+  dutyItems      PositionDutyItem[]
 
   @@unique([branchId, code], map: "positions_branch_code_unique")
   @@index([branchId])
@@ -918,16 +923,18 @@ model Personnel {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
-  company           Company           @relation(fields: [companyId], references: [id])
-  branch            Branch?           @relation(fields: [branchId], references: [id])
-  department        Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  position          Position?         @relation(fields: [positionId], references: [id], onDelete: Restrict)
-  user              User?             @relation(fields: [userId], references: [id])
-  attendance        AttendanceEntry[]
+  company             Company             @relation(fields: [companyId], references: [id])
+  branch              Branch?             @relation(fields: [branchId], references: [id])
+  department          Department?         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  position            Position?           @relation(fields: [positionId], references: [id], onDelete: Restrict)
+  user                User?               @relation(fields: [userId], references: [id])
+  attendanceBadges    AttendanceBadge[]
+  attendancePunches   AttendancePunch[]
+  attendanceDays      AttendanceDay[]
   /**
    * สาขาที่พนักงานสามารถลงเวลา/ทำงานได้ (หนึ่งคน — หลายสาขา)
    */
-  branchAssignments PersonnelBranch[]
+  branchAssignments   PersonnelBranch[]
   positionAssignments PersonnelPosition[]
 
   @@unique([companyId, rosterNo], map: "personnel_company_roster_unique")
@@ -1035,45 +1042,146 @@ model PersonnelPositionDutyItem {
   @@map("personnel_position_duty_items")
 }
 
-model AttendanceImportBatch {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   String    @map("company_id") @db.Uuid
-  branchId    String    @map("branch_id") @db.Uuid
-  fileName    String?   @map("file_name") @db.VarChar(255)
-  workDate    DateTime? @map("work_date") @db.Date
-  rowCount    Int       @default(0) @map("row_count")
-  createdById String?   @map("created_by_id") @db.Uuid
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+enum AttendanceSourceType {
+  HIP_PREMIUMTIME
+}
+
+enum AttendanceDayStatus {
+  COMPLETE
+  SINGLE_PUNCH
+}
+
+/// แหล่งข้อมูลสแกน 1 แหล่ง (1 ไฟล์ Pm2014.mdb ของสาขา) — โปรแกรมสาขายืนยันตัวด้วย API key ของแถวนี้
+model AttendanceDevice {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String               @map("company_id") @db.Uuid
+  branchId          String               @map("branch_id") @db.Uuid
+  sourceType        AttendanceSourceType @default(HIP_PREMIUMTIME) @map("source_type")
+  name              String               @db.VarChar(100)
+  /// HIP Machine.MachineNumber / CHECKINOUT.SENSORID
+  machineNumber     Int?                 @map("machine_number")
+  /// ส่วนต้นของ key ใช้ค้นหา — key เต็มเก็บเป็น sha256 เท่านั้น
+  apiKeyPrefix      String?              @unique @map("api_key_prefix") @db.VarChar(16)
+  apiKeyHash        String?              @map("api_key_hash") @db.VarChar(64)
+  /// CHECKINOUT.id สูงสุดที่รับแล้ว — ไม่ลดค่าลง
+  lastSourceRowId   Int                  @default(0) @map("last_source_row_id")
+  lastSyncedAt      DateTime?            @map("last_synced_at") @db.Timestamptz
+  lastClientVersion String?              @map("last_client_version") @db.VarChar(30)
+  isActive          Boolean              @default(true) @map("is_active")
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company             @relation(fields: [companyId], references: [id])
+  branch   Branch              @relation(fields: [branchId], references: [id])
+  badges   AttendanceBadge[]
+  syncRuns AttendanceSyncRun[]
+  punches  AttendancePunch[]
+
+  @@unique([branchId, name], map: "attendance_devices_branch_name_unique")
+  @@index([companyId])
+  @@map("attendance_devices")
+}
+
+/// เลขสแกนบนเครื่อง (USERINFO.Badgenumber) — เลขเดียวกันต่างเครื่องคือคนละ badge
+model AttendanceBadge {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  branchId     String    @map("branch_id") @db.Uuid
+  deviceId     String    @map("device_id") @db.Uuid
+  badgeNumber  String    @map("badge_number") @db.VarChar(30)
+  nameOnDevice String?   @map("name_on_device") @db.VarChar(255)
+  personnelId  String?   @map("personnel_id") @db.Uuid
+  mappedById   String?   @map("mapped_by_id") @db.Uuid
+  mappedAt     DateTime? @map("mapped_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   company   Company           @relation(fields: [companyId], references: [id])
   branch    Branch            @relation(fields: [branchId], references: [id])
-  createdBy User?             @relation("AttendanceImportAuthor", fields: [createdById], references: [id])
-  entries   AttendanceEntry[]
+  device    AttendanceDevice  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  personnel Personnel?        @relation(fields: [personnelId], references: [id], onDelete: SetNull)
+  mappedBy  User?             @relation("AttendanceBadgeMapper", fields: [mappedById], references: [id])
+  punches   AttendancePunch[]
 
-  @@index([companyId, createdAt])
-  @@map("attendance_import_batches")
+  @@unique([deviceId, badgeNumber], map: "attendance_badges_device_number_unique")
+  @@index([branchId, personnelId])
+  @@index([personnelId])
+  @@map("attendance_badges")
 }
 
-model AttendanceEntry {
+/// ประวัติการซิงค์ 1 ชุดข้อมูล
+model AttendanceSyncRun {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId     String   @map("company_id") @db.Uuid
-  branchId      String   @map("branch_id") @db.Uuid
-  personnelId   String   @map("personnel_id") @db.Uuid
-  workDate      DateTime @map("work_date") @db.Date
-  punchTimes    String[] @map("punch_times")
-  importBatchId String?  @map("import_batch_id") @db.Uuid
+  deviceId      String   @map("device_id") @db.Uuid
+  received      Int      @default(0)
+  inserted      Int      @default(0)
+  duplicates    Int      @default(0)
+  newBadges     Int      @default(0) @map("new_badges")
+  clientVersion String?  @map("client_version") @db.VarChar(30)
+  triggeredById String?  @map("triggered_by_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company     Company                @relation(fields: [companyId], references: [id])
-  branch      Branch                 @relation(fields: [branchId], references: [id])
-  personnel   Personnel              @relation(fields: [personnelId], references: [id])
-  importBatch AttendanceImportBatch? @relation(fields: [importBatchId], references: [id])
+  device      AttendanceDevice  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  triggeredBy User?             @relation("AttendanceSyncTrigger", fields: [triggeredById], references: [id])
+  punches     AttendancePunch[]
 
-  @@unique([personnelId, workDate], map: "attendance_entry_person_date_unique")
-  @@index([companyId, workDate])
+  @@index([deviceId, createdAt])
+  @@map("attendance_sync_runs")
+}
+
+/// การสแกนดิบ 1 ครั้ง — ไม่แก้ไขหลังบันทึก
+model AttendancePunch {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  branchId    String   @map("branch_id") @db.Uuid
+  deviceId    String   @map("device_id") @db.Uuid
+  badgeId     String   @map("badge_id") @db.Uuid
+  /// สำเนาจาก badge ตอนผูก เพื่อ query รายคนได้โดยไม่ join
+  personnelId String?  @map("personnel_id") @db.Uuid
+  punchAt     DateTime @map("punch_at") @db.Timestamptz
+  checkType   String?  @map("check_type") @db.VarChar(5)
+  verifyCode  Int?     @map("verify_code")
+  sourceRowId Int?     @map("source_row_id")
+  syncRunId   String?  @map("sync_run_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company   Company            @relation(fields: [companyId], references: [id])
+  branch    Branch             @relation(fields: [branchId], references: [id])
+  device    AttendanceDevice   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  badge     AttendanceBadge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  personnel Personnel?         @relation(fields: [personnelId], references: [id], onDelete: SetNull)
+  syncRun   AttendanceSyncRun? @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+
+  @@unique([deviceId, badgeId, punchAt], map: "attendance_punches_device_badge_time_unique")
+  @@index([branchId, punchAt])
+  @@index([personnelId, punchAt])
+  @@index([badgeId])
+  @@map("attendance_punches")
+}
+
+/// สรุปรายวันต่อคนต่อสาขา — สร้างใหม่จาก attendance_punches ได้เสมอ
+model AttendanceDay {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String              @map("company_id") @db.Uuid
+  branchId      String              @map("branch_id") @db.Uuid
+  personnelId   String              @map("personnel_id") @db.Uuid
+  workDate      DateTime            @map("work_date") @db.Date
+  firstIn       DateTime            @map("first_in") @db.Timestamptz
+  lastOut       DateTime?           @map("last_out") @db.Timestamptz
+  punchCount    Int                 @map("punch_count")
+  workedMinutes Int                 @default(0) @map("worked_minutes")
+  status        AttendanceDayStatus
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  company   Company   @relation(fields: [companyId], references: [id])
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  personnel Personnel @relation(fields: [personnelId], references: [id], onDelete: Cascade)
+
+  @@unique([personnelId, workDate, branchId], map: "attendance_days_person_date_branch_unique")
   @@index([branchId, workDate])
-  @@map("attendance_entries")
+  @@index([companyId, workDate])
+  @@map("attendance_days")
 }
 
 // ─── TRANSPORT MANAGEMENT SYSTEM (TMS) ───────────────────────────────────────
@@ -1964,28 +2072,28 @@ model FinanceSourceReview {
 // ─── GROUP: ASSET REGISTER (Phase 1 — no Machine/Vehicle FK) ─────────────────
 
 model Asset {
-  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId      String         @map("company_id") @db.Uuid
-  branchId       String         @map("branch_id") @db.Uuid
-  code           String         @db.VarChar(50)
-  name           String         @db.VarChar(255)
-  typeId         String         @map("type_id") @db.Uuid
-  status         AssetStatus    @default(REGISTERED)
-  ownership      AssetOwnership
-  serialNumber   String?        @map("serial_number") @db.VarChar(100)
-  details        String?        @db.Text
-  acquiredAt     DateTime?      @map("acquired_at") @db.Date
-  isActive       Boolean        @default(true) @map("is_active")
-  createdBy      String?        @map("created_by") @db.Uuid
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt      DateTime?      @map("deleted_at") @db.Timestamptz
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String         @map("company_id") @db.Uuid
+  branchId     String         @map("branch_id") @db.Uuid
+  code         String         @db.VarChar(50)
+  name         String         @db.VarChar(255)
+  typeId       String         @map("type_id") @db.Uuid
+  status       AssetStatus    @default(REGISTERED)
+  ownership    AssetOwnership
+  serialNumber String?        @map("serial_number") @db.VarChar(100)
+  details      String?        @db.Text
+  acquiredAt   DateTime?      @map("acquired_at") @db.Date
+  isActive     Boolean        @default(true) @map("is_active")
+  createdBy    String?        @map("created_by") @db.Uuid
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz
 
-  company  Company            @relation(fields: [companyId], references: [id])
-  branch   Branch             @relation(fields: [branchId], references: [id])
-  type     AssetRegisterType  @relation(fields: [typeId], references: [id])
-  creator  User?              @relation("AssetCreatedBy", fields: [createdBy], references: [id])
-  pmPlan   AssetPmPlan?
+  company Company           @relation(fields: [companyId], references: [id])
+  branch  Branch            @relation(fields: [branchId], references: [id])
+  type    AssetRegisterType @relation(fields: [typeId], references: [id])
+  creator User?             @relation("AssetCreatedBy", fields: [createdBy], references: [id])
+  pmPlan  AssetPmPlan?
 
   @@unique([companyId, code])
   @@index([companyId])

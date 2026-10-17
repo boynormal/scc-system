@@ -1,147 +1,115 @@
 import { Metadata } from "next"
+import Link from "next/link"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { AttendanceImportForm } from "./attendance-import-form"
-import { AttendanceEntriesPanel } from "./attendance-entries-panel"
+import { getTranslations } from "next-intl/server"
 import { Clock } from "lucide-react"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/shared/db"
+import type { UserRole } from "@/lib/permissions"
+import { canAttendanceAnyBranch, listAttendanceBranches } from "@/modules/hr"
 import { EmptyState } from "@/components/ui/empty-state"
 import { GlassCard } from "@/components/glass"
+import { cn } from "@/lib/utils"
+import { AttendanceDayView } from "./attendance-day-view"
+import { AttendanceBadgeView } from "./attendance-badge-view"
+import { AttendanceDeviceView } from "./attendance-device-view"
 
 export const metadata: Metadata = { title: "บันทึกเวลา" }
 
-function canRead(roles: UserRole[]) {
-  return (
-    isAdminInAnyBranch(roles) ||
-    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "hr_attendance", "read"))
-  )
-}
+const TABS = ["day", "badges", "devices"] as const
+type Tab = (typeof TABS)[number]
 
-function canCreate(roles: UserRole[]) {
-  return (
-    isAdminInAnyBranch(roles) ||
-    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "hr_attendance", "create"))
-  )
-}
-
-function canDelete(roles: UserRole[]) {
-  return (
-    isAdminInAnyBranch(roles) ||
-    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "hr_attendance", "delete"))
-  )
-}
-
-export default async function HrAttendancePage(props: { searchParams: Promise<{ branchId?: string }> }) {
+export default async function HrAttendancePage(props: {
+  searchParams: Promise<{ branchId?: string; tab?: string; date?: string }>
+}) {
   const searchParams = await props.searchParams
   const session = await auth()
   if (!session) redirect("/login")
   const roles = session.user.roles as UserRole[]
-  if (!canRead(roles)) redirect("/")
+  if (!canAttendanceAnyBranch(roles, "read")) redirect("/")
 
-  const companyId = session.user.companyId
-  const branches = await prisma.branch.findMany({
-    where: { companyId, isActive: true, deletedAt: null },
-    select: { id: true, name: true, code: true },
-    orderBy: { name: "asc" },
-  })
-  const allowedBranchIds = isAdminInAnyBranch(roles) ? branches.map((b) => b.id) : getBranchIds(roles)
-  const selectedBranchIdRaw = searchParams.branchId
-  const selectedBranchId =
-    selectedBranchIdRaw && allowedBranchIds.includes(selectedBranchIdRaw)
-      ? selectedBranchIdRaw
-      : branches.find((b) => allowedBranchIds.includes(b.id))?.id ?? null
+  const t = await getTranslations("attendance")
+  const companyId = session.user.companyId as string
+  const branches = await listAttendanceBranches(prisma, { companyId, roles })
+  const branch = branches.find((b) => b.id === searchParams.branchId) ?? branches[0] ?? null
+  const tab: Tab = TABS.includes(searchParams.tab as Tab) ? (searchParams.tab as Tab) : "day"
 
-  const allowed = getBranchIds(roles)
-  const recent =
-    !selectedBranchId || (!isAdminInAnyBranch(roles) && allowed.length === 0)
-      ? []
-      : await prisma.attendanceEntry.findMany({
-          where: {
-            companyId,
-            branchId: selectedBranchId,
-          },
-          take: 200,
-          include: {
-            personnel: { select: { displayName: true, rosterNo: true, jobGroup: true } },
-            branch: { select: { name: true, code: true } },
-          },
-          orderBy: [{ workDate: "desc" }, { personnel: { displayName: "asc" } }],
-        })
+  const perms = {
+    canUpdate: canAttendanceAnyBranch(roles, "update"),
+    canCreate: canAttendanceAnyBranch(roles, "create"),
+  }
 
-  const tableRows = recent.map((row) => ({
-    id: row.id,
-    workDate: row.workDate.toISOString(),
-    rosterNo: row.personnel.rosterNo,
-    displayName: row.personnel.displayName,
-    jobGroup: row.personnel.jobGroup,
-    punchTimes: row.punchTimes,
-    branchCode: row.branch.code,
-    branchName: row.branch.name,
-  }))
-  const showDelete = canDelete(roles)
-  const selectedBranch = selectedBranchId ? branches.find((b) => b.id === selectedBranchId) ?? null : null
+  const tabHref = (next: Tab) => `/hr/attendance?${new URLSearchParams({ ...(branch && { branchId: branch.id }), tab: next })}`
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">บันทึกเวลา</h1>
-        <p className="text-muted-foreground text-sm mt-1">แยกการทำงานตามสาขาอย่างชัดเจน เพื่อลดการสลับข้อมูลผิดสาขา</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
       </div>
 
-      <GlassCard padding="md">
-        <form className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[240px]">
-            <label className="block text-sm font-medium text-foreground">บริบทสาขาที่กำลังใช้งาน</label>
-            <select
-              name="branchId"
-              defaultValue={selectedBranchId ?? ""}
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm"
-            >
-              {branches
-                .filter((b) => allowedBranchIds.includes(b.id))
-                .map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code} {b.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <button type="submit" className="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm hover:bg-slate-900">
-            ใช้งานสาขานี้
-          </button>
-        </form>
-        {selectedBranch && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            ตอนนี้กำลังทำงานที่สาขา: <span className="font-medium text-foreground">{selectedBranch.code} {selectedBranch.name}</span>
-          </p>
-        )}
-      </GlassCard>
-
-      {canCreate(roles) && (
-        <GlassCard padding="md">
-          <h2 className="text-lg font-semibold text-foreground mb-3">นำเข้า Excel</h2>
-          {!selectedBranchId ? (
-            <p className="text-sm text-amber-700">กรุณาเลือกสาขาก่อนนำเข้า</p>
-          ) : branches.length === 0 ? (
-            <p className="text-sm text-amber-700">ยังไม่มีสาขาในระบบ — ตั้งค่าสาขาก่อน</p>
-          ) : (
-            <AttendanceImportForm branch={selectedBranch!} />
-          )}
+      {!branch ? (
+        <GlassCard padding="none">
+          <EmptyState icon={Clock} title={t("noBranchTitle")} description={t("noBranchDescription")} />
         </GlassCard>
-      )}
+      ) : (
+        <>
+          <GlassCard padding="md">
+            <form className="flex flex-wrap items-end gap-3">
+              <input type="hidden" name="tab" value={tab} />
+              <div className="min-w-[240px]">
+                <label htmlFor="attendance-branch" className="block text-sm font-medium text-foreground">
+                  {t("branch")}
+                </label>
+                <select
+                  id="attendance-branch"
+                  name="branchId"
+                  defaultValue={branch.id}
+                  className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code} {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm hover:bg-slate-900">
+                {t("useBranch")}
+              </button>
+            </form>
+          </GlassCard>
 
-      <GlassCard padding="none">
-        {recent.length === 0 ? (
-          <EmptyState
-            icon={Clock}
-            title={selectedBranchId ? "ยังไม่มีบันทึกเวลาในสาขานี้" : "ยังไม่ได้เลือกสาขา"}
-            description={selectedBranchId ? "อัปโหลดไฟล์ Excel ด้านบน หรือรอนำเข้า" : "เลือกสาขาด้านบนเพื่อเริ่มใช้งาน"}
-          />
-        ) : (
-          <AttendanceEntriesPanel rows={tableRows} branch={selectedBranch!} canDelete={showDelete} />
-        )}
-      </GlassCard>
+          <nav className="flex gap-1 border-b border-border" aria-label={t("title")}>
+            {TABS.map((key) => (
+              <Link
+                key={key}
+                href={tabHref(key)}
+                aria-current={tab === key ? "page" : undefined}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                  tab === key
+                    ? "border-blue-600 text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t(`tabs.${key}`)}
+              </Link>
+            ))}
+          </nav>
+
+          {tab === "day" && <AttendanceDayView key={branch.id} branchId={branch.id} initialDate={searchParams.date} />}
+          {tab === "badges" && <AttendanceBadgeView key={branch.id} branchId={branch.id} canUpdate={perms.canUpdate} />}
+          {tab === "devices" && (
+            <AttendanceDeviceView
+              key={branch.id}
+              branch={branch}
+              canCreate={perms.canCreate}
+              canUpdate={perms.canUpdate}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }

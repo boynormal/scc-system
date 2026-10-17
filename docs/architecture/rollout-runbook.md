@@ -36,7 +36,7 @@
 8. `/notifications`
 9. `/apps` load ได้และเห็น tile ตาม role
 10. Cron (ถ้ามี): `GET /api/cron/generate-schedules` with `Authorization: Bearer $CRON_SECRET`
-11. `/hr/personnel` list → เพิ่มบุคลากร; `/hr/attendance` → นำเข้าไฟล์ Excel บันทึกเวลา → ลบรายการ/ลบตามวัน
+11. `/hr/personnel` list → เพิ่มบุคลากร; `/hr/attendance` → แท็บเครื่องสแกน (ออก API key) → ซิงค์จากโปรแกรมสาขา → แท็บผูกเลขสแกน → แท็บรายวัน
 12. `/transport/jobs` list; `/transport/calendar`; `/transport/map` และ `/transport/monitor` (ต้องตั้ง `GPS_API_URL`/`GPS_API_AUTH`/`GPS_ASSET_ID`)
 
 ---

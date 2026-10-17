@@ -317,7 +317,7 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
         permission: { resource: "hr_attendance", action: "read" },
         moduleId: "hr_attendance",
         order: 3,
-        keywords: ["attendance", "time", "เวลา", "เข้างาน", "ออกงาน", "นำเข้า", "Excel"],
+        keywords: ["attendance", "time", "เวลา", "เข้างาน", "ออกงาน", "สแกนนิ้ว", "HIP"],
         launcher: { departmentId: "people", capabilityId: "attendance", isPrimary: true },
       },
     ],

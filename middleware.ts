@@ -3,7 +3,8 @@ import { NextResponse } from "next/server"
 import authConfig from "@/lib/auth.config"
 import { DRIVER_JOB_COOKIE, driverHomePath, isDriverAllowedPath, isDriverLogPath } from "@/lib/driver-session"
 
-const PUBLIC_PATHS = ["/login", "/api/auth"]
+// /api/device-sync/ ยืนยันตัวด้วย device API key ใน route เอง (lib/device-api-handler.ts)
+const PUBLIC_PATHS = ["/login", "/api/auth", "/api/device-sync/"]
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) return true

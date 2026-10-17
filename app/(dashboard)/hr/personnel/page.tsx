@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { listAccessiblePersonnelBranches, listPersonnel, listPersonnelDepartments } from "@/modules/hr"
+import { listAccessiblePersonnelBranches, listPersonnel } from "@/modules/hr"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { GlassCard } from "@/components/glass"
@@ -30,7 +30,7 @@ function canCreate(roles: UserRole[]) {
 }
 
 export default async function HrPersonnelPage(props: {
-  searchParams: Promise<{ search?: string; branchId?: string; isActive?: string; departmentId?: string; page?: string }>
+  searchParams: Promise<{ search?: string; branchId?: string; isActive?: string; page?: string }>
 }) {
   const searchParams = await props.searchParams
   const session = await auth()
@@ -43,23 +43,17 @@ export default async function HrPersonnelPage(props: {
   const isActiveRaw = searchParams.isActive
   const isActive = isActiveRaw === "true" ? true : isActiveRaw === "false" ? false : null
 
-  const [{ data: list, total }, { data: branches }, { data: departments }] = await Promise.all([
+  const [{ data: list, total }, { data: branches }] = await Promise.all([
     listPersonnel(prisma, {
       companyId,
       roles,
       branchId: searchParams.branchId,
       search: searchParams.search,
       isActive,
-      departmentId: searchParams.departmentId,
       page,
       pageSize: SSR_PAGE_SIZE,
     }),
     listAccessiblePersonnelBranches(prisma, { companyId, roles }),
-    listPersonnelDepartments(prisma, {
-      companyId,
-      roles,
-      branchIds: searchParams.branchId ? [searchParams.branchId] : undefined,
-    }),
   ])
 
   const totalPages = Math.max(1, Math.ceil(total / SSR_PAGE_SIZE))
@@ -67,7 +61,6 @@ export default async function HrPersonnelPage(props: {
     search: searchParams.search,
     branchId: searchParams.branchId,
     isActive: searchParams.isActive,
-    departmentId: searchParams.departmentId,
   }
 
   return (
@@ -76,7 +69,7 @@ export default async function HrPersonnelPage(props: {
         <div>
           <h1 className="text-2xl font-bold text-foreground">บุคลากร</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            ข้อมูลคน · รหัสรายชื่อ (roster) ต่อบริษัท · สามารถผูกหลายสาขาเพื่อลงเวลา/นำเข้า Excel ได้หลายที่
+            ข้อมูลคน · รหัสรายชื่อต่อบริษัท · สาขาหลักหนึ่งสาขา ลงเวลาข้ามสาขาได้เมื่อผูกเลขสแกน
           </p>
         </div>
         {canCreate(roles) && (
@@ -92,7 +85,7 @@ export default async function HrPersonnelPage(props: {
 
       <GlassCard padding="sm">
         <Suspense fallback={<div className="h-10 w-full animate-pulse rounded-lg bg-muted" />}>
-          <PersonnelFilters branches={branches} departments={departments} />
+          <PersonnelFilters branches={branches} />
         </Suspense>
       </GlassCard>
 
@@ -112,9 +105,7 @@ export default async function HrPersonnelPage(props: {
                     <th className="p-3 font-medium">รหัสรายชื่อ</th>
                     <th className="p-3 font-medium">ชื่อเรียก</th>
                     <th className="p-3 font-medium">กลุ่มงาน</th>
-                    <th className="p-3 font-medium">แผนก</th>
                     <th className="p-3 font-medium">สาขา</th>
-                    <th className="p-3 font-medium">บัญชีผู้ใช้</th>
                     <th className="p-3 font-medium">สถานะ</th>
                   </tr>
                 </thead>
@@ -132,13 +123,6 @@ export default async function HrPersonnelPage(props: {
                         </Link>
                       </td>
                       <td className="p-3 text-muted-foreground">{p.jobGroup ?? "—"}</td>
-                      <td className="p-3 text-muted-foreground">
-                        {p.department
-                          ? p.department.code
-                            ? `${p.department.name} (${p.department.code})`
-                            : p.department.name
-                          : "—"}
-                      </td>
                       <td className="p-3 text-muted-foreground">
                         {p.branchAssignments.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
@@ -163,9 +147,6 @@ export default async function HrPersonnelPage(props: {
                         ) : (
                           "—"
                         )}
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {p.user ? `${p.user.firstName} ${p.user.lastName}`.trim() || p.user.username : "—"}
                       </td>
                       <td className="p-3">
                         {p.isActive ? (

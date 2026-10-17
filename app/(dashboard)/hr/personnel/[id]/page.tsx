@@ -8,12 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 import { PersonnelDeleteButton } from "../personnel-delete-button"
 
-function formatUser(user: { firstName: string; lastName: string; username: string; email: string } | null) {
-  if (!user) return "—"
-  const name = `${user.firstName} ${user.lastName}`.trim()
-  return name ? `${name} (${user.username})` : user.username
-}
-
 export default async function PersonnelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) notFound()
@@ -39,35 +33,16 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     isAdminInAnyBranch(roles) ||
     getBranchIds(roles).some((bid) => hasPermission(roles, bid, "hr_personnel", "delete"))
 
-  const branchLabel =
-    row.branchAssignments.length > 0
-      ? row.branchAssignments
-          .map((a) => `${a.branch.code} — ${a.branch.name}${a.isPrimary ? " (หลัก)" : ""}`)
-          .join(", ")
-      : row.branch
-        ? `${row.branch.code} — ${row.branch.name}`
-        : "—"
-
-  const assignedBranches =
-    row.branchAssignments.length > 0
-      ? row.branchAssignments.map((item) => item.branch)
-      : row.branch
-        ? [row.branch]
-        : []
-  const branchCodeById = new Map(assignedBranches.map((branch) => [branch.id, branch.code]))
-
-  function formatPosition(position: { name: string; code: string | null; branchId: string }) {
-    const name = position.code ? `${position.name} (${position.code})` : position.name
-    if (assignedBranches.length <= 1) return name
-    const code = branchCodeById.get(position.branchId)
-    return code ? `${code} — ${name}` : name
-  }
-
-  const positionLabel = row.positionAssignments.length
-    ? row.positionAssignments.map((item) => formatPosition(item.position)).join(", ")
-    : row.position
-      ? formatPosition(row.position)
+  const primaryAssignment = row.branchAssignments.find((a) => a.isPrimary)
+  const branchLabel = primaryAssignment
+    ? `${primaryAssignment.branch.code} — ${primaryAssignment.branch.name}`
+    : row.branch
+      ? `${row.branch.code} — ${row.branch.name}`
       : "—"
+  const otherBranches = row.branchAssignments
+    .filter((a) => !a.isPrimary)
+    .map((a) => `${a.branch.code} — ${a.branch.name}`)
+    .join(", ")
 
   const fields: { label: string; value: string }[] = [
     { label: "รหัสรายชื่อ", value: row.rosterNo },
@@ -80,16 +55,7 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     { label: "ที่อยู่", value: row.address ?? "—" },
     { label: "หมายเหตุ", value: row.notes ?? "—" },
     { label: "สาขา", value: branchLabel },
-    {
-      label: "แผนก",
-      value: row.department
-        ? row.department.code
-          ? `${row.department.name} (${row.department.code})`
-          : row.department.name
-        : "—",
-    },
-    { label: "ตำแหน่ง", value: positionLabel },
-    { label: "บัญชีผู้ใช้", value: formatUser(row.user) },
+    ...(otherBranches ? [{ label: "ลงเวลาที่สาขาอื่น", value: otherBranches }] : []),
   ]
 
   return (

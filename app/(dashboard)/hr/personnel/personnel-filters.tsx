@@ -6,15 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Search } from "lucide-react"
 
 type BranchOption = { id: string; name: string; code: string }
-type DeptOption = { id: string; name: string; code: string | null }
 
-export function PersonnelFilters({
-  branches,
-  departments,
-}: {
-  branches: BranchOption[]
-  departments: DeptOption[]
-}) {
+export function PersonnelFilters({ branches }: { branches: BranchOption[] }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -27,7 +20,6 @@ export function PersonnelFilters({
       const params = new URLSearchParams(searchParams.toString())
       if (value) params.set(key, value)
       else params.delete(key)
-      if (key === "branchId") params.delete("departmentId")
       params.delete("page")
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`)
@@ -51,8 +43,7 @@ export function PersonnelFilters({
   const hasFilters =
     searchParams.get("search") ||
     searchParams.get("branchId") ||
-    searchParams.get("isActive") ||
-    searchParams.get("departmentId")
+    searchParams.get("isActive")
 
   return (
     <div className={`flex flex-wrap gap-3 ${isPending ? "pointer-events-none opacity-70" : ""}`}>
@@ -74,19 +65,6 @@ export function PersonnelFilters({
         {branches.map((b) => (
           <option key={b.id} value={b.id}>
             {b.code} — {b.name}
-          </option>
-        ))}
-      </select>
-      <select
-        key={`${searchParams.get("branchId") || "all"}-${searchParams.get("departmentId") || ""}`}
-        defaultValue={searchParams.get("departmentId") || ""}
-        onChange={(e) => handleFilter("departmentId", e.target.value)}
-        className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="">ทุกแผนก</option>
-        {departments.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.code ? `${d.name} (${d.code})` : d.name}
           </option>
         ))}
       </select>

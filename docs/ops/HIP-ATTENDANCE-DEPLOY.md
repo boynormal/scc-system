@@ -4,8 +4,9 @@ Checklist สำหรับขึ้น production ของสอง migration
 
 - `20261017130000_hip_attendance_redesign` — ลบตารางนำเข้า Excel (`attendance_entries`, `attendance_import_batches`) แล้วสร้างเครื่องสแกน / badge / punches / สรุปรายวัน
 - `20261017145000_drop_duty_catalog` — ลบสมุดหน้าที่ และข้อความ `positions.responsibilities`, `personnel_positions.extra_duties`
+- `20261017170000_drop_positions` — ลบตาราง `positions`, `personnel_positions` และคอลัมน์ `personnel.position_id` ถาวร สำรองฐานข้อมูลก่อน deploy เพราะ rollback จาก migration นี้ไม่ได้
 
-ทั้งคู่ลบข้อมูลเดิมทิ้ง การ rollback ต้อง restore จาก dump
+ทั้งสามลบข้อมูลเดิมทิ้ง การ rollback ต้อง restore จาก dump
 
 ดูวิธี deploy ทั่วไปที่ [DEPLOYMENT.md](./DEPLOYMENT.md) และวิธี dump ที่ [BACKUP.md](./BACKUP.md)
 
@@ -59,8 +60,8 @@ npm run build
 
 ## 5. Smoke
 
-1. ล็อกอินแล้วเปิด `/hr/attendance` และ `/hr/positions`
-2. `/hr/duties` ต้อง 404
+1. ล็อกอินแล้วเปิด `/hr/attendance` และ `/hr/personnel`
+2. `/hr/duties`, `/hr/org` และ `/hr/positions` ต้อง 404
 3. ไม่มี key:
 
 ```bash

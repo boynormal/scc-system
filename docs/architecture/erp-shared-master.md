@@ -62,7 +62,6 @@ Future GL / AP / AR  (อ้าง id เดิม — ห้ามสร้า�
 | MachineCategory · MaintenanceType | `/maintenance/master-data` | `settings.read` |
 | ExpenseType · Category · Process · CostCenter | `/finance/master-data` | `expense_masters.read` |
 | TmsCustomer · job/cargo/vehicle types · Vehicle · Driver | `/transport/master-data` | `transport_jobs.read` |
-| Position | `/hr/positions` | `hr_positions.read` |
 
 - `/settings/master-data` เดิมเหลือเป็น redirect ไป `/settings/partners` เพื่อไม่ให้ bookmark และลิงก์ในเอกสารพัง
 - Customer จะเข้ามาเป็นแท็บที่สามของ `/settings/partners` เมื่อถึง P2/P3 — `suppliers` ยังเป็นสมุดคู่ค้าเดียวไม่แตกตาม UI
@@ -95,7 +94,7 @@ Future GL / AP / AR  (อ้าง id เดิม — ห้ามสร้า�
 `GLSupplier` · `GLCustomer` · `GLVehicle` · `GLMachine`  
 `FinanceAsset` · `GLAsset` · `MaintenanceAsset` · `TransportAsset` · `ITAsset` (ตารางแยก)  
 `FinanceEmployee` · `ProductionWorker` · `ProductionPersonnel` · `MaintenanceTechnician` · `AssetCustodian` (ตารางแยก)  
-`PeopleDepartment` ห้าม (reuse `departments`) — `Position` ปลดล็อกแล้วเป็น HR master ต่อสาขา (Phase 3-Org) — [erp-people-personnel.md](./erp-people-personnel.md)  
+`PeopleDepartment` ห้าม (reuse `departments`) — Position / ผังองค์กรถูกลบแล้ว 2026-10-17 — [erp-people-personnel.md](./erp-people-personnel.md)  
 Business Partner / Party / Person framework / Contact กลาง / Address engine  
 Location master จนกว่าเข้าเกณฑ์ด้านล่าง  
 `Machine.assetId` / `Vehicle.assetId` จนกว่า Asset Phase 2 — [erp-asset-management.md](./erp-asset-management.md)

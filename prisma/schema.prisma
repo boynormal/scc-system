@@ -177,7 +177,6 @@ model Branch {
 
   company              Company                @relation(fields: [companyId], references: [id])
   departments          Department[]
-  positions            Position[]
   machines             Machine[]
   userBranchRoles      UserBranchRole[]
   workOrders           WorkOrder[]
@@ -220,7 +219,6 @@ model Department {
   children  Department[] @relation("DepartmentHierarchy")
   machines  Machine[]
   personnel Personnel[]
-  positions Position[]
 
   @@index([branchId])
   @@index([parentId])
@@ -868,36 +866,6 @@ model AuditLog {
 
 // ─── GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (ซิงค์จาก HIP PremiumTime ต่อสาขา) ─
 
-/// Org node ต่อสาขา (People Phase 3-Org) — ลำดับชั้นองค์กรอยู่ที่ parentId ไม่ใช่ที่ Personnel
-/// departmentId เป็นป้าย/ตัวกรองเท่านั้น ไม่ใช่ชั้นในผัง
-model Position {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  branchId         String   @map("branch_id") @db.Uuid
-  departmentId     String?  @map("department_id") @db.Uuid
-  parentId         String?  @map("parent_id") @db.Uuid
-  code             String?  @db.VarChar(20)
-  name             String   @db.VarChar(255)
-  sortOrder        Int      @default(0) @map("sort_order")
-  /// อัตราที่วางไว้ — ตำแหน่งว่าง = headcount ลบจำนวนคนที่นั่งจริง
-  headcount        Int      @default(1)
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  branch         Branch              @relation(fields: [branchId], references: [id])
-  department     Department?         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  parent         Position?           @relation("PositionHierarchy", fields: [parentId], references: [id])
-  children       Position[]          @relation("PositionHierarchy")
-  personnel      Personnel[]
-  personnelSeats PersonnelPosition[]
-
-  @@unique([branchId, code], map: "positions_branch_code_unique")
-  @@index([branchId])
-  @@index([parentId])
-  @@index([departmentId])
-  @@map("positions")
-}
-
 model Personnel {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId    String    @map("company_id") @db.Uuid
@@ -913,7 +881,6 @@ model Personnel {
   notes        String?   @db.Text
   userId       String?   @unique @map("user_id") @db.Uuid
   departmentId String?   @map("department_id") @db.Uuid
-  positionId   String?   @map("position_id") @db.Uuid
   isActive     Boolean   @default(true) @map("is_active")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
@@ -922,7 +889,6 @@ model Personnel {
   company             Company             @relation(fields: [companyId], references: [id])
   branch              Branch?             @relation(fields: [branchId], references: [id])
   department          Department?         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  position            Position?           @relation(fields: [positionId], references: [id], onDelete: Restrict)
   user                User?               @relation(fields: [userId], references: [id])
   attendanceBadges    AttendanceBadge[]
   attendancePunches   AttendancePunch[]
@@ -931,13 +897,11 @@ model Personnel {
    * สาขาที่พนักงานสามารถลงเวลา/ทำงานได้ (หนึ่งคน — หลายสาขา)
    */
   branchAssignments   PersonnelBranch[]
-  positionAssignments PersonnelPosition[]
 
   @@unique([companyId, rosterNo], map: "personnel_company_roster_unique")
   @@index([companyId])
   @@index([branchId])
   @@index([departmentId])
-  @@index([positionId])
   @@index([displayName])
   @@map("personnel")
 }
@@ -955,20 +919,6 @@ model PersonnelBranch {
   @@unique([personnelId, branchId], map: "personnel_branch_unique")
   @@index([branchId])
   @@map("personnel_branches")
-}
-
-model PersonnelPosition {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  personnelId String   @map("personnel_id") @db.Uuid
-  positionId  String   @map("position_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  personnel Personnel @relation(fields: [personnelId], references: [id], onDelete: Cascade)
-  position  Position  @relation(fields: [positionId], references: [id], onDelete: Restrict)
-
-  @@unique([personnelId, positionId], map: "personnel_position_unique")
-  @@index([positionId])
-  @@map("personnel_positions")
 }
 
 enum AttendanceSourceType {

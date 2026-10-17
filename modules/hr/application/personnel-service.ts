@@ -3,7 +3,7 @@ import type { PrismaClient, Prisma } from "@prisma/client"
 import { AppError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { readBranchSharing, type BranchShareAction } from "@/shared/permissions/branch-sharing"
-import { replacePersonnelBranchesFromIds } from "./personnel-branch-utils"
+import { ensurePersonnelBranch, replacePersonnelBranchesFromIds } from "./personnel-branch-utils"
 
 const personnelFieldsSchema = z.object({
   branchId: z.string().uuid().nullable().optional(),
@@ -32,23 +32,6 @@ const personnelFieldsSchema = z.object({
     .nullable()
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),
-  positionId: z
-    .string()
-    .uuid()
-    .optional()
-    .nullable()
-    .or(z.literal(""))
-    .transform((v) => (v ? v : null)),
-  positionIds: z.array(z.string().uuid()).max(20).optional(),
-  /** ส่งมาเมื่อไหร่ใช้แทน positionIds */
-  seats: z
-    .array(
-      z.object({
-        positionId: z.string().uuid(),
-      })
-    )
-    .max(20)
-    .optional(),
 })
 
 function refinePrimaryBranch(
@@ -66,7 +49,16 @@ function refinePrimaryBranch(
   }
 }
 
-export const createPersonnelSchema = personnelFieldsSchema.superRefine(refinePrimaryBranch)
+/** ไม่ส่ง rosterNo = ให้ระบบรันเลขถัดไปของบริษัท */
+export const createPersonnelSchema = personnelFieldsSchema
+  .extend({
+    rosterNo: z
+      .string()
+      .max(30)
+      .optional()
+      .transform((v) => v?.trim() || undefined),
+  })
+  .superRefine(refinePrimaryBranch)
 
 export const updatePersonnelSchema = personnelFieldsSchema
   .partial()
@@ -122,14 +114,6 @@ export function formatRosterNo(seq: number): string {
 const personnelInclude = {
   branch: { select: { id: true, name: true, code: true } },
   department: { select: { id: true, name: true, code: true, branchId: true } },
-  position: { select: { id: true, name: true, code: true, branchId: true } },
-  positionAssignments: {
-    select: {
-      positionId: true,
-      position: { select: { id: true, name: true, code: true, branchId: true } },
-    },
-    orderBy: { createdAt: "asc" as const },
-  },
   user: { select: { id: true, firstName: true, lastName: true, username: true, email: true } },
   branchAssignments: {
     include: { branch: { select: { name: true, code: true, id: true } } },
@@ -141,6 +125,12 @@ function resolveBranchIdListFromUpdate(body: UpdatePersonnelInput): string[] | u
   if (body.branchIds !== undefined) return [...new Set(body.branchIds)]
   if (body.branchId !== undefined) return body.branchId ? [body.branchId] : []
   return undefined
+}
+
+/** ส่งเฉพาะ primaryBranchId = ตั้งสาขาหลัก และคงสาขาที่ผูกเลขสแกนเพิ่มไว้ */
+function promoteBranchIdFromUpdate(body: UpdatePersonnelInput): string | null {
+  if (body.branchIds !== undefined || body.branchId !== undefined) return null
+  return body.primaryBranchId ?? null
 }
 
 async function assertUserLinkAllowed(
@@ -173,64 +163,6 @@ async function assertDepartmentAllowed(
   if (!assignedBranchIds.includes(dept.branchId)) {
     throw new ValidationError("แผนกต้องอยู่ในสาขาที่เลือก")
   }
-}
-
-async function assertPositionsAllowed(
-  db: PrismaClient | Prisma.TransactionClient,
-  companyId: string,
-  positionIds: string[],
-  assignedBranchIds: string[]
-) {
-  if (positionIds.length === 0) return
-  const rows = await db.position.findMany({
-    where: { id: { in: positionIds }, isActive: true, branch: { companyId, deletedAt: null } },
-    select: { id: true, branchId: true },
-  })
-  if (rows.length !== positionIds.length) throw new ValidationError("ตำแหน่งไม่ถูกต้อง")
-  if (rows.some((row) => !assignedBranchIds.includes(row.branchId))) {
-    throw new ValidationError("ตำแหน่งต้องอยู่ในสาขาที่เลือก")
-  }
-}
-
-type SeatInput = NonNullable<CreatePersonnelInput["seats"]>
-
-/** ที่นั่งที่ถูกเอาออกจะถูกลบ ที่นั่งเดิมคงไว้ ที่นั่งใหม่ถูกสร้าง */
-async function replacePersonnelPositions(
-  tx: Prisma.TransactionClient,
-  personnelId: string,
-  positionIds: string[]
-) {
-  const current = await tx.personnelPosition.findMany({
-    where: { personnelId },
-    select: { id: true, positionId: true },
-  })
-  const keep = new Set(positionIds)
-  const stale = current.filter((row) => !keep.has(row.positionId)).map((row) => row.id)
-  if (stale.length > 0) {
-    await tx.personnelPosition.deleteMany({ where: { id: { in: stale } } })
-  }
-  const existing = new Set(current.map((row) => row.positionId))
-  for (const positionId of positionIds) {
-    if (existing.has(positionId)) continue
-    await tx.personnelPosition.create({
-      data: { personnelId, positionId },
-    })
-  }
-}
-
-function firstPositionId(positionIds: string[]) {
-  return positionIds[0] ?? null
-}
-
-function requestedPositionIds(input: {
-  positionIds?: string[]
-  positionId?: string | null
-  seats?: SeatInput
-}): string[] | undefined {
-  if (input.seats !== undefined) return [...new Set(input.seats.map((seat) => seat.positionId))]
-  if (input.positionIds !== undefined) return [...new Set(input.positionIds)]
-  if (input.positionId !== undefined) return input.positionId ? [input.positionId] : []
-  return undefined
 }
 
 export function personnelLegalName(person: {
@@ -351,7 +283,6 @@ export async function listPersonnel(
     search?: string | null
     isActive?: boolean | null
     departmentId?: string | null
-    positionId?: string | null
     page: number
     pageSize: number
   }
@@ -365,7 +296,6 @@ export async function listPersonnel(
     search,
     isActive: isActiveParam = null,
     departmentId: departmentIdParam = null,
-    positionId: positionIdParam = null,
     page,
     pageSize,
   } = params
@@ -403,14 +333,6 @@ export async function listPersonnel(
   }
   if (departmentIdParam) {
     andParts.push({ departmentId: departmentIdParam })
-  }
-  if (positionIdParam) {
-    andParts.push({
-      OR: [
-        { positionId: positionIdParam },
-        { positionAssignments: { some: { positionId: positionIdParam } } },
-      ],
-    })
   }
 
   const where: Prisma.PersonnelWhereInput = {
@@ -462,7 +384,6 @@ export async function createPersonnel(
 
   const resolvedBranchIds = resolveBranchIdList(input)
   const primary = resolvePrimaryFromList(resolvedBranchIds, primaryBranchId ?? null) ?? branchId ?? null
-  const positionIds = requestedPositionIds(input) ?? []
 
   await assertBranchesAllowed(
     db,
@@ -473,20 +394,32 @@ export async function createPersonnel(
   )
   if (userId) await assertUserLinkAllowed(db, companyId, userId)
   if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId, resolvedBranchIds)
-  await assertPositionsAllowed(db, companyId, positionIds, resolvedBranchIds)
 
   if (resolvedBranchIds.length === 0 && !isAdminInAnyBranch(roles)) {
     const allowed = getBranchIds(roles)
     if (allowed.length === 0) throw new ForbiddenError()
   }
 
-  try {
-    return await db.$transaction(async (tx) => {
+  const autoRoster = !rosterNo
+  for (let attempt = 0; ; attempt++) {
+    const nextRosterNo = rosterNo ?? (await nextCompanyRosterNo(db, companyId))
+    try {
+      return await insertPersonnel(nextRosterNo)
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code
+      if (code !== "P2002") throw e
+      if (autoRoster && attempt < 4) continue
+      throw new AppError("รหัสรายชื่อ (roster) ซ้ำในบริษัท", 409, "CONFLICT")
+    }
+  }
+
+  function insertPersonnel(nextRosterNo: string) {
+    return db.$transaction(async (tx) => {
       const created = await tx.personnel.create({
         data: {
           companyId,
           branchId: primary,
-          rosterNo: rosterNo.trim(),
+          rosterNo: nextRosterNo,
           displayName: displayName.trim(),
           jobGroup: jobGroup?.trim() || null,
           firstName: firstName?.trim() || null,
@@ -497,10 +430,8 @@ export async function createPersonnel(
           notes: notes?.trim() || null,
           userId: userId ?? null,
           departmentId: departmentId ?? null,
-          positionId: firstPositionId(positionIds),
         },
       })
-      await replacePersonnelPositions(tx, created.id, positionIds)
       if (resolvedBranchIds.length > 0) {
         await replacePersonnelBranchesFromIds(
           tx,
@@ -514,12 +445,6 @@ export async function createPersonnel(
         include: personnelInclude,
       })
     })
-  } catch (e: unknown) {
-    const code = (e as { code?: string })?.code
-    if (code === "P2002") {
-      throw new AppError("รหัสรายชื่อ (roster) ซ้ำในบริษัท", 409, "CONFLICT")
-    }
-    throw e
   }
 }
 
@@ -542,20 +467,33 @@ export async function updatePersonnel(
   const existing = await findLivePersonnel(db, { companyId, roles, id }, "edit")
 
   const resolvedBranchIds = resolveBranchIdListFromUpdate(input)
+  const promoteBranchId = promoteBranchIdFromUpdate(input)
   if (resolvedBranchIds) {
     await assertBranchesAllowed(db, companyId, resolvedBranchIds, roles, await personnelShared(db, companyId, "edit"))
+  }
+  if (promoteBranchId) {
+    await assertBranchesAllowed(
+      db,
+      companyId,
+      [promoteBranchId],
+      roles,
+      await personnelShared(db, companyId, "edit")
+    )
   }
   if (input.userId) {
     await assertUserLinkAllowed(db, companyId, input.userId, existing.id)
   }
 
-  const nextBranchIds =
-    resolvedBranchIds ??
-    (existing.branchAssignments.length
-      ? existing.branchAssignments.map((a) => a.branchId)
-      : existing.branchId
-        ? [existing.branchId]
-        : [])
+  const existingBranchIds = existing.branchAssignments.length
+    ? existing.branchAssignments.map((a) => a.branchId)
+    : existing.branchId
+      ? [existing.branchId]
+      : []
+  const nextBranchIds = resolvedBranchIds
+    ? resolvedBranchIds
+    : promoteBranchId
+      ? [...new Set([promoteBranchId, ...existingBranchIds])]
+      : existingBranchIds
 
   const data: Prisma.PersonnelUncheckedUpdateInput = {}
   if (input.rosterNo !== undefined) data.rosterNo = input.rosterNo.trim()
@@ -572,6 +510,8 @@ export async function updatePersonnel(
 
   if (resolvedBranchIds) {
     data.branchId = resolvePrimaryFromList(resolvedBranchIds, input.primaryBranchId ?? null)
+  } else if (promoteBranchId) {
+    data.branchId = promoteBranchId
   }
 
   let nextDepartmentId = input.departmentId !== undefined ? input.departmentId : existing.departmentId
@@ -590,30 +530,9 @@ export async function updatePersonnel(
     data.departmentId = nextDepartmentId
   }
 
-  const explicitPositionIds = requestedPositionIds(input)
-  let nextPositionIds: string[]
-  if (explicitPositionIds !== undefined) {
-    await assertPositionsAllowed(db, companyId, explicitPositionIds, nextBranchIds)
-    nextPositionIds = explicitPositionIds
-  } else {
-    const assigned = existing.positionAssignments.map((row) => row.positionId)
-    const seed = assigned.length > 0 ? assigned : existing.positionId ? [existing.positionId] : []
-    const kept: string[] = []
-    for (const positionId of seed) {
-      const position = await db.position.findFirst({
-        where: { id: positionId, branch: { companyId } },
-        select: { branchId: true, isActive: true },
-      })
-      if (position && position.isActive && nextBranchIds.includes(position.branchId)) kept.push(positionId)
-    }
-    nextPositionIds = kept
-  }
-  data.positionId = firstPositionId(nextPositionIds)
-
   try {
     return await db.$transaction(async (tx) => {
       await tx.personnel.update({ where: { id: existing.id }, data })
-      await replacePersonnelPositions(tx, existing.id, nextPositionIds)
       if (resolvedBranchIds) {
         await replacePersonnelBranchesFromIds(
           tx,
@@ -623,6 +542,8 @@ export async function updatePersonnel(
             ? input.primaryBranchId
             : null
         )
+      } else if (promoteBranchId) {
+        await ensurePersonnelBranch(tx, existing.id, promoteBranchId, { makePrimary: true })
       }
       return {
         data: await tx.personnel.findUniqueOrThrow({
@@ -730,9 +651,13 @@ export async function suggestNextRosterNo(
   if (!canCreatePersonnel(params.roles) && !canReadPersonnel(params.roles)) {
     throw new ForbiddenError()
   }
+  return { data: { rosterNo: await nextCompanyRosterNo(db, params.companyId) } }
+}
 
+/** รวมแถวที่ soft-delete ด้วย เพราะรหัสเดิมยังจองไว้ให้คนที่จ้างกลับ */
+async function nextCompanyRosterNo(db: PrismaClient, companyId: string): Promise<string> {
   const rows = await db.personnel.findMany({
-    where: { companyId: params.companyId },
+    where: { companyId },
     select: { rosterNo: true },
   })
   const occupied = new Set(rows.map((r) => r.rosterNo))
@@ -744,7 +669,7 @@ export async function suggestNextRosterNo(
 
   const next = formatRosterNo(max + 1)
   if (occupied.has(next)) {
-    throw new ValidationError("ไม่สามารถแนะนำรหัสได้ กรุณากรอกเอง")
+    throw new ValidationError("ไม่สามารถสร้างรหัสรายชื่ออัตโนมัติได้")
   }
-  return { data: { rosterNo: next } }
+  return next
 }

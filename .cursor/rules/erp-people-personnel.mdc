@@ -18,7 +18,6 @@ User       = login / RBAC / actor  (IAM)
 Driver     = transport role        (no Personnel required)
 Role       = permission            (not a person)
 Department = Shared Org per Branch (Settings — Machine + Personnel.departmentId)
-Position   = Org node per Branch   (HR — org hierarchy lives on Position.parentId)
 Department ≠ Permission
 Nav "people" ≠ departments table
 User.employeeCode ≠ Personnel.rosterNo
@@ -31,7 +30,7 @@ User.employeeCode ≠ Personnel.rosterNo
 - `PeopleDepartment` — reuse `departments`
 - `Driver.personnelId`, `Expense.employeeId` → Personnel, Asset `personnelId` / custodian
 - Person / Party framework, `supervisorPersonnelId` / supervisor graph on Personnel, org-history table, employment enum
-- `Position` occupancy history, dual-hat / acting (`รักษาการ`) junction table
+- `Position` / org chart / reporting line (`positions`, `personnel_positions`, `/hr/org`, `/hr/positions`, `hr_positions`) — removed 2026-10-17
 - Payroll, leave, recruitment, benefits, tax, health — because of People Foundation
 - Company-level Department (would break Machine)
 
@@ -48,17 +47,13 @@ User.employeeCode ≠ Personnel.rosterNo
 - Nav department `people` still means HR UI (personnel + attendance).
 - `Department.parentId` exists but the app does not use it — no tree UI
 
-## Phase 3-Org build (unlocked) — Position master
+## Phase 3-Org (removed 2026-10-17)
 
-`Position` is unlocked by human order. The org hierarchy lives on **Position**, not on Personnel.
+Do not recreate the position master or org chart without a new human order.
 
-- `positions` is branch-scoped like `departments` (`branchId` required, `isActive`, no `deletedAt`)
-- `Position.parentId` = the reporting line; `parent.branchId` must equal `branchId`; no cycles
-- `Position.departmentId?` is a label/filter only — it never becomes a level in the chart
-- `Position.headcount` vs occupants = vacancy
-- `Personnel.positionId?` — one position per person; `position.branchId` must be in the person's assigned branches
-- `Personnel.jobGroup` stays; it is not replaced or migrated
-- `Department.parentId` stays unused — one hierarchy only
+- No `positions`, `personnel_positions`, or `Personnel.positionId`
+- No `/hr/org`, `/hr/positions`, or resource `hr_positions`
+- `Personnel.jobGroup` stays in the database for existing data and the attendance Daily view; the personnel form does not edit it
 
 ## Before adding any people-like table or FK
 
@@ -68,8 +63,8 @@ User.employeeCode ≠ Personnel.rosterNo
 
 Phase 1 (roster update/delete, `isActive`, optional `userId`) has landed.  
 Phase 2 **build** has landed (`Personnel.departmentId?`).  
-Phase 3-Org (`positions` + `Personnel.positionId?` + org chart) is unlocked.
+Phase 3-Org was removed (`20261017170000_drop_positions`).
 
-After this, **STOP** — do not start supervisor graph on Personnel, org/occupancy history, dual-hat positions, or Phase 3 (Driver, Expense, Asset FK) without a new human order.
+After this, **STOP** — do not recreate positions or the org chart, and do not start a supervisor graph on Personnel, org/occupancy history, dual-hat positions, or Phase 3 (Driver, Expense, Asset FK) without a new human order.
 
 See also [erp-shared-master.mdc](erp-shared-master.mdc) and [erp-asset-management.mdc](erp-asset-management.mdc).

@@ -139,7 +139,7 @@ export function OrganizationManager() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">แผนก / ฝ่าย</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          แผนกเป็นข้อมูลกลางต่อสาขา ใช้ร่วมกันทั้งเครื่องจักรและบุคลากร — ผังตำแหน่งอยู่ที่โมดูลบุคลากร
+          แผนกเป็นข้อมูลกลางต่อสาขา ใช้กับเครื่องจักร
         </p>
       </div>
 

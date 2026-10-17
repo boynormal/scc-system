@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { getPersonnel, listAccessiblePersonnelBranches, listPersonnelUserOptions } from "@/modules/hr"
+import { getPersonnel, listAccessiblePersonnelBranches } from "@/modules/hr"
 import { HrPersonnelForm } from "../../new/personnel-form"
 
 function canUpdate(roles: UserRole[]) {
@@ -30,16 +30,12 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const [{ data: branches }, { data: users }] = await Promise.all([
-    listAccessiblePersonnelBranches(prisma, { companyId, roles }),
-    listPersonnelUserOptions(prisma, { companyId, roles, currentUserId: row.userId }),
-  ])
+  const { data: branches } = await listAccessiblePersonnelBranches(prisma, { companyId, roles })
 
-  const assignedIds = row.branchAssignments.map((a) => a.branchId)
   const primary = row.branchAssignments.find((a) => a.isPrimary)?.branchId ?? row.branchId
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <Link href={`/hr/personnel/${row.id}`} className="text-sm text-blue-600 hover:underline">
           ← {row.displayName}
@@ -51,11 +47,9 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
         mode="edit"
         personnelId={row.id}
         branches={branches}
-        users={users}
         initial={{
           rosterNo: row.rosterNo,
           displayName: row.displayName,
-          jobGroup: row.jobGroup,
           firstName: row.firstName,
           lastName: row.lastName,
           idCardNo: row.idCardNo,
@@ -63,15 +57,7 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
           address: row.address,
           notes: row.notes,
           isActive: row.isActive,
-          userId: row.userId,
-          departmentId: row.departmentId,
-          positionIds: row.positionAssignments.length
-            ? row.positionAssignments.map((item) => item.positionId)
-            : row.positionId
-              ? [row.positionId]
-              : [],
-          branchIds: assignedIds.length ? assignedIds : row.branchId ? [row.branchId] : [],
-          primaryBranchId: primary,
+          branchId: primary,
         }}
       />
     </div>

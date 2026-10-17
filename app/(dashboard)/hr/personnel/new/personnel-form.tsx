@@ -1,26 +1,16 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassForm, GlassFormActions, GlassFormSection, GlassInput } from "@/components/glass"
 
 type BranchOpt = { id: string; name: string; code: string }
-type UserOpt = { id: string; firstName: string; lastName: string; username: string; email: string }
-type DeptOpt = { id: string; name: string; code: string | null; branchId: string }
-type PositionOpt = {
-  id: string
-  name: string
-  code: string | null
-  depth: number
-  branchId: string
-}
 
 export type PersonnelFormInitial = {
   rosterNo: string
   displayName: string
-  jobGroup: string | null
   firstName: string | null
   lastName: string | null
   idCardNo: string | null
@@ -28,11 +18,7 @@ export type PersonnelFormInitial = {
   address: string | null
   notes: string | null
   isActive: boolean
-  userId: string | null
-  departmentId: string | null
-  positionIds: string[]
-  branchIds: string[]
-  primaryBranchId: string | null
+  branchId: string | null
 }
 
 const fieldClass =
@@ -40,13 +26,11 @@ const fieldClass =
 
 export function HrPersonnelForm({
   branches,
-  users,
   mode = "create",
   personnelId,
   initial,
 }: {
   branches: BranchOpt[]
-  users: UserOpt[]
   mode?: "create" | "edit"
   personnelId?: string
   initial?: PersonnelFormInitial
@@ -55,137 +39,34 @@ export function HrPersonnelForm({
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isActive, setIsActive] = useState(initial?.isActive ?? true)
-  const [userId, setUserId] = useState(initial?.userId ?? "")
   const [rosterNo, setRosterNo] = useState(initial?.rosterNo ?? "")
-  const [suggesting, setSuggesting] = useState(false)
   const [displayName, setDisplayName] = useState(initial?.displayName ?? "")
-  const [jobGroup, setJobGroup] = useState(initial?.jobGroup ?? "")
   const [firstName, setFirstName] = useState(initial?.firstName ?? "")
   const [lastName, setLastName] = useState(initial?.lastName ?? "")
   const [idCardNo, setIdCardNo] = useState(initial?.idCardNo ?? "")
   const [phone, setPhone] = useState(initial?.phone ?? "")
   const [address, setAddress] = useState(initial?.address ?? "")
   const [notes, setNotes] = useState(initial?.notes ?? "")
-  const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "")
-  const [departments, setDepartments] = useState<DeptOpt[]>([])
-  const [positionIds, setPositionIds] = useState<string[]>(initial?.positionIds ?? [])
-  const [positions, setPositions] = useState<PositionOpt[]>([])
-  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>(() => {
-    if (initial?.branchIds.length) return initial.branchIds
-    return branches[0]?.id ? [branches[0].id] : []
-  })
-  const [primaryBranchId, setPrimaryBranchId] = useState<string | null>(
-    () => initial?.primaryBranchId ?? branches[0]?.id ?? null
-  )
+  const [branchId, setBranchId] = useState(initial?.branchId ?? branches[0]?.id ?? "")
 
-  const selectedSet = useMemo(() => new Set(selectedBranchIds), [selectedBranchIds])
-  const selectedBranches = useMemo(
-    () =>
-      selectedBranchIds
-        .map((id) => branches.find((branch) => branch.id === id))
-        .filter((branch): branch is BranchOpt => Boolean(branch)),
-    [selectedBranchIds, branches]
-  )
   const hasExtra =
-    Boolean(initial?.firstName || initial?.lastName || initial?.idCardNo || initial?.address || initial?.notes || initial?.userId)
-
-  useEffect(() => {
-    if (selectedBranchIds.length === 0) {
-      setPrimaryBranchId(null)
-      return
-    }
-    if (!primaryBranchId || !selectedBranchIds.includes(primaryBranchId)) {
-      setPrimaryBranchId(selectedBranchIds[0]!)
-    }
-  }, [selectedBranchIds, primaryBranchId])
-
-  useEffect(() => {
-    if (selectedBranchIds.length === 0) {
-      setDepartments([])
-      setDepartmentId("")
-      return
-    }
-    const qs = selectedBranchIds.map((id) => `branchId=${encodeURIComponent(id)}`).join("&")
-    void fetch(`/api/hr/personnel/department-options?${qs}`)
-      .then((r) => r.json())
-      .then((json) => {
-        const rows = (json.data ?? []) as DeptOpt[]
-        setDepartments(rows)
-        setDepartmentId((prev) => (prev && rows.some((d) => d.id === prev) ? prev : ""))
-      })
-  }, [selectedBranchIds])
-
-  useEffect(() => {
-    if (selectedBranchIds.length === 0) {
-      setPositions([])
-      setPositionIds([])
-      return
-    }
-    const qs = selectedBranchIds.map((id) => `branchId=${encodeURIComponent(id)}`).join("&")
-    void fetch(`/api/hr/personnel/position-options?${qs}`)
-      .then((r) => r.json())
-      .then((json) => {
-        const rows = (json.data ?? []) as PositionOpt[]
-        setPositions(rows)
-        setPositionIds((prev) => prev.filter((id) => rows.some((p) => p.id === id)))
-      })
-  }, [selectedBranchIds])
-
-  async function suggestRoster(force = false) {
-    if (mode !== "create") return
-    if (!force && rosterNo.trim()) return
-    setSuggesting(true)
-    const res = await fetch("/api/hr/personnel/next-roster")
-    const json = (await res.json().catch(() => ({}))) as { data?: { rosterNo?: string }; error?: string }
-    setSuggesting(false)
-    if (res.ok && json.data?.rosterNo) {
-      setRosterNo(json.data.rosterNo)
-      return
-    }
-    if (force) setErr(typeof json.error === "string" ? json.error : "แนะนำรหัสไม่สำเร็จ")
-  }
-
-  useEffect(() => {
-    if (mode !== "create") return
-    void suggestRoster(false)
-    // Fill once on create mount; user can still edit or tap แนะนำรหัส.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode])
-
-  function toggleBranch(id: string) {
-    setSelectedBranchIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return [...next]
-    })
-  }
-
-  function togglePosition(id: string) {
-    setPositionIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
-  }
+    Boolean(initial?.firstName || initial?.lastName || initial?.idCardNo || initial?.address || initial?.notes)
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErr(null)
     setLoading(true)
     const body = {
-      branchIds: selectedBranchIds,
-      primaryBranchId:
-        primaryBranchId && selectedSet.has(primaryBranchId) ? primaryBranchId : selectedBranchIds[0] ?? undefined,
-      rosterNo: rosterNo.trim(),
+      ...(branchId ? (mode === "edit" ? { primaryBranchId: branchId } : { branchId }) : {}),
+      ...(mode === "edit" && { rosterNo: rosterNo.trim() }),
       displayName: displayName.trim(),
-      jobGroup: jobGroup.trim() || null,
       firstName: firstName.trim() || null,
       lastName: lastName.trim() || null,
       idCardNo: idCardNo.trim() || null,
       phone: phone.trim() || null,
       address: address.trim() || null,
       notes: notes.trim() || null,
-      isActive,
-      userId: userId || null,
-      departmentId: departmentId || null,
-      positionIds,
+      ...(mode === "edit" && { isActive }),
     }
     const url = mode === "edit" && personnelId ? `/api/hr/personnel/${personnelId}` : "/api/hr/personnel"
     const res = await fetch(url, {
@@ -209,163 +90,50 @@ export function HrPersonnelForm({
     <GlassForm surfaced onSubmit={onSubmit}>
       {err && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
 
-      <GlassFormSection title="ข้อมูลหลัก" description="กรอกสองช่องนี้ก็บันทึกได้ — รหัสจะแนะนำให้อัตโนมัติ">
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,11rem)_1fr]">
-          <div className="space-y-1.5">
-            <div className="flex items-end gap-2">
-              <div className="min-w-0 flex-1">
-                <GlassInput
-                  label="รหัสรายชื่อ"
-                  name="rosterNo"
-                  required
-                  value={rosterNo}
-                  onChange={(e) => setRosterNo(e.target.value)}
-                  autoComplete="off"
-                />
-              </div>
-              {mode === "create" && (
-                <Button type="button" variant="outline" disabled={suggesting} onClick={() => void suggestRoster(true)}>
-                  {suggesting ? "…" : "แนะนำ"}
-                </Button>
-              )}
-            </div>
-            {mode === "create" && (
-              <p className="text-xs text-muted-foreground">ใช้ทั้งบริษัท ไม่ผูกสาขา — แก้ได้ถ้าเครื่องลงเวลามีรหัสอยู่แล้ว</p>
-            )}
-          </div>
-          <GlassInput
-            label="ชื่อเรียก"
-            name="displayName"
-            required
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            hint="ชื่อในรายการและไฟล์ลงเวลา"
-          />
-        </div>
+      <GlassFormSection
+        description={
+          mode === "create" ? "ชื่อเรียกกับสาขาพอสำหรับบันทึก — รหัสรายชื่อสร้างให้อัตโนมัติ" : undefined
+        }
+      >
         <div className="grid gap-4 sm:grid-cols-2">
-          <GlassInput
-            label="กลุ่มงาน"
-            name="jobGroup"
-            value={jobGroup}
-            onChange={(e) => setJobGroup(e.target.value)}
-            placeholder="เช่น ผลิต, สำนักงาน"
-          />
+          {mode === "edit" && (
+            <GlassInput
+              label="รหัสรายชื่อ"
+              name="rosterNo"
+              required
+              value={rosterNo}
+              onChange={(e) => setRosterNo(e.target.value)}
+              autoComplete="off"
+            />
+          )}
+          <div className={mode === "create" ? "sm:col-span-2" : undefined}>
+            <GlassInput
+              label="ชื่อเรียก"
+              name="displayName"
+              required
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              hint="ชื่อในรายการและไฟล์ลงเวลา"
+            />
+          </div>
+          {branches.length === 0 ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 sm:col-span-2">
+              ยังไม่มีสาขาในระบบ
+            </p>
+          ) : (
+            <Select
+              label="สาขา"
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              options={branches.map((b) => ({ value: b.id, label: `${b.code} — ${b.name}` }))}
+            />
+          )}
           <GlassInput
             label="โทรศัพท์"
             name="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-        </div>
-      </GlassFormSection>
-
-      <GlassFormSection title="สาขาที่ลงเวลาได้" description="เลือกได้หลายสาขา — กด «หลัก» เมื่อมีมากกว่าหนึ่ง">
-        {branches.length === 0 ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">ยังไม่มีสาขาในระบบ</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {branches.map((b) => {
-              const selected = selectedSet.has(b.id)
-              const isPrimary = selected && primaryBranchId === b.id
-              return (
-                <div
-                  key={b.id}
-                  className={`inline-flex items-center overflow-hidden rounded-lg border text-sm ${
-                    selected
-                      ? "border-blue-300 bg-blue-50 text-blue-900"
-                      : "border-border bg-background text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  <button type="button" onClick={() => toggleBranch(b.id)} className="px-3 py-2 text-left">
-                    <span className="font-medium">{b.code}</span>
-                    <span className="ml-1.5 text-muted-foreground">{b.name}</span>
-                  </button>
-                  {selected && selectedBranchIds.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setPrimaryBranchId(b.id)}
-                      className={`border-l px-2 py-2 text-xs ${
-                        isPrimary
-                          ? "border-blue-200 bg-blue-600 font-semibold text-white"
-                          : "border-blue-200 text-blue-700 hover:bg-blue-100"
-                      }`}
-                    >
-                      หลัก
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </GlassFormSection>
-
-      <GlassFormSection title="แผนกและตำแหน่ง" description="แผนกใช้ชุดเดียวกับเครื่องจักร ตำแหน่งคือกล่องในผังองค์กร">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Select
-            label="แผนก"
-            value={departmentId}
-            onChange={(e) => setDepartmentId(e.target.value)}
-            hint={
-              selectedBranchIds.length === 0
-                ? "เลือกสาขาก่อน จึงจะเห็นแผนกของสาขานั้น"
-                : "ไม่บังคับ — แผนกที่ปิดใช้งานจะไม่แสดง"
-            }
-            options={[
-              { value: "", label: "— ไม่ระบุแผนก —" },
-              ...departments.map((d) => {
-                const name = d.code ? `${d.name} (${d.code})` : d.name
-                const branch = branches.find((item) => item.id === d.branchId)
-                const label = selectedBranchIds.length > 1 && branch ? `${name} · ${branch.code}` : name
-                return { value: d.id, label }
-              }),
-            ]}
-          />
-          <div className="sm:col-span-2">
-            <p className="text-sm font-medium text-foreground">ตำแหน่ง</p>
-            {selectedBranches.length === 0 ? (
-              <p className="mt-0.5 text-xs text-muted-foreground">เลือกสาขาก่อน จึงจะเห็นตำแหน่งของสาขานั้น</p>
-            ) : (
-              <div className="mt-2 space-y-3">
-                <p className="text-xs text-muted-foreground">ไม่บังคับ — ติ๊กได้หลายตำแหน่งในแต่ละสาขา</p>
-                {selectedBranches.map((branch) => {
-                  const rows = positions.filter((position) => position.branchId === branch.id)
-                  return (
-                    <div key={branch.id} className="rounded-lg border border-border px-3 py-2">
-                      <p className="text-sm font-medium text-foreground">
-                        {branch.code}
-                        <span className="ml-1.5 font-normal text-muted-foreground">{branch.name}</span>
-                      </p>
-                      {rows.length === 0 ? (
-                        <p className="mt-1 text-xs text-muted-foreground">สาขานี้ยังไม่มีตำแหน่ง</p>
-                      ) : (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {rows.map((p) => {
-                            const selected = positionIds.includes(p.id)
-                            return (
-                              <button
-                                key={p.id}
-                                type="button"
-                                onClick={() => togglePosition(p.id)}
-                                className={`rounded-lg border px-3 py-2 text-left text-sm ${
-                                  selected
-                                    ? "border-blue-300 bg-blue-50 text-blue-900"
-                                    : "border-border bg-background text-foreground hover:bg-muted/60"
-                                }`}
-                              >
-                                {"— ".repeat(p.depth)}
-                                {p.code ? `${p.name} (${p.code})` : p.name}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
         </div>
       </GlassFormSection>
 
@@ -385,19 +153,6 @@ export function HrPersonnelForm({
             <label className="block text-sm font-medium text-foreground">หมายเหตุ</label>
             <textarea name="notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={fieldClass} />
           </div>
-          <Select
-            label="บัญชีผู้ใช้"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            hint="ไม่บังคับ — บัญชีในบริษัทนี้ที่ยังไม่ผูกกับคนอื่น"
-            options={[
-              { value: "", label: "— ไม่ผูกบัญชี —" },
-              ...users.map((u) => ({
-                value: u.id,
-                label: `${`${u.firstName} ${u.lastName}`.trim() || u.username} (${u.username})`,
-              })),
-            ]}
-          />
           {mode === "edit" && (
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input

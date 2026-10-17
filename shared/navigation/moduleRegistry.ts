@@ -32,7 +32,6 @@ export const NAV_ICON_KEYS = [
   "Wallet",
   "Receipt",
   "Network",
-  "Workflow",
 ] as const
 
 export type NavIconKey = (typeof NAV_ICON_KEYS)[number]
@@ -283,30 +282,6 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
         order: 0,
         keywords: ["HR", "personnel", "พนักงาน", "บุคลากร", "รายชื่อ"],
         launcher: { departmentId: "people", capabilityId: "personnel", isPrimary: true },
-      },
-      {
-        type: "link",
-        key: "hr_org",
-        href: "/hr/org",
-        label: "hr_org",
-        icon: "Network",
-        permission: { resource: "hr_personnel", action: "read" },
-        moduleId: "hr_org",
-        order: 1,
-        keywords: ["org", "chart", "ผังองค์กร", "โครงสร้าง", "สายบังคับบัญชา", "ตำแหน่งว่าง"],
-        launcher: { departmentId: "people", capabilityId: "org_chart" },
-      },
-      {
-        type: "link",
-        key: "hr_positions",
-        href: "/hr/positions",
-        label: "hr_positions",
-        icon: "Workflow",
-        permission: { resource: "hr_positions", action: "read" },
-        moduleId: "hr_positions",
-        order: 2,
-        keywords: ["position", "ตำแหน่ง", "อัตรากำลัง", "หน้าที่ความรับผิดชอบ", "JD", "หัวหน้า"],
-        launcher: { departmentId: "people", capabilityId: "positions" },
       },
       {
         type: "link",

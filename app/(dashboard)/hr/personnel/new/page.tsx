@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { listAccessiblePersonnelBranches, listPersonnelUserOptions } from "@/modules/hr"
+import { listAccessiblePersonnelBranches } from "@/modules/hr"
 import { HrPersonnelForm } from "./personnel-form"
 
 export const metadata: Metadata = { title: "เพิ่มบุคลากร" }
@@ -23,21 +23,18 @@ export default async function NewPersonnelPage() {
   if (!canCreate(roles)) redirect("/hr/personnel")
 
   const companyId = session.user.companyId as string
-  const [{ data: branches }, { data: users }] = await Promise.all([
-    listAccessiblePersonnelBranches(prisma, { companyId, roles }),
-    listPersonnelUserOptions(prisma, { companyId, roles }),
-  ])
+  const { data: branches } = await listAccessiblePersonnelBranches(prisma, { companyId, roles })
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <Link href="/hr/personnel" className="text-sm text-blue-600 hover:underline">
           ← บุคลากร
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-foreground">เพิ่มบุคลากร</h1>
-        <p className="mt-1 text-sm text-muted-foreground">กรอกชื่อกับรหัสรายชื่อ เลือกสาขาที่ลงเวลาได้ แล้วบันทึก</p>
+        <p className="mt-1 text-sm text-muted-foreground">กรอกชื่อเรียก เลือกสาขา แล้วบันทึก — ระบบสร้างรหัสรายชื่อให้</p>
       </div>
-      <HrPersonnelForm branches={branches} users={users} />
+      <HrPersonnelForm branches={branches} />
     </div>
   )
 }

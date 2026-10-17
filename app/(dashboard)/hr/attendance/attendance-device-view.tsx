@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
-import { Copy, KeyRound, MonitorSmartphone, Plus } from "lucide-react"
+import { Copy, KeyRound, MonitorSmartphone, Pencil, Plus } from "lucide-react"
 import { fetchJson } from "@/lib/client-fetch"
 import { GlassCard, GlassDialog } from "@/components/glass"
 import { Badge } from "@/components/ui/badge"
@@ -50,6 +50,8 @@ export function AttendanceDeviceView({
   const [busy, setBusy] = useState(false)
   const [issuedKey, setIssuedKey] = useState<{ deviceName: string; key: string } | null>(null)
   const [confirmRotate, setConfirmRotate] = useState<DeviceRow | null>(null)
+  const [renaming, setRenaming] = useState<DeviceRow | null>(null)
+  const [renameName, setRenameName] = useState("")
 
   const load = useCallback(async () => {
     setError(null)
@@ -100,6 +102,30 @@ export function AttendanceDeviceView({
     setConfirmRotate(null)
     if (!res) return
     setIssuedKey({ deviceName: device.name, key: res.data.apiKey })
+    await load()
+  }
+
+  function openRename(device: DeviceRow) {
+    setRenameName(device.name)
+    setRenaming(device)
+  }
+
+  async function saveRename() {
+    if (!renaming) return
+    const next = renameName.trim()
+    if (!next || next === renaming.name) {
+      setRenaming(null)
+      return
+    }
+    const res = await run(() =>
+      fetchJson(`/api/hr/attendance/devices/${renaming.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: next }),
+      })
+    )
+    if (!res) return
+    setRenaming(null)
     await load()
   }
 
@@ -167,7 +193,11 @@ export function AttendanceDeviceView({
                 </dl>
               </div>
               {canUpdate && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => openRename(d)}>
+                    <Pencil className="h-4 w-4 mr-1" aria-hidden />
+                    {t("devices.rename")}
+                  </Button>
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmRotate(d)}>
                     <KeyRound className="h-4 w-4 mr-1" aria-hidden />
                     {d.hasKey ? t("devices.rotateKey") : t("devices.issueKey")}
@@ -236,6 +266,36 @@ export function AttendanceDeviceView({
             </Button>
             <Button type="submit" disabled={busy || !name.trim()}>
               {t("devices.create")}
+            </Button>
+          </div>
+        </form>
+      </GlassDialog>
+
+      <GlassDialog open={renaming != null} onOpenChange={(o) => !o && setRenaming(null)} title={t("devices.renameTitle")} solid>
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void saveRename()
+          }}
+        >
+          <label htmlFor="device-rename" className="block text-sm font-medium text-foreground">
+            {t("devices.name")}
+          </label>
+          <input
+            id="device-rename"
+            autoFocus
+            value={renameName}
+            onChange={(e) => setRenameName(e.target.value)}
+            maxLength={100}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setRenaming(null)}>
+              {t("cancel")}
+            </Button>
+            <Button type="submit" disabled={busy || !renameName.trim() || renameName.trim() === renaming?.name}>
+              {t("devices.renameSave")}
             </Button>
           </div>
         </form>

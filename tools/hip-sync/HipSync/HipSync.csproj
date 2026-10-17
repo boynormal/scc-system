@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>HipSync</AssemblyName>
+    <RootNamespace>HipSync</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>HIP Sync</Product>
+    <Company>SCC</Company>
+    <Description>ซิงค์ข้อมูลสแกนนิ้วจาก HIP PremiumTime เข้าระบบ SCC</Description>
+    <Copyright>SCC</Copyright>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Data" />
+  </ItemGroup>
+
+</Project>

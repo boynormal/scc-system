@@ -47,6 +47,7 @@ npm run dev
 - Production / staging: **`npx prisma migrate deploy`** (ไม่ใช้ `migrate dev` บน prod)
 - Source of truth ของ schema: [`prisma/schema.prisma`](../../prisma/schema.prisma) — ดู [DATABASE.md](../DATABASE.md)
 - ก่อน migrate: สำรอง DB ตาม [BACKUP.md](./BACKUP.md) และ checklist ใน rollout-runbook
+- บันทึกเวลา HIP + การลบสมุดหน้าที่: [HIP-ATTENDANCE-DEPLOY.md](./HIP-ATTENDANCE-DEPLOY.md) — สอง migration นี้ลบข้อมูลเดิม ต้อง dump ก่อน
 
 ## หลัง deploy — smoke ขั้นต่ำ
 

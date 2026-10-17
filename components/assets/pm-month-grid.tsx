@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { GlassDialog } from "@/components/glass"
 import type { PmMonthCell } from "@/modules/assets/application/asset-pm-service"
 
@@ -27,12 +27,24 @@ export function PmMonthGrid({
   todayKey: string
 }) {
   const t = useTranslations("pmCheck")
+  const locale = useLocale()
   const [open, setOpen] = useState<{
     assetName: string
     day: number
     cell: PmMonthCell
   } | null>(null)
   const days = Array.from({ length: daysInMonth }, (_, index) => index + 1)
+  const clock = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "Asia/Bangkok",
+  })
+  const stamp = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Bangkok",
+  })
   const isSunday = (day: number) => {
     const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T12:00:00+07:00`
     return new Date(iso).getUTCDay() === 0
@@ -92,18 +104,24 @@ export function PmMonthGrid({
                       <button
                         type="button"
                         disabled={!cell}
-                        aria-label={label}
+                        aria-label={cell ? `${label} ${clock.format(new Date(cell.recordedAt))}` : label}
                         onClick={() => cell && setOpen({ assetName: row.name, day, cell })}
-                        className={`block h-8 w-full rounded ${
+                        className={`flex min-h-8 w-full flex-col items-center justify-center gap-0.5 rounded px-0.5 py-1 ${
                           cell?.status === "fail"
-                            ? "bg-[#facc15] hover:bg-[#eab308]"
+                            ? "bg-[#facc15] text-[#713f12] hover:bg-[#eab308]"
                             : cell?.status === "pass"
-                              ? "bg-[#059669] hover:bg-[#047857]"
+                              ? "bg-[#059669] text-white hover:bg-[#047857]"
                               : sunday
                                 ? "bg-[#fda4af]"
                                 : "bg-[#cbd5e1]"
                         } disabled:cursor-default`}
-                      />
+                      >
+                        {cell ? (
+                          <span className="text-[10px] font-semibold leading-none tabular-nums">
+                            {clock.format(new Date(cell.recordedAt))}
+                          </span>
+                        ) : null}
+                      </button>
                     </td>
                   )
                 })}
@@ -123,6 +141,7 @@ export function PmMonthGrid({
       >
         {open && (
           <div className="space-y-3">
+            <p className="text-sm font-semibold text-[#0f172a]">{stamp.format(new Date(open.cell.recordedAt))}</p>
             <p className="text-sm text-muted-foreground">
               {open.cell.status === "fail" ? t("fail") : t("pass")}
               {open.cell.roundCount > 1 ? ` · ${t("roundCount", { count: open.cell.roundCount })}` : ""}

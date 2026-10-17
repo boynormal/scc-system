@@ -337,7 +337,8 @@
     "back": "Back",
     "needChoice": "Choose a result for every item",
     "saveFailed": "Could not save",
-    "publicTitle": "PM check"
+    "publicTitle": "PM check",
+    "recordClock": "Recorded at"
   },
   "transport": {
     "overviewTitle": "Transport overview",

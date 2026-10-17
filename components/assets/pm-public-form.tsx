@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
@@ -24,9 +24,11 @@ const choiceClass: Record<Status, { idle: string; selected: string }> = {
 export function PmPublicForm({
   token,
   items,
+  recordedAt,
 }: {
   token: string
   items: { id: string; sequence: number; name: string }[]
+  recordedAt?: string
 }) {
   const t = useTranslations("pmCheck")
   const [choices, setChoices] = useState<Record<string, Status | "">>({})
@@ -48,6 +50,7 @@ export function PmPublicForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          recordedAt,
           results: items.map((item) => ({
             itemId: item.id,
             status: choices[item.id],
@@ -128,5 +131,69 @@ export function PmPublicForm({
         {t("submit")}
       </Button>
     </form>
+  )
+}
+
+const BANGKOK_CLOCK = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+  timeZone: "Asia/Bangkok",
+})
+
+function useBangkokClock() {
+  const [now, setNow] = useState<Date | null>(null)
+  useEffect(() => {
+    const tick = () => setNow(new Date())
+    tick()
+    const timer = window.setInterval(tick, 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+  return now
+}
+
+export function PmPublicCard({
+  token,
+  items,
+  title,
+  assetName,
+  assetCode,
+  statusLabel,
+  statusClass,
+}: {
+  token: string
+  items: { id: string; sequence: number; name: string }[]
+  title: string
+  assetName: string
+  assetCode: string
+  statusLabel: string
+  statusClass: string
+}) {
+  const t = useTranslations("pmCheck")
+  const now = useBangkokClock()
+
+  return (
+    <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-[#94a3b8] bg-[#e8eef5] shadow-md">
+      <header className="bg-[#1e293b] px-5 py-5 text-white">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold tracking-wide text-[#cbd5e1]">{title}</p>
+            <h1 className="mt-1 text-2xl font-bold leading-tight">{assetName}</h1>
+            <p className="mt-1 text-sm text-[#cbd5e1]">{assetCode}</p>
+          </div>
+          <div className="shrink-0 rounded-xl border border-[#334155] bg-[#0f172a] px-3 py-2 text-right">
+            <p className="text-[10px] font-semibold tracking-wide text-[#94a3b8]">{t("recordClock")}</p>
+            <p className="mt-1 font-mono text-xl font-semibold tabular-nums leading-none text-white">
+              {now ? BANGKOK_CLOCK.format(now) : "--:--:--"}
+            </p>
+          </div>
+        </div>
+        <p className={`mt-4 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${statusClass}`}>{statusLabel}</p>
+      </header>
+      <div className="px-4 py-4">
+        <PmPublicForm token={token} items={items} recordedAt={now?.toISOString()} />
+      </div>
+    </div>
   )
 }

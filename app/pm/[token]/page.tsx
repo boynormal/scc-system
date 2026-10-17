@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server"
 import { NotFoundError } from "@/lib/errors"
 import { prisma } from "@/shared/db"
 import { getPublicAssetPm, isPmPublicToken } from "@/modules/assets"
-import { PmPublicForm } from "@/components/assets/pm-public-form"
+import { PmPublicCard } from "@/components/assets/pm-public-form"
 
 export async function generateMetadata() {
   const t = await getTranslations("pmCheck")
@@ -42,20 +42,15 @@ export default async function PublicAssetPmPage({ params }: { params: Promise<{ 
 
   return (
     <main className="min-h-screen bg-[#d5dee8] px-4 py-6 sm:py-10">
-      <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-[#94a3b8] bg-[#e8eef5] shadow-md">
-        <header className="bg-[#1e293b] px-5 py-5 text-white">
-          <p className="text-xs font-semibold tracking-wide text-[#cbd5e1]">{t("publicTitle")}</p>
-          <h1 className="mt-1 text-2xl font-bold leading-tight">{assetName}</h1>
-          <p className="mt-1 text-sm text-[#cbd5e1]">{assetCode}</p>
-          <p className={`mt-4 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${dueChip[dueStatus] ?? "bg-[#334155] text-white"}`}>
-            {t(`status_${dueStatus}`)}
-            {nextDueDate ? ` · ${nextDueDate}` : ""}
-          </p>
-        </header>
-        <div className="px-4 py-4">
-          <PmPublicForm token={token} items={items} />
-        </div>
-      </div>
+      <PmPublicCard
+        token={token}
+        items={items}
+        title={t("publicTitle")}
+        assetName={assetName}
+        assetCode={assetCode}
+        statusClass={dueChip[dueStatus] ?? "bg-[#334155] text-white"}
+        statusLabel={`${t(`status_${dueStatus}`)}${nextDueDate ? ` · ${nextDueDate}` : ""}`}
+      />
     </main>
   )
 }

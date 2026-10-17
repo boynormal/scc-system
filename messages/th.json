@@ -335,7 +335,8 @@
     "back": "กลับ",
     "needChoice": "เลือกผลให้ครบทุกรายการ",
     "saveFailed": "บันทึกไม่สำเร็จ",
-    "publicTitle": "ตรวจ PM"
+    "publicTitle": "ตรวจ PM",
+    "recordClock": "เวลาบันทึก"
   },
   "transport": {
     "overviewTitle": "ภาพรวมขนส่ง",

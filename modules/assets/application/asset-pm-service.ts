@@ -31,6 +31,7 @@ export const upsertAssetPmSchema = z.object({
 })
 
 export const submitAssetPmRoundSchema = z.object({
+  recordedAt: z.string().min(1).max(40).optional(),
   results: z
     .array(
       z.object({
@@ -399,10 +400,22 @@ export async function getPublicAssetPm(db: PrismaClient, token: string, now?: Da
   }
 }
 
+const RECORD_CLOCK_SKEW_MS = 2 * 60 * 1000
+
+/** Use the clock time shown on the public form when it is close to the server clock. */
+export function resolvePmRecordedAt(candidate: string | undefined, now: Date): Date {
+  if (!candidate) return now
+  const at = new Date(candidate)
+  if (Number.isNaN(at.getTime())) return now
+  if (Math.abs(at.getTime() - now.getTime()) > RECORD_CLOCK_SKEW_MS) return now
+  return at
+}
+
 export async function submitPublicAssetPmRound(
   db: PrismaClient,
   token: string,
-  input: unknown
+  input: unknown,
+  now = new Date()
 ) {
   const plan = await db.assetPmPlan.findUnique({
     where: { publicToken: token },
@@ -428,6 +441,7 @@ export async function submitPublicAssetPmRound(
   const round = await db.assetPmRound.create({
     data: {
       planId: plan.id,
+      recordedAt: resolvePmRecordedAt(parsed.recordedAt, now),
       results: {
         create: plan.items.map((item) => {
           const result = byId.get(item.id)

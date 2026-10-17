@@ -17,6 +17,7 @@ import {
   rotateAssetPmToken,
   submitPublicAssetPmRound,
   upsertAssetPm,
+  resolvePmRecordedAt,
   withPmCalendarAssetFilters,
 } from "@/modules/assets/application/asset-pm-service"
 
@@ -248,6 +249,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
       }: {
         data: {
           planId: string
+          recordedAt?: Date
           recordedBy?: string
           results: {
             create: {
@@ -264,7 +266,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
         const round: PlanRound = {
           id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
           planId: data.planId,
-          recordedAt: new Date("2026-10-15T04:00:00.000Z"),
+          recordedAt: data.recordedAt ?? new Date("2026-10-15T04:00:00.000Z"),
           results: data.results.create,
         }
         state.plans.find((row) => row.id === data.planId)?.rounds.unshift(round)
@@ -509,6 +511,29 @@ describe("public asset PM round", () => {
       { itemId: ITEM_2, sequence: 2, itemName: "น้ำมันเครื่อง", status: "fail", remark: "ต่ำ" },
     ])
     expect(createPmPublicToken()).toMatch(/^[A-Za-z0-9_-]{43}$/)
+  })
+
+  it("stores the form clock when it matches the server and ignores a far clock", async () => {
+    const now = new Date("2026-10-16T03:00:00.000Z")
+    const shown = new Date(now.getTime() - 30_000)
+    expect(resolvePmRecordedAt(shown.toISOString(), now).toISOString()).toBe(shown.toISOString())
+    expect(resolvePmRecordedAt(new Date(now.getTime() - 3 * 60_000).toISOString(), now)).toEqual(now)
+    expect(resolvePmRecordedAt("not-a-date", now)).toEqual(now)
+
+    const { db, state } = fakeDb({ assets: [assetRow()], plans: [planRow()] })
+    await submitPublicAssetPmRound(
+      db,
+      TOKEN,
+      {
+        recordedAt: shown.toISOString(),
+        results: [
+          { itemId: ITEM_1, status: "pass", remark: null },
+          { itemId: ITEM_2, status: "pass", remark: null },
+        ],
+      },
+      now
+    )
+    expect(state.plans[0]?.rounds[0]?.recordedAt.toISOString()).toBe(shown.toISOString())
   })
 
   it("rejects a skipped result", async () => {

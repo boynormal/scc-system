@@ -90,6 +90,43 @@ function ScanCell({
   )
 }
 
+function PunchTimeList({
+  detail,
+  timeZone,
+  locale,
+  loadingLabel,
+  errorLabel,
+  emptyLabel,
+}: {
+  detail: Punch[] | "loading" | "error" | undefined
+  timeZone: string
+  locale: string
+  loadingLabel: string
+  errorLabel: string
+  emptyLabel: string
+}) {
+  if (detail === "loading" || detail === undefined) return <p className="text-sm font-medium text-foreground">{loadingLabel}</p>
+  if (detail === "error") return <p className="text-sm font-medium text-red-600">{errorLabel}</p>
+  if (detail.length === 0) return <p className="text-sm font-medium text-foreground">{emptyLabel}</p>
+  return (
+    <div className="flex flex-wrap gap-2">
+      {detail.map((punch) => (
+        <span
+          key={punch.id}
+          title={`${punch.deviceName} · ${punch.badgeNumber}`}
+          className={
+            punch.counted
+              ? "rounded border border-border bg-white px-2 py-1 font-mono text-sm font-medium text-foreground"
+              : "rounded border border-dashed border-border px-2 py-1 font-mono text-sm text-foreground line-through"
+          }
+        >
+          {formatTime(punch.punchAt, timeZone, locale)} · {punch.branchCode}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function OtStatus({ item, pendingLabel, notCountedLabel }: { item: OtView | null; pendingLabel: string; notCountedLabel: string }) {
   if (!item) return <span className="text-foreground">—</span>
   if (item.status === "OT") return <span className="font-mono font-medium text-foreground">{formatMinutes(item.minutes)}</span>
@@ -765,29 +802,14 @@ export function AttendanceDayView({
             <div>
               <div className="text-xs font-semibold">{t("day.managePunches")}</div>
               <div className="mt-2">
-                {punches[manageRow.id] === "loading" || punches[manageRow.id] === undefined ? (
-                  <p className="text-sm font-medium">{t("loading")}</p>
-                ) : punches[manageRow.id] === "error" ? (
-                  <p className="text-sm font-medium text-red-600">{t("day.punchesError")}</p>
-                ) : punches[manageRow.id].length === 0 ? (
-                  <p className="text-sm font-medium">{t("day.noPunches")}</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {punches[manageRow.id].map((punch) => (
-                      <span
-                        key={punch.id}
-                        title={`${punch.deviceName} · ${punch.badgeNumber}`}
-                        className={
-                          punch.counted
-                            ? "rounded border border-border bg-white px-2 py-1 font-mono text-sm font-medium"
-                            : "rounded border border-dashed border-border px-2 py-1 font-mono text-sm line-through"
-                        }
-                      >
-                        {formatTime(punch.punchAt, tz, locale)} · {punch.branchCode}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <PunchTimeList
+                  detail={punches[manageRow.id]}
+                  timeZone={tz}
+                  locale={locale}
+                  loadingLabel={t("loading")}
+                  errorLabel={t("day.punchesError")}
+                  emptyLabel={t("day.noPunches")}
+                />
               </div>
             </div>
             <div>
@@ -883,29 +905,14 @@ export function AttendanceDayView({
         )}
         {manageRow && manageStep === "punches" && (
           <div className="space-y-2 text-foreground">
-            {punches[manageRow.id] === "loading" || punches[manageRow.id] === undefined ? (
-              <p className="text-sm font-medium">{t("loading")}</p>
-            ) : punches[manageRow.id] === "error" ? (
-              <p className="text-sm font-medium text-red-600">{t("day.punchesError")}</p>
-            ) : punches[manageRow.id].length === 0 ? (
-              <p className="text-sm font-medium">{t("day.noPunches")}</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {punches[manageRow.id].map((punch) => (
-                  <span
-                    key={punch.id}
-                    title={`${punch.deviceName} · ${punch.badgeNumber}`}
-                    className={
-                      punch.counted
-                        ? "rounded border border-border bg-background px-2 py-1 font-mono text-sm font-medium text-foreground"
-                        : "rounded border border-dashed border-border px-2 py-1 font-mono text-sm text-foreground line-through"
-                    }
-                  >
-                    {formatTime(punch.punchAt, tz, locale)} · {punch.branchCode}
-                  </span>
-                ))}
-              </div>
-            )}
+            <PunchTimeList
+              detail={punches[manageRow.id]}
+              timeZone={tz}
+              locale={locale}
+              loadingLabel={t("loading")}
+              errorLabel={t("day.punchesError")}
+              emptyLabel={t("day.noPunches")}
+            />
           </div>
         )}
         {manageRow && manageStep === "note" && (

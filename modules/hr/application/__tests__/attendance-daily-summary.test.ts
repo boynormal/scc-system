@@ -4,6 +4,7 @@ import {
   isDateKey,
   localDateKey,
   summarizeDay,
+  summarizeHomeBranchDay,
   summarizePunchesByDay,
   zonedDayRange,
 } from "@/modules/hr/application/attendance-daily-summary"
@@ -78,5 +79,40 @@ describe("summarizePunchesByDay", () => {
     expect([...out.keys()].sort()).toEqual(["a|2026-10-17", "a|2026-10-18", "b|2026-10-17"])
     expect(out.get("a|2026-10-17")?.summary.punchCount).toBe(2)
     expect(out.get("a|2026-10-18")?.summary.status).toBe("SINGLE_PUNCH")
+  })
+})
+
+describe("summarizeHomeBranchDay", () => {
+  const person = {
+    personnelId: "pad-person",
+    rosterNo: "001",
+    displayName: "สมชาย",
+    jobGroup: null,
+    badgeNumber: "12",
+  }
+
+  it("labels in and out with the scanner branch of each punch", () => {
+    const rows = summarizeHomeBranchDay([
+      { ...person, punchAt: at("2026-10-17T01:00:00Z"), branchCode: "NRS" },
+      { ...person, punchAt: at("2026-10-17T10:00:00Z"), branchCode: "PAD" },
+    ])
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      firstInBranchCode: "NRS",
+      lastOutBranchCode: "PAD",
+      status: "COMPLETE",
+      punchCount: 2,
+    })
+  })
+
+  it("keeps a person off the scanner branch when their home branch is elsewhere", () => {
+    const punches = [
+      { ...person, homeBranchId: "pad", punchAt: at("2026-10-17T01:00:00Z"), branchCode: "NRS" },
+    ]
+    const onScannerBranch = punches.filter((punch) => punch.homeBranchId === "nrs")
+    const onHomeBranch = punches.filter((punch) => punch.homeBranchId === "pad")
+    expect(summarizeHomeBranchDay(onScannerBranch)).toEqual([])
+    expect(summarizeHomeBranchDay(onHomeBranch)).toHaveLength(1)
+    expect(summarizeHomeBranchDay(onHomeBranch)[0]?.firstInBranchCode).toBe("NRS")
   })
 })

@@ -1,17 +1,19 @@
 import { Suspense } from "react"
 import { Metadata } from "next"
 import Link from "next/link"
-import { Plus, Users } from "lucide-react"
+import { Users } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { listAccessiblePersonnelBranches, listPersonnel } from "@/modules/hr"
+import { listAccessiblePersonnelBranches, listPersonnel, listPersonnelDepartments } from "@/modules/hr"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { GlassCard } from "@/components/glass"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
 import { PersonnelFilters } from "./personnel-filters"
+import { PersonnelCreateButton } from "./personnel-create-button"
+import { PersonnelRowActions } from "./personnel-row-actions"
 
 export const metadata: Metadata = { title: "บุคลากร" }
 
@@ -29,6 +31,20 @@ function canCreate(roles: UserRole[]) {
   )
 }
 
+function canUpdate(roles: UserRole[]) {
+  return (
+    isAdminInAnyBranch(roles) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "hr_personnel", "update"))
+  )
+}
+
+function canDelete(roles: UserRole[]) {
+  return (
+    isAdminInAnyBranch(roles) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "hr_personnel", "delete"))
+  )
+}
+
 export default async function HrPersonnelPage(props: {
   searchParams: Promise<{ search?: string; branchId?: string; isActive?: string; page?: string }>
 }) {
@@ -43,7 +59,7 @@ export default async function HrPersonnelPage(props: {
   const isActiveRaw = searchParams.isActive
   const isActive = isActiveRaw === "true" ? true : isActiveRaw === "false" ? false : null
 
-  const [{ data: list, total }, { data: branches }] = await Promise.all([
+  const [{ data: list, total }, { data: branches }, { data: departments }] = await Promise.all([
     listPersonnel(prisma, {
       companyId,
       roles,
@@ -54,6 +70,7 @@ export default async function HrPersonnelPage(props: {
       pageSize: SSR_PAGE_SIZE,
     }),
     listAccessiblePersonnelBranches(prisma, { companyId, roles }),
+    listPersonnelDepartments(prisma, { companyId, roles }),
   ])
 
   const totalPages = Math.max(1, Math.ceil(total / SSR_PAGE_SIZE))
@@ -72,15 +89,7 @@ export default async function HrPersonnelPage(props: {
             ข้อมูลคน · รหัสรายชื่อต่อบริษัท · สาขาหลักหนึ่งสาขา ลงเวลาข้ามสาขาได้เมื่อผูกเลขสแกน
           </p>
         </div>
-        {canCreate(roles) && (
-          <Link
-            href="/hr/personnel/new"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            เพิ่ม
-          </Link>
-        )}
+        {canCreate(roles) && <PersonnelCreateButton branches={branches} departments={departments} />}
       </div>
 
       <GlassCard padding="sm">
@@ -107,10 +116,13 @@ export default async function HrPersonnelPage(props: {
                     <th className="p-3 font-medium">กลุ่มงาน</th>
                     <th className="p-3 font-medium">สาขา</th>
                     <th className="p-3 font-medium">สถานะ</th>
+                    <th className="p-3 font-medium text-right">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((p) => (
+                  {list.map((p) => {
+                    const primary = p.branchAssignments.find((a) => a.isPrimary)?.branch ?? p.branch
+                    return (
                     <tr key={p.id} className="border-b border-border hover:bg-muted/60/80">
                       <td className="p-3 font-mono text-foreground">
                         <Link href={`/hr/personnel/${p.id}`} className="text-blue-700 hover:underline">
@@ -122,31 +134,9 @@ export default async function HrPersonnelPage(props: {
                           {p.displayName}
                         </Link>
                       </td>
-                      <td className="p-3 text-muted-foreground">{p.jobGroup ?? "—"}</td>
+                      <td className="p-3 text-foreground">{p.department?.name ?? p.jobGroup ?? "—"}</td>
                       <td className="p-3 text-muted-foreground">
-                        {p.branchAssignments.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {p.branchAssignments.map((a) => (
-                              <Badge
-                                key={a.id}
-                                className={
-                                  a.isPrimary
-                                    ? "bg-blue-100 text-blue-800 font-medium"
-                                    : "bg-muted text-foreground"
-                                }
-                              >
-                                {a.branch.code}
-                                {a.isPrimary ? " · หลัก" : ""}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : p.branch ? (
-                          <span>
-                            {p.branch.code} — {p.branch.name}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
+                        {primary ? `${primary.code} — ${primary.name}` : "—"}
                       </td>
                       <td className="p-3">
                         {p.isActive ? (
@@ -155,8 +145,33 @@ export default async function HrPersonnelPage(props: {
                           <Badge variant="outline">ปิด</Badge>
                         )}
                       </td>
+                      <td className="p-3 text-right">
+                        <PersonnelRowActions
+                          person={{
+                            id: p.id,
+                            rosterNo: p.rosterNo,
+                            displayName: p.displayName,
+                            jobGroup: p.department?.name ?? p.jobGroup,
+                            departmentId: p.departmentId,
+                            firstName: p.firstName,
+                            lastName: p.lastName,
+                            idCardNo: p.idCardNo,
+                            phone: p.phone,
+                            address: p.address,
+                            notes: p.notes,
+                            isActive: p.isActive,
+                            branchId: primary?.id ?? p.branchId,
+                            branchLabel: primary ? `${primary.code} — ${primary.name}` : "—",
+                          }}
+                          branches={branches}
+                          departments={departments}
+                          canUpdate={canUpdate(roles)}
+                          canDelete={canDelete(roles)}
+                        />
+                      </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

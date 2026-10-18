@@ -39,11 +39,6 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     : row.branch
       ? `${row.branch.code} — ${row.branch.name}`
       : "—"
-  const otherBranches = row.branchAssignments
-    .filter((a) => !a.isPrimary)
-    .map((a) => `${a.branch.code} — ${a.branch.name}`)
-    .join(", ")
-
   const fields: { label: string; value: string }[] = [
     { label: "รหัสรายชื่อ", value: row.rosterNo },
     { label: "ชื่อเรียก", value: row.displayName },
@@ -55,7 +50,6 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     { label: "ที่อยู่", value: row.address ?? "—" },
     { label: "หมายเหตุ", value: row.notes ?? "—" },
     { label: "สาขา", value: branchLabel },
-    ...(otherBranches ? [{ label: "ลงเวลาที่สาขาอื่น", value: otherBranches }] : []),
   ]
 
   return (

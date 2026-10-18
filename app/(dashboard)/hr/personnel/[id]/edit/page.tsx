@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { getPersonnel, listAccessiblePersonnelBranches } from "@/modules/hr"
+import { getPersonnel, listAccessiblePersonnelBranches, listPersonnelDepartments } from "@/modules/hr"
 import { HrPersonnelForm } from "../../new/personnel-form"
 
 function canUpdate(roles: UserRole[]) {
@@ -30,7 +30,10 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const { data: branches } = await listAccessiblePersonnelBranches(prisma, { companyId, roles })
+  const [{ data: branches }, { data: departments }] = await Promise.all([
+    listAccessiblePersonnelBranches(prisma, { companyId, roles }),
+    listPersonnelDepartments(prisma, { companyId, roles }),
+  ])
 
   const primary = row.branchAssignments.find((a) => a.isPrimary)?.branchId ?? row.branchId
 
@@ -47,9 +50,12 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
         mode="edit"
         personnelId={row.id}
         branches={branches}
+        departments={departments}
         initial={{
           rosterNo: row.rosterNo,
           displayName: row.displayName,
+          jobGroup: row.jobGroup,
+          departmentId: row.departmentId,
           firstName: row.firstName,
           lastName: row.lastName,
           idCardNo: row.idCardNo,

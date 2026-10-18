@@ -87,6 +87,74 @@ export function summarizeDay(times: Date[]): DaySummary | null {
   }
 }
 
+export type HomeBranchPunch = {
+  personnelId: string
+  punchAt: Date
+  branchCode: string
+  badgeNumber: string
+  rosterNo: string
+  displayName: string
+  jobGroup: string | null
+}
+
+export type HomeBranchDayRow = {
+  id: string
+  personnelId: string
+  rosterNo: string
+  displayName: string
+  jobGroup: string | null
+  badgeNumbers: string[]
+  firstIn: Date
+  lastOut: Date | null
+  firstInBranchCode: string
+  lastOutBranchCode: string | null
+  punchCount: number
+  workedMinutes: number
+  status: AttendanceDayStatus
+}
+
+/** รวมสแกนของคนหนึ่งในวันเดียว แม้คนละสาขาเครื่อง — แถวนี้เป็นของสาขาหลัก */
+export function summarizeHomeBranchDay(punches: HomeBranchPunch[]): HomeBranchDayRow[] {
+  const byPerson = new Map<string, HomeBranchPunch[]>()
+  for (const punch of punches) {
+    const list = byPerson.get(punch.personnelId)
+    if (list) list.push(punch)
+    else byPerson.set(punch.personnelId, [punch])
+  }
+
+  const rows: HomeBranchDayRow[] = []
+  for (const [personnelId, list] of byPerson) {
+    const sorted = [...list].sort((a, b) => a.punchAt.getTime() - b.punchAt.getTime())
+    const kept: HomeBranchPunch[] = []
+    for (const punch of sorted) {
+      const previous = kept[kept.length - 1]
+      if (previous && punch.punchAt.getTime() - previous.punchAt.getTime() < DUPLICATE_PUNCH_WINDOW_MS) continue
+      kept.push(punch)
+    }
+    const summary = summarizeDay(kept.map((punch) => punch.punchAt))
+    if (!summary || kept.length === 0) continue
+    const first = kept[0]!
+    const last = kept.length > 1 ? kept[kept.length - 1]! : null
+    rows.push({
+      id: personnelId,
+      personnelId,
+      rosterNo: first.rosterNo,
+      displayName: first.displayName,
+      jobGroup: first.jobGroup,
+      badgeNumbers: [...new Set(kept.map((punch) => punch.badgeNumber))],
+      firstIn: summary.firstIn,
+      lastOut: summary.lastOut,
+      firstInBranchCode: first.branchCode,
+      lastOutBranchCode: last?.branchCode ?? null,
+      punchCount: summary.punchCount,
+      workedMinutes: summary.workedMinutes,
+      status: summary.status,
+    })
+  }
+  rows.sort((a, b) => a.firstIn.getTime() - b.firstIn.getTime())
+  return rows
+}
+
 export type PunchForSummary = { personnelId: string; punchAt: Date }
 
 /** จัดกลุ่ม punch เป็น (personnelId, วันที่สาขา) แล้วสรุป */

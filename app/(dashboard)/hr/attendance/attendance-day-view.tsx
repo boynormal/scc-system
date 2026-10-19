@@ -423,7 +423,7 @@ export function AttendanceDayView({
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [otError, setOtError] = useState<{ key: string; message: string } | null>(null)
   const [manageId, setManageId] = useState<string | null>(null)
-  const [manageStep, setManageStep] = useState<"ot" | "note" | "punches" | "branch" | "detail" | null>(null)
+  const [manageStep, setManageStep] = useState<"ot" | "note" | "punches" | "branch" | "detail" | "time" | null>(null)
   const [noteDraft, setNoteDraft] = useState("")
   const [timeIn, setTimeIn] = useState("")
   const [timeOut, setTimeOut] = useState("")

@@ -41,7 +41,7 @@ async function main() {
     update: {},
     create: {
       id: "00000000-0000-0000-0000-000000000002",
-      branchId: branch.id,
+      companyId: company.id,
       code: "MAINT",
       name: "แผนกซ่อมบำรุง",
       isActive: true,

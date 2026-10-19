@@ -9,11 +9,9 @@ export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  // Auth-only: used as dropdown on machine forms
-  const branchId = new URL(req.url).searchParams.get("branchId")
+  // Auth-only: used as a company-wide dropdown. A branchId query is ignored.
   const data = await listDepartments(prisma, {
     companyId: session.user.companyId as string,
-    branchId,
   })
 
   return NextResponse.json({ data })

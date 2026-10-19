@@ -18,6 +18,24 @@ export function canAttendanceAnyBranch(roles: UserRole[], action: Action): boole
   )
 }
 
+/** จัดการเครื่องสแกน: settings update ของสาขานั้น ไม่ใช้ branch sharing ของบุคลากร */
+export function canManageAttendanceDevice(roles: UserRole[], branchId: string): boolean {
+  return hasPermission(roles, branchId, "settings", "update")
+}
+
+export async function assertCanManageAttendanceDevice(
+  db: PrismaClient,
+  params: { companyId: string; roles: UserRole[]; branchId: string }
+): Promise<{ id: string; timezone: string; code: string; name: string }> {
+  const branch = await db.branch.findFirst({
+    where: { id: params.branchId, companyId: params.companyId, deletedAt: null, isActive: true },
+    select: { id: true, timezone: true, code: true, name: true },
+  })
+  if (!branch) throw new ValidationError("สาขาไม่ถูกต้อง")
+  if (!canManageAttendanceDevice(params.roles, branch.id)) throw new ForbiddenError()
+  return branch
+}
+
 /** ตรวจสาขาอยู่ในบริษัท + ผู้ใช้มีสิทธิ์ hr_attendance ที่สาขานั้น (รวม branch sharing ของ personnel) */
 export async function assertAttendanceBranch(
   db: PrismaClient,

@@ -26,6 +26,10 @@ type DayRow = {
   badgeNumbers: string[]
   firstIn: string | null
   lastOut: string | null
+  scanFirstIn: string | null
+  scanLastOut: string | null
+  timeConfirmed: boolean
+  scanChanged: boolean
   firstInBranchCode: string | null
   lastOutBranchCode: string | null
   punchCount: number
@@ -70,22 +74,92 @@ type Punch = { id: string; punchAt: string; badgeNumber: string; deviceName: str
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
+function timeInputValue(iso: string | null, timeZone: string): string {
+  if (!iso) return ""
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso))
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "00"
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "00"
+  return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`
+}
+
 function ScanCell({
-  iso,
+  confirmedIso,
+  scanIso,
+  originalLabel,
+  confirmedLabel,
   branchCode,
   timeZone,
   locale,
 }: {
-  iso: string | null
+  confirmedIso: string | null
+  scanIso: string | null
+  originalLabel: string
+  confirmedLabel: string
   branchCode: string | null
   timeZone: string
   locale: string
 }) {
-  if (!iso) return <span className="text-foreground">—</span>
   return (
-    <div>
-      <div className="font-mono font-medium text-foreground">{formatTime(iso, timeZone, locale)}</div>
-      {branchCode ? <div className="text-xs font-medium text-foreground">{branchCode}</div> : null}
+    <div className="flex items-center gap-1">
+      <TimeBox label={originalLabel} value={scanIso ? formatTime(scanIso, timeZone, locale) : "—"} />
+      {confirmedIso ? (
+        <>
+          <span className="text-sm font-semibold text-red-600" aria-hidden>
+            →
+          </span>
+          <TimeBox label={confirmedLabel} value={formatTime(confirmedIso, timeZone, locale)} emphasize />
+        </>
+      ) : null}
+      {branchCode ? <span className="text-xs font-medium text-foreground">{branchCode}</span> : null}
+    </div>
+  )
+}
+
+function TimeBox({ label, value, emphasize = false }: { label: string; value: string; emphasize?: boolean }) {
+  const highlighted = emphasize && value !== "—"
+  return (
+    <div className="min-w-[3.4rem] rounded-md border border-border bg-background px-1 py-1 text-center">
+      <div className="text-[10px] font-medium leading-tight text-foreground">{label}</div>
+      <div className={highlighted ? "font-mono text-xs font-semibold text-red-600" : "font-mono text-xs font-semibold text-foreground"}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function OtPair({
+  sideLabel,
+  item,
+  notCountedLabel,
+  timeZone,
+  locale,
+}: {
+  sideLabel: string
+  item: OtView
+  notCountedLabel: string
+  timeZone: string
+  locale: string
+}) {
+  const confirmed = item.status === "OT" || item.status === "NOT_OT"
+  return (
+    <div className="flex items-center gap-1 whitespace-nowrap text-xs text-foreground">
+      <span className="font-semibold">{sideLabel}</span>
+      <span className="font-mono">{formatTime(item.at, timeZone, locale)}</span>
+      {confirmed ? (
+        <>
+          <span className="font-semibold text-red-600" aria-hidden>
+            →
+          </span>
+          <span className="font-mono font-semibold text-red-600">
+            {item.status === "OT" ? formatMinutes(item.minutes) : notCountedLabel}
+          </span>
+        </>
+      ) : null}
     </div>
   )
 }
@@ -351,6 +425,8 @@ export function AttendanceDayView({
   const [manageId, setManageId] = useState<string | null>(null)
   const [manageStep, setManageStep] = useState<"ot" | "note" | "punches" | "branch" | "detail" | null>(null)
   const [noteDraft, setNoteDraft] = useState("")
+  const [timeIn, setTimeIn] = useState("")
+  const [timeOut, setTimeOut] = useState("")
   const [reasonDraft, setReasonDraft] = useState<NoteReason | null>(null)
   const [savingNote, setSavingNote] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
@@ -402,13 +478,36 @@ export function AttendanceDayView({
     }
   }
 
-  function openManage(row: DayRow, step: "ot" | "note" | "punches" | "branch" | "detail") {
+  function openManage(row: DayRow, step: "ot" | "note" | "punches" | "branch" | "detail" | "time") {
     setManageId(row.id)
     setManageStep(step)
     setNoteDraft(row.note ?? "")
     setReasonDraft(NOTE_REASONS.includes(row.noteReason as NoteReason) ? (row.noteReason as NoteReason) : null)
+    setTimeIn(timeInputValue(row.firstIn, tz))
+    setTimeOut(timeInputValue(row.lastOut, tz))
     setNoteError(null)
     if (step === "punches" || step === "detail") void loadPunches(row)
+  }
+
+  async function saveTime(row: DayRow, inTime: string, outTime: string) {
+    setSavingNote(true)
+    setNoteError(null)
+    try {
+      await fetchJson(`/api/hr/attendance/days/time`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchId, personnelId: row.personnelId, date, inTime, outTime }),
+      })
+      const res = await fetchJson<{ data: DayData }>(`/api/hr/attendance/days?${new URLSearchParams({ branchId, date })}`)
+      setData(res.data)
+      const next = res.data.rows.find((item) => item.personnelId === row.personnelId)
+      setTimeIn(timeInputValue(next?.firstIn ?? null, res.data.branch.timezone))
+      setTimeOut(timeInputValue(next?.lastOut ?? null, res.data.branch.timezone))
+    } catch (e) {
+      setNoteError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingNote(false)
+    }
   }
 
   async function saveNote(row: DayRow, reason: NoteReason | null, text: string) {
@@ -550,15 +649,14 @@ export function AttendanceDayView({
             <table className="w-full table-fixed text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted text-left text-muted-foreground">
-                  <th className="w-[8%] whitespace-nowrap px-2 py-2 font-medium">{t("day.jobGroup")}</th>
+                  <th className="w-[7%] whitespace-nowrap px-2 py-2 font-medium">{t("day.jobGroup")}</th>
                   <th className="w-[11%] px-2 py-2 font-medium">{t("day.person")}</th>
-                  <th className="w-[7%] whitespace-nowrap px-3 py-2 font-medium">{t("day.in")}</th>
-                  <th className="w-[7%] whitespace-nowrap px-3 py-2 font-medium">{t("day.out")}</th>
-                  <th className="w-[5%] whitespace-nowrap px-3 py-2 text-right font-medium">{t("day.late")}</th>
-                  <th className="w-[8%] whitespace-nowrap px-3 py-2 font-medium">{t("day.status")}</th>
-                  <th className="w-[22%] px-2 py-2 font-medium">{t("day.note")}</th>
-                  <th className="w-[9%] whitespace-nowrap px-2 py-2 font-medium">{t("day.otWork")}</th>
-                  <th className="w-[10%] whitespace-nowrap px-2 py-2 font-medium">{t("day.otConfirmColumn")}</th>
+                  <th className="w-[14%] whitespace-nowrap px-2 py-2 font-medium">{t("day.in")}</th>
+                  <th className="w-[14%] whitespace-nowrap px-2 py-2 font-medium">{t("day.out")}</th>
+                  <th className="w-[4%] whitespace-nowrap px-1 py-2 text-right font-medium">{t("day.late")}</th>
+                  <th className="w-[11%] whitespace-nowrap px-2 py-2 font-medium">{t("day.ot")}</th>
+                  <th className="w-[7%] whitespace-nowrap px-2 py-2 font-medium">{t("day.status")}</th>
+                  <th className="w-[19%] px-2 py-2 font-medium">{t("day.note")}</th>
                   <th className="w-[6%] whitespace-nowrap px-2 py-2 font-medium">{t("day.countedBranchColumn")}</th>
                   <th className="w-[7%] whitespace-nowrap px-2 py-2 font-medium">{t("day.manage")}</th>
                 </tr>
@@ -573,13 +671,55 @@ export function AttendanceDayView({
                           <div className="font-mono text-xs text-foreground">{row.rosterNo}</div>
                         </td>
                         <td className="px-2 py-1.5">
-                          <ScanCell iso={row.firstIn} branchCode={row.firstInBranchCode} timeZone={tz} locale={locale} />
+                          <ScanCell
+                            confirmedIso={row.timeConfirmed ? row.firstIn : null}
+                            scanIso={row.scanFirstIn}
+                            originalLabel={t("day.originalTime")}
+                            confirmedLabel={t("day.confirmedTime")}
+                            branchCode={row.firstInBranchCode}
+                            timeZone={tz}
+                            locale={locale}
+                          />
                         </td>
                         <td className="px-2 py-1.5">
-                          <ScanCell iso={row.lastOut} branchCode={row.lastOutBranchCode} timeZone={tz} locale={locale} />
+                          <ScanCell
+                            confirmedIso={row.timeConfirmed ? row.lastOut : null}
+                            scanIso={row.scanLastOut}
+                            originalLabel={t("day.originalTime")}
+                            confirmedLabel={t("day.confirmedTime")}
+                            branchCode={row.lastOutBranchCode}
+                            timeZone={tz}
+                            locale={locale}
+                          />
                         </td>
-                        <td className="px-2 py-1.5 text-right font-mono font-semibold text-foreground">
+                        <td className="px-1 py-1.5 text-right font-mono font-semibold text-foreground">
                           {row.lateMinutes > 0 ? <span className="text-red-600">{row.lateMinutes}</span> : "—"}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          {!row.otBefore && !row.otAfter ? (
+                            <span className="text-foreground">—</span>
+                          ) : (
+                            <div className="space-y-0.5">
+                              {row.otBefore && (
+                                <OtPair
+                                  sideLabel={t("day.otMorning")}
+                                  item={row.otBefore}
+                                  notCountedLabel={t("day.otNotCounted")}
+                                  timeZone={tz}
+                                  locale={locale}
+                                />
+                              )}
+                              {row.otAfter && (
+                                <OtPair
+                                  sideLabel={t("day.otEvening")}
+                                  item={row.otAfter}
+                                  notCountedLabel={t("day.otNotCounted")}
+                                  timeZone={tz}
+                                  locale={locale}
+                                />
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 py-1.5">
                           {row.status === "COMPLETE" ? (
@@ -594,46 +734,6 @@ export function AttendanceDayView({
                           {row.noteReason
                             ? `${t(`day.noteReasons.${row.noteReason}`)}${row.note ? ` — ${row.note}` : ""}`
                             : "—"}
-                        </td>
-                        <td className="px-2 py-1.5">
-                          {!row.otBefore && !row.otAfter ? (
-                            <span className="text-foreground">—</span>
-                          ) : (
-                            <div className="space-y-1 text-foreground">
-                              {row.otBefore && (
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-xs font-semibold">{t("day.otMorning")}</span>
-                                  <span className="font-mono font-medium">{formatTime(row.otBefore.at, tz, locale)}</span>
-                                </div>
-                              )}
-                              {row.otAfter && (
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-xs font-semibold">{t("day.otEvening")}</span>
-                                  <span className="font-mono font-medium">{formatTime(row.otAfter.at, tz, locale)}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-2 py-1.5">
-                          {!row.otBefore && !row.otAfter ? (
-                            <span className="text-foreground">—</span>
-                          ) : (
-                            <div className="space-y-1 text-foreground">
-                              {row.otBefore && (
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-xs font-semibold">{t("day.otMorning")}</span>
-                                  <OtStatus item={row.otBefore} pendingLabel={t("day.otPending")} notCountedLabel={t("day.otNotCounted")} />
-                                </div>
-                              )}
-                              {row.otAfter && (
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-xs font-semibold">{t("day.otEvening")}</span>
-                                  <OtStatus item={row.otAfter} pendingLabel={t("day.otPending")} notCountedLabel={t("day.otNotCounted")} />
-                                </div>
-                              )}
-                            </div>
-                          )}
                         </td>
                         <td className="px-2 py-1.5 font-medium text-foreground">
                           {row.countedBranchId !== row.homeBranchId ? row.countedBranchCode : null}
@@ -653,6 +753,10 @@ export function AttendanceDayView({
                                 <DropdownMenu.Item className={manageItemClass} onSelect={() => openManage(row, "detail")}>
                                   <FileText className="h-3.5 w-3.5" />
                                   {t("day.manageDetail")}
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Item className={manageItemClass} onSelect={() => openManage(row, "time")}>
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {t("day.manageTime")}
                                 </DropdownMenu.Item>
                                 <DropdownMenu.Item className={manageItemClass} onSelect={() => openManage(row, "ot")}>
                                   <Clock className="h-3.5 w-3.5" />
@@ -694,7 +798,9 @@ export function AttendanceDayView({
         title={
           manageRow
             ? `${
-                manageStep === "note"
+                manageStep === "time"
+                  ? t("day.manageTime")
+                  : manageStep === "note"
                   ? t("day.manageNote")
                   : manageStep === "punches"
                     ? t("day.managePunches")
@@ -913,6 +1019,52 @@ export function AttendanceDayView({
               errorLabel={t("day.punchesError")}
               emptyLabel={t("day.noPunches")}
             />
+          </div>
+        )}
+        {manageRow && manageStep === "time" && (
+          <div className="space-y-3 text-foreground">
+            <p className="text-sm">
+              {t("day.timeScan")}:{" "}
+              <span className="font-mono">
+                {manageRow.scanFirstIn ? formatTime(manageRow.scanFirstIn, tz, locale) : "—"} /{" "}
+                {manageRow.scanLastOut ? formatTime(manageRow.scanLastOut, tz, locale) : "—"}
+              </span>
+            </p>
+            {!manageRow.scanFirstIn && <p className="text-sm">{t("day.timeNoScan")}</p>}
+            {manageRow.scanChanged && <p className="text-sm font-medium text-red-600">{t("day.scanChanged")}</p>}
+            <label className="block text-sm font-medium" htmlFor="confirm-time-in">
+              {t("day.timeIn")}
+              <input
+                id="confirm-time-in"
+                type="time"
+                value={timeIn}
+                disabled={!canUpdate}
+                onChange={(event) => setTimeIn(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-foreground"
+              />
+            </label>
+            <label className="block text-sm font-medium" htmlFor="confirm-time-out">
+              {t("day.timeOut")}
+              <input
+                id="confirm-time-out"
+                type="time"
+                value={timeOut}
+                disabled={!canUpdate}
+                onChange={(event) => setTimeOut(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-foreground"
+              />
+            </label>
+            {noteError && <p className="text-xs text-red-600">{noteError}</p>}
+            {canUpdate && (
+              <div className="flex gap-2">
+                <Button type="button" size="sm" loading={savingNote} onClick={() => void saveTime(manageRow, timeIn, timeOut)}>
+                  {t("day.saveTime")}
+                </Button>
+                <Button type="button" variant="outline" size="sm" disabled={savingNote} onClick={() => void saveTime(manageRow, "", "")}>
+                  {t("day.clearTime")}
+                </Button>
+              </div>
+            )}
           </div>
         )}
         {manageRow && manageStep === "note" && (

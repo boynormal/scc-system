@@ -37,6 +37,18 @@ function timeZoneOffsetMs(at: Date, timeZone: string): number {
   return asUtc - Math.floor(at.getTime() / 1000) * 1000
 }
 
+/** เวลา HH:mm ของวันตามปฏิทินสาขา */
+export function zonedDateTime(dateKey: string, hhmm: string, timeZone: string): Date | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(hhmm)
+  if (!match || !isDateKey(dateKey)) return null
+  const hour = Number(match[1])
+  const minute = Number(match[2])
+  if (hour > 23 || minute > 59) return null
+  const midnightUtc = Date.parse(`${dateKey}T00:00:00.000Z`)
+  const offset = timeZoneOffsetMs(new Date(midnightUtc), timeZone)
+  return new Date(midnightUtc - offset + (hour * 60 + minute) * 60_000)
+}
+
 /** ช่วงเวลา [start, end) ของวันตามปฏิทินสาขา */
 export function zonedDayRange(dateKey: string, timeZone: string): { start: Date; end: Date } {
   const midnightUtc = Date.parse(`${dateKey}T00:00:00.000Z`)

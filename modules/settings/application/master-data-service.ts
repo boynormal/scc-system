@@ -65,15 +65,13 @@ export const createCategorySchema = z.object({
 export const updateCategorySchema = createCategorySchema.partial()
 
 export const createDepartmentSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1),
   code: z.string().optional(),
-  branchId: z.string().uuid(),
 })
 
 export const updateDepartmentSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: z.string().trim().min(1).optional(),
   code: z.string().nullable().optional(),
-  branchId: z.string().uuid().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -318,23 +316,17 @@ export async function getCategoryMachines(db: PrismaClient, params: { id: string
   return { category, machines }
 }
 
-export async function listDepartments(
-  db: PrismaClient,
-  params: { companyId: string; branchId?: string | null }
-) {
+export async function listDepartments(db: PrismaClient, params: { companyId: string }) {
   return db.department.findMany({
     where: {
       isActive: true,
-      branch: { companyId: params.companyId },
-      ...(params.branchId && { branchId: params.branchId }),
+      companyId: params.companyId,
     },
     select: {
       id: true,
       name: true,
       code: true,
-      branchId: true,
-      branch: { select: { name: true } },
-      _count: { select: { machines: true } },
+      isActive: true,
     },
     orderBy: { name: "asc" },
   })
@@ -344,27 +336,22 @@ export async function createDepartment(
   db: PrismaClient,
   params: { companyId: string; input: z.infer<typeof createDepartmentSchema> }
 ) {
-  const branch = await db.branch.findFirst({
-    where: {
-      id: params.input.branchId,
-      companyId: params.companyId,
-      deletedAt: null,
-      isActive: true,
-    },
-    select: { id: true },
-  })
-  if (!branch) return { error: "Invalid branch" as const, status: 400 as const }
-
-  const data = await db.department.create({
-    data: {
-      name: params.input.name,
-      code: params.input.code || null,
-      branchId: params.input.branchId,
-      isActive: true,
-    },
-  })
-
-  return { data }
+  try {
+    const data = await db.department.create({
+      data: {
+        companyId: params.companyId,
+        name: params.input.name,
+        code: params.input.code || null,
+        isActive: true,
+      },
+    })
+    return { data }
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === "P2002") {
+      return { error: { message: "ชื่อแผนกนี้มีอยู่แล้ว" }, status: 409 as const }
+    }
+    throw e
+  }
 }
 
 export async function updateDepartment(
@@ -372,53 +359,31 @@ export async function updateDepartment(
   params: { id: string; companyId: string; input: z.infer<typeof updateDepartmentSchema> }
 ) {
   const existing = await db.department.findFirst({
-    where: { id: params.id, branch: { companyId: params.companyId } },
+    where: { id: params.id, companyId: params.companyId },
   })
   if (!existing) return null
 
-  if (params.input.branchId) {
-    const branch = await db.branch.findFirst({
-      where: {
-        id: params.input.branchId,
-        companyId: params.companyId,
-        deletedAt: null,
-        isActive: true,
+  try {
+    const data = await db.department.update({
+      where: { id: params.id },
+      data: {
+        ...(params.input.name && { name: params.input.name }),
+        ...(params.input.code !== undefined && { code: params.input.code || null }),
+        ...(params.input.isActive !== undefined && { isActive: params.input.isActive }),
       },
-      select: { id: true },
     })
-    if (!branch) return { error: "Invalid branch" as const, status: 400 as const }
-    if (params.input.branchId !== existing.branchId) {
-      const [machineCount, personnelCount] = await Promise.all([
-        db.machine.count({
-          where: { departmentId: params.id, deletedAt: null, branch: { companyId: params.companyId } },
-        }),
-        db.personnel.count({ where: { departmentId: params.id } }),
-      ])
-      if (machineCount + personnelCount > 0) {
-        return {
-          error: { message: "Cannot move department while machines or personnel still use it" },
-          status: 400 as const,
-        }
-      }
+    return { data }
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === "P2002") {
+      return { error: { message: "ชื่อแผนกนี้มีอยู่แล้ว" }, status: 409 as const }
     }
+    throw e
   }
-
-  const data = await db.department.update({
-    where: { id: params.id },
-    data: {
-      ...(params.input.name && { name: params.input.name }),
-      ...(params.input.code !== undefined && { code: params.input.code }),
-      ...(params.input.branchId && { branchId: params.input.branchId }),
-      ...(params.input.isActive !== undefined && { isActive: params.input.isActive }),
-    },
-  })
-
-  return { data }
 }
 
 export async function deleteDepartment(db: PrismaClient, params: { id: string; companyId: string }) {
   const existing = await db.department.findFirst({
-    where: { id: params.id, branch: { companyId: params.companyId } },
+    where: { id: params.id, companyId: params.companyId },
   })
   if (!existing) return { error: "Not found" as const, status: 404 as const }
 

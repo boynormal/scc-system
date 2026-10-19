@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select"
 import { GlassForm, GlassFormActions, GlassFormSection, GlassInput } from "@/components/glass"
 
 type BranchOpt = { id: string; name: string; code: string }
-export type DepartmentOpt = { id: string; name: string; code: string | null; branchId: string }
+export type DepartmentOpt = { id: string; name: string; code: string | null }
 
 export type PersonnelFormInitial = {
   rosterNo: string
@@ -62,7 +62,6 @@ export function HrPersonnelForm({
   const [notes, setNotes] = useState(initial?.notes ?? "")
   const [branchId, setBranchId] = useState(initial?.branchId ?? branches[0]?.id ?? "")
   const embedded = Boolean(onSaved || onCancel)
-  const departmentOptions = departments.filter((department) => department.branchId === branchId)
   const selectedDepartment = departments.find((department) => department.id === departmentId) ?? null
 
   const hasExtra =
@@ -150,13 +149,7 @@ export function HrPersonnelForm({
               className={embedded ? solidField : undefined}
               label="สาขา"
               value={branchId}
-              onChange={(e) => {
-                const next = e.target.value
-                setBranchId(next)
-                setDepartmentId((current) =>
-                  departments.some((department) => department.id === current && department.branchId === next) ? current : ""
-                )
-              }}
+              onChange={(e) => setBranchId(e.target.value)}
               options={branches.map((b) => ({ value: b.id, label: `${b.code} — ${b.name}` }))}
             />
           )}
@@ -165,8 +158,8 @@ export function HrPersonnelForm({
             label="กลุ่มงาน"
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
-            placeholder={departmentOptions.length ? "ไม่ระบุ" : "สาขานี้ยังไม่มีแผนก"}
-            options={departmentOptions.map((department) => ({
+            placeholder={departments.length ? "ไม่ระบุ" : "ยังไม่มีแผนก"}
+            options={departments.map((department) => ({
               value: department.id,
               label: department.code ? `${department.code} — ${department.name}` : department.name,
             }))}

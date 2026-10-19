@@ -3,18 +3,15 @@ import type { PrismaClient } from "@prisma/client"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { permissionCoversBranch, readBranchSharing } from "@/shared/permissions/branch-sharing"
 
-async function assertDepartmentOnMachineBranch(
+async function assertDepartmentInCompany(
   db: PrismaClient,
-  params: { companyId: string; departmentId: string; branchId: string }
+  params: { companyId: string; departmentId: string }
 ) {
   const dept = await db.department.findFirst({
-    where: { id: params.departmentId, isActive: true, branch: { companyId: params.companyId, deletedAt: null } },
-    select: { id: true, branchId: true },
+    where: { id: params.departmentId, isActive: true, companyId: params.companyId },
+    select: { id: true },
   })
   if (!dept) return { error: "Invalid department" as const, status: 400 as const }
-  if (dept.branchId !== params.branchId) {
-    return { error: "Department must belong to the machine branch" as const, status: 400 as const }
-  }
   return null
 }
 
@@ -164,10 +161,9 @@ export async function createMachine(
     return { error: "Forbidden" as const, status: 403 as const }
   }
   if (params.input.departmentId) {
-    const deptErr = await assertDepartmentOnMachineBranch(db, {
+    const deptErr = await assertDepartmentInCompany(db, {
       companyId: params.companyId,
       departmentId: params.input.departmentId,
-      branchId,
     })
     if (deptErr) return deptErr
   }
@@ -204,13 +200,11 @@ export async function updateMachine(
   if (!machine) return null
 
   const { installDate, warrantyExpireDate, departmentId, ...rest } = params.input
-  const nextBranchId = rest.branchId ?? machine.branchId
   let nextDepartmentId = departmentId === undefined ? machine.departmentId : departmentId
   if (nextDepartmentId) {
-    const deptErr = await assertDepartmentOnMachineBranch(db, {
+    const deptErr = await assertDepartmentInCompany(db, {
       companyId: params.companyId,
       departmentId: nextDepartmentId,
-      branchId: nextBranchId,
     })
     if (deptErr) {
       if (departmentId) return deptErr

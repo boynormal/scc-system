@@ -64,7 +64,7 @@ type PersonRow = {
   notes: string | null
   userId: string | null
   departmentId: string | null
-  department: { id: string; name: string; code: string | null; branchId: string } | null
+  department: { id: string; name: string; code: string | null } | null
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -161,7 +161,6 @@ type DeptRow = {
   id: string
   name: string
   code: string | null
-  branchId: string
   companyId: string
   isActive: boolean
 }
@@ -190,7 +189,7 @@ function fakeDb(state: FakeState = {}): PrismaClient {
           department:
             departments
               .filter((x) => x.id === row.departmentId)
-              .map((d) => ({ id: d.id, name: d.name, code: d.code, branchId: d.branchId }))[0] ??
+              .map((d) => ({ id: d.id, name: d.name, code: d.code }))[0] ??
             row.department,
         }
       : { ...row, department: null }
@@ -218,31 +217,17 @@ function fakeDb(state: FakeState = {}): PrismaClient {
         const row = departments.find((d) => d.id === where.id)
         if (!row) return null
         if (where.isActive === true && !row.isActive) return null
-        const branchWhere = where.branch as
-          | { companyId?: string; deletedAt?: null; isActive?: boolean }
-          | undefined
-        const branch = branches[row.branchId]
-        if (branchWhere?.companyId && row.companyId !== branchWhere.companyId) return null
-        if (branchWhere?.deletedAt === null && branch?.deletedAt) return null
-        if (branchWhere?.isActive === true && branch && !branch.isActive) return null
-        return { id: row.id, branchId: row.branchId, isActive: row.isActive, name: row.name, code: row.code }
+        if (typeof where.companyId === "string" && row.companyId !== where.companyId) return null
+        return { id: row.id, isActive: row.isActive, name: row.name, code: row.code }
       },
       findMany: async ({ where }: { where: Record<string, unknown> }) => {
-        const branchWhere = where.branch as
-          | { companyId?: string; deletedAt?: null; isActive?: boolean; id?: { in?: string[] } }
-          | undefined
         return departments
           .filter((d) => {
             if (where.isActive === true && !d.isActive) return false
-            if (branchWhere?.companyId && d.companyId !== branchWhere.companyId) return false
-            const branch = branches[d.branchId]
-            if (!branch) return false
-            if (branchWhere?.deletedAt === null && branch.deletedAt) return false
-            if (branchWhere?.isActive === true && !branch.isActive) return false
-            if (branchWhere?.id?.in && !branchWhere.id.in.includes(d.branchId)) return false
+            if (typeof where.companyId === "string" && d.companyId !== where.companyId) return false
             return true
           })
-          .map((d) => ({ id: d.id, name: d.name, code: d.code, branchId: d.branchId }))
+          .map((d) => ({ id: d.id, name: d.name, code: d.code }))
       },
     },
     personnelBranch: {
@@ -647,12 +632,12 @@ describe("updatePersonnel", () => {
 
 describe("personnel department", () => {
   const departments: DeptRow[] = [
-    { id: DEPT_A, name: "ผลิต", code: "PRD", branchId: BRANCH_A, companyId: CID, isActive: true },
-    { id: DEPT_B, name: "คลัง", code: "WH", branchId: BRANCH_B, companyId: CID, isActive: true },
-    { id: DEPT_OTHER_CO, name: "อื่น", code: "X", branchId: BRANCH_A, companyId: CID_B, isActive: true },
+    { id: DEPT_A, name: "ผลิต", code: "PRD", companyId: CID, isActive: true },
+    { id: DEPT_B, name: "คลัง", code: "WH", companyId: CID, isActive: true },
+    { id: DEPT_OTHER_CO, name: "อื่น", code: "X", companyId: CID_B, isActive: true },
   ]
 
-  it("creates with a same-company department on an assigned branch", async () => {
+  it("creates with a department from the same company", async () => {
     const db = fakeDb({ departments })
     const parsed = createPersonnelSchema.parse({
       rosterNo: "010",
@@ -677,7 +662,7 @@ describe("personnel department", () => {
     )
   })
 
-  it("rejects a department whose branch is not assigned", async () => {
+  it("accepts a same-company department when the person is on another branch", async () => {
     const db = fakeDb({ departments })
     const parsed = createPersonnelSchema.parse({
       rosterNo: "012",
@@ -685,9 +670,8 @@ describe("personnel department", () => {
       branchIds: [BRANCH_A],
       departmentId: DEPT_B,
     })
-    await expect(createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })).rejects.toBeInstanceOf(
-      ValidationError
-    )
+    const created = await createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
+    expect(created.departmentId).toBe(DEPT_B)
   })
 
   it("promotes the home branch and keeps branches added by badge mapping", async () => {
@@ -755,10 +739,10 @@ describe("personnel department", () => {
     expect(result.data.branchAssignments.map((a) => a.branchId)).toEqual([BRANCH_B])
   })
 
-  it("clears departmentId when assigned branches no longer include the department branch", async () => {
+  it("keeps departmentId when the home branch changes", async () => {
     const db = fakeDb({
       departments,
-      people: [personRow({ departmentId: DEPT_A, department: { id: DEPT_A, name: "ผลิต", code: "PRD", branchId: BRANCH_A } })],
+      people: [personRow({ departmentId: DEPT_A, department: { id: DEPT_A, name: "ผลิต", code: "PRD" } })],
     })
     const parsed = updatePersonnelSchema.parse({ branchIds: [BRANCH_B] })
     const result = await updatePersonnel(db, {
@@ -767,7 +751,7 @@ describe("personnel department", () => {
       id: PERSON_ID,
       input: parsed,
     })
-    expect(result.data.departmentId).toBeNull()
+    expect(result.data.departmentId).toBe(DEPT_A)
   })
 
   it("filters the list by departmentId", async () => {
@@ -788,19 +772,18 @@ describe("personnel department", () => {
     expect(listed.data.map((p) => p.id)).toEqual([PERSON_ID])
   })
 
-  it("lists active departments scoped to requested branches", async () => {
+  it("lists active departments for the whole company", async () => {
     const db = fakeDb({
       departments: [
         ...departments,
-        { id: "dddddddd-dddd-dddd-dddd-dddddddddddd", name: "ปิด", code: "OFF", branchId: BRANCH_A, companyId: CID, isActive: false },
+        { id: "dddddddd-dddd-dddd-dddd-dddddddddddd", name: "ปิด", code: "OFF", companyId: CID, isActive: false },
       ],
     })
     const listed = await listPersonnelDepartments(db, {
       companyId: CID,
       roles: adminRoles,
-      branchIds: [BRANCH_A],
     })
-    expect(listed.data.map((d) => d.id)).toEqual([DEPT_A])
+    expect(listed.data.map((d) => d.id).sort()).toEqual([DEPT_A, DEPT_B].sort())
   })
 })
 

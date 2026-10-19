@@ -25,7 +25,7 @@ async function main() {
   const pad = withPersonnel[0]!
 
   const existing = await prisma.department.findFirst({
-    where: { branchId: pad.id, code: DEPT_CODE, name: DEPT_NAME },
+    where: { companyId: pad.companyId, code: DEPT_CODE, name: DEPT_NAME },
   })
   if (existing) {
     console.log(
@@ -34,9 +34,8 @@ async function main() {
           skipped: true,
           reason: "already exists",
           departmentId: existing.id,
-          branchId: pad.id,
-          branchName: pad.name,
           companyId: pad.companyId,
+          companyName: pad.company.name,
         },
         null,
         2
@@ -47,7 +46,7 @@ async function main() {
 
   const result = await createDepartment(prisma, {
     companyId: pad.companyId,
-    input: { name: DEPT_NAME, code: DEPT_CODE, branchId: pad.id },
+    input: { name: DEPT_NAME, code: DEPT_CODE },
   })
 
   if ("error" in result) {
@@ -61,8 +60,6 @@ async function main() {
         departmentId: result.data.id,
         name: result.data.name,
         code: result.data.code,
-        branchId: pad.id,
-        branchName: pad.name,
         companyName: pad.company.name,
         companyId: pad.companyId,
       },

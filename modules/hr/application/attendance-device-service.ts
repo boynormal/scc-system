@@ -3,7 +3,7 @@ import { z } from "zod"
 import type { PrismaClient } from "@prisma/client"
 import { ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
-import { assertAttendanceBranch, canAttendanceAnyBranch, listAttendanceBranches } from "./attendance-access"
+import { assertCanManageAttendanceDevice, canAttendanceAnyBranch, listAttendanceBranches } from "./attendance-access"
 
 const KEY_SCHEME = "hip"
 
@@ -146,7 +146,7 @@ export async function createAttendanceDevice(
   params: { companyId: string; roles: UserRole[]; userId: string; input: z.infer<typeof createAttendanceDeviceSchema> }
 ) {
   const { input } = params
-  await assertAttendanceBranch(db, { ...params, branchId: input.branchId, action: "create" })
+  await assertCanManageAttendanceDevice(db, { ...params, branchId: input.branchId })
 
   const dup = await db.attendanceDevice.findFirst({
     where: { branchId: input.branchId, name: input.name },
@@ -187,7 +187,7 @@ async function loadDeviceForManage(
     select: { id: true, branchId: true, name: true, machineNumber: true, isActive: true },
   })
   if (!device) throw new NotFoundError("ไม่พบเครื่องสแกน")
-  await assertAttendanceBranch(db, { ...params, branchId: device.branchId, action: "update" })
+  await assertCanManageAttendanceDevice(db, { ...params, branchId: device.branchId })
   return device
 }
 

@@ -47,24 +47,14 @@ export default function NewMachinePage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
-
-  const selectedBranchId = watch("branchId")
 
   useEffect(() => {
     fetch("/api/master-data/branches").then((r) => r.json()).then((d) => setBranches(d.data ?? []))
     fetch("/api/master-data/categories").then((r) => r.json()).then((d) => setCategories(d.data ?? []))
+    fetch("/api/master-data/departments").then((r) => r.json()).then((d) => setDepartments(d.data ?? []))
   }, [])
-
-  useEffect(() => {
-    if (selectedBranchId) {
-      fetch(`/api/master-data/departments?branchId=${selectedBranchId}`)
-        .then((r) => r.json())
-        .then((d) => setDepartments(d.data ?? []))
-    }
-  }, [selectedBranchId])
 
   const onSubmit = async (data: FormData) => {
     setError(null)

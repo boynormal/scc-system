@@ -8,6 +8,8 @@ const BRANCH_A = "11111111-1111-1111-1111-111111111111"
 const BRANCH_B = "22222222-2222-2222-2222-222222222222"
 const DEPT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 const DEPT_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+const DEPT_OTHER = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+const CID_B = "00000000-0000-0000-0000-0000000000dd"
 const CAT_ID = "99999999-9999-9999-9999-999999999999"
 const MACHINE_ID = "33333333-3333-3333-3333-333333333333"
 const USER_ID = "44444444-4444-4444-4444-444444444444"
@@ -40,9 +42,10 @@ function fakeDb(state: { machines?: MachineRow[] } = {}) {
       companyId: CID,
     },
   ]
-  const departments: Record<string, { branchId: string; companyId: string; isActive: boolean }> = {
-    [DEPT_A]: { branchId: BRANCH_A, companyId: CID, isActive: true },
-    [DEPT_B]: { branchId: BRANCH_B, companyId: CID, isActive: true },
+  const departments: Record<string, { companyId: string; isActive: boolean }> = {
+    [DEPT_A]: { companyId: CID, isActive: true },
+    [DEPT_B]: { companyId: CID, isActive: true },
+    [DEPT_OTHER]: { companyId: CID_B, isActive: true },
   }
 
   const api = {
@@ -51,12 +54,12 @@ function fakeDb(state: { machines?: MachineRow[] } = {}) {
         where.companyId === CID && (where.id === BRANCH_A || where.id === BRANCH_B) ? { id: where.id } : null,
     },
     department: {
-      findFirst: async ({ where }: { where: { id: string; isActive?: boolean; branch?: { companyId: string } } }) => {
+      findFirst: async ({ where }: { where: { id: string; isActive?: boolean; companyId?: string } }) => {
         const row = departments[where.id]
         if (!row) return null
         if (where.isActive === true && !row.isActive) return null
-        if (where.branch?.companyId && row.companyId !== where.branch.companyId) return null
-        return { id: where.id, branchId: row.branchId }
+        if (where.companyId && row.companyId !== where.companyId) return null
+        return { id: where.id }
       },
     },
     machine: {
@@ -95,38 +98,48 @@ const createBase = {
   criticalLevel: 1,
 }
 
-describe("machine department branch match", () => {
-  it("rejects create when department is on another branch", async () => {
+describe("machine department company match", () => {
+  it("accepts a department from the same company on any branch", async () => {
     const result = await createMachine(fakeDb({ machines: [] }), {
       companyId: CID,
       userId: USER_ID,
       roles: adminRoles,
       input: { ...createBase, departmentId: DEPT_B },
     })
+    expect(result).toMatchObject({ data: { departmentId: DEPT_B, branchId: BRANCH_A } })
+  })
+
+  it("rejects create when the department belongs to another company", async () => {
+    const result = await createMachine(fakeDb({ machines: [] }), {
+      companyId: CID,
+      userId: USER_ID,
+      roles: adminRoles,
+      input: { ...createBase, departmentId: DEPT_OTHER },
+    })
     expect(result).toMatchObject({
       status: 400,
-      error: "Department must belong to the machine branch",
+      error: "Invalid department",
     })
   })
 
-  it("rejects an explicit patch that sets a department from another branch", async () => {
+  it("rejects an explicit patch that sets a department from another company", async () => {
     const result = await updateMachine(fakeDb(), {
       id: MACHINE_ID,
       companyId: CID,
-      input: { departmentId: DEPT_B },
+      input: { departmentId: DEPT_OTHER },
     })
     expect(result).toMatchObject({
       status: 400,
-      error: "Department must belong to the machine branch",
+      error: "Invalid department",
     })
   })
 
-  it("clears departmentId when the machine branch moves and the old department no longer matches", async () => {
+  it("keeps departmentId when the machine moves to another branch", async () => {
     const result = await updateMachine(fakeDb(), {
       id: MACHINE_ID,
       companyId: CID,
       input: { branchId: BRANCH_B },
     })
-    expect(result).toMatchObject({ departmentId: null, branchId: BRANCH_B })
+    expect(result).toMatchObject({ departmentId: DEPT_A, branchId: BRANCH_B })
   })
 })

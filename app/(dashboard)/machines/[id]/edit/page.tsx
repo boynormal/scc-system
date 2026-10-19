@@ -58,22 +58,21 @@ export default function EditMachinePage() {
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
-
-  const selectedBranchId = watch("branchId")
 
   useEffect(() => {
     Promise.all([
       fetch("/api/master-data/branches").then((r) => r.json()),
       fetch("/api/master-data/categories").then((r) => r.json()),
+      fetch("/api/master-data/departments").then((r) => r.json()),
       fetch(`/api/machines/${id}`).then((r) => r.json()),
       fetch(`/api/machines/${id}/images`).then((r) => r.json()),
       fetch(`/api/machines/${id}/products`).then((r) => r.json()),
-    ]).then(([b, c, m, img, prod]) => {
+    ]).then(([b, c, dept, m, img, prod]) => {
       setBranches(b.data ?? [])
       setCategories(c.data ?? [])
+      setDepartments(dept.data ?? [])
       setImages(img.data ?? [])
       setProducts(prod.data ?? [])
       if (m.data) {
@@ -102,14 +101,6 @@ export default function EditMachinePage() {
       setLoading(false)
     })
   }, [id, reset])
-
-  useEffect(() => {
-    if (selectedBranchId) {
-      fetch(`/api/master-data/departments?branchId=${selectedBranchId}`)
-        .then((r) => r.json())
-        .then((d) => setDepartments(d.data ?? []))
-    }
-  }, [selectedBranchId])
 
   const onSubmit = async (data: FormData) => {
     setError(null)

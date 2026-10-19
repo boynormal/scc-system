@@ -139,6 +139,7 @@ model Company {
   attendanceOtDecisions AttendanceOtDecision[]
   attendanceDayNotes    AttendanceDayNote[]
   attendanceDayBranches AttendanceDayBranch[]
+  attendanceTimeConfirmations AttendanceTimeConfirmation[]
   tmsCustomers          TmsCustomer[]
   transportJobTypes     TransportJobType[]
   transportCargoTypes   TransportCargoType[]
@@ -160,6 +161,7 @@ model Company {
   assetRegisterTypes    AssetRegisterType[]
   assetPmPlans          AssetPmPlan[]
   storedFiles           StoredFile[]
+  departments           Department[]
 
   @@map("companies")
 }
@@ -179,7 +181,6 @@ model Branch {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   company              Company                @relation(fields: [companyId], references: [id])
-  departments          Department[]
   machines             Machine[]
   userBranchRoles      UserBranchRole[]
   workOrders           WorkOrder[]
@@ -210,7 +211,7 @@ model Branch {
 
 model Department {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  branchId  String   @map("branch_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
   code      String?  @db.VarChar(20)
   name      String   @db.VarChar(255)
   parentId  String?  @map("parent_id") @db.Uuid
@@ -218,13 +219,14 @@ model Department {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  branch    Branch       @relation(fields: [branchId], references: [id])
+  company   Company      @relation(fields: [companyId], references: [id])
   parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children  Department[] @relation("DepartmentHierarchy")
   machines  Machine[]
   personnel Personnel[]
 
-  @@index([branchId])
+  @@unique([companyId, name])
+  @@index([companyId])
   @@index([parentId])
   @@map("departments")
 }
@@ -275,6 +277,7 @@ model User {
   attendanceOtDecisions  AttendanceOtDecision[] @relation("AttendanceOtDecider")
   attendanceDayNotes     AttendanceDayNote[]    @relation("AttendanceDayNoteEditor")
   attendanceDayBranches  AttendanceDayBranch[]  @relation("AttendanceDayBranchDecider")
+  attendanceTimeConfirmations AttendanceTimeConfirmation[] @relation("AttendanceTimeConfirmer")
   transportJobsCreated   TransportJob[]         @relation("TransportJobCreator")
   jobAssignmentsBy       JobAssignment[]        @relation("JobAssignedBy")
   jobAttachmentsUploaded JobAttachment[]        @relation("JobAttachmentUploader")
@@ -903,6 +906,7 @@ model Personnel {
   attendanceOtDecisions AttendanceOtDecision[]
   attendanceDayNotes  AttendanceDayNote[]
   attendanceDayBranches AttendanceDayBranch[]
+  attendanceTimeConfirmations AttendanceTimeConfirmation[]
   /**
    * สาขาที่พนักงานสามารถลงเวลา/ทำงานได้ (หนึ่งคน — หลายสาขา)
    */
@@ -1127,6 +1131,30 @@ model AttendanceDayNote {
   @@unique([personnelId, workDate], map: "attendance_day_notes_person_date_unique")
   @@index([companyId, workDate])
   @@map("attendance_day_notes")
+}
+
+/// เวลายืนยันของ HR ต่อคนต่อวัน ไม่เขียนทับเวลาสแกน
+model AttendanceTimeConfirmation {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  personnelId   String    @map("personnel_id") @db.Uuid
+  workDate      DateTime  @map("work_date") @db.Date
+  confirmedIn   DateTime  @map("confirmed_in") @db.Timestamptz
+  confirmedOut  DateTime  @map("confirmed_out") @db.Timestamptz
+  sourceFirstIn DateTime? @map("source_first_in") @db.Timestamptz
+  sourceLastOut DateTime? @map("source_last_out") @db.Timestamptz
+  decidedById   String    @map("decided_by_id") @db.Uuid
+  decidedAt     DateTime  @map("decided_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  company   Company   @relation(fields: [companyId], references: [id])
+  personnel Personnel @relation(fields: [personnelId], references: [id], onDelete: Cascade)
+  decidedBy User      @relation("AttendanceTimeConfirmer", fields: [decidedById], references: [id])
+
+  @@unique([personnelId, workDate], map: "attendance_time_confirmations_person_date_unique")
+  @@index([companyId, workDate])
+  @@map("attendance_time_confirmations")
 }
 
 /// สาขาที่ให้นับคนและ Man hour ในวันนั้น ถ้าไม่มีแถวให้นับที่สาขาหลัก

@@ -5,7 +5,7 @@ import { Clock } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
-import { canAttendanceAnyBranch, listAttendanceBranches } from "@/modules/hr"
+import { canAttendanceAnyBranch, canManageAttendanceDevice, listAttendanceBranches } from "@/modules/hr"
 import { EmptyState } from "@/components/ui/empty-state"
 import { GlassCard } from "@/components/glass"
 import { AttendanceChrome } from "./attendance-chrome"
@@ -35,7 +35,6 @@ export default async function HrAttendancePage(props: {
 
   const perms = {
     canUpdate: canAttendanceAnyBranch(roles, "update"),
-    canCreate: canAttendanceAnyBranch(roles, "create"),
   }
 
   return (
@@ -61,8 +60,7 @@ export default async function HrAttendancePage(props: {
             <AttendanceDeviceView
               key={branch.id}
               branch={branch}
-              canCreate={perms.canCreate}
-              canUpdate={perms.canUpdate}
+              canManage={canManageAttendanceDevice(roles, branch.id)}
             />
           )}
         </>

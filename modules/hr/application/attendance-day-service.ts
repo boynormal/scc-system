@@ -3,8 +3,16 @@ import { z } from "zod"
 import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { assertAttendanceBranch } from "./attendance-access"
-import { dedupePunchTimes, isDateKey, summarizeHomeBranchDay, zonedDayRange } from "./attendance-daily-summary"
+import { dedupePunchTimes, isDateKey, localDateKey, summarizeDay, summarizeHomeBranchDay, zonedDateTime, zonedDayRange } from "./attendance-daily-summary"
 import { presentOt, summarizeManHour, type OtRowView, type StoredOtDecision } from "./attendance-man-hour"
+import { effectiveDayTimes, type StoredTimeConfirmation } from "./attendance-time-confirmation"
+import {
+  buildAttendanceReport,
+  buildExceptionGroups,
+  countsOnBranch,
+  dateKeysInRange,
+  type ReportFact,
+} from "./attendance-report"
 
 export const decideAttendanceOtSchema = z.object({
   branchId: z.string().uuid(),
@@ -22,6 +30,14 @@ export const saveAttendanceDayBranchSchema = z.object({
   personnelId: z.string().uuid(),
   date: z.string(),
   countedBranchId: z.string().uuid(),
+})
+
+export const saveAttendanceTimeConfirmationSchema = z.object({
+  branchId: z.string().uuid(),
+  personnelId: z.string().uuid(),
+  date: z.string(),
+  inTime: z.string(),
+  outTime: z.string(),
 })
 
 export const saveAttendanceDayNoteSchema = z.object({
@@ -139,9 +155,10 @@ export async function listAttendanceDays(
     .filter((person) => !scannedIds.has(person.id))
     .sort((a, b) => a.displayName.localeCompare(b.displayName, "th"))
   const personnelIds = [...scannedIds, ...absent.map((person) => person.id)]
-  const [decisions, notes] = await Promise.all([
+  const [decisions, notes, confirmations] = await Promise.all([
     loadOtDecisions(db, params.companyId, params.date, personnelIds),
     loadDayNotes(db, params.companyId, params.date, personnelIds),
+    loadTimeConfirmations(db, params.companyId, params.date, personnelIds),
   ])
   const noteByPerson = new Map(notes.map((row) => [row.personnel_id, row.note || null]))
   const reasonByPerson = new Map(notes.map((row) => [row.personnel_id, row.reason]))
@@ -158,41 +175,36 @@ export async function listAttendanceDays(
   }
 
   const scannedRows = summarized.map((row) => {
-    const hours = summarizeManHour(row.firstIn, row.lastOut, branch.timezone)
     const stored = decisionByPerson.get(row.personnelId) ?? []
+    const times = applyConfirmedTimes(row.firstIn, row.lastOut, confirmations.get(row.personnelId) ?? null, branch.timezone, stored)
     return {
       ...row,
-      manMinutes: hours.manMinutes,
-      lateMinutes: hours.lateMinutes,
-      otBefore: otView(hours.otBefore, stored.find((item) => item.side === "BEFORE") ?? null),
-      otAfter: otView(hours.otAfter, stored.find((item) => item.side === "AFTER") ?? null),
+      ...times,
       note: noteByPerson.get(row.personnelId) ?? null,
       noteReason: reasonByPerson.get(row.personnelId) ?? null,
       ...countedBranchFields(row.personnelId, homeByPerson, countedBranchByPerson, scanBranchesByPerson, branch),
     }
   })
-  const absentRows = absent.map((person) => ({
-    id: person.id,
-    personnelId: person.id,
-    rosterNo: person.rosterNo,
-    displayName: person.displayName,
-    jobGroup: person.jobGroup,
-    badgeNumbers: [] as string[],
-    firstIn: null,
-    lastOut: null,
-    firstInBranchCode: null,
-    lastOutBranchCode: null,
-    punchCount: 0,
-    workedMinutes: 0,
-    manMinutes: 0,
-    lateMinutes: 0,
-    otBefore: null,
-    otAfter: null,
-    status: "NO_SCAN" as const,
-    note: noteByPerson.get(person.id) ?? null,
-    noteReason: reasonByPerson.get(person.id) ?? null,
-    ...countedBranchFields(person.id, homeByPerson, countedBranchByPerson, scanBranchesByPerson, branch),
-  }))
+  const absentRows = absent.map((person) => {
+    const stored = decisionByPerson.get(person.id) ?? []
+    const times = applyConfirmedTimes(null, null, confirmations.get(person.id) ?? null, branch.timezone, stored)
+    return {
+      id: person.id,
+      personnelId: person.id,
+      rosterNo: person.rosterNo,
+      displayName: person.displayName,
+      jobGroup: person.jobGroup,
+      badgeNumbers: [] as string[],
+      firstInBranchCode: null,
+      lastOutBranchCode: null,
+      punchCount: 0,
+      workedMinutes: 0,
+      ...times,
+      note: noteByPerson.get(person.id) ?? null,
+      noteReason: reasonByPerson.get(person.id) ?? null,
+      ...countedBranchFields(person.id, homeByPerson, countedBranchByPerson, scanBranchesByPerson, branch),
+    }
+  })
   const rows = [...scannedRows, ...absentRows]
 
   return {
@@ -214,6 +226,63 @@ type OtDecisionRow = {
 
 function otView(candidate: ReturnType<typeof summarizeManHour>["otBefore"], decision: StoredOtDecision | null): OtRowView | null {
   return presentOt(candidate, decision)
+}
+
+type TimeConfirmationRow = {
+  personnel_id: string
+  work_date?: string
+  confirmed_in: Date
+  confirmed_out: Date
+  source_first_in: Date | null
+  source_last_out: Date | null
+}
+
+function toStoredConfirmation(row: TimeConfirmationRow): StoredTimeConfirmation {
+  return {
+    confirmedIn: row.confirmed_in,
+    confirmedOut: row.confirmed_out,
+    sourceFirstIn: row.source_first_in,
+    sourceLastOut: row.source_last_out,
+  }
+}
+
+function applyConfirmedTimes(
+  scanFirstIn: Date | null,
+  scanLastOut: Date | null,
+  confirmation: TimeConfirmationRow | null,
+  timeZone: string,
+  stored: StoredOtDecision[]
+) {
+  const effective = effectiveDayTimes(scanFirstIn, scanLastOut, confirmation ? toStoredConfirmation(confirmation) : null)
+  const hours = effective.firstIn ? summarizeManHour(effective.firstIn, effective.lastOut, timeZone) : null
+  return {
+    firstIn: effective.firstIn,
+    lastOut: effective.lastOut,
+    scanFirstIn,
+    scanLastOut,
+    timeConfirmed: effective.confirmed,
+    scanChanged: effective.scanChanged,
+    status: (effective.confirmed ? "COMPLETE" : scanFirstIn ? (scanLastOut ? "COMPLETE" : "SINGLE_PUNCH") : "NO_SCAN") as
+      | "COMPLETE"
+      | "SINGLE_PUNCH"
+      | "NO_SCAN",
+    manMinutes: hours?.manMinutes ?? 0,
+    lateMinutes: hours?.lateMinutes ?? 0,
+    otBefore: hours ? otView(hours.otBefore, stored.find((item) => item.side === "BEFORE") ?? null) : null,
+    otAfter: hours ? otView(hours.otAfter, stored.find((item) => item.side === "AFTER") ?? null) : null,
+  }
+}
+
+async function loadTimeConfirmations(db: PrismaClient, companyId: string, date: string, personnelIds: string[]) {
+  if (personnelIds.length === 0) return new Map<string, TimeConfirmationRow>()
+  const rows = await db.$queryRaw<TimeConfirmationRow[]>`
+    SELECT personnel_id, confirmed_in, confirmed_out, source_first_in, source_last_out
+    FROM attendance_time_confirmations
+    WHERE company_id = ${companyId}::uuid
+      AND work_date = ${date}::date
+      AND personnel_id IN (${Prisma.join(personnelIds.map((id) => Prisma.sql`${id}::uuid`))})
+  `
+  return new Map(rows.map((row) => [row.personnel_id, row]))
 }
 
 async function loadOtDecisions(db: PrismaClient, companyId: string, date: string, personnelIds: string[]) {
@@ -254,6 +323,162 @@ function countedBranchFields(
     countedBranchId: countedId,
     countedBranchCode: countedCode,
     scanBranches: scans,
+  }
+}
+
+export async function listAttendanceReport(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    branchId: string
+    from: string
+    to: string
+    departmentId?: string | null
+  }
+) {
+  const dates = dateKeysInRange(params.from, params.to)
+  if (!dates) throw new ValidationError("ช่วงวันที่ไม่ถูกต้อง หรือยาวเกิน 62 วัน")
+  const branch = await assertAttendanceBranch(db, { ...params, action: "read" })
+  const { start } = zonedDayRange(dates[0]!, branch.timezone)
+  const { end } = zonedDayRange(dates[dates.length - 1]!, branch.timezone)
+
+  const assignments = await db.$queryRaw<Array<{ personnel_id: string; branch_id: string; work_date: string }>>`
+    SELECT personnel_id, branch_id, to_char(work_date, 'YYYY-MM-DD') AS work_date
+    FROM attendance_day_branches
+    WHERE company_id = ${params.companyId}::uuid
+      AND work_date >= ${params.from}::date
+      AND work_date <= ${params.to}::date
+  `
+  const countedByPersonDate = new Map(assignments.map((row) => [`${row.personnel_id}|${row.work_date}`, row.branch_id]))
+  const movedHere = [...new Set(assignments.filter((row) => row.branch_id === branch.id).map((row) => row.personnel_id))]
+
+  const roster = await db.personnel.findMany({
+    where: {
+      companyId: params.companyId,
+      deletedAt: null,
+      isActive: true,
+      ...(params.departmentId ? { departmentId: params.departmentId } : {}),
+      OR: [{ branchId: branch.id }, ...(movedHere.length ? [{ id: { in: movedHere } }] : [])],
+    },
+    select: {
+      id: true,
+      displayName: true,
+      jobGroup: true,
+      branchId: true,
+      department: { select: { name: true } },
+    },
+    orderBy: { displayName: "asc" },
+  })
+
+  const personnelIds = roster.map((person) => person.id)
+  if (personnelIds.length === 0) {
+    return {
+      branch: { id: branch.id, code: branch.code, name: branch.name, timezone: branch.timezone },
+      from: params.from,
+      to: params.to,
+      ...buildAttendanceReport(dates, []),
+      exceptions: buildExceptionGroups([]),
+    }
+  }
+
+  const [punches, decisions, notes, confirmations] = await Promise.all([
+    db.attendancePunch.findMany({
+      where: {
+        companyId: params.companyId,
+        personnelId: { in: personnelIds },
+        punchAt: { gte: start, lt: end },
+      },
+      select: { personnelId: true, punchAt: true },
+    }),
+    db.$queryRaw<Array<{ personnel_id: string; work_date: string; side: "BEFORE" | "AFTER"; punch_at: Date; decision: "OT" | "NOT_OT"; ot_minutes: number }>>`
+      SELECT personnel_id, to_char(work_date, 'YYYY-MM-DD') AS work_date, side::text AS side, punch_at, decision::text AS decision, ot_minutes
+      FROM attendance_ot_decisions
+      WHERE company_id = ${params.companyId}::uuid
+        AND work_date >= ${params.from}::date
+        AND work_date <= ${params.to}::date
+        AND personnel_id IN (${Prisma.join(personnelIds.map((id) => Prisma.sql`${id}::uuid`))})
+    `,
+    db.$queryRaw<Array<{ personnel_id: string; work_date: string; reason: string | null; note: string | null }>>`
+      SELECT personnel_id, to_char(work_date, 'YYYY-MM-DD') AS work_date, reason, note
+      FROM attendance_day_notes
+      WHERE company_id = ${params.companyId}::uuid
+        AND work_date >= ${params.from}::date
+        AND work_date <= ${params.to}::date
+        AND personnel_id IN (${Prisma.join(personnelIds.map((id) => Prisma.sql`${id}::uuid`))})
+    `,
+    db.$queryRaw<TimeConfirmationRow[]>`
+      SELECT personnel_id, to_char(work_date, 'YYYY-MM-DD') AS work_date, confirmed_in, confirmed_out, source_first_in, source_last_out
+      FROM attendance_time_confirmations
+      WHERE company_id = ${params.companyId}::uuid
+        AND work_date >= ${params.from}::date
+        AND work_date <= ${params.to}::date
+        AND personnel_id IN (${Prisma.join(personnelIds.map((id) => Prisma.sql`${id}::uuid`))})
+    `,
+  ])
+
+  const punchesByPersonDate = new Map<string, Date[]>()
+  for (const punch of punches) {
+    if (!punch.personnelId) continue
+    const date = localDateKey(punch.punchAt, branch.timezone)
+    const key = `${punch.personnelId}|${date}`
+    const list = punchesByPersonDate.get(key)
+    if (list) list.push(punch.punchAt)
+    else punchesByPersonDate.set(key, [punch.punchAt])
+  }
+  const decisionByKey = new Map<string, StoredOtDecision>()
+  for (const row of decisions) {
+    decisionByKey.set(`${row.personnel_id}|${row.work_date}|${row.side}`, {
+      side: row.side,
+      punchAt: row.punch_at,
+      decision: row.decision,
+      otMinutes: row.ot_minutes,
+    })
+  }
+  const noteByKey = new Map(notes.map((row) => [`${row.personnel_id}|${row.work_date}`, row]))
+  const confirmationByKey = new Map(confirmations.map((row) => [`${row.personnel_id}|${row.work_date}`, row]))
+
+  const facts: ReportFact[] = []
+  for (const date of dates) {
+    for (const person of roster) {
+      const counted = countedByPersonDate.get(`${person.id}|${date}`) ?? null
+      if (!countsOnBranch(person.branchId, counted, branch.id)) continue
+      const summary = summarizeDay(punchesByPersonDate.get(`${person.id}|${date}`) ?? [])
+      const savedNote = noteByKey.get(`${person.id}|${date}`)
+      const times = applyConfirmedTimes(
+        summary?.firstIn ?? null,
+        summary?.lastOut ?? null,
+        confirmationByKey.get(`${person.id}|${date}`) ?? null,
+        branch.timezone,
+        [
+          decisionByKey.get(`${person.id}|${date}|BEFORE`),
+          decisionByKey.get(`${person.id}|${date}|AFTER`),
+        ].filter((item): item is StoredOtDecision => item != null)
+      )
+      facts.push({
+        date,
+        personnelId: person.id,
+        displayName: person.displayName,
+        departmentName: person.department?.name ?? person.jobGroup,
+        status: times.status,
+        manMinutes: times.manMinutes,
+        lateMinutes: times.lateMinutes,
+        otBefore: times.otBefore ? { minutes: times.otBefore.minutes, status: times.otBefore.status } : null,
+        otAfter: times.otAfter ? { minutes: times.otAfter.minutes, status: times.otAfter.status } : null,
+        noteReason: savedNote?.reason ?? null,
+        note: savedNote?.note?.trim() || null,
+        firstIn: times.firstIn,
+        lastOut: times.lastOut,
+      })
+    }
+  }
+
+  return {
+    branch: { id: branch.id, code: branch.code, name: branch.name, timezone: branch.timezone },
+    from: params.from,
+    to: params.to,
+    ...buildAttendanceReport(dates, facts),
+    exceptions: buildExceptionGroups(facts),
   }
 }
 
@@ -439,6 +664,94 @@ export async function saveAttendanceDayBranch(
     countedBranchId: params.countedBranchId,
     countedBranchCode: counted?.code ?? "",
   }
+}
+
+/** บันทึกหรือลบเวลายืนยันของ HR เวลาว่างทั้งคู่คือลบ ไม่แก้แถวสแกน */
+export async function saveAttendanceTimeConfirmation(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    roles: UserRole[]
+    userId: string
+    branchId: string
+    personnelId: string
+    date: string
+    inTime: string
+    outTime: string
+  }
+) {
+  assertDateKey(params.date)
+  const branch = await assertAttendanceBranch(db, { ...params, action: "update" })
+  const person = await db.personnel.findFirst({
+    where: { id: params.personnelId, companyId: params.companyId, deletedAt: null },
+    select: { id: true, branchId: true },
+  })
+  const assignment = await db.$queryRaw<Array<{ branch_id: string }>>`
+    SELECT branch_id
+    FROM attendance_day_branches
+    WHERE company_id = ${params.companyId}::uuid
+      AND personnel_id = ${params.personnelId}::uuid
+      AND work_date = ${params.date}::date
+  `
+  if (!person || !countsOnBranch(person.branchId, assignment[0]?.branch_id ?? null, branch.id)) {
+    throw new ValidationError("ไม่พบพนักงานในสาขานี้")
+  }
+
+  const inTime = params.inTime.trim()
+  const outTime = params.outTime.trim()
+  if (!inTime && !outTime) {
+    await db.$executeRaw`
+      DELETE FROM attendance_time_confirmations
+      WHERE company_id = ${params.companyId}::uuid
+        AND personnel_id = ${params.personnelId}::uuid
+        AND work_date = ${params.date}::date
+    `
+    return { personnelId: params.personnelId, date: params.date, confirmed: false }
+  }
+  if (!inTime || !outTime) throw new ValidationError("ต้องระบุทั้งเวลาเข้าและเวลาออก")
+  const confirmedIn = zonedDateTime(params.date, inTime, branch.timezone)
+  const confirmedOut = zonedDateTime(params.date, outTime, branch.timezone)
+  if (!confirmedIn || !confirmedOut || confirmedOut.getTime() <= confirmedIn.getTime()) {
+    throw new ValidationError("เวลาออกต้องอยู่หลังเวลาเข้า")
+  }
+
+  const { start, end } = zonedDayRange(params.date, branch.timezone)
+  const punches = await db.attendancePunch.findMany({
+    where: { companyId: params.companyId, personnelId: params.personnelId, punchAt: { gte: start, lt: end } },
+    select: { punchAt: true },
+    orderBy: { punchAt: "asc" },
+  })
+  const times = dedupePunchTimes(punches.map((punch) => punch.punchAt))
+  const sourceFirstIn = times[0] ?? null
+  const sourceLastOut = times.length > 1 ? times[times.length - 1]! : null
+
+  await db.$executeRaw`
+    INSERT INTO attendance_time_confirmations (
+      company_id, personnel_id, work_date, confirmed_in, confirmed_out,
+      source_first_in, source_last_out, decided_by_id, decided_at, updated_at
+    ) VALUES (
+      ${params.companyId}::uuid,
+      ${params.personnelId}::uuid,
+      ${params.date}::date,
+      ${confirmedIn},
+      ${confirmedOut},
+      ${sourceFirstIn},
+      ${sourceLastOut},
+      ${params.userId}::uuid,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+    ON CONFLICT (personnel_id, work_date)
+    DO UPDATE SET
+      confirmed_in = EXCLUDED.confirmed_in,
+      confirmed_out = EXCLUDED.confirmed_out,
+      source_first_in = EXCLUDED.source_first_in,
+      source_last_out = EXCLUDED.source_last_out,
+      decided_by_id = EXCLUDED.decided_by_id,
+      decided_at = EXCLUDED.decided_at,
+      updated_at = CURRENT_TIMESTAMP
+  `
+  return { personnelId: params.personnelId, date: params.date, confirmed: true }
 }
 
 /** บันทึกหรือลบหมายเหตุของคนหนึ่งในวันนั้น ข้อความว่างคือลบ */

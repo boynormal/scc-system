@@ -33,12 +33,10 @@ const TZ = "Asia/Bangkok"
 
 export function AttendanceDeviceView({
   branch,
-  canCreate,
-  canUpdate,
+  canManage,
 }: {
   branch: { id: string; code: string; name: string }
-  canCreate: boolean
-  canUpdate: boolean
+  canManage: boolean
 }) {
   const t = useTranslations("attendance")
   const locale = useLocale()
@@ -145,7 +143,7 @@ export function AttendanceDeviceView({
       <GlassCard padding="md">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">{t("devices.hint")}</p>
-          {canCreate && (
+          {canManage && (
             <Button size="sm" onClick={() => setCreating(true)}>
               <Plus className="h-4 w-4 mr-1" aria-hidden />
               {t("devices.add")}
@@ -192,7 +190,7 @@ export function AttendanceDeviceView({
                   </dd>
                 </dl>
               </div>
-              {canUpdate && (
+              {canManage && (
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => openRename(d)}>
                     <Pencil className="h-4 w-4 mr-1" aria-hidden />

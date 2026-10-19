@@ -113,7 +113,7 @@ export function formatRosterNo(seq: number): string {
 
 const personnelInclude = {
   branch: { select: { id: true, name: true, code: true } },
-  department: { select: { id: true, name: true, code: true, branchId: true } },
+  department: { select: { id: true, name: true, code: true } },
   user: { select: { id: true, firstName: true, lastName: true, username: true, email: true } },
   branchAssignments: {
     include: { branch: { select: { name: true, code: true, id: true } } },
@@ -152,17 +152,13 @@ async function assertUserLinkAllowed(
 async function assertDepartmentAllowed(
   db: PrismaClient | Prisma.TransactionClient,
   companyId: string,
-  departmentId: string,
-  assignedBranchIds: string[]
+  departmentId: string
 ) {
   const dept = await db.department.findFirst({
-    where: { id: departmentId, isActive: true, branch: { companyId, deletedAt: null } },
-    select: { id: true, branchId: true },
+    where: { id: departmentId, isActive: true, companyId },
+    select: { id: true },
   })
   if (!dept) throw new ValidationError("แผนกไม่ถูกต้อง")
-  if (!assignedBranchIds.includes(dept.branchId)) {
-    throw new ValidationError("แผนกต้องอยู่ในสาขาที่เลือก")
-  }
 }
 
 export function personnelLegalName(person: {
@@ -393,7 +389,7 @@ export async function createPersonnel(
     await personnelShared(db, companyId, "create")
   )
   if (userId) await assertUserLinkAllowed(db, companyId, userId)
-  if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId, resolvedBranchIds)
+  if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId)
 
   if (resolvedBranchIds.length === 0 && !isAdminInAnyBranch(roles)) {
     const allowed = getBranchIds(roles)
@@ -484,17 +480,6 @@ export async function updatePersonnel(
     await assertUserLinkAllowed(db, companyId, input.userId, existing.id)
   }
 
-  const existingBranchIds = existing.branchAssignments.length
-    ? existing.branchAssignments.map((a) => a.branchId)
-    : existing.branchId
-      ? [existing.branchId]
-      : []
-  const nextBranchIds = resolvedBranchIds
-    ? resolvedBranchIds
-    : promoteBranchId
-      ? [...new Set([promoteBranchId, ...existingBranchIds])]
-      : existingBranchIds
-
   const data: Prisma.PersonnelUncheckedUpdateInput = {}
   if (input.rosterNo !== undefined) data.rosterNo = input.rosterNo.trim()
   if (input.displayName !== undefined) data.displayName = input.displayName.trim()
@@ -516,14 +501,14 @@ export async function updatePersonnel(
 
   let nextDepartmentId = input.departmentId !== undefined ? input.departmentId : existing.departmentId
   if (nextDepartmentId) {
-    const dept = await db.department.findFirst({
-      where: { id: nextDepartmentId, branch: { companyId } },
-      select: { branchId: true, isActive: true },
-    })
     if (input.departmentId) {
-      await assertDepartmentAllowed(db, companyId, nextDepartmentId, nextBranchIds)
-    } else if (!dept || !dept.isActive || !nextBranchIds.includes(dept.branchId)) {
-      nextDepartmentId = null
+      await assertDepartmentAllowed(db, companyId, nextDepartmentId)
+    } else {
+      const dept = await db.department.findFirst({
+        where: { id: nextDepartmentId, companyId },
+        select: { isActive: true },
+      })
+      if (!dept || !dept.isActive) nextDepartmentId = null
     }
   }
   if (input.departmentId !== undefined || nextDepartmentId !== existing.departmentId) {
@@ -619,26 +604,16 @@ export async function listAccessiblePersonnelBranches(
 
 export async function listPersonnelDepartments(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; branchIds?: string[] | null }
+  params: { companyId: string; roles: UserRole[] }
 ) {
   if (!canReadPersonnel(params.roles)) throw new ForbiddenError()
-  const shareView = (await readBranchSharing(db, params.companyId)).personnel.view
-  const isAdmin = isAdminInAnyBranch(params.roles) || shareView
-  const allowed = getBranchIds(params.roles)
-  const requested = params.branchIds?.filter(Boolean) ?? []
-  const scope = isAdmin ? requested : requested.filter((id) => allowed.includes(id))
-  const branchFilter = scope.length
-    ? { id: { in: scope } }
-    : isAdmin
-      ? {}
-      : { id: { in: allowed.length ? allowed : ["00000000-0000-0000-0000-000000000000"] } }
 
   const departments = await db.department.findMany({
     where: {
       isActive: true,
-      branch: { companyId: params.companyId, deletedAt: null, isActive: true, ...branchFilter },
+      companyId: params.companyId,
     },
-    select: { id: true, name: true, code: true, branchId: true },
+    select: { id: true, name: true, code: true },
     orderBy: { name: "asc" },
   })
   return { data: departments }

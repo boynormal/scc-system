@@ -3,10 +3,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
-import { ChevronDown, Eye, Pencil, Trash2 } from "lucide-react"
+import { ChevronDown, Eye, LogOut, Pencil, Trash2 } from "lucide-react"
 import { GlassDialog } from "@/components/glass"
 import { cn } from "@/lib/utils"
+import { exitKindLabel, PersonnelExitDialog } from "./personnel-exit-dialog"
 import { HrPersonnelForm, type DepartmentOpt, type PersonnelFormInitial } from "./new/personnel-form"
+import { formatPersonnelDateTime } from "@/modules/hr/application/personnel-date-time"
 
 type BranchOpt = { id: string; name: string; code: string }
 
@@ -18,6 +20,13 @@ export type PersonnelRow = PersonnelFormInitial & {
 
 const itemClass =
   "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-[#0f172a] outline-none data-[highlighted]:bg-[#e2e8f0]"
+
+const GENDER_LABEL: Record<string, string> = { MALE: "ชาย", FEMALE: "หญิง", UNSPECIFIED: "ไม่ระบุ" }
+const NATIONALITY_LABEL: Record<string, string> = { THAI: "ไทย", MYANMAR: "พม่า", OTHER: "อื่นๆ" }
+
+function shown(value: string | null | undefined): string {
+  return value && value.length > 0 ? value : "—"
+}
 
 export function PersonnelRowActions({
   person,
@@ -34,11 +43,11 @@ export function PersonnelRowActions({
 }) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [dialog, setDialog] = useState<"detail" | "edit" | null>(null)
+  const [dialog, setDialog] = useState<"detail" | "edit" | "exit" | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function openDialog(next: "detail" | "edit") {
+  function openDialog(next: "detail" | "edit" | "exit") {
     setMenuOpen(false)
     setDialog(next)
   }
@@ -64,12 +73,22 @@ export function PersonnelRowActions({
     { label: "กลุ่มงาน", value: person.jobGroup ?? "—" },
     { label: "ชื่อจริง", value: person.firstName ?? "—" },
     { label: "นามสกุล", value: person.lastName ?? "—" },
+    { label: "วันเกิด", value: shown(person.birthDate) },
+    { label: "วันเริ่มงาน", value: formatPersonnelDateTime(person.startDate) },
+    { label: "เพศ", value: person.gender ? (GENDER_LABEL[person.gender] ?? "—") : "—" },
+    { label: "สัญชาติ", value: person.nationality ? (NATIONALITY_LABEL[person.nationality] ?? "—") : "—" },
     { label: "เลขบัตรประชาชน", value: person.idCardNo ?? "—" },
     { label: "โทรศัพท์", value: person.phone ?? "—" },
     { label: "ที่อยู่", value: person.address ?? "—" },
     { label: "หมายเหตุ", value: person.notes ?? "—" },
     { label: "สาขา", value: person.branchLabel },
     { label: "สถานะ", value: person.isActive ? "ใช้งาน" : "ปิด" },
+    ...(person.endDate
+      ? [
+          { label: "วันและเวลาที่ออก", value: formatPersonnelDateTime(person.endDate) },
+          { label: "เหตุที่ออก", value: exitKindLabel(person.exitKind) },
+        ]
+      : []),
   ]
 
   return (
@@ -96,6 +115,12 @@ export function PersonnelRowActions({
               <DropdownMenu.Item className={itemClass} onSelect={() => openDialog("edit")}>
                 <Pencil className="h-3.5 w-3.5" />
                 แก้ไข
+              </DropdownMenu.Item>
+            )}
+            {canUpdate && (
+              <DropdownMenu.Item className={itemClass} onSelect={() => openDialog("exit")}>
+                <LogOut className="h-3.5 w-3.5" />
+                บันทึกการออก
               </DropdownMenu.Item>
             )}
             {canDelete && (
@@ -151,6 +176,10 @@ export function PersonnelRowActions({
           />
         )}
       </GlassDialog>
+
+      {dialog === "exit" && (
+        <PersonnelExitDialog person={person} open onOpenChange={(open) => !open && setDialog(null)} />
+      )}
     </div>
   )
 }

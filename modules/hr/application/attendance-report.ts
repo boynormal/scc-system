@@ -88,6 +88,13 @@ export type AttendanceReport = {
     confirmedOtMinutes: number
     pendingOtCount: number
     leave: LeaveCounts
+    presentDays: number
+    onTimeDays: number
+    lateDays: number
+    expectedDays: number
+    absentDays: number
+    leaveDays: number
+    fullLeaveDays: number
   }
   days: ReportDayRow[]
   people: ReportPersonRow[]
@@ -140,6 +147,13 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[]): Att
   let manMinutes = 0
   let confirmedOtMinutes = 0
   let pendingOtCount = 0
+  let presentDays = 0
+  let onTimeDays = 0
+  let lateDays = 0
+  let expectedDays = 0
+  let absentDays = 0
+  let leaveDays = 0
+  let fullLeaveDays = 0
 
   const dayBuckets = new Map<string, ReportDayRow>()
   for (const date of dates) {
@@ -164,10 +178,19 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[]): Att
     const confirmed = confirmedMinutes(fact.otBefore) + confirmedMinutes(fact.otAfter)
     const pending = pendingCount(fact.otBefore) + pendingCount(fact.otAfter)
 
-    if (fact.status !== "NO_SCAN") {
+    expectedDays += 1
+    const present = fact.status !== "NO_SCAN"
+    const absent = fact.status === "NO_SCAN" || reason === "ABSENT"
+    if (present) {
       day.present += 1
       presentPeople.add(fact.personnelId)
+      presentDays += 1
+      if (fact.lateMinutes > 0) lateDays += 1
+      else onTimeDays += 1
     }
+    if (absent) absentDays += 1
+    if (reason === "PERSONAL" || reason === "SICK" || reason === "INTRA_DAY") leaveDays += 1
+    if (reason === "PERSONAL" || reason === "SICK") fullLeaveDays += 1
     if (fact.status === "SINGLE_PUNCH") day.singlePunch += 1
     if (fact.status === "NO_SCAN") day.noScan += 1
     day.manMinutes += fact.manMinutes
@@ -221,7 +244,20 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[]): Att
   }
 
   return {
-    cards: { presentPeople: presentPeople.size, manMinutes, confirmedOtMinutes, pendingOtCount, leave },
+    cards: {
+      presentPeople: presentPeople.size,
+      manMinutes,
+      confirmedOtMinutes,
+      pendingOtCount,
+      leave,
+      presentDays,
+      onTimeDays,
+      lateDays,
+      expectedDays,
+      absentDays,
+      leaveDays,
+      fullLeaveDays,
+    },
     days: dates.map((date) => dayBuckets.get(date)!),
     people: [...people.values()].sort((a, b) => a.displayName.localeCompare(b.displayName, "th")),
   }

@@ -4,6 +4,48 @@ import { AppError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { readBranchSharing, type BranchShareAction } from "@/shared/permissions/branch-sharing"
 import { ensurePersonnelBranch, replacePersonnelBranchesFromIds } from "./personnel-branch-utils"
+import { isPersonnelDateTime, parsePersonnelDateTime, personnelDateTimeReached } from "./personnel-date-time"
+
+const optionalDate = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((value) => {
+    const text = value?.trim() ?? ""
+    return text.length > 0 ? text : null
+  })
+  .refine((value) => value == null || /^\d{4}-\d{2}-\d{2}$/.test(value), "วันที่ไม่ถูกต้อง")
+
+const optionalDateTime = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((value) => {
+    const text = value?.trim() ?? ""
+    return text.length > 0 ? text : null
+  })
+  .refine((value) => isPersonnelDateTime(value), "วันและเวลาไม่ถูกต้อง")
+
+const optionalGender = z
+  .enum(["MALE", "FEMALE", "UNSPECIFIED"])
+  .nullable()
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => (value ? value : null))
+
+const optionalNationality = z
+  .enum(["THAI", "MYANMAR", "OTHER"])
+  .nullable()
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => (value ? value : null))
+
+const optionalExitKind = z
+  .enum(["VOLUNTARY", "INVOLUNTARY"])
+  .nullable()
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => (value ? value : null))
 
 const personnelFieldsSchema = z.object({
   branchId: z.string().uuid().nullable().optional(),
@@ -32,10 +74,16 @@ const personnelFieldsSchema = z.object({
     .nullable()
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),
+  birthDate: optionalDate,
+  startDate: optionalDateTime,
+  gender: optionalGender,
+  nationality: optionalNationality,
+  endDate: optionalDateTime,
+  exitKind: optionalExitKind,
 })
 
 function refinePrimaryBranch(
-  data: { primaryBranchId?: string; branchIds?: string[] },
+  data: { primaryBranchId?: string; branchIds?: string[]; endDate?: string | null; exitKind?: string | null },
   ctx: z.RefinementCtx
 ) {
   if (data.primaryBranchId && data.branchIds?.length) {
@@ -47,6 +95,22 @@ function refinePrimaryBranch(
       })
     }
   }
+  if (data.endDate && !data.exitKind) {
+    ctx.addIssue({
+      code: "custom",
+      message: "ต้องระบุเหตุที่ออก",
+      path: ["exitKind"],
+    })
+  }
+}
+
+function toDbDate(value: string | null | undefined): Date | null {
+  if (!value) return null
+  return new Date(`${value}T00:00:00.000Z`)
+}
+
+function toDbDateTime(value: string | null | undefined): Date | null {
+  return parsePersonnelDateTime(value)
 }
 
 /** ไม่ส่ง rosterNo = ให้ระบบรันเลขถัดไปของบริษัท */
@@ -238,6 +302,15 @@ async function assertBranchesAllowed(
   }
 }
 
+function listedOnBranch(branchId: string): Prisma.PersonnelWhereInput {
+  return {
+    OR: [
+      { branchAssignments: { some: { branchId, isPrimary: true } } },
+      { branchId, branchAssignments: { none: { isPrimary: true } } },
+    ],
+  }
+}
+
 export function personnelBranchWhereForRoles(
   isAdmin: boolean,
   allowed: string[],
@@ -245,22 +318,12 @@ export function personnelBranchWhereForRoles(
 ): Prisma.PersonnelWhereInput | null {
   if (isAdmin) {
     if (!branchIdParam) return null
-    return {
-      OR: [
-        { branchId: branchIdParam },
-        { branchAssignments: { some: { branchId: branchIdParam } } },
-      ],
-    }
+    return listedOnBranch(branchIdParam)
   }
   if (allowed.length === 0) return { id: "00000000-0000-0000-0000-000000000000" }
   if (branchIdParam) {
     if (!allowed.includes(branchIdParam)) return null
-    return {
-      OR: [
-        { branchId: branchIdParam },
-        { branchAssignments: { some: { branchId: branchIdParam } } },
-      ],
-    }
+    return listedOnBranch(branchIdParam)
   }
   return {
     OR: [
@@ -376,6 +439,12 @@ export async function createPersonnel(
     notes,
     userId,
     departmentId,
+    birthDate,
+    startDate,
+    gender,
+    nationality,
+    endDate,
+    exitKind,
   } = input
 
   const resolvedBranchIds = resolveBranchIdList(input)
@@ -426,6 +495,13 @@ export async function createPersonnel(
           notes: notes?.trim() || null,
           userId: userId ?? null,
           departmentId: departmentId ?? null,
+          birthDate: toDbDate(birthDate),
+          startDate: toDbDateTime(startDate),
+          gender,
+          nationality,
+          endDate: toDbDateTime(endDate),
+          exitKind: endDate ? exitKind : null,
+          ...(personnelDateTimeReached(endDate) ? { isActive: false } : {}),
         },
       })
       if (resolvedBranchIds.length > 0) {
@@ -491,7 +567,16 @@ export async function updatePersonnel(
   if (input.address !== undefined) data.address = input.address?.trim() || null
   if (input.notes !== undefined) data.notes = input.notes?.trim() || null
   if (input.isActive !== undefined) data.isActive = input.isActive
+  if (personnelDateTimeReached(input.endDate)) data.isActive = false
   if (input.userId !== undefined) data.userId = input.userId
+  if (input.birthDate !== undefined) data.birthDate = toDbDate(input.birthDate)
+  if (input.startDate !== undefined) data.startDate = toDbDateTime(input.startDate)
+  if (input.gender !== undefined) data.gender = input.gender
+  if (input.nationality !== undefined) data.nationality = input.nationality
+  if (input.endDate !== undefined) data.endDate = toDbDateTime(input.endDate)
+  if (input.exitKind !== undefined || input.endDate !== undefined) {
+    data.exitKind = input.endDate ? input.exitKind ?? null : null
+  }
 
   if (resolvedBranchIds) {
     data.branchId = resolvePrimaryFromList(resolvedBranchIds, input.primaryBranchId ?? null)

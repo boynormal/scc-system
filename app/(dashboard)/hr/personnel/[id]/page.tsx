@@ -7,6 +7,16 @@ import { getPersonnel } from "@/modules/hr"
 import { Badge } from "@/components/ui/badge"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 import { PersonnelDeleteButton } from "../personnel-delete-button"
+import { exitKindLabel, PersonnelExitButton } from "../personnel-exit-dialog"
+import { formatPersonnelDateTime, personnelDateTimeInput } from "@/modules/hr/application/personnel-date-time"
+
+function dateText(value: Date | null): string {
+  if (!value) return "—"
+  return value.toISOString().slice(0, 10)
+}
+
+const GENDER_LABEL: Record<string, string> = { MALE: "ชาย", FEMALE: "หญิง", UNSPECIFIED: "ไม่ระบุ" }
+const NATIONALITY_LABEL: Record<string, string> = { THAI: "ไทย", MYANMAR: "พม่า", OTHER: "อื่นๆ" }
 
 export default async function PersonnelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -45,11 +55,21 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
     { label: "กลุ่มงาน", value: row.jobGroup ?? "—" },
     { label: "ชื่อจริง", value: row.firstName ?? "—" },
     { label: "นามสกุล", value: row.lastName ?? "—" },
+    { label: "วันเกิด", value: dateText(row.birthDate) },
+    { label: "วันเริ่มงาน", value: formatPersonnelDateTime(row.startDate) },
+    { label: "เพศ", value: row.gender ? (GENDER_LABEL[row.gender] ?? "—") : "—" },
+    { label: "สัญชาติ", value: row.nationality ? (NATIONALITY_LABEL[row.nationality] ?? "—") : "—" },
     { label: "เลขบัตรประชาชน", value: row.idCardNo ?? "—" },
     { label: "โทรศัพท์", value: row.phone ?? "—" },
     { label: "ที่อยู่", value: row.address ?? "—" },
     { label: "หมายเหตุ", value: row.notes ?? "—" },
     { label: "สาขา", value: branchLabel },
+    ...(row.endDate
+      ? [
+          { label: "วันและเวลาที่ออก", value: formatPersonnelDateTime(row.endDate) },
+          { label: "เหตุที่ออก", value: exitKindLabel(row.exitKind) },
+        ]
+      : []),
   ]
 
   return (
@@ -77,6 +97,16 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
             >
               แก้ไข
             </Link>
+          )}
+          {canUpdate && (
+            <PersonnelExitButton
+              person={{
+                id: row.id,
+                displayName: row.displayName,
+                endDate: personnelDateTimeInput(row.endDate),
+                exitKind: row.exitKind,
+              }}
+            />
           )}
           {canDelete && <PersonnelDeleteButton id={row.id} />}
         </div>

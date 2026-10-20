@@ -80,7 +80,7 @@ function formatMonthChip(month: string, locale: string): string {
   })
 }
 
-function MonthPicker({
+export function MonthPicker({
   month,
   today,
   onChange,

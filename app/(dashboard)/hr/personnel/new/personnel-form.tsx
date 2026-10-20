@@ -22,6 +22,12 @@ export type PersonnelFormInitial = {
   notes: string | null
   isActive: boolean
   branchId: string | null
+  birthDate?: string | null
+  startDate?: string | null
+  gender?: "MALE" | "FEMALE" | "UNSPECIFIED" | null
+  nationality?: "THAI" | "MYANMAR" | "OTHER" | null
+  endDate?: string | null
+  exitKind?: "VOLUNTARY" | "INVOLUNTARY" | null
 }
 
 const fieldClass =
@@ -61,6 +67,10 @@ export function HrPersonnelForm({
   const [address, setAddress] = useState(initial?.address ?? "")
   const [notes, setNotes] = useState(initial?.notes ?? "")
   const [branchId, setBranchId] = useState(initial?.branchId ?? branches[0]?.id ?? "")
+  const [birthDate, setBirthDate] = useState(initial?.birthDate ?? "")
+  const [startDate, setStartDate] = useState(initial?.startDate ?? "")
+  const [gender, setGender] = useState(initial?.gender ?? "")
+  const [nationality, setNationality] = useState(initial?.nationality ?? "")
   const embedded = Boolean(onSaved || onCancel)
   const selectedDepartment = departments.find((department) => department.id === departmentId) ?? null
 
@@ -83,6 +93,10 @@ export function HrPersonnelForm({
       phone: phone.trim() || null,
       address: address.trim() || null,
       notes: notes.trim() || null,
+      birthDate: birthDate || null,
+      startDate: startDate || null,
+      gender: gender || null,
+      nationality: nationality || null,
       ...(mode === "edit" && { isActive }),
     }
     const url = mode === "edit" && personnelId ? `/api/hr/personnel/${personnelId}` : "/api/hr/personnel"
@@ -170,6 +184,40 @@ export function HrPersonnelForm({
             name="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+          />
+          <GlassInput className={embedded ? solidField : undefined} label="วันเกิด" name="birthDate" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+          <GlassInput
+            className={embedded ? solidField : undefined}
+            label="วันเริ่มงาน"
+            name="startDate"
+            type="datetime-local"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            hint="วันและเวลา"
+          />
+          <Select
+            className={embedded ? solidField : undefined}
+            label="เพศ"
+            value={gender}
+            onChange={(e) => setGender(e.target.value as typeof gender)}
+            placeholder="ยังไม่ระบุ"
+            options={[
+              { value: "MALE", label: "ชาย" },
+              { value: "FEMALE", label: "หญิง" },
+              { value: "UNSPECIFIED", label: "ไม่ระบุ" },
+            ]}
+          />
+          <Select
+            className={embedded ? solidField : undefined}
+            label="สัญชาติ"
+            value={nationality}
+            onChange={(e) => setNationality(e.target.value as typeof nationality)}
+            placeholder="ยังไม่ระบุ"
+            options={[
+              { value: "THAI", label: "ไทย" },
+              { value: "MYANMAR", label: "พม่า" },
+              { value: "OTHER", label: "อื่นๆ" },
+            ]}
           />
         </div>
       </GlassFormSection>

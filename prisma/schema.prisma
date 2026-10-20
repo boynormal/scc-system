@@ -140,6 +140,7 @@ model Company {
   attendanceDayNotes    AttendanceDayNote[]
   attendanceDayBranches AttendanceDayBranch[]
   attendanceTimeConfirmations AttendanceTimeConfirmation[]
+  attendanceHolidays     AttendanceHoliday[]
   tmsCustomers          TmsCustomer[]
   transportJobTypes     TransportJobType[]
   transportCargoTypes   TransportCargoType[]
@@ -192,6 +193,7 @@ model Branch {
   attendancePunches    AttendancePunch[]
   attendanceDays       AttendanceDay[]
   attendanceDayBranches AttendanceDayBranch[]
+  attendanceHolidayBranches AttendanceHolidayBranch[]
   personnelBranchLinks PersonnelBranch[]
   transportVehicles    TransportVehicle[]
   drivers              Driver[]
@@ -874,6 +876,23 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+enum PersonnelGender {
+  MALE
+  FEMALE
+  UNSPECIFIED
+}
+
+enum PersonnelNationality {
+  THAI
+  MYANMAR
+  OTHER
+}
+
+enum PersonnelExitKind {
+  VOLUNTARY
+  INVOLUNTARY
+}
+
 // ─── GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (ซิงค์จาก HIP PremiumTime ต่อสาขา) ─
 
 model Personnel {
@@ -891,6 +910,12 @@ model Personnel {
   notes        String?   @db.Text
   userId       String?   @unique @map("user_id") @db.Uuid
   departmentId String?   @map("department_id") @db.Uuid
+  birthDate    DateTime? @map("birth_date") @db.Date
+  startDate    DateTime? @map("start_date") @db.Timestamptz
+  gender       PersonnelGender?
+  nationality  PersonnelNationality?
+  endDate      DateTime? @map("end_date") @db.Timestamptz
+  exitKind     PersonnelExitKind? @map("exit_kind")
   isActive     Boolean   @default(true) @map("is_active")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
@@ -1131,6 +1156,35 @@ model AttendanceDayNote {
   @@unique([personnelId, workDate], map: "attendance_day_notes_person_date_unique")
   @@index([companyId, workDate])
   @@map("attendance_day_notes")
+}
+
+/// วันหยุดที่ประกาศ ใช้กับสาขาที่เลือกเท่านั้น
+model AttendanceHoliday {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String   @db.VarChar(200)
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company                   @relation(fields: [companyId], references: [id])
+  branches AttendanceHolidayBranch[]
+
+  @@index([companyId, startDate])
+  @@map("attendance_holidays")
+}
+
+model AttendanceHolidayBranch {
+  holidayId String @map("holiday_id") @db.Uuid
+  branchId  String @map("branch_id") @db.Uuid
+
+  holiday AttendanceHoliday @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  branch  Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([holidayId, branchId])
+  @@index([branchId])
+  @@map("attendance_holiday_branches")
 }
 
 /// เวลายืนยันของ HR ต่อคนต่อวัน ไม่เขียนทับเวลาสแกน

@@ -21,8 +21,12 @@ export default async function HrLayout({ children }: { children: React.ReactNode
   }
   if (canReadHrAttendance(roles)) {
     tabs.push({ href: "/hr/attendance", label: "บันทึกเวลา" })
+    tabs.push({ href: "/hr/holidays", label: "วันหยุด" })
     tabs.push({ href: "/hr/reports", label: "รายงาน" })
     tabs.push({ href: "/hr/exceptions", label: "รายการผิดปกติ" })
+  }
+  if (canReadHrPersonnel(roles) || canReadHrAttendance(roles)) {
+    tabs.push({ href: "/hr/kpi", label: "ตัวชี้วัด" })
   }
 
   if (tabs.length === 0) {

@@ -38,8 +38,7 @@ export default async function HrReportsPage() {
       branches={branches}
       departments={departments.map((department) => ({ id: department.id, name: department.name }))}
       initialBranchId={branches[0]!.id}
-      initialFrom={`${today.slice(0, 8)}01`}
-      initialTo={today}
+      today={today}
     />
   )
 }

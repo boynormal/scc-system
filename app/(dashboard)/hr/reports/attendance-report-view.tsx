@@ -10,10 +10,12 @@ import { GlassDialog } from "@/components/glass"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
-import { Input } from "@/components/ui/input"
 import { LoadingState } from "@/components/ui/loading-state"
 import { Select } from "@/components/ui/select"
+import { monthKeyOf } from "@/modules/hr/application/attendance-day-calendar"
+import { monthBounds } from "@/modules/hr/application/hr-kpi"
 import { formatMinutes } from "../attendance/attendance-format"
+import { MonthPicker } from "../exceptions/attendance-exception-view"
 
 type LeaveCounts = { PERSONAL: number; SICK: number; ABSENT: number; INTRA_DAY: number }
 type DayStatus = "COMPLETE" | "SINGLE_PUNCH" | "NO_SCAN"
@@ -94,19 +96,19 @@ export function AttendanceReportView({
   branches,
   departments,
   initialBranchId,
-  initialFrom,
-  initialTo,
+  today,
 }: {
   branches: { id: string; code: string; name: string }[]
   departments: { id: string; name: string }[]
   initialBranchId: string
-  initialFrom: string
-  initialTo: string
+  today: string
 }) {
   const t = useTranslations("attendance")
   const [branchId, setBranchId] = useState(initialBranchId)
-  const [from, setFrom] = useState(initialFrom)
-  const [to, setTo] = useState(initialTo)
+  const [month, setMonth] = useState(() => monthKeyOf(today))
+  const bounds = monthBounds(month, today)
+  const from = bounds?.start ?? `${month}-01`
+  const to = bounds?.asOf ?? from
   const [departmentId, setDepartmentId] = useState("")
   const [view, setView] = useState<"day" | "person">("day")
   const [filter, setFilter] = useState<FilterKey | null>(null)
@@ -200,6 +202,7 @@ export function AttendanceReportView({
       <ListFrame
         title={t("report.title")}
         description={t("report.description")}
+        filterOverflow
         actions={
           <Button size="sm" variant="outline" disabled={!report || loading} onClick={exportTable}>
             {t("report.export")}
@@ -207,8 +210,10 @@ export function AttendanceReportView({
         }
         filters={
           <>
-            <Input label={t("report.from")} type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
-            <Input label={t("report.to")} type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+            <div className="space-y-1.5">
+              <span className="block text-sm font-medium text-foreground">{t("exceptions.month")}</span>
+              <MonthPicker month={month} today={today} onChange={setMonth} />
+            </div>
             <Select
               label={t("branch")}
               value={branchId}

@@ -135,15 +135,23 @@ function matchPersonnel(where: Record<string, unknown> | undefined, row: PersonR
     if (inner.in && !inner.in.includes(row.branchId ?? "")) return false
   }
   if (where.branchAssignments && typeof where.branchAssignments === "object") {
-    const some = (where.branchAssignments as { some?: { branchId?: string | { in?: string[] } } }).some
+    const filter = where.branchAssignments as {
+      some?: { branchId?: string | { in?: string[] }; isPrimary?: boolean }
+      none?: { isPrimary?: boolean }
+    }
+    if (filter.none?.isPrimary === true && row.branchAssignments.some((assignment) => assignment.isPrimary)) return false
+    const some = filter.some
     if (some?.branchId) {
       if (typeof some.branchId === "string") {
-        const hit = row.branchAssignments.some((a) => a.branchId === some.branchId) || row.branchId === some.branchId
+        const hit = row.branchAssignments.some(
+          (assignment) =>
+            assignment.branchId === some.branchId &&
+            (some.isPrimary === undefined || assignment.isPrimary === some.isPrimary)
+        )
         if (!hit) return false
       } else if (some.branchId.in) {
         const allowed = some.branchId.in
-        const hit =
-          row.branchAssignments.some((a) => allowed.includes(a.branchId)) || allowed.includes(row.branchId ?? "")
+        const hit = row.branchAssignments.some((assignment) => allowed.includes(assignment.branchId))
         if (!hit) return false
       }
     }
@@ -389,11 +397,14 @@ describe("personnelBranchWhereForRoles", () => {
     expect(personnelBranchWhereForRoles(true, [], null)).toBeNull()
   })
 
-  it("admin with branchIdParam filters by direct branch or assignment", () => {
+  it("admin with branchIdParam filters by the primary branch shown in the list", () => {
     const result = personnelBranchWhereForRoles(true, [], "branch-1")
 
     expect(result).toEqual({
-      OR: [{ branchId: "branch-1" }, { branchAssignments: { some: { branchId: "branch-1" } } }],
+      OR: [
+        { branchAssignments: { some: { branchId: "branch-1", isPrimary: true } } },
+        { branchId: "branch-1", branchAssignments: { none: { isPrimary: true } } },
+      ],
     })
   })
 
@@ -409,11 +420,14 @@ describe("personnelBranchWhereForRoles", () => {
     expect(result).toBeNull()
   })
 
-  it("non-admin requesting an allowed branch filters by that branch or assignment", () => {
+  it("non-admin requesting an allowed branch filters by the primary branch", () => {
     const result = personnelBranchWhereForRoles(false, ["branch-1", "branch-2"], "branch-1")
 
     expect(result).toEqual({
-      OR: [{ branchId: "branch-1" }, { branchAssignments: { some: { branchId: "branch-1" } } }],
+      OR: [
+        { branchAssignments: { some: { branchId: "branch-1", isPrimary: true } } },
+        { branchId: "branch-1", branchAssignments: { none: { isPrimary: true } } },
+      ],
     })
   })
 
@@ -770,6 +784,52 @@ describe("personnel department", () => {
       pageSize: 20,
     })
     expect(listed.data.map((p) => p.id)).toEqual([PERSON_ID])
+  })
+
+  it("branch filter keeps people whose primary branch matches and drops a secondary link", async () => {
+    const db = fakeDb({
+      people: [
+        personRow({
+          branchAssignments: [
+            {
+              id: "assign-a",
+              branchId: BRANCH_A,
+              isPrimary: true,
+              branch: { id: BRANCH_A, name: "พระประแดง", code: "PPD" },
+            },
+          ],
+        }),
+        personRow({
+          id: PERSON_OTHER,
+          rosterNo: "78",
+          displayName: "สาขาอื่น",
+          branchId: BRANCH_B,
+          branch: { id: BRANCH_B, name: "อื่น", code: "OTH" },
+          branchAssignments: [
+            {
+              id: "assign-b",
+              branchId: BRANCH_B,
+              isPrimary: true,
+              branch: { id: BRANCH_B, name: "อื่น", code: "OTH" },
+            },
+            {
+              id: "assign-link",
+              branchId: BRANCH_A,
+              isPrimary: false,
+              branch: { id: BRANCH_A, name: "พระประแดง", code: "PPD" },
+            },
+          ],
+        }),
+      ],
+    })
+    const listed = await listPersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      branchId: BRANCH_A,
+      page: 1,
+      pageSize: 20,
+    })
+    expect(listed.data.map((person) => person.rosterNo)).toEqual(["001"])
   })
 
   it("lists active departments for the whole company", async () => {

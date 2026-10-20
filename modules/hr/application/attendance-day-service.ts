@@ -13,6 +13,8 @@ import {
   dateKeysInRange,
   type ReportFact,
 } from "./attendance-report"
+import { listHolidaySpans } from "./attendance-holiday-service"
+import { isOffDay, shouldSkipOffDay } from "./attendance-off-days"
 
 export const decideAttendanceOtSchema = z.object({
   branchId: z.string().uuid(),
@@ -151,9 +153,12 @@ export async function listAttendanceDays(
     if (person.branchId && person.branch) homeByPerson.set(person.id, { id: person.branchId, code: person.branch.code })
   }
   const scannedIds = new Set(summarized.map((row) => row.personnelId))
-  const absent = roster
-    .filter((person) => !scannedIds.has(person.id))
-    .sort((a, b) => a.displayName.localeCompare(b.displayName, "th"))
+  const holidays = await listHolidaySpans(db, params.companyId, params.date, params.date)
+  const absent = isOffDay(params.date, branch.id, holidays)
+    ? []
+    : roster
+        .filter((person) => !scannedIds.has(person.id))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName, "th"))
   const personnelIds = [...scannedIds, ...absent.map((person) => person.id)]
   const [decisions, notes, confirmations] = await Promise.all([
     loadOtDecisions(db, params.companyId, params.date, personnelIds),
@@ -340,6 +345,7 @@ export async function listAttendanceReport(
   const dates = dateKeysInRange(params.from, params.to)
   if (!dates) throw new ValidationError("ช่วงวันที่ไม่ถูกต้อง หรือยาวเกิน 62 วัน")
   const branch = await assertAttendanceBranch(db, { ...params, action: "read" })
+  const holidays = await listHolidaySpans(db, params.companyId, dates[0]!, dates[dates.length - 1]!)
   const { start } = zonedDayRange(dates[0]!, branch.timezone)
   const { end } = zonedDayRange(dates[dates.length - 1]!, branch.timezone)
 
@@ -443,7 +449,9 @@ export async function listAttendanceReport(
     for (const person of roster) {
       const counted = countedByPersonDate.get(`${person.id}|${date}`) ?? null
       if (!countsOnBranch(person.branchId, counted, branch.id)) continue
-      const summary = summarizeDay(punchesByPersonDate.get(`${person.id}|${date}`) ?? [])
+      const punches = punchesByPersonDate.get(`${person.id}|${date}`) ?? []
+      if (shouldSkipOffDay(date, branch.id, holidays, punches.length > 0)) continue
+      const summary = summarizeDay(punches)
       const savedNote = noteByKey.get(`${person.id}|${date}`)
       const times = applyConfirmedTimes(
         summary?.firstIn ?? null,

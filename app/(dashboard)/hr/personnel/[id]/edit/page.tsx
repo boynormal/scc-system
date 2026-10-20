@@ -5,6 +5,12 @@ import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { getPersonnel, listAccessiblePersonnelBranches, listPersonnelDepartments } from "@/modules/hr"
 import { HrPersonnelForm } from "../../new/personnel-form"
+import { personnelDateTimeInput } from "@/modules/hr/application/personnel-date-time"
+
+function dateInput(value: Date | null): string | null {
+  if (!value) return null
+  return value.toISOString().slice(0, 10)
+}
 
 function canUpdate(roles: UserRole[]) {
   return (
@@ -64,6 +70,12 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
           notes: row.notes,
           isActive: row.isActive,
           branchId: primary,
+          birthDate: dateInput(row.birthDate),
+          startDate: personnelDateTimeInput(row.startDate),
+          gender: row.gender,
+          nationality: row.nationality,
+          endDate: personnelDateTimeInput(row.endDate),
+          exitKind: row.exitKind,
         }}
       />
     </div>

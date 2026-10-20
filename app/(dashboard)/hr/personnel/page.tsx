@@ -14,8 +14,14 @@ import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-p
 import { PersonnelFilters } from "./personnel-filters"
 import { PersonnelCreateButton } from "./personnel-create-button"
 import { PersonnelRowActions } from "./personnel-row-actions"
+import { personnelDateTimeInput } from "@/modules/hr/application/personnel-date-time"
 
 export const metadata: Metadata = { title: "บุคลากร" }
+
+function dateInput(value: Date | null): string | null {
+  if (!value) return null
+  return value.toISOString().slice(0, 10)
+}
 
 function canRead(roles: UserRole[]) {
   return (
@@ -161,6 +167,12 @@ export default async function HrPersonnelPage(props: {
                             notes: p.notes,
                             isActive: p.isActive,
                             branchId: primary?.id ?? p.branchId,
+                            birthDate: dateInput(p.birthDate),
+                            startDate: personnelDateTimeInput(p.startDate),
+                            gender: p.gender,
+                            nationality: p.nationality,
+                            endDate: personnelDateTimeInput(p.endDate),
+                            exitKind: p.exitKind,
                             branchLabel: primary ? `${primary.code} — ${primary.name}` : "—",
                           }}
                           branches={branches}

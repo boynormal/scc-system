@@ -13,7 +13,7 @@ export function ListFrame({
   children,
   className,
 }: {
-  title: string
+  title?: string
   description?: string
   actions?: ReactNode
   filters?: ReactNode
@@ -24,7 +24,9 @@ export function ListFrame({
 }) {
   return (
     <div className={cn("min-w-0 space-y-4", className)}>
-      <PageHeader title={title} description={description} actions={actions} />
+      {title || description || actions ? (
+        <PageHeader title={title ?? ""} description={description} actions={actions} />
+      ) : null}
       {filters ? (
         <DataPanel padding="sm" className={filterOverflow ? "relative z-20 overflow-visible" : undefined}>
           <div className={cn("flex items-end gap-2 text-foreground", filterOverflow ? "overflow-visible" : "overflow-x-auto")}>

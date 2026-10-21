@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { DataPanel } from "@/components/shell/data-panel"
+import { PendingFade } from "@/components/shell/nav-pending"
 import { PageHeader } from "@/components/shell/page-header"
 
 /** Compact list shell: one header row, one filter row, then the table panel. */
@@ -34,9 +35,11 @@ export function ListFrame({
           </div>
         </DataPanel>
       ) : null}
-      <DataPanel padding="none" className="[&_td]:text-foreground [&_th]:text-foreground">
-        {children}
-      </DataPanel>
+      <PendingFade scope="section">
+        <DataPanel padding="none" className="[&_td]:text-foreground [&_th]:text-foreground">
+          {children}
+        </DataPanel>
+      </PendingFade>
     </div>
   )
 }

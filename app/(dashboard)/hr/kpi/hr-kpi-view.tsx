@@ -36,6 +36,7 @@ import {
 import { fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { ListFrame } from "@/components/shell/list-frame"
+import { SLIDING_PILL_BASE, SLIDING_PILL_MOTION, useSlidingPill } from "@/components/shell/use-sliding-pill"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
@@ -182,6 +183,8 @@ export function HrKpiView({
     router.replace(`/hr/kpi?${new URLSearchParams({ tab: next })}`, { scroll: false })
   }
 
+  const { rootRef, setItemRef, shownKey, select, pillStyle, ready } = useSlidingPill(true, tab)
+
   return (
     <ListFrame
       title={t("title")}
@@ -211,21 +214,33 @@ export function HrKpiView({
       }
     >
       <div className="space-y-4 p-4">
-        <nav className="flex gap-1 border-b border-border" aria-label={t("title")}>
-          {tabs.map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => selectTab(key)}
-              aria-current={tab === key ? "page" : undefined}
-              className={cn(
-                "-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-                tab === key ? "border-blue-600 text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t(`tabs.${key}`)}
-            </button>
-          ))}
+        <nav ref={rootRef} className="relative flex gap-1 border-b border-border" aria-label={t("title")}>
+          {pillStyle && (
+            <span aria-hidden className={cn(SLIDING_PILL_BASE, ready && SLIDING_PILL_MOTION)} style={pillStyle}>
+              <span className="absolute inset-x-0 bottom-0 h-0.5 bg-blue-600" />
+            </span>
+          )}
+          {tabs.map((key) => {
+            const active = key === shownKey
+            return (
+              <button
+                key={key}
+                ref={setItemRef(key)}
+                type="button"
+                onClick={() => {
+                  select(key)
+                  selectTab(key)
+                }}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "relative z-10 px-3 py-2 text-sm font-medium transition-colors duration-300",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t(`tabs.${key}`)}
+              </button>
+            )
+          })}
         </nav>
         {loading ? (
           <LoadingState title="…" />

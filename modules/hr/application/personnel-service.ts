@@ -333,6 +333,37 @@ export function personnelBranchWhereForRoles(
   }
 }
 
+/** จำนวนคนที่ยังใช้งาน แยกตามสาขาหลักที่แสดงในรายการ */
+export async function countActivePersonnelByBranch(
+  db: PrismaClient,
+  params: { companyId: string; roles: UserRole[]; branchIds: string[] }
+): Promise<Record<string, number>> {
+  if (!canReadPersonnel(params.roles)) throw new ForbiddenError()
+  const ids = [...new Set(params.branchIds)]
+  const counts: Record<string, number> = {}
+  for (const id of ids) counts[id] = 0
+  if (ids.length === 0) return counts
+
+  const rows = await db.personnel.findMany({
+    where: {
+      companyId: params.companyId,
+      deletedAt: null,
+      isActive: true,
+      OR: ids.map((branchId) => listedOnBranch(branchId)),
+    },
+    select: {
+      branchId: true,
+      branchAssignments: { where: { isPrimary: true }, select: { branchId: true }, take: 1 },
+    },
+  })
+
+  for (const row of rows) {
+    const home = row.branchAssignments[0]?.branchId ?? row.branchId
+    if (home && counts[home] != null) counts[home] += 1
+  }
+  return counts
+}
+
 export async function listPersonnel(
   db: PrismaClient,
   params: {

@@ -110,7 +110,19 @@
   },
   "holidays": {
     "title": "Holidays",
-    "weekly": "Every Sunday is a day off for all branches and is not listed here",
+    "weekly": "Every Sunday is a day off for all branches and appears on the calendar without an entry",
+    "sunday": "All branches",
+    "previous": "Previous month",
+    "next": "Next month",
+    "weekdays": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
     "year": "Year",
     "add": "Add holiday",
     "edit": "Edit holiday",

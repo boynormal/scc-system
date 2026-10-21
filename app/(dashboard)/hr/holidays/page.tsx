@@ -19,7 +19,7 @@ export default async function HrHolidaysPage() {
   return (
     <HolidayCalendar
       branches={branches}
-      year={Number(todayInZone("Asia/Bangkok").slice(0, 4))}
+      today={todayInZone("Asia/Bangkok")}
       canUpdate={canAttendanceAnyBranch(roles, "update")}
     />
   )

@@ -15,6 +15,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
 import { AttendanceDayPicker } from "./attendance-day-picker"
+import { PendingFade } from "@/components/shell/nav-pending"
+import { AttendanceSectionTabs } from "./attendance-chrome"
 import { formatDateTime, formatMinutes, formatTime, todayInZone } from "./attendance-format"
 
 type DayRow = {
@@ -598,9 +600,10 @@ export function AttendanceDayView({
     <div className="space-y-2">
       <DataPanel padding="sm" className="relative z-20 overflow-visible">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <AttendanceSectionTabs branchId={branchId} tab="day" />
           <AttendanceDayPicker branchId={branchId} date={date} today={todayInZone(tz)} onChange={setDate} />
           {data && (
-            <>
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
               <DayStat label={t("day.present")} value={present} />
               <DayStat label={t("day.singlePunchCount")} value={incomplete} alert />
               <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
@@ -617,11 +620,12 @@ export function AttendanceDayView({
                   {t("day.unmappedWarning", { count: data.unmappedBadgesToday })}
                 </Link>
               )}
-            </>
+            </div>
           )}
         </div>
       </DataPanel>
 
+      <PendingFade scope="section">
       <GlassCard padding="none">
         {loading ? (
           <LoadingState title={t("loading")} />
@@ -786,6 +790,7 @@ export function AttendanceDayView({
           </div>
         )}
       </GlassCard>
+      </PendingFade>
       <GlassDialog
         solid
         open={manageRow != null && manageStep != null}

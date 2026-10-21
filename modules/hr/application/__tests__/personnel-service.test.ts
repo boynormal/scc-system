@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client"
 import { AppError, ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import {
+  countActivePersonnelByBranch,
   createPersonnel,
   createPersonnelSchema,
   deletePersonnel,
@@ -830,6 +831,43 @@ describe("personnel department", () => {
       pageSize: 20,
     })
     expect(listed.data.map((person) => person.rosterNo)).toEqual(["001"])
+  })
+
+  it("counts only active people on their primary branch", async () => {
+    const db = fakeDb({
+      people: [
+        personRow({
+          branchAssignments: [
+            { id: "a1", branchId: BRANCH_A, isPrimary: true, branch: { id: BRANCH_A, name: "A", code: "A" } },
+          ],
+        }),
+        personRow({
+          id: PERSON_OTHER,
+          rosterNo: "78",
+          isActive: false,
+          branchId: BRANCH_A,
+          branchAssignments: [
+            { id: "a2", branchId: BRANCH_A, isPrimary: true, branch: { id: BRANCH_A, name: "A", code: "A" } },
+          ],
+        }),
+        personRow({
+          id: "99999999-9999-9999-9999-999999999999",
+          rosterNo: "003",
+          branchId: BRANCH_B,
+          branch: { id: BRANCH_B, name: "B", code: "B" },
+          branchAssignments: [
+            { id: "b1", branchId: BRANCH_B, isPrimary: true, branch: { id: BRANCH_B, name: "B", code: "B" } },
+            { id: "link", branchId: BRANCH_A, isPrimary: false, branch: { id: BRANCH_A, name: "A", code: "A" } },
+          ],
+        }),
+      ],
+    })
+    const counts = await countActivePersonnelByBranch(db, {
+      companyId: CID,
+      roles: adminRoles,
+      branchIds: [BRANCH_A, BRANCH_B],
+    })
+    expect(counts).toEqual({ [BRANCH_A]: 1, [BRANCH_B]: 1 })
   })
 
   it("lists active departments for the whole company", async () => {

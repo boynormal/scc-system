@@ -6,6 +6,7 @@ import { getBranchIds, hasPermission, isAdminInAnyBranch } from "@/lib/permissio
 import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
+import { PendingFade } from "@/components/shell/nav-pending"
 import { TransportModuleTabs } from "./transport-module-tabs"
 
 function canRead(roles: UserRole[], resource: "transport_jobs" | "transport_vehicles" | "transport_drivers") {
@@ -50,7 +51,9 @@ export default async function TransportLayout({ children }: { children: React.Re
     <ModuleBackdrop isDark={isDark}>
       <div className="space-y-6">
         <TransportModuleTabs tabs={tabs} />
-        <div className="min-w-0">{children}</div>
+        <PendingFade scope="module" className="min-w-0">
+          {children}
+        </PendingFade>
       </div>
     </ModuleBackdrop>
   )

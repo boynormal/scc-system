@@ -6,15 +6,17 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { listAccessiblePersonnelBranches, listPersonnel, listPersonnelDepartments } from "@/modules/hr"
+import { countActivePersonnelByBranch, listAccessiblePersonnelBranches, listPersonnel, listPersonnelDepartments } from "@/modules/hr"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Badge } from "@/components/ui/badge"
-import { GlassCard } from "@/components/glass"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
 import { PersonnelFilters } from "./personnel-filters"
 import { PersonnelCreateButton } from "./personnel-create-button"
 import { PersonnelRowActions } from "./personnel-row-actions"
 import { personnelDateTimeInput } from "@/modules/hr/application/personnel-date-time"
+import { ListFrame } from "@/components/shell/list-frame"
+import { SubTabs } from "@/components/shell/sub-tabs"
+import { compareBranchTabName } from "@/modules/hr/application/branch-tab-order"
 
 export const metadata: Metadata = { title: "บุคลากร" }
 
@@ -52,7 +54,7 @@ function canDelete(roles: UserRole[]) {
 }
 
 export default async function HrPersonnelPage(props: {
-  searchParams: Promise<{ search?: string; branchId?: string; isActive?: string; page?: string }>
+  searchParams: Promise<{ search?: string; branchId?: string; isActive?: string; departmentId?: string; page?: string }>
 }) {
   const searchParams = await props.searchParams
   const session = await auth()
@@ -63,7 +65,7 @@ export default async function HrPersonnelPage(props: {
   const companyId = session.user.companyId as string
   const page = parsePage(searchParams.page)
   const isActiveRaw = searchParams.isActive
-  const isActive = isActiveRaw === "true" ? true : isActiveRaw === "false" ? false : null
+  const isActive = isActiveRaw === "false" ? false : isActiveRaw === "all" ? null : true
 
   const [{ data: list, total }, { data: branches }, { data: departments }] = await Promise.all([
     listPersonnel(prisma, {
@@ -72,39 +74,67 @@ export default async function HrPersonnelPage(props: {
       branchId: searchParams.branchId,
       search: searchParams.search,
       isActive,
+      departmentId: searchParams.departmentId,
       page,
       pageSize: SSR_PAGE_SIZE,
     }),
     listAccessiblePersonnelBranches(prisma, { companyId, roles }),
     listPersonnelDepartments(prisma, { companyId, roles }),
   ])
+  const activeCounts = await countActivePersonnelByBranch(prisma, {
+    companyId,
+    roles,
+    branchIds: branches.map((branch) => branch.id),
+  })
+  const activeTotal = Object.values(activeCounts).reduce((sum, count) => sum + count, 0)
 
   const totalPages = Math.max(1, Math.ceil(total / SSR_PAGE_SIZE))
   const paginationQuery = {
     search: searchParams.search,
     branchId: searchParams.branchId,
     isActive: searchParams.isActive,
+    departmentId: searchParams.departmentId,
+  }
+
+  const branchHref = (branchId?: string) => {
+    const params = new URLSearchParams()
+    if (searchParams.search) params.set("search", searchParams.search)
+    if (searchParams.isActive) params.set("isActive", searchParams.isActive)
+    if (searchParams.departmentId) params.set("departmentId", searchParams.departmentId)
+    if (branchId) params.set("branchId", branchId)
+    const query = params.toString()
+    return query ? `/hr/personnel?${query}` : "/hr/personnel"
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">บุคลากร</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            ข้อมูลคน · รหัสรายชื่อต่อบริษัท · สาขาหลักหนึ่งสาขา ลงเวลาข้ามสาขาได้เมื่อผูกเลขสแกน
-          </p>
-        </div>
-        {canCreate(roles) && <PersonnelCreateButton branches={branches} departments={departments} />}
-      </div>
-
-      <GlassCard padding="sm">
-        <Suspense fallback={<div className="h-10 w-full animate-pulse rounded-lg bg-muted" />}>
-          <PersonnelFilters branches={branches} />
-        </Suspense>
-      </GlassCard>
-
-      <GlassCard padding="none">
+    <div className="space-y-4">
+      {branches.length > 1 && (
+        <SubTabs
+          aria-label="สาขา"
+          activeKey={searchParams.branchId || "all"}
+          items={[
+            { key: "all", label: "ทั้งหมด", count: activeTotal, href: branchHref() },
+            ...[...branches]
+              .sort((a, b) => compareBranchTabName(a.name, b.name))
+              .map((branch) => ({
+              key: branch.id,
+              label: branch.name,
+              count: activeCounts[branch.id] ?? 0,
+              href: branchHref(branch.id),
+            })),
+          ]}
+        />
+      )}
+      <ListFrame
+        filters={
+          <Suspense fallback={<div className="h-10 w-full animate-pulse rounded-lg bg-muted" />}>
+            <PersonnelFilters
+              departments={departments}
+              action={canCreate(roles) ? <PersonnelCreateButton branches={branches} departments={departments} /> : null}
+            />
+          </Suspense>
+        }
+      >
         {list.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -196,7 +226,7 @@ export default async function HrPersonnelPage(props: {
             />
           </>
         )}
-      </GlassCard>
+      </ListFrame>
     </div>
   )
 }

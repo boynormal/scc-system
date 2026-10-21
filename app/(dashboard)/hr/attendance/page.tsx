@@ -5,13 +5,14 @@ import { Clock } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
-import { canAttendanceAnyBranch, canManageAttendanceDevice, listAttendanceBranches } from "@/modules/hr"
+import { canAttendanceAnyBranch, canManageAttendanceDevice, canReadPersonnel, countActivePersonnelByBranch, listAttendanceBranches } from "@/modules/hr"
 import { EmptyState } from "@/components/ui/empty-state"
 import { GlassCard } from "@/components/glass"
 import { AttendanceChrome } from "./attendance-chrome"
 import { AttendanceDayView } from "./attendance-day-view"
 import { AttendanceBadgeView } from "./attendance-badge-view"
 import { AttendanceDeviceView } from "./attendance-device-view"
+import { compareBranchTabName } from "@/modules/hr/application/branch-tab-order"
 
 export const metadata: Metadata = { title: "บันทึกเวลา" }
 
@@ -29,9 +30,18 @@ export default async function HrAttendancePage(props: {
 
   const t = await getTranslations("attendance")
   const companyId = session.user.companyId as string
-  const branches = await listAttendanceBranches(prisma, { companyId, roles })
+  const branches = (await listAttendanceBranches(prisma, { companyId, roles })).sort((a, b) =>
+    compareBranchTabName(a.name, b.name)
+  )
   const branch = branches.find((b) => b.id === searchParams.branchId) ?? branches[0] ?? null
   const tab: Tab = TABS.includes(searchParams.tab as Tab) ? (searchParams.tab as Tab) : "day"
+  const counts = canReadPersonnel(roles)
+    ? await countActivePersonnelByBranch(prisma, {
+        companyId,
+        roles,
+        branchIds: branches.map((item) => item.id),
+      })
+    : {}
 
   const perms = {
     canUpdate: canAttendanceAnyBranch(roles, "update"),
@@ -45,7 +55,7 @@ export default async function HrAttendancePage(props: {
         </GlassCard>
       ) : (
         <>
-          <AttendanceChrome branches={branches} branchId={branch.id} tab={tab} />
+          <AttendanceChrome branches={branches} branchId={branch.id} tab={tab} counts={counts} />
 
           {tab === "day" && (
             <AttendanceDayView

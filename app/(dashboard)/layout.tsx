@@ -11,6 +11,7 @@ import { buildDashboardNav } from "@/shared/navigation/buildDashboardNav"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
 import { translateNavTree } from "@/shared/navigation/translateNav"
 import { cn } from "@/lib/utils"
+import { NavPendingProvider } from "@/components/shell/nav-pending"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -48,18 +49,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className={cn("relative flex min-h-screen bg-glass-ambient", isDark && "dark")}>
-      <div className="sticky top-0 z-40 h-screen shrink-0 self-start">
-        <Sidebar
-          navItems={navItems}
-          productLineImageOverrides={navPreferences.productLineImageOverrides}
-          moduleImageOverrides={navPreferences.moduleImageOverrides}
-          logoUrl={company?.logoUrl}
-        />
-      </div>
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-        <Header user={session.user} navItems={navItems} appearance={appearance} />
-        <main className="p-6 text-foreground">{children}</main>
-      </div>
+      <NavPendingProvider>
+        <div className="sticky top-0 z-40 h-screen shrink-0 self-start">
+          <Sidebar
+            navItems={navItems}
+            productLineImageOverrides={navPreferences.productLineImageOverrides}
+            moduleImageOverrides={navPreferences.moduleImageOverrides}
+            logoUrl={company?.logoUrl}
+          />
+        </div>
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col">
+          <Header user={session.user} navItems={navItems} appearance={appearance} />
+          <main className="p-6 text-foreground">{children}</main>
+        </div>
+      </NavPendingProvider>
     </div>
   )
 }

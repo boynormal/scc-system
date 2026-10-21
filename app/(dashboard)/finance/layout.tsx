@@ -6,6 +6,7 @@ import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { canFinance } from "./finance-access"
+import { PendingFade } from "@/components/shell/nav-pending"
 import { FinanceModuleTabs } from "./finance-module-tabs"
 
 export default async function FinanceLayout({ children }: { children: React.ReactNode }) {
@@ -33,7 +34,9 @@ export default async function FinanceLayout({ children }: { children: React.Reac
     <ModuleBackdrop isDark={isDark}>
       <div className="space-y-6">
         <FinanceModuleTabs tabs={tabs} />
-        <div className="min-w-0">{children}</div>
+        <PendingFade scope="module" className="min-w-0">
+          {children}
+        </PendingFade>
       </div>
     </ModuleBackdrop>
   )

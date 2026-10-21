@@ -1,17 +1,18 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { useTranslations } from "next-intl"
-import { CalendarOff, Pencil, Trash2 } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { fetchJson } from "@/lib/client-fetch"
+import { cn } from "@/lib/utils"
 import { GlassDialog } from "@/components/glass"
 import { ListFrame } from "@/components/shell/list-frame"
 import { Button } from "@/components/ui/button"
-import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { Input } from "@/components/ui/input"
 import { LoadingState } from "@/components/ui/loading-state"
-import { Select } from "@/components/ui/select"
+import { buildMonthCells, monthKeyOf, shiftMonthKey } from "@/modules/hr/application/attendance-day-calendar"
+import { isSunday } from "@/modules/hr/application/attendance-off-days"
 
 type Branch = { id: string; code: string; name: string }
 type Holiday = {
@@ -23,21 +24,35 @@ type Holiday = {
   canUpdate: boolean
 }
 
+const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
+
+function holidaysOn(date: string, rows: Holiday[]): Holiday[] {
+  return rows.filter((row) => date >= row.startDate && date <= row.endDate)
+}
+
+function branchText(holiday: Holiday, allBranches: Branch[], allLabel: string): string {
+  if (allBranches.length > 0 && holiday.branches.length === allBranches.length) return allLabel
+  return holiday.branches.map((branch) => branch.name).join(", ")
+}
+
 export function HolidayCalendar({
   branches,
-  year: initialYear,
+  today,
   canUpdate,
 }: {
   branches: Branch[]
-  year: number
+  today: string
   canUpdate: boolean
 }) {
   const t = useTranslations("holidays")
-  const [year, setYear] = useState(initialYear)
+  const locale = useLocale()
+  const [month, setMonth] = useState(() => monthKeyOf(today))
   const [rows, setRows] = useState<Holiday[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<Holiday | null | "new">(null)
+  const [seedDate, setSeedDate] = useState<string | null>(null)
+  const year = Number(month.slice(0, 4))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -57,6 +72,11 @@ export function HolidayCalendar({
     void load()
   }, [load])
 
+  function openNew(date?: string) {
+    setSeedDate(date ?? null)
+    setEditing("new")
+  }
+
   async function remove(row: Holiday) {
     if (!window.confirm(t("confirmDelete"))) return
     const res = await fetch(`/api/hr/holidays/${row.id}`, { method: "DELETE" })
@@ -65,82 +85,114 @@ export function HolidayCalendar({
       setError(json.error ?? t("empty"))
       return
     }
+    setEditing(null)
     await load()
   }
 
-  const years = [initialYear - 1, initialYear, initialYear + 1, initialYear + 2]
+  const monthLabel = new Date(`${month}-01T00:00:00.000Z`).toLocaleDateString(locale === "th" ? "th-TH" : "en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+  const cells = buildMonthCells(month)
+  const weekRows = Math.max(1, cells.length / 7)
 
   return (
     <ListFrame
-      title={t("title")}
-      description={t("weekly")}
-      actions={
-        canUpdate ? (
-          <Button type="button" onClick={() => setEditing("new")}>
-            {t("add")}
-          </Button>
-        ) : null
-      }
       filters={
-        <Select
-          label={t("year")}
-          value={String(year)}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="w-32"
-          options={years.map((item) => ({ value: String(item), label: String(item) }))}
-        />
+        <div className="flex w-full items-center gap-2">
+          <Button type="button" variant="outline" className="h-9 px-2" onClick={() => setMonth(shiftMonthKey(month, -1))}>
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">{t("previous")}</span>
+          </Button>
+          <span className="min-w-36 text-center text-sm font-semibold text-foreground">{monthLabel}</span>
+          <Button type="button" variant="outline" className="h-9 px-2" onClick={() => setMonth(shiftMonthKey(month, 1))}>
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">{t("next")}</span>
+          </Button>
+          {canUpdate && (
+            <Button type="button" className="ml-auto" onClick={() => openNew()}>
+              {t("add")}
+            </Button>
+          )}
+        </div>
       }
     >
       {loading ? (
         <LoadingState title="…" />
       ) : error ? (
         <ErrorState description={error} onRetry={() => void load()} />
-      ) : rows.length === 0 ? (
-        <EmptyState icon={CalendarOff} title={t("empty")} />
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-3 py-2 font-medium">{t("name")}</th>
-              <th className="px-3 py-2 font-medium">{t("dates")}</th>
-              <th className="px-3 py-2 font-medium">{t("branches")}</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-b border-border">
-                <td className="px-3 py-2">{row.name}</td>
-                <td className="px-3 py-2 font-mono tabular-nums">
-                  {row.startDate === row.endDate ? row.startDate : `${row.startDate} – ${row.endDate}`}
-                </td>
-                <td className="px-3 py-2">{row.branches.map((branch) => branch.name).join(", ")}</td>
-                <td className="px-3 py-2 text-right">
-                  {row.canUpdate && (
-                    <div className="flex justify-end gap-1">
-                      <Button type="button" variant="outline" className="h-8 px-2" onClick={() => setEditing(row)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                        <span className="sr-only">{t("edit")}</span>
-                      </Button>
-                      <Button type="button" variant="outline" className="h-8 px-2" onClick={() => void remove(row)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                        <span className="sr-only">{t("delete")}</span>
-                      </Button>
-                    </div>
-                  )}
-                </td>
-              </tr>
+        <div className="flex h-[calc(100vh-18rem)] flex-col">
+          <div className="grid shrink-0 grid-cols-7 border-b border-border">
+            {WEEKDAYS.map((day) => (
+              <div key={day} className="px-1 py-2 text-center text-xs font-medium text-foreground">
+                {t(`weekdays.${day}`)}
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+          <div className="grid min-h-0 flex-1 grid-cols-7" style={{ gridTemplateRows: `repeat(${weekRows}, minmax(0, 1fr))` }}>
+            {cells.map((date, index) => {
+              if (!date) return <div key={`empty-${index}`} className="h-full border-b border-r border-border bg-muted/40" />
+              const items = holidaysOn(date, rows)
+              const sunday = isSunday(date)
+              return (
+                <div
+                  key={date}
+                  className={cn(
+                    "h-full overflow-auto border-b border-r border-border p-1",
+                    sunday && "bg-amber-500/10",
+                    date === today && "ring-2 ring-inset ring-blue-600"
+                  )}
+                >
+                  <button
+                    type="button"
+                    disabled={!canUpdate}
+                    onClick={() => openNew(date)}
+                    className="mb-1 font-mono text-xs font-semibold tabular-nums text-foreground disabled:cursor-default"
+                  >
+                    {Number(date.slice(8, 10))}
+                  </button>
+                  <div className="space-y-1">
+                    {sunday && (
+                      <div className="rounded bg-amber-500/15 px-1 py-0.5 text-[11px] font-medium leading-tight text-foreground">
+                        {t("sunday")}
+                      </div>
+                    )}
+                    {items.map((item) => {
+                      const label = (
+                        <>
+                          <span className="block truncate text-[11px] font-semibold">{item.name}</span>
+                          <span className="block truncate text-[10px]">{branchText(item, branches, t("allBranches"))}</span>
+                        </>
+                      )
+                      const className = "block w-full rounded border border-blue-600/30 bg-blue-500/10 px-1 py-0.5 text-left leading-tight text-foreground"
+                      return item.canUpdate ? (
+                        <button key={item.id} type="button" onClick={() => setEditing(item)} className={className}>
+                          {label}
+                        </button>
+                      ) : (
+                        <div key={item.id} className={className}>
+                          {label}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {editing && (
         <HolidayDialog
-          key={editing === "new" ? "new" : editing.id}
+          key={editing === "new" ? `new-${seedDate ?? ""}` : editing.id}
           holiday={editing === "new" ? null : editing}
+          seedDate={editing === "new" ? seedDate : null}
           branches={branches}
           onClose={() => setEditing(null)}
+          onDelete={editing !== "new" && editing.canUpdate ? () => void remove(editing) : undefined}
           onSaved={() => {
             setEditing(null)
             void load()
@@ -153,19 +205,23 @@ export function HolidayCalendar({
 
 function HolidayDialog({
   holiday,
+  seedDate,
   branches,
   onClose,
+  onDelete,
   onSaved,
 }: {
   holiday: Holiday | null
+  seedDate: string | null
   branches: Branch[]
   onClose: () => void
+  onDelete?: () => void
   onSaved: () => void
 }) {
   const t = useTranslations("holidays")
   const [name, setName] = useState(holiday?.name ?? "")
-  const [startDate, setStartDate] = useState(holiday?.startDate ?? "")
-  const [endDate, setEndDate] = useState(holiday?.endDate ?? "")
+  const [startDate, setStartDate] = useState(holiday?.startDate ?? seedDate ?? "")
+  const [endDate, setEndDate] = useState(holiday?.endDate ?? seedDate ?? "")
   const [branchIds, setBranchIds] = useState<string[]>(holiday?.branches.map((branch) => branch.id) ?? [])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -230,6 +286,12 @@ function HolidayDialog({
           </div>
         </fieldset>
         <div className="flex justify-end gap-2">
+          {onDelete && (
+            <Button type="button" variant="outline" className="mr-auto" onClick={onDelete}>
+              <Trash2 className="h-3.5 w-3.5" />
+              {t("delete")}
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={onClose}>
             {t("cancel")}
           </Button>

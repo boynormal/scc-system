@@ -11,6 +11,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
 import { formatDateTime } from "./attendance-format"
+import { PendingFade } from "@/components/shell/nav-pending"
+import { AttendanceSectionTabs } from "./attendance-chrome"
 
 type SyncRun = { id: string; received: number; inserted: number; duplicates: number; newBadges: number; clientVersion: string | null; createdAt: string }
 
@@ -142,7 +144,10 @@ export function AttendanceDeviceView({
     <div className="space-y-4">
       <GlassCard padding="md">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">{t("devices.hint")}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <AttendanceSectionTabs branchId={branch.id} tab="devices" />
+            <p className="text-sm text-muted-foreground">{t("devices.hint")}</p>
+          </div>
           {canManage && (
             <Button size="sm" onClick={() => setCreating(true)}>
               <Plus className="h-4 w-4 mr-1" aria-hidden />
@@ -153,6 +158,7 @@ export function AttendanceDeviceView({
         {actionError && <p className="mt-2 text-sm text-red-600">{actionError}</p>}
       </GlassCard>
 
+      <PendingFade scope="section">
       {error ? (
         <GlassCard padding="none">
           <ErrorState description={error} onRetry={() => void load()} />
@@ -237,6 +243,7 @@ export function AttendanceDeviceView({
           </GlassCard>
         ))
       )}
+      </PendingFade>
 
       <GlassDialog open={creating} onOpenChange={setCreating} title={t("devices.addTitle", { branch: `${branch.code} ${branch.name}` })} solid>
         <form

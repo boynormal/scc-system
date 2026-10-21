@@ -3,6 +3,9 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { followTabHref, useNavPending } from "./nav-pending"
+import { isPlainLeftClick } from "./nav-pending-utils"
+import { SLIDING_PILL_BASE, SLIDING_PILL_MOTION, useSlidingPill } from "./use-sliding-pill"
 
 export type SubTabItem = {
   key: string
@@ -13,6 +16,9 @@ export type SubTabItem = {
   /** Extra badge emphasis (e.g. alert tab). */
   emphasizeCount?: boolean
 }
+
+const ACTIVE_FILL =
+  "bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-600 shadow-[0_8px_16px_rgb(16_185_129/0.45),inset_0_1px_0_rgb(255_255_255/0.7)] ring-1 ring-white/50 dark:from-emerald-400 dark:via-emerald-500 dark:to-emerald-700"
 
 export function SubTabs({
   items,
@@ -29,28 +35,35 @@ export function SubTabs({
   size?: "sm" | "md"
   "aria-label"?: string
 }) {
+  const nav = useNavPending()
+  const { rootRef, setItemRef, shownKey, select, pillStyle, ready } = useSlidingPill(true, activeKey)
+
   return (
     <div
+      ref={rootRef}
       className={cn(
-        "inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border border-white/80 bg-white/40 p-1 shadow-[0_10px_28px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)] backdrop-blur-2xl dark:border-white/20 dark:bg-white/10",
+        "relative inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border border-white/80 bg-white/40 p-1 shadow-[0_10px_28px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)] backdrop-blur-2xl dark:border-white/20 dark:bg-white/10",
         className
       )}
       aria-label={ariaLabel}
     >
+      {pillStyle && (
+        <span aria-hidden className={cn(SLIDING_PILL_BASE, "rounded-full", ACTIVE_FILL, ready && SLIDING_PILL_MOTION)} style={pillStyle} />
+      )}
       {items.map((item) => {
-        const active = item.key === activeKey
+        const active = item.key === shownKey
         const itemClass = cn(
-          "inline-flex items-center gap-1 whitespace-nowrap rounded-full font-medium transition-colors",
+          "relative z-10 inline-flex items-center gap-1 whitespace-nowrap rounded-full font-medium transition-colors duration-300",
           size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-1.5 text-sm",
           active
-            ? "bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-600 text-white shadow-[0_8px_16px_rgb(16_185_129/0.45),inset_0_1px_0_rgb(255_255_255/0.7)] ring-1 ring-white/50 dark:from-emerald-400 dark:via-emerald-500 dark:to-emerald-700 dark:text-white"
+            ? "text-white dark:text-white"
             : "text-slate-700/80 hover:bg-white/40 hover:text-slate-900 dark:text-foreground/70 dark:hover:bg-white/10 dark:hover:text-foreground"
         )
         const badge =
           typeof item.count === "number" ? (
             <span
               className={cn(
-                "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-colors duration-300",
                 item.emphasizeCount && item.count > 0
                   ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
                   : active
@@ -72,14 +85,43 @@ export function SubTabs({
 
         if (item.href) {
           return (
-            <Link key={item.key} href={item.href} className={itemClass}>
+            <Link
+              key={item.key}
+              ref={setItemRef(item.key)}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              onClick={(event) => {
+                if (!item.href) return
+                if (!nav) {
+                  if (isPlainLeftClick(event)) select(item.key)
+                  return
+                }
+                followTabHref(event, {
+                  href: item.href,
+                  scope: "section",
+                  nav,
+                  select: () => select(item.key),
+                })
+              }}
+              className={itemClass}
+            >
               {content}
             </Link>
           )
         }
 
         return (
-          <button key={item.key} type="button" onClick={() => onChange?.(item.key)} className={itemClass}>
+          <button
+            key={item.key}
+            ref={setItemRef(item.key)}
+            type="button"
+            aria-pressed={active}
+            onClick={() => {
+              select(item.key)
+              onChange?.(item.key)
+            }}
+            className={itemClass}
+          >
             {content}
           </button>
         )

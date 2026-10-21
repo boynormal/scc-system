@@ -11,6 +11,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
 import { formatDateTime } from "./attendance-format"
+import { PendingFade } from "@/components/shell/nav-pending"
+import { AttendanceSectionTabs } from "./attendance-chrome"
 
 type Filter = "unmapped" | "mapped" | "all"
 
@@ -80,6 +82,7 @@ export function AttendanceBadgeView({ branchId, canUpdate }: { branchId: string;
     <div className="space-y-4">
       <GlassCard padding="md">
         <div className="flex flex-wrap items-center gap-2">
+          <AttendanceSectionTabs branchId={branchId} tab="badges" />
           {FILTERS.map((f) => (
             <button
               key={f}
@@ -100,6 +103,7 @@ export function AttendanceBadgeView({ branchId, canUpdate }: { branchId: string;
         {actionError && <p className="mt-2 text-sm text-red-600">{actionError}</p>}
       </GlassCard>
 
+      <PendingFade scope="section">
       <GlassCard padding="none">
         {error ? (
           <ErrorState description={error} onRetry={() => void load()} />
@@ -176,6 +180,7 @@ export function AttendanceBadgeView({ branchId, canUpdate }: { branchId: string;
           </div>
         )}
       </GlassCard>
+      </PendingFade>
 
       {picking && (
         <PersonPicker

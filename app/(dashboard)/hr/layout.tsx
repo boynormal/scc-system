@@ -6,6 +6,7 @@ import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { canReadHrAttendance, canReadHrPersonnel } from "@/lib/hr-settings-nav-access"
+import { PendingFade } from "@/components/shell/nav-pending"
 import { HrModuleTabs, type HrTabDef } from "./hr-module-tabs"
 
 export default async function HrLayout({ children }: { children: React.ReactNode }) {
@@ -40,7 +41,7 @@ export default async function HrLayout({ children }: { children: React.ReactNode
     <ModuleBackdrop isDark={isDark}>
       <div className="space-y-6">
         <HrModuleTabs tabs={tabs} />
-        {children}
+        <PendingFade scope="module">{children}</PendingFade>
       </div>
     </ModuleBackdrop>
   )

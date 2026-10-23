@@ -379,6 +379,7 @@
       "hours": "Man hour",
       "ot": "OT",
       "late": "Late",
+      "lateMinutes": "{count} min",
       "otMorning": "Morning",
       "otEvening": "Evening",
       "otWork": "Work OT",

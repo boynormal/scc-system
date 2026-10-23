@@ -657,10 +657,10 @@ export function AttendanceDayView({
                   <th className="w-[11%] px-2 py-2 font-medium">{t("day.person")}</th>
                   <th className="w-[14%] whitespace-nowrap px-2 py-2 font-medium">{t("day.in")}</th>
                   <th className="w-[14%] whitespace-nowrap px-2 py-2 font-medium">{t("day.out")}</th>
-                  <th className="w-[4%] whitespace-nowrap px-1 py-2 text-right font-medium">{t("day.late")}</th>
+                  <th className="w-[8%] whitespace-nowrap px-1 py-2 text-right font-medium">{t("day.late")}</th>
                   <th className="w-[11%] whitespace-nowrap px-2 py-2 font-medium">{t("day.ot")}</th>
                   <th className="w-[7%] whitespace-nowrap px-2 py-2 font-medium">{t("day.status")}</th>
-                  <th className="w-[19%] px-2 py-2 font-medium">{t("day.note")}</th>
+                  <th className="w-[15%] px-2 py-2 font-medium">{t("day.note")}</th>
                   <th className="w-[6%] whitespace-nowrap px-2 py-2 font-medium">{t("day.countedBranchColumn")}</th>
                   <th className="w-[7%] whitespace-nowrap px-2 py-2 font-medium">{t("day.manage")}</th>
                 </tr>
@@ -696,8 +696,8 @@ export function AttendanceDayView({
                             locale={locale}
                           />
                         </td>
-                        <td className="px-1 py-1.5 text-right font-mono font-semibold text-foreground">
-                          {row.lateMinutes > 0 ? <span className="text-red-600">{row.lateMinutes}</span> : "—"}
+                        <td className="min-w-[4.75rem] px-1 py-1.5 text-right font-mono font-semibold text-foreground">
+                          {row.lateMinutes > 0 ? <span className="whitespace-nowrap text-red-600">{t("day.lateMinutes", { count: row.lateMinutes })}</span> : "—"}
                         </td>
                         <td className="px-2 py-1.5">
                           {!row.otBefore && !row.otAfter ? (
@@ -871,7 +871,7 @@ export function AttendanceDayView({
               <div>
                 <dt className="text-xs font-semibold">{t("day.late")}</dt>
                 <dd className={cn("mt-0.5 font-mono text-sm font-semibold", manageRow.lateMinutes > 0 && "text-red-600")}>
-                  {manageRow.lateMinutes > 0 ? manageRow.lateMinutes : "—"}
+                  {manageRow.lateMinutes > 0 ? t("day.lateMinutes", { count: manageRow.lateMinutes }) : "—"}
                 </dd>
               </div>
               <div>

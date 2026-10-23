@@ -36,6 +36,7 @@ import {
 import { fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { ListFrame } from "@/components/shell/list-frame"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import { SLIDING_PILL_BASE, SLIDING_PILL_MOTION, useSlidingPill } from "@/components/shell/use-sliding-pill"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
@@ -130,12 +131,14 @@ function hours(minutes: number): number {
 
 export function HrKpiView({
   branches,
+  counts,
   departments,
   today,
   tabs,
   initialTab,
 }: {
   branches: { id: string; name: string }[]
+  counts?: Record<string, number>
   departments: { id: string; name: string }[]
   today: string
   tabs: KpiTab[]
@@ -185,32 +188,42 @@ export function HrKpiView({
 
   const { rootRef, setItemRef, shownKey, select, pillStyle, ready } = useSlidingPill(true, tab)
 
+  const activeTotal = counts ? Object.values(counts).reduce((sum, count) => sum + count, 0) : undefined
+
   return (
+    <div className="space-y-3">
+      {branches.length > 1 && (
+        <SubTabs
+          aria-label={t("branch")}
+          activeKey={branchId || "all"}
+          onChange={(key) => setBranchId(key === "all" ? "" : key)}
+          items={[
+            { key: "all", label: t("allBranches"), ...(activeTotal != null ? { count: activeTotal } : {}) },
+            ...branches.map((branch) => ({
+              key: branch.id,
+              label: branch.name,
+              ...(counts ? { count: counts[branch.id] ?? 0 } : {}),
+            })),
+          ]}
+        />
+      )}
     <ListFrame
       title={t("title")}
+      filterOverflow
       filters={
-        <>
-          <div className="space-y-1.5">
-            <span className="block text-sm font-medium text-foreground">{t("month")}</span>
-            <MonthPicker month={month} today={today} onChange={setMonth} />
-          </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="text-sm font-medium text-foreground">{t("month")}</span>
+          <MonthPicker month={month} today={today} onChange={setMonth} />
+          <span className="text-sm font-medium text-foreground">{t("department")}</span>
           <Select
-            label={t("branch")}
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            placeholder={t("allBranches")}
-            className="w-56"
-            options={branches.map((branch) => ({ value: branch.id, label: branch.name }))}
-          />
-          <Select
-            label={t("department")}
+            aria-label={t("department")}
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
             placeholder={t("allDepartments")}
             className="w-52"
             options={departments.map((department) => ({ value: department.id, label: department.name }))}
           />
-        </>
+        </div>
       }
     >
       <div className="space-y-4 p-4">
@@ -495,6 +508,7 @@ export function HrKpiView({
         )}
       </div>
     </ListFrame>
+    </div>
   )
 }
 

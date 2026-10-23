@@ -379,6 +379,7 @@
       "hours": "Man hour",
       "ot": "OT",
       "late": "สาย",
+      "lateMinutes": "{count} นาที",
       "otMorning": "เช้า",
       "otEvening": "เย็น",
       "otWork": "OT เข้างาน",

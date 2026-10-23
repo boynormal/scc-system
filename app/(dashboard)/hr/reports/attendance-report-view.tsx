@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl"
 import { FileSpreadsheet } from "lucide-react"
 import { fetchJson } from "@/lib/client-fetch"
 import { ListFrame } from "@/components/shell/list-frame"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import { GlassDialog } from "@/components/glass"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -94,11 +95,13 @@ function downloadCsv(filename: string, rows: string[][]) {
 
 export function AttendanceReportView({
   branches,
+  counts,
   departments,
   initialBranchId,
   today,
 }: {
   branches: { id: string; code: string; name: string }[]
+  counts?: Record<string, number>
   departments: { id: string; name: string }[]
   initialBranchId: string
   today: string
@@ -199,6 +202,19 @@ export function AttendanceReportView({
 
   return (
     <>
+      <div className="space-y-3">
+      {branches.length > 1 && (
+        <SubTabs
+          aria-label={t("branch")}
+          activeKey={branchId}
+          onChange={setBranchId}
+          items={branches.map((branch) => ({
+            key: branch.id,
+            label: branch.name,
+            ...(counts ? { count: counts[branch.id] ?? 0 } : {}),
+          }))}
+        />
+      )}
       <ListFrame
         title={t("report.title")}
         description={t("report.description")}
@@ -209,27 +225,19 @@ export function AttendanceReportView({
           </Button>
         }
         filters={
-          <>
-            <div className="space-y-1.5">
-              <span className="block text-sm font-medium text-foreground">{t("exceptions.month")}</span>
-              <MonthPicker month={month} today={today} onChange={setMonth} />
-            </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-sm font-medium text-foreground">{t("exceptions.month")}</span>
+            <MonthPicker month={month} today={today} onChange={setMonth} />
+            <span className="text-sm font-medium text-foreground">{t("report.department")}</span>
             <Select
-              label={t("branch")}
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              className="w-64"
-              options={branches.map((branch) => ({ value: branch.id, label: `${branch.code} ${branch.name}` }))}
-            />
-            <Select
-              label={t("report.department")}
+              aria-label={t("report.department")}
               value={departmentId}
               onChange={(e) => setDepartmentId(e.target.value)}
               className="w-52"
               placeholder={t("report.allDepartments")}
               options={departments.map((department) => ({ value: department.id, label: department.name }))}
             />
-          </>
+          </div>
         }
       >
         {loading ? (
@@ -354,6 +362,7 @@ export function AttendanceReportView({
           </div>
         )}
       </ListFrame>
+      </div>
 
       <GlassDialog open={person != null} onOpenChange={(open) => !open && setPerson(null)} title={person ? t("report.personDays", { name: person.displayName }) : ""} solid>
         {person && (

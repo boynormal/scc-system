@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
 import { canReadHrAttendance, canReadHrPersonnel } from "@/lib/hr-settings-nav-access"
-import { listAttendanceBranches } from "@/modules/hr"
+import { canReadPersonnel, countActivePersonnelByBranch, listAttendanceBranches } from "@/modules/hr"
+import { compareBranchTabName } from "@/modules/hr/application/branch-tab-order"
 import { listDepartments } from "@/modules/settings"
 import { todayInZone } from "../attendance/attendance-format"
 import { HrKpiView } from "./hr-kpi-view"
@@ -26,10 +27,19 @@ export default async function HrKpiPage(props: { searchParams: Promise<{ tab?: s
     canAttendance ? listAttendanceBranches(prisma, { companyId, roles }) : Promise.resolve([]),
     listDepartments(prisma, { companyId }),
   ])
+  const sorted = [...branches].sort((a, b) => compareBranchTabName(a.name, b.name))
+  const counts = canReadPersonnel(roles)
+    ? await countActivePersonnelByBranch(prisma, {
+        companyId,
+        roles,
+        branchIds: sorted.map((branch) => branch.id),
+      })
+    : undefined
 
   return (
     <HrKpiView
-      branches={branches}
+      branches={sorted}
+      counts={counts}
       departments={departments.map((department) => ({ id: department.id, name: department.name }))}
       today={todayInZone("Asia/Bangkok")}
       tabs={allowed}

@@ -1,20 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react"
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { dataPanelClassName } from "@/components/shell/data-panel"
 import { ListFrame } from "@/components/shell/list-frame"
+import { SubTabs } from "@/components/shell/sub-tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
-import { Select } from "@/components/ui/select"
 import { monthKeyOf, shiftMonthKey } from "@/modules/hr/application/attendance-day-calendar"
+import { filterExceptionGroups, type DepartmentFilterMode } from "@/modules/hr/application/attendance-report"
 import { formatTime } from "../attendance/attendance-format"
 
 type DayStatus = "COMPLETE" | "SINGLE_PUNCH" | "NO_SCAN"
@@ -23,6 +24,7 @@ type LeaveReason = "PERSONAL" | "SICK" | "ABSENT" | "INTRA_DAY"
 type ExceptionRow = {
   personnelId: string
   displayName: string
+  departmentId: string | null
   status: DayStatus
   late: boolean
   minutes: number
@@ -216,13 +218,147 @@ export function MonthPicker({
   )
 }
 
+function DepartmentFilter({
+  departments,
+  mode,
+  selected,
+  onModeChange,
+  onSelectedChange,
+}: {
+  departments: { id: string; name: string }[]
+  mode: DepartmentFilterMode
+  selected: ReadonlySet<string | null>
+  onModeChange: (mode: DepartmentFilterMode) => void
+  onSelectedChange: (selected: ReadonlySet<string | null>) => void
+}) {
+  const t = useTranslations("attendance")
+  const rootRef = useRef<HTMLDivElement>(null)
+  const dialogId = useId()
+  const [open, setOpen] = useState(false)
+  const options = useMemo(
+    () => [
+      ...departments.map((department) => ({ key: department.id as string | null, label: department.name })),
+      { key: null, label: t("exceptions.deptNone") },
+    ],
+    [departments, t]
+  )
+
+  useEffect(() => {
+    if (!open) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false)
+    }
+    function onPointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener("keydown", onKey)
+    document.addEventListener("mousedown", onPointer)
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.removeEventListener("mousedown", onPointer)
+    }
+  }, [open])
+
+  const chosen = options.filter((option) => selected.has(option.key)).map((option) => option.label)
+  const names = chosen.length > 2 ? t("exceptions.deptMore", { first: chosen[0]!, count: chosen.length - 1 }) : chosen.join(", ")
+  const summary =
+    chosen.length === 0
+      ? t("exceptions.deptAll")
+      : mode === "only"
+        ? t("exceptions.deptOnly", { names })
+        : t("exceptions.deptExcept", { names })
+
+  function toggle(key: string | null) {
+    const next = new Set(selected)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    onSelectedChange(next)
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-controls={dialogId}
+        title={chosen.length > 0 ? chosen.join(", ") : undefined}
+        className="h-9 max-w-[18rem] justify-between gap-2 border-slate-300 bg-white px-3 text-sm font-medium text-foreground shadow-sm hover:bg-muted dark:border-white/30 dark:bg-slate-950"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="truncate">{summary}</span>
+        <ChevronDown className="h-4 w-4 shrink-0" />
+      </Button>
+      {open && (
+        <div
+          id={dialogId}
+          role="dialog"
+          aria-label={t("report.department")}
+          className={cn(dataPanelClassName, "absolute left-0 top-full z-30 mt-1 w-[18rem] overflow-visible p-3")}
+        >
+          <div role="radiogroup" aria-label={t("report.department")} className="mb-2 grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
+            {(["only", "except"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={mode === value}
+                onClick={() => onModeChange(value)}
+                className={cn(
+                  "rounded px-2 py-1 text-sm font-medium text-foreground",
+                  mode === value ? "bg-blue-600 text-white" : "hover:bg-background"
+                )}
+              >
+                {t(value === "only" ? "exceptions.deptModeOnly" : "exceptions.deptModeExcept")}
+              </button>
+            ))}
+          </div>
+          <div className="max-h-64 space-y-0.5 overflow-auto">
+            {options.map((option) => (
+              <label
+                key={option.key ?? "__none__"}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-foreground hover:bg-muted"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={selected.has(option.key)}
+                  onChange={() => toggle(option.key)}
+                />
+                <span className="truncate">{option.label}</span>
+              </label>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2">
+            <span className="text-xs text-muted-foreground">{t("exceptions.deptHint")}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={selected.size === 0}
+              className="h-7 px-2 text-xs text-foreground"
+              onClick={() => onSelectedChange(new Set())}
+            >
+              {t("exceptions.deptClear")}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AttendanceExceptionView({
   branches,
+  counts,
   departments,
   initialBranchId,
   today,
 }: {
   branches: { id: string; code: string; name: string }[]
+  counts?: Record<string, number>
   departments: { id: string; name: string }[]
   initialBranchId: string
   today: string
@@ -232,7 +368,8 @@ export function AttendanceExceptionView({
   const [branchId, setBranchId] = useState(initialBranchId)
   const [month, setMonth] = useState(() => monthKeyOf(today))
   const { from, to } = monthBounds(month, today)
-  const [departmentId, setDepartmentId] = useState("")
+  const [deptMode, setDeptMode] = useState<DepartmentFilterMode>("only")
+  const [deptSelected, setDeptSelected] = useState<ReadonlySet<string | null>>(() => new Set())
   const [groups, setGroups] = useState<ExceptionGroup[] | null>(null)
   const [timeZone, setTimeZone] = useState("Asia/Bangkok")
   const [error, setError] = useState<string | null>(null)
@@ -242,7 +379,6 @@ export function AttendanceExceptionView({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ branchId, from, to })
-    if (departmentId) params.set("departmentId", departmentId)
     try {
       const res = await fetchJson<{ data: ReportData }>(`/api/hr/attendance/reports?${params}`)
       setGroups(res.data.exceptions ?? [])
@@ -253,37 +389,46 @@ export function AttendanceExceptionView({
     } finally {
       setLoading(false)
     }
-  }, [branchId, departmentId, from, t, to])
+  }, [branchId, from, t, to])
 
   useEffect(() => {
     void load()
   }, [load])
 
+  const visibleGroups = useMemo(
+    () => (groups ? filterExceptionGroups(groups, deptMode, deptSelected) : null),
+    [groups, deptMode, deptSelected]
+  )
+
   return (
+    <div className="space-y-3">
+      {branches.length > 1 && (
+        <SubTabs
+          aria-label={t("branch")}
+          activeKey={branchId}
+          onChange={setBranchId}
+          items={branches.map((branch) => ({
+            key: branch.id,
+            label: branch.name,
+            ...(counts ? { count: counts[branch.id] ?? 0 } : {}),
+          }))}
+        />
+      )}
     <ListFrame
       filterOverflow
       filters={
-        <>
-          <div className="space-y-1.5">
-            <span className="block text-sm font-medium text-foreground">{t("exceptions.month")}</span>
-            <MonthPicker month={month} today={today} onChange={setMonth} />
-          </div>
-          <Select
-            label={t("branch")}
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-64"
-            options={branches.map((branch) => ({ value: branch.id, label: `${branch.code} ${branch.name}` }))}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="text-sm font-medium text-foreground">{t("exceptions.month")}</span>
+          <MonthPicker month={month} today={today} onChange={setMonth} />
+          <span className="text-sm font-medium text-foreground">{t("report.department")}</span>
+          <DepartmentFilter
+            departments={departments}
+            mode={deptMode}
+            selected={deptSelected}
+            onModeChange={setDeptMode}
+            onSelectedChange={setDeptSelected}
           />
-          <Select
-            label={t("report.department")}
-            value={departmentId}
-            onChange={(e) => setDepartmentId(e.target.value)}
-            className="w-52"
-            placeholder={t("report.allDepartments")}
-            options={departments.map((department) => ({ value: department.id, label: department.name }))}
-          />
-        </>
+        </div>
       }
     >
       {loading ? (
@@ -292,8 +437,14 @@ export function AttendanceExceptionView({
         <ErrorState description={error} onRetry={() => void load()} />
       ) : !groups || groups.length === 0 ? (
         <EmptyState icon={AlertTriangle} title={t("exceptions.emptyTitle")} description={t("exceptions.emptyDescription")} />
+      ) : !visibleGroups || visibleGroups.length === 0 ? (
+        <EmptyState
+          icon={AlertTriangle}
+          title={t("exceptions.filteredEmptyTitle")}
+          description={t("exceptions.filteredEmptyDescription")}
+        />
       ) : (
-        <div className="max-h-[calc(100vh-11rem)] overflow-auto">
+        <div className="max-h-[calc(100vh-9.5rem)] overflow-auto">
           <table className="w-max text-xs">
             <thead className="sticky top-0 z-10 bg-background">
               <tr className="border-b border-border text-left text-foreground">
@@ -303,7 +454,7 @@ export function AttendanceExceptionView({
                 <th className="w-12 px-2 py-1 text-right font-medium">{t("exceptions.minutes")}</th>
               </tr>
             </thead>
-            {groups.map((group) => (
+            {visibleGroups.map((group) => (
               <tbody key={group.date}>
                 <tr className="border-b border-blue-200 bg-blue-100 dark:border-blue-900 dark:bg-blue-950">
                   <td colSpan={3} className="px-2 py-0.5 font-semibold text-foreground">
@@ -338,6 +489,7 @@ export function AttendanceExceptionView({
         </div>
       )}
     </ListFrame>
+    </div>
   )
 }
 

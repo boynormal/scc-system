@@ -3,6 +3,7 @@ import {
   dedupePunchTimes,
   isDateKey,
   localDateKey,
+  reportDateKey,
   summarizeDay,
   summarizeHomeBranchDay,
   summarizePunchesByDay,
@@ -11,6 +12,14 @@ import {
 
 const TZ = "Asia/Bangkok"
 const at = (iso: string) => new Date(iso)
+
+describe("reportDateKey", () => {
+  it("keeps a date text and a local date column on the same calendar day", () => {
+    expect(reportDateKey("2026-10-23")).toBe("2026-10-23")
+    expect(reportDateKey(new Date(2026, 9, 23))).toBe("2026-10-23")
+    expect(reportDateKey("2026-10-23T00:00:00.000Z")).toBe("2026-10-23")
+  })
+})
 
 describe("localDateKey / zonedDayRange", () => {
   it("uses the branch calendar date, not UTC", () => {

@@ -66,6 +66,7 @@ type PersonRow = {
   userId: string | null
   departmentId: string | null
   department: { id: string; name: string; code: string | null } | null
+  jobGroupId: string | null
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -109,6 +110,7 @@ function personRow(over: Partial<PersonRow> = {}): PersonRow {
     userId: null,
     departmentId: null,
     department: null,
+    jobGroupId: null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -178,6 +180,7 @@ type FakeState = {
   people?: PersonRow[]
   users?: UserRow[]
   departments?: DeptRow[]
+  jobGroups?: DeptRow[]
   branches?: Record<string, { companyId: string; isActive: boolean; deletedAt: Date | null }>
   lastFindManyWhere?: unknown
 }
@@ -186,6 +189,7 @@ function fakeDb(state: FakeState = {}): PrismaClient {
   const people = state.people ?? [personRow()]
   const users = state.users ?? []
   const departments = state.departments ?? []
+  const jobGroups = state.jobGroups ?? []
   const branches = state.branches ?? {
     [BRANCH_A]: { companyId: CID, isActive: true, deletedAt: null },
     [BRANCH_B]: { companyId: CID, isActive: true, deletedAt: null },
@@ -237,6 +241,15 @@ function fakeDb(state: FakeState = {}): PrismaClient {
             return true
           })
           .map((d) => ({ id: d.id, name: d.name, code: d.code }))
+      },
+    },
+    jobGroup: {
+      findFirst: async ({ where }: { where: Record<string, unknown> }) => {
+        const row = jobGroups.find((g) => g.id === where.id)
+        if (!row) return null
+        if (where.isActive === true && !row.isActive) return null
+        if (typeof where.companyId === "string" && row.companyId !== where.companyId) return null
+        return { id: row.id }
       },
     },
     personnelBranch: {
@@ -348,6 +361,7 @@ function fakeDb(state: FakeState = {}): PrismaClient {
           notes: (data.notes as string | null) ?? null,
           userId: (data.userId as string | null) ?? null,
           departmentId: (data.departmentId as string | null) ?? null,
+          jobGroupId: (data.jobGroupId as string | null) ?? null,
         })
         const attached = attachDept(row)
         people.push(attached)
@@ -642,6 +656,82 @@ describe("updatePersonnel", () => {
     await expect(deletePersonnel(db, { companyId: CID, roles: viewerRoles, id: PERSON_ID })).rejects.toBeInstanceOf(
       ForbiddenError
     )
+  })
+})
+
+describe("personnel job group", () => {
+  const GROUP_A = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+  const GROUP_OTHER_CO = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+  const departments: DeptRow[] = [{ id: DEPT_A, name: "ผลิต", code: "PRD", companyId: CID, isActive: true }]
+  const jobGroups: DeptRow[] = [
+    { id: GROUP_A, name: "แพ็ค", code: "PK", companyId: CID, isActive: true },
+    { id: GROUP_OTHER_CO, name: "อื่น", code: null, companyId: CID_B, isActive: true },
+  ]
+
+  it("saves department and job group separately on create", async () => {
+    const db = fakeDb({ departments, jobGroups })
+    const parsed = createPersonnelSchema.parse({
+      displayName: "แพ็คของ",
+      branchIds: [BRANCH_A],
+      departmentId: DEPT_A,
+      jobGroupId: GROUP_A,
+    })
+    const created = await createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })
+    expect(created.departmentId).toBe(DEPT_A)
+    expect(created.jobGroupId).toBe(GROUP_A)
+    expect(created.jobGroup).toBeNull()
+  })
+
+  it("rejects a job group from another company", async () => {
+    const db = fakeDb({ jobGroups })
+    const parsed = createPersonnelSchema.parse({
+      displayName: "ข้ามบริษัท",
+      branchIds: [BRANCH_A],
+      jobGroupId: GROUP_OTHER_CO,
+    })
+    await expect(createPersonnel(db, { companyId: CID, roles: adminRoles, input: parsed })).rejects.toBeInstanceOf(
+      ValidationError
+    )
+  })
+
+  it("sets and clears the job group on update without touching the old text column", async () => {
+    const db = fakeDb({ jobGroups })
+    const set = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ jobGroupId: GROUP_A }),
+    })
+    expect(set.data.jobGroupId).toBe(GROUP_A)
+    expect(set.data.jobGroup).toBe("ผลิต")
+
+    const kept = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ displayName: "สมชาย ใหม่" }),
+    })
+    expect(kept.data.jobGroupId).toBe(GROUP_A)
+
+    const cleared = await updatePersonnel(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: PERSON_ID,
+      input: updatePersonnelSchema.parse({ jobGroupId: "" }),
+    })
+    expect(cleared.data.jobGroupId).toBeNull()
+  })
+
+  it("rejects an update to a job group from another company", async () => {
+    const db = fakeDb({ jobGroups })
+    await expect(
+      updatePersonnel(db, {
+        companyId: CID,
+        roles: adminRoles,
+        id: PERSON_ID,
+        input: updatePersonnelSchema.parse({ jobGroupId: GROUP_OTHER_CO }),
+      })
+    ).rejects.toBeInstanceOf(ValidationError)
   })
 })
 

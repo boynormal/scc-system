@@ -335,7 +335,18 @@
       "forgotScan": "Missed scan",
       "noScan": "No scan",
       "emptyTitle": "No exceptions in this range",
-      "emptyDescription": "Everyone was on time and no notes were saved"
+      "emptyDescription": "Everyone was on time and no notes were saved",
+      "deptAll": "All departments",
+      "deptOnly": "Only {names}",
+      "deptExcept": "Except {names}",
+      "deptMore": "{first} +{count}",
+      "deptModeOnly": "Only selected",
+      "deptModeExcept": "Except selected",
+      "deptNone": "No department",
+      "deptClear": "Clear selection",
+      "deptHint": "Nothing selected shows every department",
+      "filteredEmptyTitle": "Nothing in the selected departments",
+      "filteredEmptyDescription": "Change the departments or clear the selection"
     },
     "status": {
       "COMPLETE": "Complete",

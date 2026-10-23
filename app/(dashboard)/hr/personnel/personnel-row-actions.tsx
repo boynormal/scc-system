@@ -7,14 +7,15 @@ import { ChevronDown, Eye, LogOut, Pencil, Trash2 } from "lucide-react"
 import { GlassDialog } from "@/components/glass"
 import { cn } from "@/lib/utils"
 import { exitKindLabel, PersonnelExitDialog } from "./personnel-exit-dialog"
-import { HrPersonnelForm, type DepartmentOpt, type PersonnelFormInitial } from "./new/personnel-form"
+import { HrPersonnelForm, type DepartmentOpt, type JobGroupOpt, type PersonnelFormInitial } from "./new/personnel-form"
 import { formatPersonnelDateTime } from "@/modules/hr/application/personnel-date-time"
 
 type BranchOpt = { id: string; name: string; code: string }
 
 export type PersonnelRow = PersonnelFormInitial & {
   id: string
-  jobGroup: string | null
+  departmentName: string | null
+  jobGroupName: string | null
   branchLabel: string
 }
 
@@ -32,12 +33,14 @@ export function PersonnelRowActions({
   person,
   branches,
   departments,
+  jobGroups,
   canUpdate,
   canDelete,
 }: {
   person: PersonnelRow
   branches: BranchOpt[]
   departments: DepartmentOpt[]
+  jobGroups: JobGroupOpt[]
   canUpdate: boolean
   canDelete: boolean
 }) {
@@ -70,7 +73,8 @@ export function PersonnelRowActions({
   const fields: { label: string; value: string }[] = [
     { label: "รหัสรายชื่อ", value: person.rosterNo },
     { label: "ชื่อเรียก", value: person.displayName },
-    { label: "กลุ่มงาน", value: person.jobGroup ?? "—" },
+    { label: "แผนก", value: person.departmentName ?? "—" },
+    { label: "กลุ่มงาน", value: person.jobGroupName ?? "—" },
     { label: "ชื่อจริง", value: person.firstName ?? "—" },
     { label: "นามสกุล", value: person.lastName ?? "—" },
     { label: "วันเกิด", value: shown(person.birthDate) },
@@ -170,6 +174,7 @@ export function PersonnelRowActions({
             personnelId={person.id}
             branches={branches}
             departments={departments}
+            jobGroups={jobGroups}
             initial={person}
             onSaved={() => setDialog(null)}
             onCancel={() => setDialog(null)}

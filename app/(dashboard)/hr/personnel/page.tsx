@@ -6,7 +6,13 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { countActivePersonnelByBranch, listAccessiblePersonnelBranches, listPersonnel, listPersonnelDepartments } from "@/modules/hr"
+import {
+  countActivePersonnelByBranch,
+  listAccessiblePersonnelBranches,
+  listPersonnel,
+  listPersonnelDepartments,
+  listPersonnelJobGroups,
+} from "@/modules/hr"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
@@ -67,7 +73,7 @@ export default async function HrPersonnelPage(props: {
   const isActiveRaw = searchParams.isActive
   const isActive = isActiveRaw === "false" ? false : isActiveRaw === "all" ? null : true
 
-  const [{ data: list, total }, { data: branches }, { data: departments }] = await Promise.all([
+  const [{ data: list, total }, { data: branches }, { data: departments }, { data: jobGroups }] = await Promise.all([
     listPersonnel(prisma, {
       companyId,
       roles,
@@ -80,6 +86,7 @@ export default async function HrPersonnelPage(props: {
     }),
     listAccessiblePersonnelBranches(prisma, { companyId, roles }),
     listPersonnelDepartments(prisma, { companyId, roles }),
+    listPersonnelJobGroups(prisma, { companyId, roles }),
   ])
   const activeCounts = await countActivePersonnelByBranch(prisma, {
     companyId,
@@ -130,7 +137,7 @@ export default async function HrPersonnelPage(props: {
           <Suspense fallback={<div className="h-10 w-full animate-pulse rounded-lg bg-muted" />}>
             <PersonnelFilters
               departments={departments}
-              action={canCreate(roles) ? <PersonnelCreateButton branches={branches} departments={departments} /> : null}
+              action={canCreate(roles) ? <PersonnelCreateButton branches={branches} departments={departments} jobGroups={jobGroups} /> : null}
             />
           </Suspense>
         }
@@ -149,6 +156,7 @@ export default async function HrPersonnelPage(props: {
                   <tr className="border-b border-border bg-muted text-left text-muted-foreground">
                     <th className="p-3 font-medium">รหัสรายชื่อ</th>
                     <th className="p-3 font-medium">ชื่อเรียก</th>
+                    <th className="p-3 font-medium">แผนก</th>
                     <th className="p-3 font-medium">กลุ่มงาน</th>
                     <th className="p-3 font-medium">สาขา</th>
                     <th className="p-3 font-medium">สถานะ</th>
@@ -170,7 +178,8 @@ export default async function HrPersonnelPage(props: {
                           {p.displayName}
                         </Link>
                       </td>
-                      <td className="p-3 text-foreground">{p.department?.name ?? p.jobGroup ?? "—"}</td>
+                      <td className="p-3 text-foreground">{p.department?.name ?? "—"}</td>
+                      <td className="p-3 text-foreground">{p.jobGroupRef?.name ?? "—"}</td>
                       <td className="p-3 text-muted-foreground">
                         {primary ? `${primary.code} — ${primary.name}` : "—"}
                       </td>
@@ -187,8 +196,10 @@ export default async function HrPersonnelPage(props: {
                             id: p.id,
                             rosterNo: p.rosterNo,
                             displayName: p.displayName,
-                            jobGroup: p.department?.name ?? p.jobGroup,
                             departmentId: p.departmentId,
+                            departmentName: p.department?.name ?? null,
+                            jobGroupId: p.jobGroupId,
+                            jobGroupName: p.jobGroupRef?.name ?? null,
                             firstName: p.firstName,
                             lastName: p.lastName,
                             idCardNo: p.idCardNo,
@@ -207,6 +218,7 @@ export default async function HrPersonnelPage(props: {
                           }}
                           branches={branches}
                           departments={departments}
+                          jobGroups={jobGroups}
                           canUpdate={canUpdate(roles)}
                           canDelete={canDelete(roles)}
                         />

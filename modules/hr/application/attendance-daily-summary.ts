@@ -5,6 +5,18 @@ export const DUPLICATE_PUNCH_WINDOW_MS = 60_000
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/
 
+/** วันจากผล raw query อาจเป็นข้อความ YYYY-MM-DD หรือ Date ของคอลัมน์ date */
+export function reportDateKey(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, "0")
+    const day = String(value.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+  const match = String(value).match(/\d{4}-\d{2}-\d{2}/)
+  return match?.[0] ?? String(value)
+}
+
 export function isDateKey(value: string): boolean {
   if (!DATE_KEY_RE.test(value)) return false
   const d = new Date(`${value}T00:00:00.000Z`)

@@ -52,7 +52,8 @@ export default async function PersonnelDetailPage({ params }: { params: Promise<
   const fields: { label: string; value: string }[] = [
     { label: "รหัสรายชื่อ", value: row.rosterNo },
     { label: "ชื่อเรียก", value: row.displayName },
-    { label: "กลุ่มงาน", value: row.jobGroup ?? "—" },
+    { label: "แผนก", value: row.department?.name ?? "—" },
+    { label: "กลุ่มงาน", value: row.jobGroupRef?.name ?? "—" },
     { label: "ชื่อจริง", value: row.firstName ?? "—" },
     { label: "นามสกุล", value: row.lastName ?? "—" },
     { label: "วันเกิด", value: dateText(row.birthDate) },

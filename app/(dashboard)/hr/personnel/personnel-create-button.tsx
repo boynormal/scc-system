@@ -3,16 +3,18 @@
 import { useState } from "react"
 import { Plus } from "lucide-react"
 import { GlassDialog } from "@/components/glass"
-import { HrPersonnelForm, type DepartmentOpt } from "./new/personnel-form"
+import { HrPersonnelForm, type DepartmentOpt, type JobGroupOpt } from "./new/personnel-form"
 
 type BranchOpt = { id: string; name: string; code: string }
 
 export function PersonnelCreateButton({
   branches,
   departments,
+  jobGroups,
 }: {
   branches: BranchOpt[]
   departments: DepartmentOpt[]
+  jobGroups: JobGroupOpt[]
 }) {
   const [open, setOpen] = useState(false)
 
@@ -31,6 +33,7 @@ export function PersonnelCreateButton({
           <HrPersonnelForm
             branches={branches}
             departments={departments}
+            jobGroups={jobGroups}
             onSaved={() => setOpen(false)}
             onCancel={() => setOpen(false)}
           />

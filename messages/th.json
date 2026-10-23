@@ -335,7 +335,18 @@
       "forgotScan": "ลืมสแกน",
       "noScan": "ไม่มีสแกน",
       "emptyTitle": "ไม่มีรายการผิดปกติในช่วงนี้",
-      "emptyDescription": "ทุกคนมาตรงเวลาและไม่มีหมายเหตุ"
+      "emptyDescription": "ทุกคนมาตรงเวลาและไม่มีหมายเหตุ",
+      "deptAll": "ทุกแผนก",
+      "deptOnly": "เฉพาะ {names}",
+      "deptExcept": "ยกเว้น {names}",
+      "deptMore": "{first} +{count}",
+      "deptModeOnly": "เฉพาะที่เลือก",
+      "deptModeExcept": "ยกเว้นที่เลือก",
+      "deptNone": "ไม่ระบุแผนก",
+      "deptClear": "ล้างที่เลือก",
+      "deptHint": "ไม่เลือกเลย = แสดงทุกแผนก",
+      "filteredEmptyTitle": "ไม่มีรายการในแผนกที่เลือก",
+      "filteredEmptyDescription": "ลองเปลี่ยนแผนกที่เลือก หรือล้างที่เลือก"
     },
     "status": {
       "COMPLETE": "ครบ",

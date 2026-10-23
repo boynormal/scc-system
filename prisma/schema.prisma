@@ -179,6 +179,7 @@ model Company {
   assetPmPlans          AssetPmPlan[]
   storedFiles           StoredFile[]
   departments           Department[]
+  jobGroups             JobGroup[]
 
   @@map("companies")
 }
@@ -247,6 +248,24 @@ model Department {
   @@index([companyId])
   @@index([parentId])
   @@map("departments")
+}
+
+// Company-wide work groups used for Man Hour. Independent of departments: one group may span many departments.
+model JobGroup {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  code      String?  @db.VarChar(20)
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company   Company     @relation(fields: [companyId], references: [id])
+  personnel Personnel[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("job_groups")
 }
 
 // โ”€โ”€โ”€ GROUP 2: USERS & RBAC โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
@@ -995,6 +1014,7 @@ model Personnel {
   notes        String?   @db.Text
   userId       String?   @unique @map("user_id") @db.Uuid
   departmentId String?   @map("department_id") @db.Uuid
+  jobGroupId   String?   @map("job_group_id") @db.Uuid
   birthDate    DateTime? @map("birth_date") @db.Date
   startDate    DateTime? @map("start_date") @db.Timestamptz
   gender       PersonnelGender?
@@ -1009,6 +1029,7 @@ model Personnel {
   company             Company             @relation(fields: [companyId], references: [id])
   branch              Branch?             @relation(fields: [branchId], references: [id])
   department          Department?         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  jobGroupRef         JobGroup?           @relation(fields: [jobGroupId], references: [id], onDelete: Restrict)
   user                User?               @relation(fields: [userId], references: [id])
   attendanceBadges    AttendanceBadge[]
   attendancePunches   AttendancePunch[]
@@ -1026,6 +1047,7 @@ model Personnel {
   @@index([companyId])
   @@index([branchId])
   @@index([departmentId])
+  @@index([jobGroupId])
   @@index([displayName])
   @@map("personnel")
 }

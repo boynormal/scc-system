@@ -75,6 +75,10 @@ export const updateDepartmentSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
+export const createJobGroupSchema = createDepartmentSchema
+
+export const updateJobGroupSchema = updateDepartmentSchema
+
 export const createMaintenanceTypeSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
@@ -407,6 +411,83 @@ export async function deleteDepartment(db: PrismaClient, params: { id: string; c
   }
 
   await db.department.delete({ where: { id: params.id } })
+  return { success: true }
+}
+
+const JOB_GROUP_DUPLICATE = "ชื่อกลุ่มงานนี้มีอยู่แล้ว"
+
+export async function listJobGroups(db: PrismaClient, params: { companyId: string }) {
+  return db.jobGroup.findMany({
+    where: { isActive: true, companyId: params.companyId },
+    select: { id: true, name: true, code: true, isActive: true },
+    orderBy: { name: "asc" },
+  })
+}
+
+export async function createJobGroup(
+  db: PrismaClient,
+  params: { companyId: string; input: z.infer<typeof createJobGroupSchema> }
+) {
+  try {
+    const data = await db.jobGroup.create({
+      data: {
+        companyId: params.companyId,
+        name: params.input.name,
+        code: params.input.code || null,
+        isActive: true,
+      },
+    })
+    return { data }
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === "P2002") {
+      return { error: { message: JOB_GROUP_DUPLICATE }, status: 409 as const }
+    }
+    throw e
+  }
+}
+
+export async function updateJobGroup(
+  db: PrismaClient,
+  params: { id: string; companyId: string; input: z.infer<typeof updateJobGroupSchema> }
+) {
+  const existing = await db.jobGroup.findFirst({
+    where: { id: params.id, companyId: params.companyId },
+  })
+  if (!existing) return null
+
+  try {
+    const data = await db.jobGroup.update({
+      where: { id: params.id },
+      data: {
+        ...(params.input.name && { name: params.input.name }),
+        ...(params.input.code !== undefined && { code: params.input.code || null }),
+        ...(params.input.isActive !== undefined && { isActive: params.input.isActive }),
+      },
+    })
+    return { data }
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === "P2002") {
+      return { error: { message: JOB_GROUP_DUPLICATE }, status: 409 as const }
+    }
+    throw e
+  }
+}
+
+export async function deleteJobGroup(db: PrismaClient, params: { id: string; companyId: string }) {
+  const existing = await db.jobGroup.findFirst({
+    where: { id: params.id, companyId: params.companyId },
+  })
+  if (!existing) return { error: "Not found" as const, status: 404 as const }
+
+  const personnelCount = await db.personnel.count({ where: { jobGroupId: params.id } })
+  if (personnelCount > 0) {
+    return {
+      error: { message: `ลบไม่ได้ เพราะยังมีบุคลากร ${personnelCount} คนอยู่ในกลุ่มงานนี้` },
+      status: 400 as const,
+    }
+  }
+
+  await db.jobGroup.delete({ where: { id: params.id } })
   return { success: true }
 }
 

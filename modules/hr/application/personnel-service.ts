@@ -74,6 +74,13 @@ const personnelFieldsSchema = z.object({
     .nullable()
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),
+  jobGroupId: z
+    .string()
+    .uuid()
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null)),
   birthDate: optionalDate,
   startDate: optionalDateTime,
   gender: optionalGender,
@@ -178,6 +185,7 @@ export function formatRosterNo(seq: number): string {
 const personnelInclude = {
   branch: { select: { id: true, name: true, code: true } },
   department: { select: { id: true, name: true, code: true } },
+  jobGroupRef: { select: { id: true, name: true } },
   user: { select: { id: true, firstName: true, lastName: true, username: true, email: true } },
   branchAssignments: {
     include: { branch: { select: { name: true, code: true, id: true } } },
@@ -223,6 +231,18 @@ async function assertDepartmentAllowed(
     select: { id: true },
   })
   if (!dept) throw new ValidationError("แผนกไม่ถูกต้อง")
+}
+
+async function assertJobGroupAllowed(
+  db: PrismaClient | Prisma.TransactionClient,
+  companyId: string,
+  jobGroupId: string
+) {
+  const group = await db.jobGroup.findFirst({
+    where: { id: jobGroupId, isActive: true, companyId },
+    select: { id: true },
+  })
+  if (!group) throw new ValidationError("กลุ่มงานไม่ถูกต้อง")
 }
 
 export function personnelLegalName(person: {
@@ -470,6 +490,7 @@ export async function createPersonnel(
     notes,
     userId,
     departmentId,
+    jobGroupId,
     birthDate,
     startDate,
     gender,
@@ -490,6 +511,7 @@ export async function createPersonnel(
   )
   if (userId) await assertUserLinkAllowed(db, companyId, userId)
   if (departmentId) await assertDepartmentAllowed(db, companyId, departmentId)
+  if (jobGroupId) await assertJobGroupAllowed(db, companyId, jobGroupId)
 
   if (resolvedBranchIds.length === 0 && !isAdminInAnyBranch(roles)) {
     const allowed = getBranchIds(roles)
@@ -526,6 +548,7 @@ export async function createPersonnel(
           notes: notes?.trim() || null,
           userId: userId ?? null,
           departmentId: departmentId ?? null,
+          jobGroupId: jobGroupId ?? null,
           birthDate: toDbDate(birthDate),
           startDate: toDbDateTime(startDate),
           gender,
@@ -631,6 +654,11 @@ export async function updatePersonnel(
     data.departmentId = nextDepartmentId
   }
 
+  if (input.jobGroupId !== undefined) {
+    if (input.jobGroupId) await assertJobGroupAllowed(db, companyId, input.jobGroupId)
+    data.jobGroupId = input.jobGroupId
+  }
+
   try {
     return await db.$transaction(async (tx) => {
       await tx.personnel.update({ where: { id: existing.id }, data })
@@ -733,6 +761,20 @@ export async function listPersonnelDepartments(
     orderBy: { name: "asc" },
   })
   return { data: departments }
+}
+
+export async function listPersonnelJobGroups(
+  db: PrismaClient,
+  params: { companyId: string; roles: UserRole[] }
+) {
+  if (!canReadPersonnel(params.roles)) throw new ForbiddenError()
+
+  const jobGroups = await db.jobGroup.findMany({
+    where: { isActive: true, companyId: params.companyId },
+    select: { id: true, name: true, code: true },
+    orderBy: { name: "asc" },
+  })
+  return { data: jobGroups }
 }
 
 export async function suggestNextRosterNo(

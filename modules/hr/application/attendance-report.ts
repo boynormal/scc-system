@@ -14,6 +14,7 @@ export type ReportFact = {
   date: string
   personnelId: string
   displayName: string
+  departmentId?: string | null
   departmentName: string | null
   status: ReportDayStatus
   manMinutes: number
@@ -29,6 +30,7 @@ export type ReportFact = {
 export type ExceptionRow = {
   personnelId: string
   displayName: string
+  departmentId: string | null
   status: ReportDayStatus
   late: boolean
   minutes: number
@@ -277,6 +279,7 @@ export function buildExceptionGroups(facts: ReportFact[]): ExceptionGroup[] {
     list.push({
       personnelId: fact.personnelId,
       displayName: fact.displayName,
+      departmentId: fact.departmentId ?? null,
       status: fact.status,
       late: fact.lateMinutes > 0,
       minutes: fact.lateMinutes,
@@ -294,4 +297,20 @@ export function buildExceptionGroups(facts: ReportFact[]): ExceptionGroup[] {
       minutes: rows.reduce((sum, row) => sum + row.minutes, 0),
       rows: rows.sort((a, b) => a.displayName.localeCompare(b.displayName, "th")),
     }))
+}
+
+export type DepartmentFilterMode = "only" | "except"
+
+/** An empty selection keeps every row in both modes. A null key matches rows without a department. */
+export function filterExceptionGroups<Row extends { departmentId: string | null; minutes: number }>(
+  groups: { date: string; minutes: number; rows: Row[] }[],
+  mode: DepartmentFilterMode,
+  selected: ReadonlySet<string | null>
+): { date: string; minutes: number; rows: Row[] }[] {
+  if (selected.size === 0) return groups
+  return groups.flatMap((group) => {
+    const rows = group.rows.filter((row) => selected.has(row.departmentId) === (mode === "only"))
+    if (rows.length === 0) return []
+    return [{ date: group.date, minutes: rows.reduce((sum, row) => sum + row.minutes, 0), rows }]
+  })
 }

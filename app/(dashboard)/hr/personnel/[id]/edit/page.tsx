@@ -3,7 +3,12 @@ import { notFound, redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
-import { getPersonnel, listAccessiblePersonnelBranches, listPersonnelDepartments } from "@/modules/hr"
+import {
+  getPersonnel,
+  listAccessiblePersonnelBranches,
+  listPersonnelDepartments,
+  listPersonnelJobGroups,
+} from "@/modules/hr"
 import { HrPersonnelForm } from "../../new/personnel-form"
 import { personnelDateTimeInput } from "@/modules/hr/application/personnel-date-time"
 
@@ -36,9 +41,10 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const [{ data: branches }, { data: departments }] = await Promise.all([
+  const [{ data: branches }, { data: departments }, { data: jobGroups }] = await Promise.all([
     listAccessiblePersonnelBranches(prisma, { companyId, roles }),
     listPersonnelDepartments(prisma, { companyId, roles }),
+    listPersonnelJobGroups(prisma, { companyId, roles }),
   ])
 
   const primary = row.branchAssignments.find((a) => a.isPrimary)?.branchId ?? row.branchId
@@ -57,11 +63,12 @@ export default async function EditPersonnelPage({ params }: { params: Promise<{ 
         personnelId={row.id}
         branches={branches}
         departments={departments}
+        jobGroups={jobGroups}
         initial={{
           rosterNo: row.rosterNo,
           displayName: row.displayName,
-          jobGroup: row.jobGroup,
           departmentId: row.departmentId,
+          jobGroupId: row.jobGroupId,
           firstName: row.firstName,
           lastName: row.lastName,
           idCardNo: row.idCardNo,

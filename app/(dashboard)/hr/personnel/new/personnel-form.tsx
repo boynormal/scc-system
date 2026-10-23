@@ -8,12 +8,13 @@ import { GlassForm, GlassFormActions, GlassFormSection, GlassInput } from "@/com
 
 type BranchOpt = { id: string; name: string; code: string }
 export type DepartmentOpt = { id: string; name: string; code: string | null }
+export type JobGroupOpt = { id: string; name: string; code: string | null }
 
 export type PersonnelFormInitial = {
   rosterNo: string
   displayName: string
-  jobGroup: string | null
   departmentId: string | null
+  jobGroupId: string | null
   firstName: string | null
   lastName: string | null
   idCardNo: string | null
@@ -39,6 +40,7 @@ const solidField =
 export function HrPersonnelForm({
   branches,
   departments,
+  jobGroups,
   mode = "create",
   personnelId,
   initial,
@@ -47,6 +49,7 @@ export function HrPersonnelForm({
 }: {
   branches: BranchOpt[]
   departments: DepartmentOpt[]
+  jobGroups: JobGroupOpt[]
   mode?: "create" | "edit"
   personnelId?: string
   initial?: PersonnelFormInitial
@@ -60,6 +63,7 @@ export function HrPersonnelForm({
   const [rosterNo, setRosterNo] = useState(initial?.rosterNo ?? "")
   const [displayName, setDisplayName] = useState(initial?.displayName ?? "")
   const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "")
+  const [jobGroupId, setJobGroupId] = useState(initial?.jobGroupId ?? "")
   const [firstName, setFirstName] = useState(initial?.firstName ?? "")
   const [lastName, setLastName] = useState(initial?.lastName ?? "")
   const [idCardNo, setIdCardNo] = useState(initial?.idCardNo ?? "")
@@ -72,7 +76,6 @@ export function HrPersonnelForm({
   const [gender, setGender] = useState(initial?.gender ?? "")
   const [nationality, setNationality] = useState(initial?.nationality ?? "")
   const embedded = Boolean(onSaved || onCancel)
-  const selectedDepartment = departments.find((department) => department.id === departmentId) ?? null
 
   const hasExtra =
     Boolean(initial?.firstName || initial?.lastName || initial?.idCardNo || initial?.address || initial?.notes)
@@ -86,7 +89,7 @@ export function HrPersonnelForm({
       ...(mode === "edit" && { rosterNo: rosterNo.trim() }),
       displayName: displayName.trim(),
       departmentId: departmentId || null,
-      jobGroup: selectedDepartment?.name ?? null,
+      jobGroupId: jobGroupId || null,
       firstName: firstName.trim() || null,
       lastName: lastName.trim() || null,
       idCardNo: idCardNo.trim() || null,
@@ -169,13 +172,25 @@ export function HrPersonnelForm({
           )}
           <Select
             className={embedded ? solidField : undefined}
-            label="กลุ่มงาน"
+            label="แผนก"
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
             placeholder={departments.length ? "ไม่ระบุ" : "ยังไม่มีแผนก"}
             options={departments.map((department) => ({
               value: department.id,
               label: department.code ? `${department.code} — ${department.name}` : department.name,
+            }))}
+          />
+          <Select
+            className={embedded ? solidField : undefined}
+            label="กลุ่มงาน"
+            value={jobGroupId}
+            onChange={(e) => setJobGroupId(e.target.value)}
+            placeholder={jobGroups.length ? "ไม่ระบุ" : "ยังไม่มีกลุ่มงาน"}
+            hint="ใช้คิด Man Hour"
+            options={jobGroups.map((group) => ({
+              value: group.id,
+              label: group.code ? `${group.code} — ${group.name}` : group.name,
             }))}
           />
           <GlassInput

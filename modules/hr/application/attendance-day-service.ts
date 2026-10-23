@@ -3,7 +3,7 @@ import { z } from "zod"
 import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { assertAttendanceBranch } from "./attendance-access"
-import { dedupePunchTimes, isDateKey, localDateKey, summarizeDay, summarizeHomeBranchDay, zonedDateTime, zonedDayRange } from "./attendance-daily-summary"
+import { dedupePunchTimes, isDateKey, localDateKey, reportDateKey, summarizeDay, summarizeHomeBranchDay, zonedDateTime, zonedDayRange } from "./attendance-daily-summary"
 import { presentOt, summarizeManHour, type OtRowView, type StoredOtDecision } from "./attendance-man-hour"
 import { effectiveDayTimes, type StoredTimeConfirmation } from "./attendance-time-confirmation"
 import {
@@ -92,7 +92,7 @@ export async function listAttendanceDays(
           select: {
             rosterNo: true,
             displayName: true,
-            jobGroup: true,
+            jobGroupRef: { select: { name: true } },
             branchId: true,
             branch: { select: { code: true } },
           },
@@ -122,7 +122,7 @@ export async function listAttendanceDays(
           badgeNumber: punch.badge.badgeNumber,
           rosterNo: punch.personnel.rosterNo,
           displayName: punch.personnel.displayName,
-          jobGroup: punch.personnel.jobGroup,
+          jobGroup: punch.personnel.jobGroupRef?.name ?? null,
         },
       ]
     })
@@ -148,7 +148,14 @@ export async function listAttendanceDays(
         ...(movedHere.length ? [{ id: { in: movedHere } }] : []),
       ],
     },
-    select: { id: true, rosterNo: true, displayName: true, jobGroup: true, branchId: true, branch: { select: { code: true } } },
+    select: {
+      id: true,
+      rosterNo: true,
+      displayName: true,
+      jobGroupRef: { select: { name: true } },
+      branchId: true,
+      branch: { select: { code: true } },
+    },
   })
   for (const person of roster) {
     if (person.branchId && person.branch) homeByPerson.set(person.id, { id: person.branchId, code: person.branch.code })
@@ -199,7 +206,7 @@ export async function listAttendanceDays(
       personnelId: person.id,
       rosterNo: person.rosterNo,
       displayName: person.displayName,
-      jobGroup: person.jobGroup,
+      jobGroup: person.jobGroupRef?.name ?? null,
       badgeNumbers: [] as string[],
       firstInBranchCode: null,
       lastOutBranchCode: null,
@@ -243,12 +250,26 @@ type TimeConfirmationRow = {
   source_last_out: Date | null
 }
 
-function toStoredConfirmation(row: TimeConfirmationRow): StoredTimeConfirmation {
+function asDate(value: Date | string | null | undefined): Date | null {
+  if (value == null) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function personDateKey(personnelId: unknown, workDate: unknown): string {
+  return `${String(personnelId).toLowerCase()}|${reportDateKey(workDate)}`
+}
+
+function toStoredConfirmation(row: TimeConfirmationRow): StoredTimeConfirmation | null {
+  const confirmedIn = asDate(row.confirmed_in)
+  const confirmedOut = asDate(row.confirmed_out)
+  if (!confirmedIn || !confirmedOut) return null
   return {
-    confirmedIn: row.confirmed_in,
-    confirmedOut: row.confirmed_out,
-    sourceFirstIn: row.source_first_in,
-    sourceLastOut: row.source_last_out,
+    confirmedIn,
+    confirmedOut,
+    sourceFirstIn: asDate(row.source_first_in),
+    sourceLastOut: asDate(row.source_last_out),
   }
 }
 
@@ -259,7 +280,8 @@ function applyConfirmedTimes(
   timeZone: string,
   stored: StoredOtDecision[]
 ) {
-  const effective = effectiveDayTimes(scanFirstIn, scanLastOut, confirmation ? toStoredConfirmation(confirmation) : null)
+  const storedConfirmation = confirmation ? toStoredConfirmation(confirmation) : null
+  const effective = effectiveDayTimes(scanFirstIn, scanLastOut, storedConfirmation)
   const hours = effective.firstIn ? summarizeManHour(effective.firstIn, effective.lastOut, timeZone) : null
   return {
     firstIn: effective.firstIn,
@@ -357,7 +379,7 @@ export async function listAttendanceReport(
       AND work_date >= ${params.from}::date
       AND work_date <= ${params.to}::date
   `
-  const countedByPersonDate = new Map(assignments.map((row) => [`${row.personnel_id}|${row.work_date}`, row.branch_id]))
+  const countedByPersonDate = new Map(assignments.map((row) => [personDateKey(row.personnel_id, row.work_date), row.branch_id]))
   const movedHere = [...new Set(assignments.filter((row) => row.branch_id === branch.id).map((row) => row.personnel_id))]
 
   const roster = await db.personnel.findMany({
@@ -373,6 +395,7 @@ export async function listAttendanceReport(
       displayName: true,
       jobGroup: true,
       branchId: true,
+      departmentId: true,
       department: { select: { name: true } },
       attendanceBadges: { select: { id: true }, take: 1 },
     },
@@ -436,39 +459,41 @@ export async function listAttendanceReport(
   }
   const decisionByKey = new Map<string, StoredOtDecision>()
   for (const row of decisions) {
-    decisionByKey.set(`${row.personnel_id}|${row.work_date}|${row.side}`, {
+    decisionByKey.set(`${personDateKey(row.personnel_id, row.work_date)}|${row.side}`, {
       side: row.side,
       punchAt: row.punch_at,
       decision: row.decision,
       otMinutes: row.ot_minutes,
     })
   }
-  const noteByKey = new Map(notes.map((row) => [`${row.personnel_id}|${row.work_date}`, row]))
-  const confirmationByKey = new Map(confirmations.map((row) => [`${row.personnel_id}|${row.work_date}`, row]))
+  const noteByKey = new Map(notes.map((row) => [personDateKey(row.personnel_id, row.work_date), row]))
+  const confirmationByKey = new Map(confirmations.map((row) => [personDateKey(row.personnel_id, row.work_date), row]))
 
   const facts: ReportFact[] = []
   for (const date of dates) {
     for (const person of roster) {
-      const counted = countedByPersonDate.get(`${person.id}|${date}`) ?? null
+      const dayKey = personDateKey(person.id, date)
+      const counted = countedByPersonDate.get(dayKey) ?? null
       if (!countsOnBranch(person.branchId, counted, branch.id)) continue
       const punches = punchesByPersonDate.get(`${person.id}|${date}`) ?? []
       if (shouldSkipOffDay(date, branch.id, holidays, punches.length > 0)) continue
       const summary = summarizeDay(punches)
-      const savedNote = noteByKey.get(`${person.id}|${date}`)
+      const savedNote = noteByKey.get(dayKey)
       const times = applyConfirmedTimes(
         summary?.firstIn ?? null,
         summary?.lastOut ?? null,
-        confirmationByKey.get(`${person.id}|${date}`) ?? null,
+        confirmationByKey.get(dayKey) ?? null,
         branch.timezone,
         [
-          decisionByKey.get(`${person.id}|${date}|BEFORE`),
-          decisionByKey.get(`${person.id}|${date}|AFTER`),
+          decisionByKey.get(`${dayKey}|BEFORE`),
+          decisionByKey.get(`${dayKey}|AFTER`),
         ].filter((item): item is StoredOtDecision => item != null)
       )
       facts.push({
         date,
         personnelId: person.id,
         displayName: person.displayName,
+        departmentId: person.departmentId,
         departmentName: person.department?.name ?? person.jobGroup,
         status: times.status,
         manMinutes: times.manMinutes,

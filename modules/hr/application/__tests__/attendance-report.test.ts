@@ -5,6 +5,7 @@ import {
   buildExceptionGroups,
   countsOnBranch,
   dateKeysInRange,
+  filterExceptionGroups,
   type ReportFact,
 } from "@/modules/hr/application/attendance-report"
 
@@ -118,6 +119,14 @@ describe("buildExceptionGroups", () => {
     expect(groups[0]?.minutes).toBe(0)
   })
 
+  it("carries the department id onto each row", () => {
+    const groups = buildExceptionGroups([
+      fact({ personnelId: "p1", departmentId: "d1", status: "NO_SCAN" }),
+      fact({ personnelId: "p2", status: "NO_SCAN" }),
+    ])
+    expect(groups[0]?.rows.map((row) => row.departmentId)).toEqual(["d1", null])
+  })
+
   it("includes a day with no scan", () => {
     const groups = buildExceptionGroups([
       fact({ personnelId: "p1", status: "NO_SCAN" }),
@@ -126,6 +135,34 @@ describe("buildExceptionGroups", () => {
     expect(groups.map((group) => group.date)).toEqual(["2026-10-19", "2026-10-18"])
     expect(groups[1]?.rows[0]?.status).toBe("NO_SCAN")
     expect(groups[1]?.rows[0]?.minutes).toBe(0)
+  })
+})
+
+describe("filterExceptionGroups", () => {
+  const groups = buildExceptionGroups([
+    fact({ personnelId: "p1", displayName: "ก", departmentId: "maid", status: "COMPLETE", lateMinutes: 5 }),
+    fact({ personnelId: "p2", displayName: "ข", departmentId: "prod", status: "COMPLETE", lateMinutes: 7 }),
+    fact({ personnelId: "p3", displayName: "ค", departmentId: null, status: "COMPLETE", lateMinutes: 11 }),
+    fact({ personnelId: "p1", displayName: "ก", departmentId: "maid", date: "2026-10-19", status: "NO_SCAN" }),
+  ])
+
+  it("keeps everything when nothing is selected", () => {
+    expect(filterExceptionGroups(groups, "only", new Set())).toBe(groups)
+    expect(filterExceptionGroups(groups, "except", new Set())).toBe(groups)
+  })
+
+  it("shows only the selected departments and recomputes the day total", () => {
+    const result = filterExceptionGroups(groups, "only", new Set(["prod", null]))
+    expect(result.map((group) => group.date)).toEqual(["2026-10-18"])
+    expect(result[0]?.rows.map((row) => row.personnelId)).toEqual(["p2", "p3"])
+    expect(result[0]?.minutes).toBe(18)
+  })
+
+  it("hides the excepted departments and drops days left empty", () => {
+    const result = filterExceptionGroups(groups, "except", new Set(["maid"]))
+    expect(result.map((group) => group.date)).toEqual(["2026-10-18"])
+    expect(result[0]?.rows.map((row) => row.personnelId)).toEqual(["p2", "p3"])
+    expect(result[0]?.minutes).toBe(18)
   })
 })
 

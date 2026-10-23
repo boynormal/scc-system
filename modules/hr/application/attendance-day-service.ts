@@ -54,7 +54,7 @@ function assertDateKey(date: string): void {
   if (!isDateKey(date)) throw new ValidationError("วันที่ไม่ถูกต้อง (YYYY-MM-DD)")
 }
 
-/** สรุปรายวันของคนที่สาขาหลักตรงกับสาขาที่เปิด + เลขสแกนที่ยังไม่ผูกบนเครื่องสาขานั้น */
+/** สรุปรายวันของคนที่สาขาหลักตรงกับสาขาที่เปิด และผูกเลขสแกนแล้ว + เลขสแกนที่ยังไม่ผูกบนเครื่องสาขานั้น */
 export async function listAttendanceDays(
   db: PrismaClient,
   params: { companyId: string; roles: UserRole[]; branchId: string; date: string }
@@ -142,6 +142,7 @@ export async function listAttendanceDays(
       companyId: params.companyId,
       deletedAt: null,
       isActive: true,
+      attendanceBadges: { some: {} },
       OR: [
         { branchId: branch.id, ...(movedAway.length ? { id: { notIn: movedAway } } : {}) },
         ...(movedHere.length ? [{ id: { in: movedHere } }] : []),
@@ -373,6 +374,7 @@ export async function listAttendanceReport(
       jobGroup: true,
       branchId: true,
       department: { select: { name: true } },
+      attendanceBadges: { select: { id: true }, take: 1 },
     },
     orderBy: { displayName: "asc" },
   })
@@ -481,12 +483,14 @@ export async function listAttendanceReport(
     }
   }
 
+  const linkedIds = new Set(roster.filter((person) => person.attendanceBadges.length > 0).map((person) => person.id))
+
   return {
     branch: { id: branch.id, code: branch.code, name: branch.name, timezone: branch.timezone },
     from: params.from,
     to: params.to,
     ...buildAttendanceReport(dates, facts),
-    exceptions: buildExceptionGroups(facts),
+    exceptions: buildExceptionGroups(facts.filter((fact) => linkedIds.has(fact.personnelId))),
   }
 }
 

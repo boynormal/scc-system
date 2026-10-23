@@ -12,7 +12,7 @@ import { Select } from "@/components/ui/select"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { fmtMoney, fmtQty, localInputToIso } from "./fuel-format"
-import { TankPicker, TankStatusLine, TextArea, initialBranchTank } from "./fuel-entry-shared"
+import { OccurredAtField, TankPicker, TankStatusLine, TextArea, initialBranchTank } from "./fuel-entry-shared"
 
 type Option = { id: string; name: string }
 type FuelAsset = {
@@ -128,6 +128,7 @@ export function DispenseForm({
       setOtherName("")
       setOtherNote("")
       setReceiverName("")
+      setOccurredAt("")
       setRemark("")
       setReloadKey((k) => k + 1)
     } catch (err) {
@@ -251,7 +252,7 @@ export function DispenseForm({
           </div>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Input
             label={t("quantity")}
             required
@@ -264,14 +265,8 @@ export function DispenseForm({
             onChange={(e) => setQuantity(e.target.value)}
           />
           <Input label={t("receiverName")} maxLength={255} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} />
-          <Input
-            label={t("occurredAt")}
-            type="datetime-local"
-            value={occurredAt}
-            onChange={(e) => setOccurredAt(e.target.value)}
-            hint={t("occurredAtHint")}
-          />
         </div>
+        <OccurredAtField value={occurredAt} onChange={setOccurredAt} />
         <TextArea label={t("remark")} value={remark} onChange={setRemark} />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end">

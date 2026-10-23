@@ -71,27 +71,33 @@ async function main() {
     check("auto tank code", /^TK-\d{3,}$/.test(tank.data.code), tank.data.code)
     check("create type + tank", tank.data.currentQty === 0)
 
-    await receiveFuel(db, { ...ctx, input: { tankId, quantity: 500, unitCost: 30 } })
-    await receiveFuel(db, { ...ctx, input: { tankId, quantity: 300, unitCost: 34 } })
+    const at = () => new Date().toISOString()
+    await expectReject(
+      "receive without date and time rejected",
+      () => receiveFuel(db, { ...ctx, input: { tankId: tankId!, quantity: 10, unitCost: 30 } }),
+      /กรุณาระบุวันเวลา/
+    )
+    await receiveFuel(db, { ...ctx, input: { tankId, quantity: 500, unitCost: 30, occurredAt: at() } })
+    await receiveFuel(db, { ...ctx, input: { tankId, quantity: 300, unitCost: 34, occurredAt: at() } })
     let t = (await getFuelTank(db, { companyId, roles, id: tankId })).data
     check("receive x2 moving average", t.currentQty === 800 && t.avgCost === 31.5, `qty=${t.currentQty} avg=${t.avgCost}`)
 
     await expectReject(
       "receive over capacity rejected",
-      () => receiveFuel(db, { ...ctx, input: { tankId: tankId!, quantity: 300, unitCost: 30 } }),
+      () => receiveFuel(db, { ...ctx, input: { tankId: tankId!, quantity: 300, unitCost: 30, occurredAt: at() } }),
       /ความจุ/
     )
 
     const d1 = await dispenseFuel(db, {
       ...ctx,
       roles: technician,
-      input: { tankId, quantity: 450, targetType: "OTHER", otherTargetName: "Smoke generator" },
+      input: { tankId, quantity: 450, targetType: "OTHER", otherTargetName: "Smoke generator", occurredAt: at() },
     })
     check("dispense OTHER at avg cost", d1.data.totalCost === 14175 && d1.data.balanceAfter === 350, `cost=${d1.data.totalCost}`)
 
     await expectReject(
       "dispense more than stock rejected",
-      () => dispenseFuel(db, { ...ctx, input: { tankId: tankId!, quantity: 9999, targetType: "OTHER", otherTargetName: "x" } })
+      () => dispenseFuel(db, { ...ctx, input: { tankId: tankId!, quantity: 9999, targetType: "OTHER", otherTargetName: "x", occurredAt: at() } })
     )
 
     const assets = await listFuelAssets(db, { companyId, roles, branchId })
@@ -116,7 +122,7 @@ async function main() {
         () =>
           dispenseFuel(db, {
             ...ctx,
-            input: { tankId: tankId!, quantity: 5, targetType: "ASSET", assetId: asset.id, meterType: "ODOMETER", meterReading: base + 100 },
+            input: { tankId: tankId!, quantity: 5, targetType: "ASSET", assetId: asset.id, meterType: "ODOMETER", meterReading: base + 100, occurredAt: at() },
           }),
         /เลขไมล์|มิเตอร์/
       )
@@ -129,7 +135,7 @@ async function main() {
 
     t = (await getFuelTank(db, { companyId, roles, id: tankId })).data
     const toLow = t.currentQty - 80
-    await dispenseFuel(db, { ...ctx, input: { tankId, quantity: toLow, targetType: "OTHER", otherTargetName: "Smoke pump" } })
+    await dispenseFuel(db, { ...ctx, input: { tankId, quantity: toLow, targetType: "OTHER", otherTargetName: "Smoke pump", occurredAt: at() } })
     const notes = await db.notification.count({ where: { refType: "FuelTank", refId: tankId } })
     check("low-level notification on crossing minLevel", notes > 0, `notifications=${notes}`)
 

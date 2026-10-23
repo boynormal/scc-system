@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import type { FuelTankDto } from "@/modules/fuel"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { fmtQty } from "./fuel-format"
+import { fmtQty, nowLocalInput } from "./fuel-format"
 import { TankLevel } from "./tank-level"
 
 type Option = { id: string; name: string }
@@ -102,6 +104,29 @@ export function TextArea({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+    </div>
+  )
+}
+
+/** Required date and time of the refill or dispense, with a one-tap "now". */
+export function OccurredAtField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useTranslations("fuel")
+  return (
+    <div className="flex flex-wrap items-start gap-2">
+      <div className="w-full min-w-[17rem] max-w-xs">
+        <Input
+          label={t("occurredAt")}
+          required
+          type="datetime-local"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          hint={t("occurredAtHint")}
+          className="min-w-[17rem]"
+        />
+      </div>
+      <Button type="button" variant="outline" size="sm" className="mt-7 shrink-0" onClick={() => onChange(nowLocalInput())}>
+        {t("useNow")}
+      </Button>
     </div>
   )
 }

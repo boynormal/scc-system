@@ -106,21 +106,36 @@ function makeDb(tank: { qty: number; avgCost: number; capacity?: number; minLeve
 }
 
 const base = { companyId: CID, userId: USER_ID }
+const NOW = new Date().toISOString()
 
 describe("receiveFuel", () => {
   it("writes the ledger row and updates the tank cache", async () => {
     const { db, state } = makeDb({ qty: 1000, avgCost: 30 })
-    const res = await receiveFuel(db, { ...base, roles: technician, input: { tankId: TANK_ID, quantity: 500, unitCost: 33 } })
+    const res = await receiveFuel(db, { ...base, roles: technician, input: { occurredAt: NOW, tankId: TANK_ID, quantity: 500, unitCost: 33 } })
     expect(res.data.type).toBe("RECEIVE")
     expect(state.tank.currentQty.toNumber()).toBe(1500)
     expect(state.tank.avgCost.toNumber()).toBe(31)
     expect(db.$queryRaw).toHaveBeenCalled()
   })
 
+  it("requires the date and time", async () => {
+    const { db } = makeDb({ qty: 0, avgCost: 0 })
+    await expect(
+      receiveFuel(db, { ...base, roles: technician, input: { tankId: TANK_ID, quantity: 10, unitCost: 30 } })
+    ).rejects.toThrow(/กรุณาระบุวันเวลา/)
+    await expect(
+      dispenseFuel(db, {
+        ...base,
+        roles: technician,
+        input: { occurredAt: "", tankId: TANK_ID, quantity: 5, targetType: "OTHER", otherTargetName: "x" },
+      })
+    ).rejects.toThrow(/กรุณาระบุวันเวลา/)
+  })
+
   it("forbids users of another branch", async () => {
     const { db } = makeDb({ qty: 0, avgCost: 0 })
     await expect(
-      receiveFuel(db, { ...base, roles: managerOfB, input: { tankId: TANK_ID, quantity: 10, unitCost: 30 } })
+      receiveFuel(db, { ...base, roles: managerOfB, input: { occurredAt: NOW, tankId: TANK_ID, quantity: 10, unitCost: 30 } })
     ).rejects.toBeInstanceOf(ForbiddenError)
   })
 })
@@ -132,7 +147,7 @@ describe("dispenseFuel", () => {
       dispenseFuel(db, {
         ...base,
         roles: technician,
-        input: { tankId: TANK_ID, quantity: 60, targetType: "OTHER", otherTargetName: "Generator" },
+        input: { occurredAt: NOW, tankId: TANK_ID, quantity: 60, targetType: "OTHER", otherTargetName: "Generator" },
       })
     ).rejects.toThrow(/ไม่พอ/)
   })
@@ -140,7 +155,7 @@ describe("dispenseFuel", () => {
   it("requires a name for free-text targets", async () => {
     const { db } = makeDb({ qty: 50, avgCost: 30 })
     await expect(
-      dispenseFuel(db, { ...base, roles: technician, input: { tankId: TANK_ID, quantity: 5, targetType: "OTHER" } })
+      dispenseFuel(db, { ...base, roles: technician, input: { occurredAt: NOW, tankId: TANK_ID, quantity: 5, targetType: "OTHER" } })
     ).rejects.toBeInstanceOf(ValidationError)
   })
 
@@ -150,7 +165,7 @@ describe("dispenseFuel", () => {
       dispenseFuel(db, {
         ...base,
         roles: technician,
-        input: { tankId: TANK_ID, quantity: 5, targetType: "ASSET", assetId: ASSET_B },
+        input: { occurredAt: NOW, tankId: TANK_ID, quantity: 5, targetType: "ASSET", assetId: ASSET_B },
       })
     ).rejects.toThrow(/สาขาเดียวกับถัง/)
   })
@@ -162,6 +177,7 @@ describe("dispenseFuel", () => {
         ...base,
         roles: technician,
         input: {
+          occurredAt: NOW,
           tankId: TANK_ID,
           quantity: 40,
           targetType: "ASSET",
@@ -179,6 +195,7 @@ describe("dispenseFuel", () => {
       ...base,
       roles: technician,
       input: {
+        occurredAt: NOW,
         tankId: TANK_ID,
         quantity: 150,
         targetType: "ASSET",
@@ -199,7 +216,7 @@ describe("dispenseFuel", () => {
     await dispenseFuel(db, {
       ...base,
       roles: technician,
-      input: { tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_A, meterType: "HOUR_METER", meterReading: 500 },
+      input: { occurredAt: NOW, tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_A, meterType: "HOUR_METER", meterReading: 500 },
     })
     expect(state.created[0].meterType).toBe("ODOMETER")
     expect(state.created[0].meterReading).toBe(500)
@@ -211,7 +228,7 @@ describe("dispenseFuel", () => {
       dispenseFuel(db, {
         ...base,
         roles: technician,
-        input: { tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_A },
+        input: { occurredAt: NOW, tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_A },
       })
     ).rejects.toThrow(/เลขไมล์/)
   })
@@ -221,7 +238,7 @@ describe("dispenseFuel", () => {
     await dispenseFuel(db, {
       ...base,
       roles: technician,
-      input: { tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_C, meterType: "ODOMETER", meterReading: 99 },
+      input: { occurredAt: NOW, tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_C, meterType: "ODOMETER", meterReading: 99 },
     })
     expect(state.created[0].meterType).toBe("NONE")
     expect(state.created[0].meterReading).toBeNull()
@@ -232,9 +249,9 @@ describe("adjustFuel / reverseFuelTransaction", () => {
   it("requires approve permission for adjustments", async () => {
     const { db } = makeDb({ qty: 1000, avgCost: 30 })
     await expect(
-      adjustFuel(db, { ...base, roles: technician, input: { tankId: TANK_ID, measuredQty: 990, remark: "dip" } })
+      adjustFuel(db, { ...base, roles: technician, input: { occurredAt: NOW, tankId: TANK_ID, measuredQty: 990, remark: "dip" } })
     ).rejects.toBeInstanceOf(ForbiddenError)
-    const res = await adjustFuel(db, { ...base, roles: manager, input: { tankId: TANK_ID, measuredQty: 990, remark: "dip" } })
+    const res = await adjustFuel(db, { ...base, roles: manager, input: { occurredAt: NOW, tankId: TANK_ID, measuredQty: 990, remark: "dip" } })
     expect(res.data.quantity).toBe(-10)
   })
 

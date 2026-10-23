@@ -39,13 +39,18 @@ const occurredAtInput = z
   .or(z.literal(""))
   .transform((v) => (v ? v : null))
 
+const requiredOccurredAt = z.preprocess(
+  (v) => (v === null || v === undefined ? "" : v),
+  z.string().trim().min(1, "กรุณาระบุวันเวลา")
+)
+
 export const receiveFuelSchema = z.object({
   tankId: z.string().uuid(),
   quantity: z.coerce.number().finite().positive(),
   unitCost: z.coerce.number().finite().min(0),
   supplierId: z.string().uuid().optional().nullable().or(z.literal("")).transform((v) => (v ? v : null)),
   documentNo: optionalText(50),
-  occurredAt: occurredAtInput,
+  occurredAt: requiredOccurredAt,
   remark: optionalText(1000),
 })
 
@@ -63,7 +68,7 @@ export const dispenseFuelSchema = z
       .optional()
       .transform((v) => (typeof v === "number" ? v : null)),
     receiverName: optionalText(255),
-    occurredAt: occurredAtInput,
+    occurredAt: requiredOccurredAt,
     remark: optionalText(1000),
   })
   .superRefine((v, ctx) => {

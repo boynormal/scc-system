@@ -25,6 +25,11 @@ export function fmtDateTime(iso: string): string {
   })
 }
 
+/** Current Bangkok wall time in `datetime-local` format (YYYY-MM-DDTHH:mm). */
+export function nowLocalInput(): string {
+  return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 16)
+}
+
 /** `datetime-local` value (Bangkok wall time) to ISO, or null when empty. */
 export function localInputToIso(value: string): string | null {
   if (!value) return null

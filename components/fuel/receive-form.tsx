@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { fmtCost, fmtMoney, fmtQty, localInputToIso } from "./fuel-format"
-import { TankPicker, TankStatusLine, TextArea, initialBranchTank } from "./fuel-entry-shared"
+import { OccurredAtField, TankPicker, TankStatusLine, TextArea, initialBranchTank } from "./fuel-entry-shared"
 
 type Option = { id: string; name: string }
 
@@ -80,6 +80,7 @@ export function ReceiveForm({
       setSaved(res.data)
       setQuantity("")
       setDocumentNo("")
+      setOccurredAt("")
       setRemark("")
     } catch (err) {
       setError(err instanceof ClientFetchError ? err.message : t("saveFailed"))
@@ -151,14 +152,8 @@ export function ReceiveForm({
             options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
           />
           <Input label={t("documentNo")} maxLength={50} value={documentNo} onChange={(e) => setDocumentNo(e.target.value)} />
-          <Input
-            label={t("occurredAt")}
-            type="datetime-local"
-            value={occurredAt}
-            onChange={(e) => setOccurredAt(e.target.value)}
-            hint={t("occurredAtHint")}
-          />
         </div>
+        <OccurredAtField value={occurredAt} onChange={setOccurredAt} />
         <TextArea label={t("remark")} value={remark} onChange={setRemark} />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end">

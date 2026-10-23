@@ -196,6 +196,34 @@ export async function generateLowStockNotifications(db: PrismaClient, companyId:
   return notifications.length
 }
 
+/** Alert Admin/Manager of the tank's branch when a dispense drops it below its minimum level. */
+export async function notifyFuelTankLow(
+  db: PrismaClient,
+  tank: { id: string; branchId: string; code: string; name: string; currentQty: number; minLevel: number; unit: string }
+) {
+  const recipients = await db.userBranchRole.findMany({
+    where: {
+      branchId: tank.branchId,
+      role: { name: { in: ["Admin", "Manager"] } },
+      user: { isActive: true, deletedAt: null },
+    },
+    select: { userId: true },
+    distinct: ["userId"],
+  })
+  if (recipients.length === 0) return 0
+  const notifications = recipients.map((r) => ({
+    userId: r.userId,
+    type: "low_stock" as NotificationType,
+    title: `น้ำมันใกล้หมด: ${tank.code} ${tank.name}`,
+    message: `คงเหลือ ${tank.currentQty.toLocaleString("th-TH")} ${tank.unit} (ต่ำกว่าระดับแจ้งเตือน ${tank.minLevel.toLocaleString("th-TH")} ${tank.unit})`,
+    link: `/fuel/tanks/${tank.id}`,
+    refId: tank.id,
+    refType: "FuelTank",
+  }))
+  await db.notification.createMany({ data: notifications })
+  return notifications.length
+}
+
 export async function generateCompanyNotifications(db: PrismaClient) {
   const companies = await db.company.findMany({
     where: { isActive: true, deletedAt: null },

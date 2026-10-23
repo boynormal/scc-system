@@ -7,6 +7,7 @@ import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "
 import { getAsset } from "@/modules/assets"
 import { AssetDeleteButton } from "@/components/assets/asset-delete-button"
 import { AssetMaintenanceCard } from "@/components/assets/asset-maintenance-card"
+import { AssetFuelHistory } from "@/components/fuel/asset-fuel-history"
 import { Button } from "@/components/ui/button"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 
@@ -95,6 +96,8 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
       </GlassCard>
 
       <AssetMaintenanceCard assetId={asset.id} canUpdate={canUpdate} />
+
+      <AssetFuelHistory db={prisma} companyId={session.user.companyId} roles={roles} assetId={asset.id} />
     </div>
   )
 }

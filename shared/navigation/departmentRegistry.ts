@@ -24,6 +24,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Company vehicle and machine register",
   },
   {
+    id: "fuel",
+    label: "Fuel Management",
+    order: 12,
+    icon: "Fuel",
+    description: "Branch fuel tanks, refills, dispensing, stock and consumption",
+  },
+  {
     id: "work_management",
     label: "Work Management",
     order: 20,

@@ -460,6 +460,23 @@ async function main() {
   }
   console.log("✅ Expense master mappings created")
 
+  // ── Fuel types ─────────────────────────────────────────────────────────────
+  const fuelTypes = [
+    { code: "DIESEL", name: "ดีเซล" },
+    { code: "B7", name: "ดีเซล B7" },
+    { code: "GSH95", name: "แก๊สโซฮอล์ 95" },
+    { code: "GSH91", name: "แก๊สโซฮอล์ 91" },
+    { code: "E20", name: "แก๊สโซฮอล์ E20" },
+  ]
+  for (const ft of fuelTypes) {
+    await prisma.fuelType.upsert({
+      where: { companyId_code: { companyId: company.id, code: ft.code } },
+      update: {},
+      create: { companyId: company.id, code: ft.code, name: ft.name, unit: "ลิตร", isActive: true },
+    })
+  }
+  console.log(`✅ Fuel types created: ${fuelTypes.length}`)
+
   console.log("\n🎉 Seed completed successfully!")
   console.log("─────────────────────────────────────")
   console.log("👤 Admin username : admin")

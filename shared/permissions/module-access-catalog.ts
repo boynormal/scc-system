@@ -97,6 +97,20 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     navModuleIds: ["assets", "pm_check", "pm_calendar"],
   },
   {
+    moduleId: "fuel",
+    label: "จัดการน้ำมัน",
+    anyOfResources: ["fuel"],
+    navModuleIds: [
+      "fuel_overview",
+      "fuel_dispense",
+      "fuel_receive",
+      "fuel_transactions",
+      "fuel_tanks",
+      "fuel_reports",
+      "fuel_master_data",
+    ],
+  },
+  {
     moduleId: "finance",
     label: "การเงินและบัญชี",
     anyOfResources: ["expenses", "expense_masters"],

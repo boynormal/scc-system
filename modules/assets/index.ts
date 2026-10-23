@@ -30,6 +30,11 @@ export {
   type LinkAssetInput,
 } from "./application/asset-maintenance-service"
 export {
+  lookupBranchAssets,
+  findActiveAsset,
+  type AssetLookupRow,
+} from "./application/asset-lookup-service"
+export {
   listAssetRegisterTypes,
   createAssetRegisterType,
   updateAssetRegisterType,

@@ -7,6 +7,7 @@ export {
   listUserNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  notifyFuelTankLow,
   notifyWOAssigned,
   notifyWOCompleted,
   type CreateNotificationInput,

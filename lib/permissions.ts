@@ -24,6 +24,7 @@ export type Resource =
   | "expenses"
   | "expense_masters"
   | "assets"
+  | "fuel"
 
 export type Action = "create" | "read" | "update" | "delete" | "approve"
 
@@ -141,6 +142,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     expenses: ["create", "read", "update", "delete", "approve"],
     expense_masters: ["create", "read", "update", "delete"],
     assets: ["create", "read", "update", "delete"],
+    fuel: ["create", "read", "update", "delete", "approve"],
   },
   Manager: {
     dashboard: ["read"],
@@ -168,6 +170,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     expenses: ["create", "read", "update", "approve"],
     expense_masters: ["read"],
     assets: ["create", "read", "update"],
+    fuel: ["create", "read", "update", "approve"],
   },
   Technician: {
     dashboard: ["read"],
@@ -191,6 +194,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     expenses: ["create", "read"],
     expense_masters: ["read"],
     assets: ["read"],
+    fuel: ["create", "read"],
   },
   Viewer: {
     dashboard: ["read"],
@@ -213,5 +217,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     expenses: ["read"],
     expense_masters: ["read"],
     assets: ["read"],
+    fuel: ["read"],
   },
 }

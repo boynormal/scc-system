@@ -41,6 +41,16 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     iconKey: "ClipboardList",
   },
   {
+    id: "fuel",
+    labelTh: "จัดการน้ำมัน",
+    labelEn: "Fuel Management",
+    description: "ถังน้ำมันรายสาขา · รับเข้า · จ่ายออก · สต๊อก · อัตราสิ้นเปลือง",
+    departmentIds: ["fuel"],
+    order: 1.7,
+    accent: "from-amber-500 to-red-600 shadow-amber-600/30",
+    iconKey: "Fuel",
+  },
+  {
     id: "people_time",
     labelTh: "บุคลากรและเวลา",
     labelEn: "People & Time",

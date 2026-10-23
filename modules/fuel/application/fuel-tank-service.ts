@@ -7,11 +7,12 @@ import { toNumber } from "./fuel-calc"
 import { parseOrThrow } from "./fuel-validation"
 
 const decimalInput = z.coerce.number().finite()
+const CODE_PREFIX = "TK-"
+const CODE_RETRIES = 3
 
 export const createFuelTankSchema = z.object({
   branchId: z.string().uuid(),
   fuelTypeId: z.string().uuid(),
-  code: z.string().trim().min(1).max(30),
   name: z.string().trim().min(1).max(255),
   capacity: decimalInput.positive().max(9_999_999_999),
   minLevel: decimalInput.min(0).max(9_999_999_999).optional(),
@@ -143,25 +144,41 @@ export async function createFuelTank(
   await assertFuelType(db, params.companyId, input.fuelTypeId)
   const minLevel = input.minLevel ?? 0
   if (minLevel > input.capacity) throw new ValidationError("ระดับแจ้งเตือนต้องไม่เกินความจุ")
-  try {
-    const row = await db.fuelTank.create({
-      data: {
-        companyId: params.companyId,
-        branchId: input.branchId,
-        fuelTypeId: input.fuelTypeId,
-        code: input.code.toUpperCase(),
-        name: input.name,
-        capacity: input.capacity,
-        minLevel,
-        isActive: input.isActive ?? true,
-      },
-      include: fuelTankInclude,
-    })
-    return { data: serializeFuelTank(row) }
-  } catch (error) {
-    if (isUniqueError(error)) throw new ValidationError("รหัสถังนี้มีอยู่แล้วในบริษัท")
-    throw error
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const row = await db.fuelTank.create({
+        data: {
+          companyId: params.companyId,
+          branchId: input.branchId,
+          fuelTypeId: input.fuelTypeId,
+          code: await nextFuelTankCode(db, params.companyId),
+          name: input.name,
+          capacity: input.capacity,
+          minLevel,
+          isActive: input.isActive ?? true,
+        },
+        include: fuelTankInclude,
+      })
+      return { data: serializeFuelTank(row) }
+    } catch (error) {
+      if (isUniqueError(error) && attempt < CODE_RETRIES) continue
+      if (isUniqueError(error)) throw new ValidationError("สร้างรหัสถังไม่สำเร็จ กรุณาลองใหม่")
+      throw error
+    }
   }
+}
+
+/** Next TK-### for the company, including soft-deleted tanks so a code is never reused. */
+async function nextFuelTankCode(db: PrismaClient, companyId: string): Promise<string> {
+  const rows = await db.fuelTank.findMany({
+    where: { companyId, code: { startsWith: CODE_PREFIX } },
+    select: { code: true },
+  })
+  const max = rows.reduce((acc, r) => {
+    const n = Number(r.code.slice(CODE_PREFIX.length))
+    return Number.isInteger(n) && n > acc ? n : acc
+  }, 0)
+  return `${CODE_PREFIX}${String(max + 1).padStart(3, "0")}`
 }
 
 export async function updateFuelTank(
@@ -204,18 +221,12 @@ export async function updateFuelTank(
   const data: Prisma.FuelTankUpdateInput = {}
   if (input.branchId) data.branch = { connect: { id: input.branchId } }
   if (input.fuelTypeId) data.fuelType = { connect: { id: input.fuelTypeId } }
-  if (input.code !== undefined) data.code = input.code.toUpperCase()
   if (input.name !== undefined) data.name = input.name
   if (input.capacity !== undefined) data.capacity = input.capacity
   if (input.minLevel !== undefined) data.minLevel = input.minLevel
   if (input.isActive !== undefined) data.isActive = input.isActive
-  try {
-    const row = await db.fuelTank.update({ where: { id: params.id }, data, include: fuelTankInclude })
-    return { data: serializeFuelTank(row) }
-  } catch (error) {
-    if (isUniqueError(error)) throw new ValidationError("รหัสถังนี้มีอยู่แล้วในบริษัท")
-    throw error
-  }
+  const row = await db.fuelTank.update({ where: { id: params.id }, data, include: fuelTankInclude })
+  return { data: serializeFuelTank(row) }
 }
 
 export async function deleteFuelTank(

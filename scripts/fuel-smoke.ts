@@ -54,7 +54,6 @@ async function main() {
   const roles: UserRole[] = [{ branchId, branchName: admin.branch.name, roleName: "Admin", permissions: null }]
   const technician: UserRole[] = [{ branchId, branchName: admin.branch.name, roleName: "Technician", permissions: null }]
   const ctx = { companyId, roles, userId }
-  const stamp = String(Date.now()).slice(-8)
 
   let typeId: string | null = null
   let tankId: string | null = null
@@ -65,9 +64,10 @@ async function main() {
     const tank = await createFuelTank(db, {
       companyId,
       roles,
-      input: { branchId, fuelTypeId: typeId, code: `ZS-${stamp}`, name: "Smoke tank", capacity: 1000, minLevel: 100 },
+      input: { branchId, fuelTypeId: typeId, name: "Smoke tank", capacity: 1000, minLevel: 100 },
     })
     tankId = tank.data.id
+    check("auto tank code", /^TK-\d{3,}$/.test(tank.data.code), tank.data.code)
     check("create type + tank", tank.data.currentQty === 0)
 
     await receiveFuel(db, { ...ctx, input: { tankId, quantity: 500, unitCost: 30 } })

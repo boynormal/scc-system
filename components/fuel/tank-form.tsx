@@ -27,7 +27,6 @@ export function TankForm({
   const [form, setForm] = useState({
     branchId: tank?.branchId ?? (branches.length === 1 ? branches[0].id : ""),
     fuelTypeId: tank?.fuelTypeId ?? "",
-    code: tank?.code ?? "",
     name: tank?.name ?? "",
     capacity: tank ? String(tank.capacity) : "",
     minLevel: tank ? String(tank.minLevel) : "0",
@@ -50,7 +49,6 @@ export function TankForm({
         body: JSON.stringify({
           branchId: form.branchId,
           fuelTypeId: form.fuelTypeId,
-          code: form.code,
           name: form.name,
           capacity: Number(form.capacity),
           minLevel: Number(form.minLevel || 0),
@@ -85,7 +83,9 @@ export function TankForm({
           placeholder={t("fuelType")}
           options={fuelTypes.map((f) => ({ value: f.id, label: f.name }))}
         />
-        <Input label={t("tankCode")} required maxLength={30} value={form.code} onChange={set("code")} />
+        <p className="text-sm text-foreground sm:col-span-2">
+          {t("tankCode")}: <span className="font-semibold">{tank?.code ?? t("autoCode")}</span>
+        </p>
         <Input label={t("tankName")} required maxLength={255} value={form.name} onChange={set("name")} />
         <Input
           label={t("capacity")}

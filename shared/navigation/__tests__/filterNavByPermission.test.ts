@@ -176,6 +176,27 @@ describe("filterNavByPermission", () => {
     expect(filterNavByPermission(nodes, rolesMissingNotifications)).toHaveLength(1)
   })
 
+  it("shows a link when any listed permission is readable", () => {
+    const nodes = [
+      link({
+        key: "kpi",
+        moduleId: "hr_kpi",
+        permission: { resource: "hr_personnel", action: "read" },
+        anyOfPermissions: [
+          { resource: "hr_personnel", action: "read" },
+          { resource: "hr_attendance", action: "read" },
+        ],
+      }),
+    ]
+    const attendanceOnly: UserRole[] = [
+      role({ roleName: "Custom", permissions: { hr_attendance: ["read"] } }),
+    ]
+    const neither: UserRole[] = [role({ roleName: "Custom", permissions: { machines: ["read"] } })]
+
+    expect(filterNavByPermission(nodes, attendanceOnly)).toHaveLength(1)
+    expect(filterNavByPermission(nodes, neither)).toHaveLength(0)
+  })
+
   it("drops the notifications link for legacy custom roles missing both notifications and dashboard read", () => {
     const nodes = [link({ key: "notif", permission: { resource: "notifications", action: "read" } })]
     const roles: UserRole[] = [

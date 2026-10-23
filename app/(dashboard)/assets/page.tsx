@@ -14,6 +14,7 @@ import { AssetCreateButton } from "@/components/assets/asset-create-button"
 import { AssetTypesButton } from "@/components/assets/asset-types-button"
 import { AssetFilters } from "@/components/assets/asset-filters"
 import { AssetRowActions } from "@/components/assets/asset-row-actions"
+import { AssetPmToggle } from "@/components/assets/asset-pm-toggle"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
@@ -34,6 +35,7 @@ export default async function AssetsListPage(props: {
     status?: string
     ownership?: string
     branchId?: string
+    maintenancePm?: string
     page?: string
     tab?: string
     year?: string
@@ -205,6 +207,7 @@ export default async function AssetsListPage(props: {
       status: searchParams.status,
       ownership: searchParams.ownership,
       search: searchParams.search,
+      maintenancePm: searchParams.maintenancePm,
       page,
       pageSize: SSR_PAGE_SIZE,
     }),
@@ -228,6 +231,7 @@ export default async function AssetsListPage(props: {
     status: searchParams.status,
     ownership: searchParams.ownership,
     branchId: searchParams.branchId,
+    maintenancePm: searchParams.maintenancePm,
   }
 
   return (
@@ -288,6 +292,9 @@ export default async function AssetsListPage(props: {
                       {t("status")}
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
+                      {t("maintenancePmColumn")}
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
                       {t("serialNumber")}
                     </th>
                     <th className="px-5 py-3 text-right text-xs font-semibold text-[#0f172a]">
@@ -299,11 +306,16 @@ export default async function AssetsListPage(props: {
                   {data.map((asset) => (
                     <tr key={asset.id} className="bg-[#ffffff] transition-colors hover:bg-[#f1f5f9]">
                       <td className="px-5 py-3.5 font-semibold text-[#0f172a]">{asset.code}</td>
-                      <td className="px-5 py-3.5 text-[#0f172a]">{asset.name}</td>
+                      <td className="px-5 py-3.5 text-[#0f172a]">
+                        {asset.name}
+                      </td>
                       <td className="px-5 py-3.5 text-[#334155]">{asset.typeName}</td>
                       <td className="px-5 py-3.5 text-[#334155]">{t(`own_${asset.ownership}`)}</td>
                       <td className="px-5 py-3.5 text-[#334155]">{asset.branchName}</td>
                       <td className="px-5 py-3.5 text-[#334155]">{t(`st_${asset.status}`)}</td>
+                      <td className="px-5 py-3.5">
+                        <AssetPmToggle asset={asset} canUpdate={canUpdate} />
+                      </td>
                       <td className="px-5 py-3.5 text-[#334155]">{asset.serialNumber ?? "—"}</td>
                       <td className="px-5 py-3.5">
                         <AssetRowActions asset={asset} canUpdate={canUpdate} canDelete={canDelete} />

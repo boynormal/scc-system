@@ -8,7 +8,7 @@ type Box = { left: number; top: number; width: number; height: number }
 
 export const SLIDING_PILL_BASE = "pointer-events-none absolute left-0 top-0"
 export const SLIDING_PILL_MOTION =
-  "transition-[transform,width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+  "transition-[transform,width,height] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
 
 /**
  * Tracks one highlight box under the selected tab. `select` moves it on click,

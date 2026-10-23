@@ -4,6 +4,11 @@ import { Factory, Plus, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import type { UserRole } from "@/lib/permissions"
+import { readableBranchIds } from "@/modules/maintenance/application/branch-scope"
+import { resolveTarget, targetHref, targetScopeWhere } from "@/modules/maintenance/application/pm-target"
+
+const NO_BRANCH = "00000000-0000-0000-0000-000000000000"
 import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DeleteButton } from "@/components/ui/delete-button"
@@ -18,10 +23,17 @@ const freqLabel: Record<string, string> = {
   quarter: "ไตรมาส", year: "ปี", runtime_hour: "ชั่วโมงรัน",
 }
 
-async function getPlansPage(companyId: string, page: number, machineId?: string) {
+async function getPlansPage(
+  companyId: string,
+  roles: UserRole[],
+  page: number,
+  filter: { machineId?: string; assetId?: string }
+) {
+  const scope = readableBranchIds(roles, "maintenance_plans")
   const where: Prisma.MaintenancePlanWhereInput = {
-    machine: { branch: { companyId } },
-    ...(machineId && { machineId }),
+    AND: [targetScopeWhere(companyId, scope === "all" || scope.length ? scope : [NO_BRANCH])],
+    ...(filter.machineId && { machineId: filter.machineId }),
+    ...(filter.assetId && { assetId: filter.assetId }),
   }
   const skip = (page - 1) * SSR_PAGE_SIZE
 
@@ -34,10 +46,12 @@ async function getPlansPage(companyId: string, page: number, machineId?: string)
             id: true,
             name: true,
             code: true,
+            branchId: true,
             branch: { select: { name: true } },
             images: { where: { isPrimary: true }, take: 1, select: { fileUrl: true } },
           },
         },
+        asset: { select: { id: true, name: true, code: true, branchId: true, branch: { select: { name: true } } } },
         type: { select: { id: true, name: true, code: true, color: true } },
         _count: { select: { schedules: true } },
       },
@@ -54,7 +68,7 @@ async function getPlansPage(companyId: string, page: number, machineId?: string)
 
 export default async function MaintenancePlansPage(
   props: {
-    searchParams: Promise<{ machineId?: string; page?: string }>
+    searchParams: Promise<{ machineId?: string; assetId?: string; page?: string }>
   }
 ) {
   const searchParams = await props.searchParams
@@ -62,8 +76,9 @@ export default async function MaintenancePlansPage(
   const session = await auth()
   const { plans, total, active } = await getPlansPage(
     session!.user.companyId as string,
+    session!.user.roles as UserRole[],
     page,
-    searchParams.machineId
+    { machineId: searchParams.machineId, assetId: searchParams.assetId }
   )
   const totalPages = Math.max(1, Math.ceil(total / SSR_PAGE_SIZE))
 
@@ -90,7 +105,7 @@ export default async function MaintenancePlansPage(
           <EmptyState
             icon={Factory}
             title="ยังไม่มีแผนซ่อมบำรุง"
-            description="สร้างแผน PM/CM สำหรับเครื่องจักรของคุณ"
+            description="สร้างแผน PM/CM สำหรับทรัพย์สินที่เปิดเข้าแผนซ่อมบำรุง"
             action={
               <Link href="/maintenance/plans/new" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg">
                 <Plus className="w-4 h-4" /> สร้างแผนใหม่
@@ -104,7 +119,7 @@ export default async function MaintenancePlansPage(
                 <thead>
                   <tr className="border-b border-border bg-muted">
                     <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide w-16"></th>
-                    <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">เครื่องจักร</th>
+                    <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ทรัพย์สิน / เครื่องจักร</th>
                     <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ชื่อแผน</th>
                     <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ประเภท</th>
                     <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ความถี่</th>
@@ -114,14 +129,17 @@ export default async function MaintenancePlansPage(
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {plans.map((plan) => (
+                  {plans.map((plan) => {
+                    const target = resolveTarget(plan)
+                    const image = plan.machine?.images?.[0]
+                    return (
                     <tr key={plan.id} className="hover:bg-muted/60 transition-colors">
                       <td className="px-5 py-3.5">
-                        {plan.machine.images?.[0] ? (
+                        {image ? (
                           <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border">
                             <Image
-                              src={plan.machine.images[0].fileUrl}
-                              alt={plan.machine.name}
+                              src={image.fileUrl}
+                              alt={target?.name ?? plan.name}
                               width={48}
                               height={48}
                               className="w-full h-full object-cover"
@@ -135,10 +153,17 @@ export default async function MaintenancePlansPage(
                         )}
                       </td>
                       <td className="px-3 py-3.5">
-                        <Link href={`/machines/${plan.machine.id}`} className="hover:text-blue-600 transition-colors">
-                          <p className="font-semibold text-foreground">{plan.machine.code}</p>
-                          <p className="text-muted-foreground text-xs mt-0.5">{plan.machine.name} · {plan.machine.branch.name}</p>
-                        </Link>
+                        {target ? (
+                          <Link href={targetHref(target)} className="hover:text-blue-600 transition-colors">
+                            <p className="font-semibold text-foreground">{target.code}</p>
+                            <p className="text-muted-foreground text-xs mt-0.5">
+                              {target.name}
+                              {target.branchName ? ` · ${target.branchName}` : ""}
+                            </p>
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <p className="font-semibold text-foreground">{plan.name}</p>
@@ -179,7 +204,8 @@ export default async function MaintenancePlansPage(
                         <DeleteButton url={`/api/maintenance-plans/${plan.id}`} confirmMessage={`คุณต้องการลบแผน '${plan.name}' ใช่หรือไม่?`} />
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -188,7 +214,7 @@ export default async function MaintenancePlansPage(
               page={page}
               totalPages={totalPages}
               total={total}
-              query={{ machineId: searchParams.machineId }}
+              query={{ machineId: searchParams.machineId, assetId: searchParams.assetId }}
             />
           </>
         )}

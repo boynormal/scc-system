@@ -7,6 +7,7 @@ import { transportJobAllowed } from "./transport-job-access"
 import { ACTIVE_JOB_STATUSES } from "@/shared/transport/job-status-groups"
 import { isScheduledTodayBangkok } from "./transport-date-utils"
 import { vehicleHasOpenInRepair } from "./repair-service"
+import { assertNoActiveMaintenanceWork } from "./maintenance-guard"
 
 export const assignJobSchema = z.object({
   vehicleId: z.string().uuid(),
@@ -120,6 +121,7 @@ export async function performAssignment(
   })
   if (!vehicle) throw new NotFoundError("Vehicle not found")
   assertVehicleAssignable(vehicle.currentStatus, vehicle.plateNumber)
+  await assertNoActiveMaintenanceWork(db, vehicle)
 
   const driver = await db.driver.findFirst({
     where: { id: params.input.driverId, companyId: params.companyId },
@@ -429,7 +431,7 @@ export async function reopenJob(
     include: {
       assignment: {
         include: {
-          vehicle: { select: { id: true, plateNumber: true, currentStatus: true } },
+          vehicle: { select: { id: true, plateNumber: true, currentStatus: true, assetId: true } },
           driver: { select: { id: true } },
         },
       },
@@ -462,6 +464,7 @@ export async function reopenJob(
 
   const vehicle = job.assignment.vehicle
   assertVehicleAssignable(vehicle.currentStatus, vehicle.plateNumber)
+  await assertNoActiveMaintenanceWork(db, vehicle)
 
   const markOnJob = isScheduledTodayBangkok(job.scheduledDate)
   if (markOnJob) {

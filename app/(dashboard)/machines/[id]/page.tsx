@@ -40,6 +40,9 @@ async function getMachine(id: string, companyId: string) {
         },
       },
       products: { orderBy: { order: "asc" } },
+      asset: {
+        select: { id: true, code: true, name: true, maintenancePmEnabled: true, isActive: true, deletedAt: true, status: true },
+      },
     },
   })
   if (!machine) return null
@@ -53,6 +56,52 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
       <span className="text-muted-foreground text-sm w-40 shrink-0">{label}</span>
       <span className="text-foreground text-sm font-medium">{value ?? "—"}</span>
     </div>
+  )
+}
+
+type LinkedAsset = {
+  id: string
+  code: string
+  name: string
+  maintenancePmEnabled: boolean
+  isActive: boolean
+  deletedAt: Date | null
+  status: string
+} | null
+
+/** แผน PM ใหม่ต้องมาจากทรัพย์สินที่เปิดสวิตช์ "เข้าแผนซ่อมบำรุง" */
+function PlanEntry({ asset }: { asset: LinkedAsset }) {
+  const usable = asset && !asset.deletedAt && asset.isActive && asset.status !== "RETIRED" && asset.status !== "DISPOSED"
+  if (usable && asset.maintenancePmEnabled) {
+    return (
+      <Link
+        href={`/maintenance/plans/new?assetId=${asset.id}`}
+        className="mt-3 inline-flex items-center gap-1.5 text-blue-600 text-sm hover:text-blue-800"
+      >
+        <Package className="w-3.5 h-3.5" /> สร้างแผนใหม่
+      </Link>
+    )
+  }
+  return (
+    <p className="mt-3 text-sm text-foreground">
+      {asset ? (
+        <>
+          ทรัพย์สิน{" "}
+          <Link href={`/assets/${asset.id}`} className="text-blue-600 hover:text-blue-800">
+            {asset.code}
+          </Link>{" "}
+          ยังไม่เปิดเข้าแผนซ่อมบำรุง เปิดสวิตช์ที่ทะเบียนสินทรัพย์ก่อนสร้างแผน
+        </>
+      ) : (
+        <>
+          เครื่องนี้ยังไม่ผูกกับทรัพย์สิน ผูกและเปิดสวิตช์ "เข้าแผนซ่อมบำรุง" ที่{" "}
+          <Link href="/assets" className="text-blue-600 hover:text-blue-800">
+            ทะเบียนสินทรัพย์
+          </Link>{" "}
+          ก่อนสร้างแผน
+        </>
+      )}
+    </p>
   )
 }
 
@@ -233,12 +282,7 @@ export default async function MachineDetailPage(props: { params: Promise<{ id: s
               <div className="text-center py-6">
                 <Wrench className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-muted-foreground text-sm">ยังไม่มีแผนซ่อมบำรุง</p>
-                <Link
-                  href={`/maintenance/plans/new?machineId=${machine.id}`}
-                  className="mt-3 inline-flex items-center gap-1.5 text-blue-600 text-sm hover:text-blue-800"
-                >
-                  <Package className="w-3.5 h-3.5" /> สร้างแผนใหม่
-                </Link>
+                <PlanEntry asset={machine.asset} />
               </div>
             ) : (
               <div className="space-y-2">

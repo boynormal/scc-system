@@ -6,6 +6,7 @@ import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { getAsset } from "@/modules/assets"
 import { AssetDeleteButton } from "@/components/assets/asset-delete-button"
+import { AssetMaintenanceCard } from "@/components/assets/asset-maintenance-card"
 import { Button } from "@/components/ui/button"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 
@@ -92,6 +93,8 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
           ))}
         </dl>
       </GlassCard>
+
+      <AssetMaintenanceCard assetId={asset.id} canUpdate={canUpdate} />
     </div>
   )
 }

@@ -4,6 +4,9 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import type { UserRole } from "@/lib/permissions"
+import { permissionCoversBranch } from "@/shared/permissions/branch-sharing"
+import { resolveTarget, targetBranchId, targetHref, targetScopeWhere } from "@/modules/maintenance/application/pm-target"
 import { Badge } from "@/components/ui/badge"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 import { formatDate } from "@/lib/utils"
@@ -23,11 +26,12 @@ const statusLabel: Record<string, { label: string; variant: "default" | "success
   cancelled: { label: "ยกเลิก", variant: "danger" },
 }
 
-async function getPlan(id: string, companyId: string) {
+async function getPlan(id: string, companyId: string, roles: UserRole[]) {
   const plan = await prisma.maintenancePlan.findFirst({
-    where: { id, machine: { branch: { companyId } } },
+    where: { id, AND: [targetScopeWhere(companyId, "all")] },
     include: {
-      machine: { select: { id: true, name: true, code: true, branch: { select: { name: true } } } },
+      machine: { select: { id: true, name: true, code: true, branchId: true, branch: { select: { name: true } } } },
+      asset: { select: { id: true, name: true, code: true, branchId: true, branch: { select: { name: true } } } },
       type: { select: { id: true, name: true, code: true, color: true } },
       planChecklistTemplates: {
         include: { template: { include: { items: { orderBy: { sequence: "asc" } } } } },
@@ -35,18 +39,22 @@ async function getPlan(id: string, companyId: string) {
       schedules: {
         orderBy: { dueDate: "desc" },
         take: 10,
-        include: { workOrders: { select: { id: true, woNumber: true, status: true }, take: 1 } },
+        include: { workOrder: { select: { id: true, woNumber: true, status: true } } },
       },
     },
   })
+  if (!plan) return null
+  const branchId = targetBranchId(plan)
+  if (!branchId || !permissionCoversBranch(roles, "maintenance_plans", "read", branchId, false)) return null
   return plan
 }
 
 export default async function MaintenancePlanDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await auth()
-  const plan = await getPlan(params.id, session!.user.companyId as string)
+  const plan = await getPlan(params.id, session!.user.companyId as string, session!.user.roles as UserRole[])
   if (!plan) return notFound()
+  const target = resolveTarget(plan)
 
   return (
     <div className="space-y-6">
@@ -57,7 +65,11 @@ export default async function MaintenancePlanDetailPage(props: { params: Promise
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-foreground">{plan.name}</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">{plan.machine.name} ({plan.machine.code})</p>
+            {target && (
+              <p className="text-muted-foreground text-sm mt-0.5">
+                {target.name} ({target.code})
+              </p>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
@@ -85,9 +97,25 @@ export default async function MaintenancePlanDetailPage(props: { params: Promise
             <div className="px-5 pb-5 space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground mb-1">เครื่องจักร</p>
-                  <p className="font-medium text-foreground">{plan.machine.name}</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">{plan.machine.branch.name}</p>
+                  <p className="text-muted-foreground mb-1">{target?.kind === "machine" ? "เครื่องจักร" : "ทรัพย์สิน"}</p>
+                  {target ? (
+                    <Link href={targetHref(target)} className="font-medium text-foreground hover:text-blue-600">
+                      {target.code} - {target.name}
+                    </Link>
+                  ) : (
+                    <p className="font-medium text-foreground">—</p>
+                  )}
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    {target?.branchName}
+                    {target?.kind === "asset" && plan.machine && (
+                      <>
+                        {" · เครื่องจักร "}
+                        <Link href={`/machines/${plan.machine.id}`} className="hover:text-blue-600">
+                          {plan.machine.code}
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">ประเภทการซ่อมบำรุง</p>
@@ -143,7 +171,7 @@ export default async function MaintenancePlanDetailPage(props: { params: Promise
           <GlassCard padding="none">
             <GlassCardHeader>
               <GlassCardTitle>กำหนดการล่าสุด</GlassCardTitle>
-              <Link href={`/maintenance/schedules?planId=${plan.id}`} className="text-blue-600 hover:text-blue-800 text-xs font-medium">
+              <Link href="/maintenance/calendar" className="text-blue-600 hover:text-blue-800 text-xs font-medium">
                 ดูทั้งหมด →
               </Link>
             </GlassCardHeader>
@@ -157,8 +185,10 @@ export default async function MaintenancePlanDetailPage(props: { params: Promise
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <div>
                         <p className="text-sm font-medium text-foreground">{formatDate(schedule.dueDate)}</p>
-                        {schedule.workOrders[0] && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{schedule.workOrders[0].woNumber}</p>
+                        {schedule.workOrder && (
+                          <Link href={`/work-orders/${schedule.workOrder.id}`} className="text-xs text-blue-600 hover:underline mt-0.5 block">
+                            {schedule.workOrder.woNumber}
+                          </Link>
                         )}
                       </div>
                     </div>

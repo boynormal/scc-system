@@ -56,6 +56,8 @@ export type NavLinkNode = {
   label: string
   icon: NavIconKey
   permission: NavPermissionGate
+  /** When set, any one of these gates is enough to show the link. */
+  anyOfPermissions?: NavPermissionGate[]
   /** ใช้กับ tenant overrides / palette grouping */
   moduleId: string
   order?: number
@@ -181,18 +183,6 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
       },
       {
         type: "link",
-        key: "maintenance_schedules",
-        href: "/maintenance/schedules",
-        label: "maintenance_schedules",
-        icon: "Clock",
-        permission: { resource: "schedules", action: "read" },
-        moduleId: "maintenance",
-        order: 1,
-        keywords: ["ตาราง", "schedule", "งาน"],
-        launcher: { departmentId: "work_management", capabilityId: "pm" },
-      },
-      {
-        type: "link",
         key: "maintenance_calendar",
         href: "/maintenance/calendar",
         label: "maintenance_calendar",
@@ -200,7 +190,7 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
         permission: { resource: "schedules", action: "read" },
         moduleId: "maintenance",
         order: 2,
-        keywords: ["ปฏิทิน", "calendar"],
+        keywords: ["ปฏิทิน", "calendar", "ตาราง", "schedule", "ถึงกำหนด", "PM compliance"],
         launcher: { departmentId: "work_management", capabilityId: "pm" },
       },
       {
@@ -291,9 +281,61 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
         icon: "Clock",
         permission: { resource: "hr_attendance", action: "read" },
         moduleId: "hr_attendance",
-        order: 3,
+        order: 1,
         keywords: ["attendance", "time", "เวลา", "เข้างาน", "ออกงาน", "สแกนนิ้ว", "HIP"],
         launcher: { departmentId: "people", capabilityId: "attendance", isPrimary: true },
+      },
+      {
+        type: "link",
+        key: "hr_holidays",
+        href: "/hr/holidays",
+        label: "hr_holidays",
+        icon: "CalendarDays",
+        permission: { resource: "hr_attendance", action: "read" },
+        moduleId: "hr_holidays",
+        order: 2,
+        keywords: ["holiday", "วันหยุด", "ปฏิทิน", "อาทิตย์"],
+        launcher: { departmentId: "people", capabilityId: "holidays", isPrimary: true },
+      },
+      {
+        type: "link",
+        key: "hr_reports",
+        href: "/hr/reports",
+        label: "hr_reports",
+        icon: "FileText",
+        permission: { resource: "hr_attendance", action: "read" },
+        moduleId: "hr_reports",
+        order: 3,
+        keywords: ["report", "รายงาน", "เวลา", "ชั่วโมง"],
+        launcher: { departmentId: "people", capabilityId: "reports", isPrimary: true },
+      },
+      {
+        type: "link",
+        key: "hr_exceptions",
+        href: "/hr/exceptions",
+        label: "hr_exceptions",
+        icon: "Bell",
+        permission: { resource: "hr_attendance", action: "read" },
+        moduleId: "hr_exceptions",
+        order: 4,
+        keywords: ["exception", "ผิดปกติ", "ขาด", "สาย"],
+        launcher: { departmentId: "people", capabilityId: "exceptions", isPrimary: true },
+      },
+      {
+        type: "link",
+        key: "hr_kpi",
+        href: "/hr/kpi",
+        label: "hr_kpi",
+        icon: "BarChart3",
+        permission: { resource: "hr_personnel", action: "read" },
+        anyOfPermissions: [
+          { resource: "hr_personnel", action: "read" },
+          { resource: "hr_attendance", action: "read" },
+        ],
+        moduleId: "hr_kpi",
+        order: 5,
+        keywords: ["kpi", "ตัวชี้วัด", "อัตรากำลัง", "turnover"],
+        launcher: { departmentId: "people", capabilityId: "kpi", isPrimary: true },
       },
     ],
   },

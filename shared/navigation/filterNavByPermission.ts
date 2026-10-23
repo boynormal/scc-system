@@ -30,7 +30,8 @@ function filterOne(
   userModuleAccess?: string[] | "all" | null
 ): ModuleNavNode | null {
   if (n.type === "link") {
-    if (!canAccessResource(roles, n.permission.resource, n.permission.action)) return null
+    const gates = n.anyOfPermissions?.length ? n.anyOfPermissions : [n.permission]
+    if (!gates.some((gate) => canAccessResource(roles, gate.resource, gate.action))) return null
     if (n.moduleId && !canAccessModuleId(roles, n.moduleId, userModuleAccess)) return null
     return n
   }

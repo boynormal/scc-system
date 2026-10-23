@@ -161,6 +161,7 @@ function serializeAsset(row: Prisma.AssetGetPayload<{ include: typeof assetInclu
     details: row.details,
     acquiredAt: isoDate(row.acquiredAt),
     isActive: row.isActive,
+    maintenancePmEnabled: row.maintenancePmEnabled,
     createdById: row.createdBy,
     createdByName: row.creator ? `${row.creator.firstName} ${row.creator.lastName}`.trim() : null,
     createdAt: row.createdAt.toISOString(),
@@ -180,6 +181,8 @@ export async function listAssets(
     status?: string | null
     ownership?: string | null
     search?: string | null
+    /** "on" = เข้าแผนซ่อมบำรุง, "off" = ยังไม่เข้า */
+    maintenancePm?: string | null
     page?: number
     pageSize?: number
   }
@@ -201,6 +204,8 @@ export async function listAssets(
   if (params.ownership && ASSET_OWNERSHIPS.includes(params.ownership as (typeof ASSET_OWNERSHIPS)[number])) {
     where.ownership = params.ownership as (typeof ASSET_OWNERSHIPS)[number]
   }
+  if (params.maintenancePm === "on") where.maintenancePmEnabled = true
+  else if (params.maintenancePm === "off") where.maintenancePmEnabled = false
   if (params.search?.trim()) {
     const q = params.search.trim()
     where.OR = [
@@ -327,6 +332,13 @@ export async function updateAsset(
     data.acquiredAt = params.input.acquiredAt ? parseDateOnly(params.input.acquiredAt) : null
   }
   if (params.input.isActive !== undefined) data.isActive = params.input.isActive
+  if (
+    params.input.isActive === false ||
+    params.input.status === "RETIRED" ||
+    params.input.status === "DISPOSED"
+  ) {
+    data.maintenancePmEnabled = false
+  }
 
   try {
     const row = await db.asset.update({
@@ -354,7 +366,7 @@ export async function deleteAsset(
   if (!existing) throw new NotFoundError("ไม่พบรายการ")
   await db.asset.update({
     where: { id: params.id },
-    data: { deletedAt: new Date(), isActive: false },
+    data: { deletedAt: new Date(), isActive: false, maintenancePmEnabled: false },
   })
   return { success: true }
 }

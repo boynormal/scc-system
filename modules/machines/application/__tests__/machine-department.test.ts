@@ -126,6 +126,7 @@ describe("machine department company match", () => {
     const result = await updateMachine(fakeDb(), {
       id: MACHINE_ID,
       companyId: CID,
+      roles: adminRoles,
       input: { departmentId: DEPT_OTHER },
     })
     expect(result).toMatchObject({
@@ -138,6 +139,7 @@ describe("machine department company match", () => {
     const result = await updateMachine(fakeDb(), {
       id: MACHINE_ID,
       companyId: CID,
+      roles: adminRoles,
       input: { branchId: BRANCH_B },
     })
     expect(result).toMatchObject({ departmentId: DEPT_A, branchId: BRANCH_B })

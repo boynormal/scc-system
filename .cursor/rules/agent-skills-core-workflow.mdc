@@ -17,6 +17,7 @@ Use this flow for every non-trivial task:
 # Non-negotiables
 
 - No "looks correct" claims without evidence from commands or runtime output.
+- When tests fail, the build breaks, or behavior does not match expectations, read `.cursor/skills/debugging-and-error-recovery/SKILL.md` before guessing a fix.
 - Keep route/API contracts backward compatible unless explicitly requested.
 - Prefer reversible changes; avoid broad refactors without a migration path.
 - When upgrading dependencies, separate framework/runtime and DB/ORM concerns.

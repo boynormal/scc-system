@@ -20,6 +20,16 @@ export {
   type AssetDto,
 } from "./application/asset-service"
 export {
+  PM_BLOCKED_ASSET_STATUSES,
+  assetPmBlockReason,
+  setAssetMaintenancePmSchema,
+  linkAssetSchema,
+  getAssetMaintenance,
+  setAssetMaintenancePm,
+  linkAssetTarget,
+  type LinkAssetInput,
+} from "./application/asset-maintenance-service"
+export {
   listAssetRegisterTypes,
   createAssetRegisterType,
   updateAssetRegisterType,

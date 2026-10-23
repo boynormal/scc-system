@@ -1,4 +1,4 @@
-import { PrismaClient, MachineStatus } from "@prisma/client"
+import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { DEFAULT_ROLE_PERMISSIONS } from "../lib/permissions"
 
@@ -157,12 +157,10 @@ async function main() {
     { code: "PUMP", name: "ปั๊มและท่อ" },
   ]
 
-  const catMap: Record<string, string> = {}
   for (const cat of categories) {
     const c = await prisma.machineCategory.create({
       data: { companyId: company.id, ...cat },
     })
-    catMap[cat.code] = c.id
     console.log(`✅ Category created: ${c.name}`)
   }
 
@@ -174,55 +172,12 @@ async function main() {
     { code: "PDM", name: "Predictive Maintenance", color: "#3b82f6", requiresShutdown: false },
   ]
 
-  const typeMap: Record<string, string> = {}
   for (const mt of maintenanceTypes) {
     const t = await prisma.maintenanceType.create({
       data: { companyId: company.id, ...mt },
     })
-    typeMap[mt.code] = t.id
     console.log(`✅ Maintenance type created: ${t.name}`)
   }
-
-  // ── Sample Machine ─────────────────────────────────────────────────────────
-  const machine = await prisma.machine.upsert({
-    where: { branchId_code: { branchId: branch.id, code: "MCH-001" } },
-    update: {},
-    create: {
-      branchId: branch.id,
-      departmentId: dept.id,
-      categoryId: catMap["ELEC"],
-      code: "MCH-001",
-      name: "Air Compressor Unit #1",
-      model: "AC-500",
-      manufacturer: "Atlas Copco",
-      serialNumber: "SN2024001",
-      installDate: new Date("2022-01-15"),
-      warrantyExpireDate: new Date("2027-01-15"),
-      status: MachineStatus.active,
-      criticalLevel: 3,
-      locationDetail: "อาคาร A ชั้น 1",
-      createdBy: adminUser.id,
-    },
-  })
-  console.log("✅ Sample machine created:", machine.name)
-
-  // ── Sample Maintenance Plan ────────────────────────────────────────────────
-  await prisma.maintenancePlan.create({
-    data: {
-      machineId: machine.id,
-      typeId: typeMap["PM"],
-      name: "PM รายเดือน - Air Compressor #1",
-      description: "ตรวจสอบและบำรุงรักษาประจำเดือน",
-      frequencyUnit: "month",
-      frequencyValue: 1,
-      estimatedDurationMin: 120,
-      startDate: new Date("2024-01-01"),
-      leadTimeDays: 7,
-      isActive: true,
-      createdBy: adminUser.id,
-    },
-  })
-  console.log("✅ Sample maintenance plan created")
 
   // ── Sample Supplier & Spare Part ──────────────────────────────────────────
   const supplier = await prisma.supplier.upsert({

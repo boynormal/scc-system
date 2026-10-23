@@ -13,23 +13,30 @@ Policy: [docs/architecture/erp-asset-management.md](docs/architecture/erp-asset-
 ```text
 Machine  = Maintenance operational master
 Vehicle  = Transport operational master
-Asset    = Shared registration (not created yet)
+Asset    = Shared registration (Phase 1 live: `assets`, `/assets`)
 Finance  = Expense today; Financial Profile later — never a second asset register
 ```
 
-## Do not create (until an explicit Phase 1+ order with a first use case)
+## Phase 2 opened for Maintenance PM (order 2026-10-22, Maintenance Phase 3.5)
 
-- `Asset`, `FixedAsset`, `ITAsset`, `FinanceAsset`, `GLAsset`, `AccountingAsset`
+- `Machine.assetId?` and `TransportVehicle.assetId?` exist: optional, unique, `SetNull`. Link one row at a time from the asset page; same company and branch; audit every change.
+- `Asset.maintenancePmEnabled` is the switch "เข้าแผนซ่อมบำรุง". Only active assets not `RETIRED`/`DISPOSED`. Separate from the QR PM (`AssetPmPlan`).
+- `MaintenancePlan` / `MaintenanceSchedule` / `WorkOrder` carry `assetId?`; `machineId` is optional with a CHECK that one of them is set. New plans target an asset; legacy machine-only rows still work.
+- A failed check on any asset (vehicles too) opens a corrective WO in Maintenance. Never create `TransportRepairLog` from Maintenance; do not edit `repair-service.ts`.
+- Transport reads WO status only: assignment is refused while the linked asset has a WO `in_progress`/`on_hold`. Maintenance never writes `TransportVehicle.currentStatus`.
+
+## Do not create (until an explicit order with a first use case)
+
+- `FixedAsset`, `ITAsset`, `FinanceAsset`, `GLAsset`, `AccountingAsset`
 - `MaintenanceAsset`, `TransportAsset`, `AssetVehicle`, `ProductionAsset`
-- `Machine.assetId` / `Vehicle.assetId` (Phase 2 only, after ownership data + approval)
-- `modules/assets`, `assets` RBAC resource, Asset API / UI / seed / migration
 - VehicleProfile / MachineProfile tables that duplicate existing columns
-- Auto-backfill of all machines/vehicles into Asset
+- Auto-backfill or auto-create of assets from machines/vehicles (still forbidden after Phase 2)
 - Location master, Component tree, Custodian, Transfer, depreciation engine — because of Asset
+- Finance Expense rows from Maintenance (Finance Phase 4 is locked)
 
 ## Leave as-is
 
-- `Machine` stays Maintenance. Work orders keep `machineId`.
+- `Machine` stays Maintenance. Work orders keep `machineId` (filled from the linked asset when present).
 - `TransportVehicle` stays Transport. Jobs / GPS / tire / repair keep `vehicleId`.
 - Nav department `asset_management` still means Machines — it is not a register.
 - `ExpenseTransactionType.ASSET` is an expense classification, not a register.
@@ -42,6 +49,6 @@ Finance  = Expense today; Financial Profile later — never a second asset regis
 2. Does Machine / Vehicle / SparePart already own this meaning?
 3. Is there an explicit Phase 1+ order plus a first use case (IT register or company capitalization)?
 
-Phase 0 is docs only. After it, **STOP** — do not start Phase 1 without a new human order.
+Anything beyond the Phase 2 scope above (more FKs, backfill, FA engine) needs a new human order.
 
 See also [erp-shared-master.mdc](erp-shared-master.mdc) and [finance-expense-ssot.mdc](finance-expense-ssot.mdc).

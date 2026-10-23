@@ -10,15 +10,20 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { Select } from "@/components/ui/select"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import { ChecklistTemplatePicker } from "../checklist-template-picker"
+import { pmAssetHint, pmAssetLabel, type PmAssetOption } from "@/components/maintenance/pm-asset-option"
 
 const schema = z.object({
-  machineId: z.string().uuid(),
+  assetId: z.string().uuid("กรุณาเลือกทรัพย์สิน"),
   typeId: z.string().uuid(),
   name: z.string().min(1, "กรุณากรอกชื่อแผน"),
   description: z.string().optional(),
-  frequencyUnit: z.enum(["day", "week", "month", "quarter", "year", "runtime_hour"]),
+  frequencyUnit: z.enum(["day", "week", "month", "quarter", "year"]),
   frequencyValue: z.coerce.number().int().min(1, "ความถี่ต้องมากกว่า 0"),
-  estimatedDurationMin: z.coerce.number().int().min(1).optional(),
+  estimatedDurationMin: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().min(1, "ต้องมากกว่า 0").optional()
+  ),
   startDate: z.string().min(1, "กรุณาเลือกวันเริ่มต้น"),
   endDate: z.string().optional(),
   leadTimeDays: z.coerce.number().int().min(0).default(7),
@@ -32,42 +37,57 @@ const freqOptions = [
   { value: "month", label: "เดือน" },
   { value: "quarter", label: "ไตรมาส" },
   { value: "year", label: "ปี" },
-  { value: "runtime_hour", label: "ชั่วโมงรัน" },
 ]
 
 function NewMaintenancePlanForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const machineId = searchParams.get("machineId")
-  const [machines, setMachines] = useState<{ id: string; name: string; code: string }[]>([])
+  const assetIdParam = searchParams.get("assetId")
+  const machineIdParam = searchParams.get("machineId")
+  const [assets, setAssets] = useState<PmAssetOption[] | null>(null)
   const [types, setTypes] = useState<{ id: string; name: string; code: string }[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [templateIds, setTemplateIds] = useState<string[]>([])
+  const [presetId, setPresetId] = useState<string | null>(null)
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { machineId: machineId ?? "", leadTimeDays: 7 },
+    defaultValues: { assetId: "", leadTimeDays: 7 },
   })
+  const selectedAsset = assets?.find((a) => a.id === watch("assetId")) ?? null
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/machines").then((r) => r.json()),
+      fetch("/api/maintenance/pm-assets?for=plan").then((r) => r.json()),
       fetch("/api/master-data/maintenance-types").then((r) => r.json()),
-    ]).then(([m, t]) => {
-      setMachines(m.data ?? [])
+    ]).then(([a, t]) => {
+      const options: PmAssetOption[] = a.data ?? []
+      setAssets(options)
       setTypes(t.data ?? [])
+      const preset =
+        options.find((o) => o.id === assetIdParam) ??
+        (machineIdParam ? options.find((o) => o.link?.kind === "machine" && o.link.id === machineIdParam) : undefined)
+      if (preset) setPresetId(preset.id)
     })
-  }, [])
+  }, [assetIdParam, machineIdParam])
+
+  // The <option> must be rendered before setValue can select it.
+  useEffect(() => {
+    if (presetId) setValue("assetId", presetId)
+  }, [presetId, setValue])
 
   const onSubmit = async (data: FormData) => {
     setError(null)
     const res = await fetch("/api/maintenance-plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, templateIds }),
     })
     if (res.ok) {
       router.push("/maintenance/plans")
@@ -95,12 +115,13 @@ function NewMaintenancePlanForm() {
           <GlassCardHeader><GlassCardTitle>ข้อมูลพื้นฐาน</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="เครื่องจักร"
+              label="ทรัพย์สิน"
               required
-              placeholder="เลือกเครื่องจักร"
-              options={machines.map((m) => ({ value: m.id, label: `${m.name} (${m.code})` }))}
-              error={errors.machineId?.message}
-              {...register("machineId")}
+              placeholder="เลือกทรัพย์สิน"
+              options={(assets ?? []).map((a) => ({ value: a.id, label: pmAssetLabel(a) }))}
+              error={errors.assetId?.message}
+              hint={pmAssetHint(assets, selectedAsset)}
+              {...register("assetId")}
             />
             <Select
               label="ประเภทการซ่อมบำรุง"
@@ -111,7 +132,12 @@ function NewMaintenancePlanForm() {
               {...register("typeId")}
             />
             <GlassInput label="ชื่อแผน" required error={errors.name?.message} {...register("name")} />
-            <GlassInput label="ระยะเวลาโดยประมาณ (นาที)" type="number" {...register("estimatedDurationMin")} />
+            <GlassInput
+              label="ระยะเวลาโดยประมาณ (นาที)"
+              type="number"
+              error={errors.estimatedDurationMin?.message}
+              {...register("estimatedDurationMin")}
+            />
           </div>
           <div className="mt-4">
             <label className="block text-sm font-medium text-foreground mb-1">ขอบเขตการทำงาน (Scope of Work) / รายละเอียด</label>
@@ -155,10 +181,15 @@ function NewMaintenancePlanForm() {
               label="จำนวนวันแจ้งเตือนล่วงหน้า"
               type="number"
               min={0}
-              hint="จำนวนวันก่อนถึงกำหนดที่จะแจ้งเตือน"
+              hint="จำนวนวันก่อนถึงกำหนดที่ระบบจะสร้างรอบและใบ PM"
               {...register("leadTimeDays")}
             />
           </div>
+        </GlassCard>
+
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รายการตรวจ (Checklist)</GlassCardTitle></GlassCardHeader>
+          <ChecklistTemplatePicker value={templateIds} onChange={setTemplateIds} />
         </GlassCard>
 
         {error && (

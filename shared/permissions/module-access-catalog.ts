@@ -55,7 +55,7 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     moduleId: "hr",
     label: "บุคลากร",
     anyOfResources: ["hr_personnel", "hr_attendance"],
-    navModuleIds: ["hr_personnel", "hr_attendance"],
+    navModuleIds: ["hr_personnel", "hr_attendance", "hr_holidays", "hr_reports", "hr_exceptions", "hr_kpi"],
   },
   {
     moduleId: "transport",

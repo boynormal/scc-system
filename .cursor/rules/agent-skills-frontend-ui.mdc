@@ -24,3 +24,12 @@ alwaysApply: false
 
 - Confirm changed pages render without runtime errors.
 - Confirm key user flows still work after UI changes.
+
+# Shared page chrome
+
+When adding or changing a list, filter bar, page title, or short create/edit flow, use `ListFrame` and `PageHeader` from `components/shell`. Read `.cursor/skills/scc-page-ui/SKILL.md` before laying out a new page.
+
+- Title, description, table cells, button labels, and form values use `text-foreground` in both light and dark mode.
+- `text-muted-foreground` is only for secondary hints inside a `DataPanel` or an `Input`.
+- Filters stay on one row inside `DataPanel`. A short form opens `GlassDialog` with `solid`.
+- Controls come from `components/ui` (`Button`, `Input`, `Select`, `Badge`). Do not add a module-colored header, blur orbs, or hardcoded hex text.

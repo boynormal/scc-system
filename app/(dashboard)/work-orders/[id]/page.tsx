@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { ArrowLeft, Edit, CheckCircle2, XCircle } from "lucide-react"
+import { ArrowLeft, Edit } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
@@ -7,8 +7,14 @@ import { auth } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 import { formatDate } from "@/lib/utils"
+import { hasPermission, type UserRole } from "@/lib/permissions"
 import { prisma } from "@/shared/db"
 import { getWorkOrderDetailForPage } from "@/modules/work_orders"
+import { resolveTarget, targetHref } from "@/modules/maintenance"
+import { WORK_ORDER_STATUS_LABEL, type WorkOrderStatusName } from "@/modules/work_orders/application/work-order-transitions"
+import { WorkOrderTransitionPanel } from "../work-order-transition-panel"
+import { WorkOrderLaborPanel } from "../work-order-labor-panel"
+import { WorkOrderChecklistPanel } from "../work-order-checklist-panel"
 
 export const metadata: Metadata = { title: "รายละเอียดใบสั่งงาน" }
 
@@ -19,23 +25,31 @@ const priorityLabel: Record<string, { label: string; variant: "default" | "succe
   critical: { label: "วิกฤต", variant: "danger" },
 }
 
-const statusLabel: Record<string, { label: string; variant: "default" | "success" | "warning" | "danger" }> = {
-  draft: { label: "ร่าง", variant: "default" } as const,
-  open: { label: "รอดำเนินการ", variant: "warning" } as const,
-  in_progress: { label: "กำลังดำเนินการ", variant: "default" },
-  on_hold: { label: "ระงับชั่วคราว", variant: "warning" },
-  completed: { label: "เสร็จสิ้น", variant: "success" },
-  cancelled: { label: "ยกเลิก", variant: "danger" },
+const statusVariant: Record<string, "default" | "success" | "warning" | "danger"> = {
+  draft: "default",
+  open: "warning",
+  assigned: "warning",
+  in_progress: "default",
+  on_hold: "warning",
+  ready_for_handover: "warning",
+  handed_over: "default",
+  completed: "success",
+  closed: "success",
+  cancelled: "danger",
 }
 
 export default async function WorkOrderDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await auth()
+  const roles = session!.user.roles as UserRole[]
   const workOrder = await getWorkOrderDetailForPage(prisma, {
     id: params.id,
     companyId: session!.user.companyId as string,
+    roles,
   })
   if (!workOrder) return notFound()
+  const canUpdate = hasPermission(roles, workOrder.branchId, "work_orders", "update")
+  const target = resolveTarget(workOrder)
 
   return (
     <div className="space-y-6">
@@ -60,6 +74,10 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
         </div>
       </div>
 
+      <WorkOrderTransitionPanel workOrderId={params.id} status={workOrder.status} />
+      <WorkOrderLaborPanel workOrderId={params.id} canUpdate={canUpdate} />
+      <WorkOrderChecklistPanel workOrderId={params.id} canUpdate={canUpdate} />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <GlassCard padding="none">
@@ -67,9 +85,27 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
             <div className="px-5 pb-5 space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground mb-1">เครื่องจักร</p>
-                  <p className="font-medium text-foreground">{workOrder.machine.name}</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">{workOrder.machine.branch.name}</p>
+                  <p className="text-muted-foreground mb-1">
+                    {target ? (target.kind === "machine" ? "เครื่องจักร" : "ทรัพย์สิน") : "แจ้งซ่อม"}
+                  </p>
+                  {target ? (
+                    <Link href={targetHref(target)} className="font-medium text-foreground hover:text-blue-600">
+                      {target.name} ({target.code})
+                    </Link>
+                  ) : (
+                    <p className="font-medium text-foreground">งานทั่วไป</p>
+                  )}
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    {target?.branchName ?? workOrder.branch.name}
+                    {target?.kind === "asset" && workOrder.machine && (
+                      <>
+                        {" · เครื่องจักร "}
+                        <Link href={`/machines/${workOrder.machine.id}`} className="hover:text-blue-600">
+                          {workOrder.machine.code}
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">ความสำคัญ</p>
@@ -99,8 +135,8 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">สถานะ</p>
-                  <Badge variant={statusLabel[workOrder.status]?.variant ?? "default"}>
-                    {statusLabel[workOrder.status]?.label ?? workOrder.status}
+                  <Badge variant={statusVariant[workOrder.status] ?? "default"}>
+                    {WORK_ORDER_STATUS_LABEL[workOrder.status as WorkOrderStatusName] ?? workOrder.status}
                   </Badge>
                 </div>
               </div>
@@ -153,25 +189,17 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
             </div>
           </GlassCard>
 
-          {workOrder.checklistResults.length > 0 && (
+          {workOrder.statusHistory.length > 0 && (
             <GlassCard padding="none">
-              <GlassCardHeader><GlassCardTitle>ผลการตรวจสอบ Checklist</GlassCardTitle></GlassCardHeader>
+              <GlassCardHeader><GlassCardTitle>ประวัติสถานะ</GlassCardTitle></GlassCardHeader>
               <div className="px-5 pb-5 space-y-2">
-                {workOrder.checklistResults.map((result: NonNullable<typeof workOrder>["checklistResults"][number]) => (
-                  <div key={result.id} className="flex items-center gap-3 p-2 bg-muted rounded">
-                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                      result.status === "pass" ? "bg-green-500 border-green-500" :
-                      result.status === "fail" ? "bg-red-500 border-red-500" :
-                      "border-border"
-                    }`}>
-                      {result.status === "pass" && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
-                      {result.status === "fail" && <XCircle className="w-2.5 h-2.5 text-white" />}
-                    </div>
-                    <span className="text-sm text-foreground">{result.item.itemName}</span>
-                    {result.actualValue && (
-                      <span className="text-xs text-muted-foreground ml-auto">{result.actualValue}</span>
-                    )}
-                  </div>
+                {workOrder.statusHistory.map((row: { id: string; fromStatus: string | null; toStatus: string; reason: string | null; changedAt: Date }) => (
+                  <p key={row.id} className="text-sm text-foreground">
+                    {row.fromStatus ? `${WORK_ORDER_STATUS_LABEL[row.fromStatus as WorkOrderStatusName] ?? row.fromStatus} → ` : ""}
+                    {WORK_ORDER_STATUS_LABEL[row.toStatus as WorkOrderStatusName] ?? row.toStatus}
+                    {row.reason ? ` · ${row.reason}` : ""}
+                    <span className="text-muted-foreground"> · {formatDate(row.changedAt)}</span>
+                  </p>
                 ))}
               </div>
             </GlassCard>
@@ -199,6 +227,17 @@ export default async function WorkOrderDetailPage(props: { params: Promise<{ id:
           <GlassCard padding="none">
             <GlassCardHeader><GlassCardTitle>ข้อมูลเพิ่มเติม</GlassCardTitle></GlassCardHeader>
             <div className="px-5 pb-5 space-y-3">
+              {workOrder.sourceWorkOrder && (
+                <div>
+                  <p className="text-muted-foreground mb-1 text-sm">สร้างจากผลตรวจของใบ PM</p>
+                  <Link
+                    href={`/work-orders/${workOrder.sourceWorkOrder.id}`}
+                    className="block p-2 bg-muted rounded text-sm text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {workOrder.sourceWorkOrder.woNumber} · {workOrder.sourceWorkOrder.title}
+                  </Link>
+                </div>
+              )}
               {workOrder.schedule && (
                 <div>
                   <p className="text-muted-foreground mb-1 text-sm">เชื่อมโยงกับกำหนดการ</p>

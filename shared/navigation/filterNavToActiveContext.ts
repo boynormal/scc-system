@@ -43,7 +43,6 @@ function pruneTree(
 /** คู่กับ product line "การจัดการซ่อมบำรุง" — แสดงคู่กับเครื่องจักร */
 const MACHINE_COMPANION_OPERATION_KEYS = new Set([
   "maintenance_plans",
-  "maintenance_schedules",
   "maintenance_calendar",
   "work_orders",
   "reports",

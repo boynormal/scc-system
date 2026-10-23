@@ -540,7 +540,7 @@ function ProductLineExpandedPanel({
             <h3 className="text-base font-black text-slate-950 dark:text-white">{line.labelTh}</h3>
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{line.labelEn}</span>
           </div>
-          <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground dark:text-muted-foreground">{line.description}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground dark:text-muted-foreground">{line.description}</p>
         </div>
         <ChevronDown className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
       </button>

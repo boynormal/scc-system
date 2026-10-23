@@ -53,7 +53,8 @@ export function AssetFilters({
     searchParams.get("type") ||
     searchParams.get("status") ||
     searchParams.get("ownership") ||
-    searchParams.get("branchId")
+    searchParams.get("branchId") ||
+    searchParams.get("maintenancePm")
 
   return (
     <div className={`flex flex-wrap gap-3 ${isPending ? "pointer-events-none opacity-70" : ""}`}>
@@ -111,6 +112,16 @@ export function AssetFilters({
         <option value="IDLE">{t("st_IDLE")}</option>
         <option value="RETIRED">{t("st_RETIRED")}</option>
         <option value="DISPOSED">{t("st_DISPOSED")}</option>
+      </select>
+      <select
+        aria-label={t("filterMaintenancePm")}
+        defaultValue={searchParams.get("maintenancePm") || ""}
+        onChange={(e) => handleFilter("maintenancePm", e.target.value)}
+        className="rounded-lg border border-[#94a3b8] bg-[#ffffff] px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">{t("filterMaintenancePm")}</option>
+        <option value="on">{t("maintenancePmOn")}</option>
+        <option value="off">{t("maintenancePmOff")}</option>
       </select>
       {hasFilters && (
         <Link

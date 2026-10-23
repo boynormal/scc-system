@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/shared/db"
 import { auth } from "@/lib/auth"
+import type { UserRole } from "@/lib/permissions"
 import { deleteMachine, getMachineById, updateMachine, updateMachineSchema } from "@/modules/machines"
 
 export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -29,6 +30,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   const updated = await updateMachine(prisma, {
     id: params.id,
     companyId: session.user.companyId as string,
+    roles: session.user.roles as UserRole[],
     input: parsed.data,
   })
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -47,8 +49,10 @@ export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: s
   const result = await deleteMachine(prisma, {
     id: params.id,
     companyId: session.user.companyId as string,
+    roles: session.user.roles as UserRole[],
   })
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status })
 
   return NextResponse.json(result)
 }

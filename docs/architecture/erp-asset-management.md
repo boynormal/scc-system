@@ -1,6 +1,6 @@
 # ERP Asset Management Architecture
 
-**สถานะ:** Phase 0 ล็อกแล้ว · **Phase 1 ลงแล้ว** (ตาราง `assets` + CRUD + RBAC + UI `/assets`) · Phase 2 ยังเกต  
+**สถานะ:** Phase 0 ล็อกแล้ว · **Phase 1 ลงแล้ว** (ตาราง `assets` + CRUD + RBAC + UI `/assets`) · **Phase 2 เปิดแล้วเฉพาะ use case PM ซ่อมบำรุง** (คำสั่ง 2026-10-22, Maintenance Phase 3.5)  
 กฎเอเจนต์: [`.cursor/rules/erp-asset-management.mdc`](../../.cursor/rules/erp-asset-management.mdc)  
 Shared Master: [`erp-shared-master.md`](./erp-shared-master.md)  
 Expense SSOT: [`modules/finance/FINANCE-EXPENSE-OWNERSHIP.md`](../../modules/finance/FINANCE-EXPENSE-OWNERSHIP.md)  
@@ -14,7 +14,7 @@ Asset Management
       │
       ▼
  Shared Asset Master          ← ตาราง assets มีแล้ว (Phase 1)
-      │                         ยังไม่มี FK ไป Machine / Vehicle
+      │                         Machine.assetId? / Vehicle.assetId? ลิงก์ทีละแถว (Phase 2)
       ├── Maintenance → Machine     (operational master — มีแล้ว)
       ├── Transport   → Vehicle     (operational master — มีแล้ว)
       ├── IT          → IT Asset    (future)
@@ -43,7 +43,11 @@ Decision:
 Status:
   Accepted (2026-08-31) — Phase 0 ล็อกแล้ว
   Phase 1 landed (2026-08-31) — ตาราง assets + CRUD + resource `assets` + nav `asset_register` / `/assets`
-  Phase 2 (Machine.assetId / Vehicle.assetId) ยังเกต
+  Phase 2 opened (2026-10-22) — use case แรกคือ PM ซ่อมบำรุงจากทะเบียน (Maintenance Phase 3.5)
+    • Machine.assetId? / TransportVehicle.assetId? optional, unique, SetNull — ผูกทีละแถวจากหน้าทรัพย์สิน
+    • Asset.maintenancePmEnabled = สวิตช์ "เข้าแผนซ่อมบำรุง" (แยกจาก PM แบบ QR ของ AssetPmPlan)
+    • แผน / รอบ / ใบงานซ่อมบำรุงมี assetId?; machineId ว่างได้ แต่ต้องมีอย่างน้อยหนึ่งค่า (CHECK)
+    • ยังห้ามสร้างทรัพย์สินอัตโนมัติจากเครื่องจักรหรือรถ และห้าม backfill
 
 Owner:
   ทะเบียน Asset     = Asset Management (`modules/assets` — ไม่ใช่ Settings, ไม่ใช่ Finance)
@@ -75,10 +79,11 @@ Future trigger (Phase 1 ห้ามเริ่มถ้ายังไม่�
 Implementation:
   Phase 0 = เอกสารนี้ + Cursor rule + ลิงก์จาก Shared Master / Vision / Finance SSOT
   Phase 1 = `modules/assets` + `prisma` Asset + `/api/assets` + `/assets` UI
-  Phase 2+ = รอคำสั่งใหม่ — ห้ามเพิ่ม assetId บน Machine/Vehicle โดยอัตโนมัติ
+  Phase 2 = ลิงก์ optional + PM ซ่อมบำรุงจากทะเบียน (`asset-maintenance-service.ts`, `/api/assets/[id]/maintenance`)
+  Phase 2+ อื่น = รอคำสั่งใหม่ — ห้ามเติม assetId บน Machine/Vehicle แบบอัตโนมัติ
 
 Deferred:
-  ตาราง Asset, assetId บน Machine/Vehicle, backfill, FA engine, GL,
+  backfill, FA engine, GL,
   Component tree, Location master, Custodian, Transfer, ITAM
 ```
 
@@ -86,7 +91,8 @@ Deferred:
 
 ## สิ่งที่มีอยู่แล้ว (FACT)
 
-มีตาราง `assets` (Phase 1) — **ยังไม่มี** `FixedAsset` / `ITAsset` / `FinanceAsset` และ **ยังไม่มี** `assetId` บน Machine / Vehicle
+มีตาราง `assets` (Phase 1) — **ยังไม่มี** `FixedAsset` / `ITAsset` / `FinanceAsset`  
+มี `assetId` แบบ optional บน Machine / TransportVehicle (Phase 2, ผูกเองทีละแถว) และบนแผน / รอบ / ใบงานซ่อมบำรุง
 
 | Entity | ตาราง | Owner | หมายเหตุ |
 |---|---|---|---|
@@ -148,15 +154,15 @@ Finance ─────── Financial Layer         (Expense วันนี�
 Asset **ไม่ใช่ parent** ของ Machine หรือ Vehicle  
 ห้ามบังคับให้ทุก Machine / ทุก Vehicle มีแถว Asset
 
-เมื่อถึง Phase 2 (หลัง approval แยก):
+Phase 2 (ลงแล้ว 2026-10-22 สำหรับ PM ซ่อมบำรุง):
 
 ```text
-Machine.assetId?          optional
-TransportVehicle.assetId? optional
+Machine.assetId?          optional, unique, SetNull
+TransportVehicle.assetId? optional, unique, SetNull
 ```
 
-ลิงก์เฉพาะของที่บริษัทถือครอง (หรือเช่าที่ต้องตั้งทุน)  
-**ห้าม backfill ทั้งก้อนโดยอัตโนมัติ** จนกว่าจะมีข้อมูล ownership และผ่าน Phase 2 approval
+ลิงก์ทีละแถวจากหน้าทรัพย์สิน บริษัทและสาขาเดียวกัน และแถวนั้นยังไม่ถูกผูกที่อื่น ทุกครั้งเขียน audit  
+**ห้าม backfill ทั้งก้อนโดยอัตโนมัติ** และห้ามสร้างทรัพย์สินให้จากเครื่องจักรหรือรถ
 
 ---
 
@@ -164,7 +170,7 @@ TransportVehicle.assetId? optional
 
 | Entity | Owner | Shared | Finance | Maintenance | Transport | Inventory | IT |
 |---|---|---|---|---|---|---|---|
-| Asset | Asset Management | ใช่ | Ref + future Profile | ยังไม่ลิงก์ (Phase 2) | ยังไม่ลิงก์ (Phase 2) | ไม่สร้างซ้ำ | ประเภทของ Asset |
+| Asset | Asset Management | ใช่ | Ref + future Profile | เป้าหมายแผน PM / ใบงาน (Phase 2) | ลิงก์ optional; อ่านสถานะใบงานซ่อมบำรุงตอนจ่ายงาน | ไม่สร้างซ้ำ | ประเภทของ Asset |
 | FinanceAssetProfile | Finance | ไม่ | Owner | — | — | — | — |
 | Machine | Maintenance | ไม่ | cost object (label) | Owner | — | BOM อะไหล่ | — |
 | Vehicle | Transport | ไม่ | cost object (label) | — | Owner | — | — |
@@ -238,11 +244,12 @@ Asset
 
 ---
 
-## ห้ามสร้าง (หลัง Phase 1 — จนกว่าจะมีคำสั่ง Phase 2+)
+## ห้ามสร้าง (จนกว่าจะมีคำสั่งใหม่)
 
 ```text
-Machine.assetId / Vehicle.assetId
-Backfill จาก machines / transport_vehicles
+Backfill หรือสร้างทรัพย์สินอัตโนมัติจาก machines / transport_vehicles
+Expense ของการเงินจากใบงานซ่อมบำรุง (Finance Phase 4 ล็อก)
+TransportRepairLog จากฝั่งซ่อมบำรุง
 FixedAsset / ITAsset / FinanceAsset / GLAsset
 VehicleProfile / MachineProfile ที่ย้ายคอลัมน์จากตารางที่มีอยู่
 MaintenanceAsset / TransportAsset / AssetVehicle
@@ -263,12 +270,12 @@ Phase 1 ใช้ department ใหม่ `asset_register` + `/assets`
 |---|---|---|---|
 | **0** | ADR + Cursor rule + ลิงก์เอกสาร | ตาราง, API, UI, seed, permission, nav | อนุมัติแผนแล้ว |
 | **1** (ลงแล้ว) | ตาราง Asset บาง + CRUD + `assets` RBAC + `/assets` | FA, assetId บน Machine/Vehicle, backfill | คำสั่ง BUILD + use case capitalization |
-| **2** | `Machine.assetId?` / `Vehicle.assetId?` ลิงก์ทีละแถว | auto-backfill ทั้งก้อน | ข้อมูล ownership + approval แยก |
+| **2** (ลงแล้ว 2026-10-22) | `Machine.assetId?` / `Vehicle.assetId?` ลิงก์ทีละแถว + สวิตช์เข้าแผนซ่อมบำรุง | auto-backfill ทั้งก้อน | คำสั่ง Maintenance Phase 3.5 |
 | **3** | Transfer / custodian / history เมื่อมี requirement | engine ใหญ่ | use case รายสัปดาห์ |
 | **4** | FinanceAssetProfile + ค่าเสื่อมเมื่อมี CoA | GL master ซ้ำ | Product Decision การเงิน |
 | **เลื่อน** | Component, Location, ITAM, IoT twin, Party | — | — |
 
-หลัง Phase 1: **STOP** — ห้ามเริ่ม Phase 2 โดยอัตโนมัติ
+หลัง Phase 2: **STOP** — Phase 3+ ต้องมีคำสั่งใหม่
 
 ---
 
@@ -276,7 +283,7 @@ Phase 1 ใช้ department ใหม่ `asset_register` + `/assets`
 
 Phase 1 **ลงแล้ว** (use case: Company Vehicle / Machine Capitalization)
 
-Phase 2 เริ่มได้เมื่อมีข้อมูลว่าแถวไหนเป็นของบริษัท / เช่า / ของภายนอก และมี rollback (FK เป็น null ได้; WO / Job เก่ายังอ่าน `machineId` / `vehicleId`) **บวกคำสั่งชัด**
+Phase 2 **เปิดแล้ว** ตามคำสั่ง 2026-10-22 (use case: PM ซ่อมบำรุงจากทะเบียน) rollback คือ FK เป็น null ได้; WO / Job เก่ายังอ่าน `machineId` / `vehicleId`
 
 ---
 
@@ -286,5 +293,4 @@ Phase 2 เริ่มได้เมื่อมีข้อมูลว่า
 - CRUD ตรวจ company / branch / supplier และรหัสไม่ซ้ำในบริษัท
 - RBAC `assets` แค่ create|read|update|delete
 - UI `/assets` ใช้งานได้; nav `asset_management` (Machines) ไม่ถูกเขียนทับ
-- `modules/assets` ไม่ query ตาราง Machine / Vehicle / Expense
-- Phase 2 ยังเกต
+- `modules/assets` ไม่ query ตาราง Expense (Phase 2 อ่าน / ผูก Machine และ Vehicle ได้เฉพาะใน `asset-maintenance-service.ts`)

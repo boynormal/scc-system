@@ -194,10 +194,19 @@ export async function getMachineById(db: PrismaClient, params: { id: string; com
 
 export async function updateMachine(
   db: PrismaClient,
-  params: { id: string; companyId: string; input: UpdateMachineInput }
+  params: { id: string; companyId: string; roles: UserRole[]; input: UpdateMachineInput }
 ) {
   const machine = await getMachineBase(db, { id: params.id, companyId: params.companyId })
   if (!machine) return null
+  const share = await readBranchSharing(db, params.companyId)
+  if (!permissionCoversBranch(params.roles, "machines", "update", machine.branchId, share.machines.edit)) {
+    return { error: "Forbidden" as const, status: 403 as const }
+  }
+  if (params.input.branchId && params.input.branchId !== machine.branchId) {
+    if (!permissionCoversBranch(params.roles, "machines", "update", params.input.branchId, share.machines.edit)) {
+      return { error: "Forbidden" as const, status: 403 as const }
+    }
+  }
 
   const { installDate, warrantyExpireDate, departmentId, ...rest } = params.input
   let nextDepartmentId = departmentId === undefined ? machine.departmentId : departmentId
@@ -225,9 +234,16 @@ export async function updateMachine(
   return updated
 }
 
-export async function deleteMachine(db: PrismaClient, params: { id: string; companyId: string }) {
+export async function deleteMachine(
+  db: PrismaClient,
+  params: { id: string; companyId: string; roles: UserRole[] }
+) {
   const machine = await getMachineBase(db, params)
   if (!machine) return null
+  const share = await readBranchSharing(db, params.companyId)
+  if (!permissionCoversBranch(params.roles, "machines", "delete", machine.branchId, share.machines.delete)) {
+    return { error: "Forbidden" as const, status: 403 as const }
+  }
 
   await db.machine.update({
     where: { id: params.id },

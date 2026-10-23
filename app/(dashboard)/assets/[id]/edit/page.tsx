@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db"
 import type { UserRole } from "@/lib/permissions"
 import { getAsset } from "@/modules/assets"
 import { AssetForm } from "@/components/assets/asset-form"
+import { AssetMaintenanceCard } from "@/components/assets/asset-maintenance-card"
 
 export async function generateMetadata() {
   const t = await getTranslations("assets")
@@ -35,6 +36,9 @@ export default async function EditAssetPage({ params }: { params: Promise<{ id: 
         <p className="mt-1 text-sm text-muted-foreground">{asset.code}</p>
       </div>
       <AssetForm asset={asset} />
+      <div className="max-w-xl">
+        <AssetMaintenanceCard assetId={asset.id} canUpdate />
+      </div>
     </div>
   )
 }

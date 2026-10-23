@@ -115,12 +115,13 @@ export async function generateOverdueNotifications(db: PrismaClient, companyId: 
 
   const overdueSchedules = await db.maintenanceSchedule.findMany({
     where: {
-      machine: { branch: { companyId } },
+      OR: [{ asset: { companyId } }, { assetId: null, machine: { branch: { companyId } } }],
       dueDate: { lt: now },
       status: "pending",
     },
     include: {
       machine: { select: { name: true, branchId: true } },
+      asset: { select: { name: true } },
       plan: { select: { assignedRoleId: true } },
     },
     take: 50,
@@ -143,9 +144,9 @@ export async function generateOverdueNotifications(db: PrismaClient, companyId: 
     admins.map((admin) => ({
       userId: admin.userId,
       type: "overdue_schedule" as NotificationType,
-      title: `กำหนดการเกินกำหนด: ${schedule.machine.name}`,
+      title: `กำหนดการเกินกำหนด: ${schedule.asset?.name ?? schedule.machine?.name ?? "-"}`,
       message: `กำหนดการวันที่ ${schedule.dueDate.toLocaleDateString("th-TH")} ยังไม่ได้รับการดำเนินการ`,
-      link: "/maintenance/schedules",
+      link: "/maintenance/calendar",
       refId: schedule.id,
       refType: "MaintenanceSchedule",
     }))

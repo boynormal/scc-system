@@ -35,7 +35,7 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     label: "People & Time",
     order: 25,
     icon: "Users",
-    description: "Personnel, daily attendance, Excel import",
+    description: "Personnel, attendance, holidays, reports, exceptions, indicators",
   },
   {
     id: "inventory",

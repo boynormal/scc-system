@@ -11,12 +11,12 @@ import { Select } from "@/components/ui/select"
 import { BeforeAfterImages } from "@/components/ui/before-after-images"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
+import { WorkOrderTransitionPanel } from "../../work-order-transition-panel"
 
 const schema = z.object({
   title: z.string().min(1, "กรุณากรอกหัวข้อ"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "critical"]),
-  status: z.enum(["draft", "open", "in_progress", "on_hold", "completed", "cancelled"]),
   assignedTo: z.string().optional(),
   plannedStart: z.string().optional(),
   plannedEnd: z.string().optional(),
@@ -43,15 +43,6 @@ const priorityOptions = [
   { value: "critical", label: "วิกฤต" },
 ]
 
-const statusOptions = [
-  { value: "draft", label: "ร่าง" },
-  { value: "open", label: "เปิด" },
-  { value: "in_progress", label: "กำลังดำเนินการ" },
-  { value: "on_hold", label: "พัก" },
-  { value: "completed", label: "เสร็จสิ้น" },
-  { value: "cancelled", label: "ยกเลิก" },
-]
-
 export default function EditWorkOrderPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
@@ -63,6 +54,7 @@ export default function EditWorkOrderPage() {
   const [users, setUsers] = useState<{ id: string; firstName: string; lastName: string }[]>([])
   const [imagesBefore, setImagesBefore] = useState<string[]>([])
   const [imagesAfter, setImagesAfter] = useState<string[]>([])
+  const [status, setStatus] = useState("")
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -78,13 +70,13 @@ export default function EditWorkOrderPage() {
         const w = wo.data
         setWoTitle(w.title)
         setWoNumber(w.woNumber)
+        setStatus(w.status)
         setImagesBefore(Array.isArray(w.imagesBefore) ? w.imagesBefore : [])
         setImagesAfter(Array.isArray(w.imagesAfter) ? w.imagesAfter : [])
         reset({
           title: w.title,
           description: w.description ?? "",
           priority: w.priority,
-          status: w.status,
           assignedTo: w.assignedTo ?? "",
           plannedStart: toDatetimeLocal(w.plannedStart),
           plannedEnd: toDatetimeLocal(w.plannedEnd),
@@ -150,11 +142,12 @@ export default function EditWorkOrderPage() {
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
       )}
 
+      {status && <WorkOrderTransitionPanel workOrderId={id} status={status} />}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <GlassCard>
           <GlassCardHeader><GlassCardTitle>ข้อมูลหลัก</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select label="สถานะ" required options={statusOptions} {...register("status")} />
             <Select label="ความสำคัญ" required options={priorityOptions} {...register("priority")} />
             <div className="sm:col-span-2">
               <GlassInput label="หัวข้อ" required error={errors.title?.message} {...register("title")} />

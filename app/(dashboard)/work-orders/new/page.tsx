@@ -10,17 +10,32 @@ import Link from "next/link"
 import { Select } from "@/components/ui/select"
 import { BeforeAfterImages } from "@/components/ui/before-after-images"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import { pmAssetHint, pmAssetLabel, type PmAssetOption } from "@/components/maintenance/pm-asset-option"
 
-const schema = z.object({
-  machineId: z.string().uuid("กรุณาเลือกเครื่องจักร"),
-  typeId: z.string().uuid("กรุณาเลือกประเภท"),
-  branchId: z.string().uuid("กรุณาเลือกสาขา"),
-  title: z.string().min(1, "กรุณากรอกหัวข้อ"),
-  description: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "critical"]),
-  assignedTo: z.string().optional(),
-  scheduleId: z.string().optional(),
-})
+const schema = z
+  .object({
+    kind: z.enum(["asset", "general"]),
+    assetId: z.string().optional(),
+    branchId: z.string().optional(),
+    typeId: z.string().uuid("กรุณาเลือกประเภท"),
+    title: z.string().min(1, "กรุณากรอกหัวข้อ"),
+    description: z.string().optional(),
+    priority: z.enum(["low", "medium", "high", "critical"]),
+    assignedTo: z.string().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind === "asset" && !v.assetId) {
+      ctx.addIssue({ code: "custom", path: ["assetId"], message: "กรุณาเลือกทรัพย์สิน" })
+    }
+    if (v.kind === "general" && !v.branchId) {
+      ctx.addIssue({ code: "custom", path: ["branchId"], message: "กรุณาเลือกสาขา" })
+    }
+  })
+
+const kindOptions = [
+  { value: "asset", label: "ทรัพย์สินในทะเบียน" },
+  { value: "general", label: "งานทั่วไป (ไม่ผูกทรัพย์สิน เช่น ไฟ ประปา เก้าอี้)" },
+]
 
 type FormData = z.infer<typeof schema>
 
@@ -34,14 +49,15 @@ const priorityOptions = [
 function NewWorkOrderForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const machineId = searchParams.get("machineId")
-  const scheduleId = searchParams.get("scheduleId")
-  const [machines, setMachines] = useState<{ id: string; name: string; code: string; branchId: string }[]>([])
+  const machineIdParam = searchParams.get("machineId")
+  const assetIdParam = searchParams.get("assetId")
+  const [assets, setAssets] = useState<PmAssetOption[] | null>(null)
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [users, setUsers] = useState<{ id: string; firstName: string; lastName: string }[]>([])
   const [types, setTypes] = useState<{ id: string; name: string; code: string }[]>([])
-  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
-  const [schedules, setSchedules] = useState<{ id: string; dueDate: string; machine: { name: string } }[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [created, setCreated] = useState<{ id: string; warning: string } | null>(null)
+  const [preset, setPreset] = useState<string | null>(null)
   const [imagesBefore, setImagesBefore] = useState<string[]>([])
   const [imagesAfter, setImagesAfter] = useState<string[]>([])
 
@@ -53,46 +69,48 @@ function NewWorkOrderForm() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { machineId: machineId ?? "", scheduleId: scheduleId ?? "", priority: "medium" },
+    defaultValues: { kind: "asset", assetId: "", branchId: "", priority: "medium" },
   })
 
-  const selectedMachineId = watch("machineId")
+  const kind = watch("kind")
+  const selectedAsset = assets?.find((a) => a.id === watch("assetId")) ?? null
+  const assetHint =
+    assets && assets.length === 0
+      ? "ยังไม่มีทรัพย์สินที่ใช้งานอยู่ในทะเบียน เลือกงานทั่วไปได้"
+      : selectedAsset
+        ? `สาขาของใบงานตามทรัพย์สิน: ${pmAssetHint(assets, selectedAsset)}`
+        : undefined
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/machines").then((r) => r.json()),
+      fetch("/api/maintenance/pm-assets?for=work_order").then((r) => r.json()),
+      fetch("/api/master-data/branches").then((r) => r.json()),
       fetch("/api/users").then((r) => r.json()),
       fetch("/api/master-data/maintenance-types").then((r) => r.json()),
-      fetch("/api/master-data/branches").then((r) => r.json()),
-    ]).then(([m, u, t, b]) => {
-      setMachines(m.data ?? [])
+    ]).then(([a, b, u, t]) => {
+      const assetOptions: PmAssetOption[] = a.data ?? []
+      setAssets(assetOptions)
+      setBranches(b.data ?? [])
       setUsers(u.data ?? [])
       setTypes(t.data ?? [])
-      setBranches(b.data ?? [])
+      const byMachine = machineIdParam ? assetOptions.find((o) => o.machineId === machineIdParam) : undefined
+      if (assetIdParam && assetOptions.some((o) => o.id === assetIdParam)) setPreset(assetIdParam)
+      else if (byMachine) setPreset(byMachine.id)
+      else if (machineIdParam) setValue("kind", "general")
     })
-  }, [])
+  }, [assetIdParam, machineIdParam, setValue])
 
+  // The <option> must be rendered before setValue can select it.
   useEffect(() => {
-    if (selectedMachineId) {
-      fetch(`/api/schedules?machineId=${selectedMachineId}&status=pending`)
-        .then((r) => r.json())
-        .then((d) => setSchedules(d.data ?? []))
-      // Auto-fill branchId from machine
-      const machine = machines.find((m) => m.id === selectedMachineId)
-      if (machine) setValue("branchId", machine.branchId)
-    }
-  }, [selectedMachineId, machines, setValue])
+    if (preset) setValue("assetId", preset)
+  }, [preset, setValue])
 
-  useEffect(() => {
-    if (scheduleId) setValue("scheduleId", scheduleId)
-  }, [scheduleId, setValue])
-
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async ({ kind: picked, assetId, branchId, ...data }: FormData) => {
     setError(null)
     const payload = {
       ...data,
+      ...(picked === "asset" ? { assetId } : { branchId }),
       assignedTo: data.assignedTo || undefined,
-      scheduleId: data.scheduleId || undefined,
       imagesBefore,
       imagesAfter,
     }
@@ -103,11 +121,15 @@ function NewWorkOrderForm() {
     })
     if (res.ok) {
       const json = await res.json()
+      if (json.warning) {
+        setCreated({ id: json.data.id, warning: json.warning })
+        return
+      }
       router.push(`/work-orders/${json.data.id}`)
       router.refresh()
     } else {
       const body = await res.json()
-      setError(body.error?.message ?? "เกิดข้อผิดพลาด")
+      setError(typeof body.error === "string" ? body.error : body.error?.message ?? "เกิดข้อผิดพลาด")
     }
   }
 
@@ -127,22 +149,32 @@ function NewWorkOrderForm() {
         <GlassCard>
           <GlassCardHeader><GlassCardTitle>ข้อมูลพื้นฐาน</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="เครื่องจักร"
-              required
-              placeholder="เลือกเครื่องจักร"
-              options={machines.map((m) => ({ value: m.id, label: `${m.name} (${m.code})` }))}
-              error={errors.machineId?.message}
-              {...register("machineId")}
-            />
-            <Select
-              label="สาขา"
-              required
-              placeholder="เลือกสาขา"
-              options={branches.map((b) => ({ value: b.id, label: b.name }))}
-              error={errors.branchId?.message}
-              {...register("branchId")}
-            />
+            <div className="sm:col-span-2">
+              <Select label="แจ้งซ่อมสำหรับ" required options={kindOptions} {...register("kind")} />
+            </div>
+            <div className="sm:col-span-2">
+              {kind === "asset" ? (
+                <Select
+                  label="ทรัพย์สิน"
+                  required
+                  placeholder="เลือกทรัพย์สิน"
+                  options={(assets ?? []).map((a) => ({ value: a.id, label: pmAssetLabel(a) }))}
+                  error={errors.assetId?.message}
+                  hint={assetHint}
+                  {...register("assetId")}
+                />
+              ) : (
+                <Select
+                  label="สาขา"
+                  required
+                  placeholder="เลือกสาขา"
+                  options={branches.map((b) => ({ value: b.id, label: b.name }))}
+                  error={errors.branchId?.message}
+                  hint="งานทั่วไปไม่ผูกทรัพย์สิน ระบุสิ่งที่ซ่อมในหัวข้อและรายละเอียด"
+                  {...register("branchId")}
+                />
+              )}
+            </div>
             <Select
               label="ประเภทการซ่อมบำรุง"
               required
@@ -174,22 +206,13 @@ function NewWorkOrderForm() {
         </GlassCard>
 
         <GlassCard>
-          <GlassCardHeader><GlassCardTitle>มอบหมายและเชื่อมโยง</GlassCardTitle></GlassCardHeader>
+          <GlassCardHeader><GlassCardTitle>มอบหมาย</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="ผู้รับผิดชอบ"
               placeholder="เลือกผู้รับผิดชอบ"
               options={users.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
               {...register("assignedTo")}
-            />
-            <Select
-              label="เชื่อมโยงกับกำหนดการ (ถ้ามี)"
-              placeholder="เลือกกำหนดการ"
-              options={schedules.map((s) => ({
-                value: s.id,
-                label: `${s.machine.name} — ${new Date(s.dueDate).toLocaleDateString("th-TH")}`,
-              }))}
-              {...register("scheduleId")}
             />
           </div>
         </GlassCard>
@@ -210,11 +233,20 @@ function NewWorkOrderForm() {
           </div>
         )}
 
+        {created && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-500/50 dark:bg-amber-950/40">
+            <p className="text-sm text-amber-800 dark:text-amber-200">สร้างใบสั่งงานแล้ว · {created.warning}</p>
+            <Link href={`/work-orders/${created.id}`} className="text-sm font-medium text-amber-900 underline dark:text-amber-100">
+              ไปที่ใบสั่งงาน
+            </Link>
+          </div>
+        )}
+
         <div className="flex gap-3 justify-end">
           <Link href="/work-orders" className="px-5 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:bg-muted/60 transition-colors">
             ยกเลิก
           </Link>
-          <GlassButton type="submit" loading={isSubmitting} icon={<Save className="w-4 h-4" />}>
+          <GlassButton type="submit" loading={isSubmitting} disabled={!!created} icon={<Save className="w-4 h-4" />}>
             สร้างใบสั่งงาน
           </GlassButton>
         </div>

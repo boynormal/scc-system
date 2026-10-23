@@ -1,29 +1,40 @@
 import { z } from "zod"
 import type { PrismaClient } from "@prisma/client"
-import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { getBranchIds, hasPermission, isAdminInAnyBranch, type Action, type UserRole } from "@/lib/permissions"
 import { permissionCoversBranch, readBranchSharing } from "@/shared/permissions/branch-sharing"
 import { generateWONumber } from "@/modules/work_orders/application/generate-wo-number"
+import { evaluateTransition, type WorkOrderStatusName } from "@/modules/work_orders/application/work-order-transitions"
+import { loadRepairAsset } from "@/modules/maintenance/application/pm-asset-options"
 
-export const createWorkOrderSchema = z.object({
-  scheduleId: z.string().uuid().optional(),
-  machineId: z.string().uuid(),
-  typeId: z.string().uuid(),
-  branchId: z.string().uuid(),
-  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
-  title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  plannedStart: z.string().optional(),
-  plannedEnd: z.string().optional(),
-  assignedTo: z.string().uuid().optional(),
-  imagesBefore: z.array(z.string()).optional(),
-  imagesAfter: z.array(z.string()).optional(),
-})
+const SCHEDULE_STATUS_FOR: Partial<Record<WorkOrderStatusName, "in_progress" | "completed" | "cancelled">> = {
+  in_progress: "in_progress",
+  handed_over: "completed",
+  closed: "completed",
+  cancelled: "cancelled",
+}
+
+export const createWorkOrderSchema = z
+  .object({
+    /** ทรัพย์สินที่ยังใช้งาน ไม่ต้องเปิดสวิตช์เข้าแผนซ่อมบำรุง */
+    assetId: z.string().uuid().optional(),
+    typeId: z.string().uuid(),
+    /** งานทั่วไปต้องส่ง ถ้ามีทรัพย์สินต้องตรงกับสาขาของทรัพย์สิน */
+    branchId: z.string().uuid().optional(),
+    priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+    title: z.string().min(1).max(255),
+    description: z.string().optional(),
+    plannedStart: z.string().optional(),
+    plannedEnd: z.string().optional(),
+    assignedTo: z.string().uuid().optional(),
+    imagesBefore: z.array(z.string()).optional(),
+    imagesAfter: z.array(z.string()).optional(),
+  })
+  .refine((v) => !!v.assetId || !!v.branchId, { message: "ต้องเลือกทรัพย์สิน หรือสาขาของงานทั่วไป" })
 
 export const updateWorkOrderSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
   priority: z.enum(["low", "medium", "high", "critical"]).optional(),
-  status: z.enum(["draft", "open", "in_progress", "on_hold", "completed", "cancelled"]).optional(),
   assignedTo: z.string().uuid().nullable().optional(),
   plannedStart: z.string().nullable().optional(),
   plannedEnd: z.string().nullable().optional(),
@@ -37,8 +48,22 @@ export const updateWorkOrderSchema = z.object({
   imagesAfter: z.array(z.string()).optional(),
 })
 
+export const transitionWorkOrderSchema = z.object({
+  toStatus: z.string().min(1),
+  reason: z.string().optional(),
+  assignedTo: z.string().uuid().optional(),
+})
+
 export type CreateWorkOrderInput = z.infer<typeof createWorkOrderSchema>
 export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderSchema>
+export type TransitionWorkOrderInput = z.infer<typeof transitionWorkOrderSchema>
+
+function shareFlagFor(action: Action, share: { view: boolean; edit: boolean; delete: boolean }) {
+  if (action === "read") return share.view
+  if (action === "update") return share.edit
+  if (action === "delete") return share.delete
+  return false
+}
 
 export async function listWorkOrders(
   db: PrismaClient,
@@ -49,6 +74,8 @@ export async function listWorkOrders(
     status?: string | null
     priority?: string | null
     assignedTo?: string | null
+    machineId?: string | null
+    assetId?: string | null
     search?: string | null
     page: number
     pageSize: number
@@ -105,6 +132,8 @@ export async function listWorkOrders(
     ...(params.status && { status: params.status as never }),
     ...(params.priority && { priority: params.priority as never }),
     ...(params.assignedTo && { assignedTo: params.assignedTo }),
+    ...(params.machineId && { machineId: params.machineId }),
+    ...(params.assetId && { assetId: params.assetId }),
     ...(params.search && {
       OR: [
         { title: { contains: params.search, mode: "insensitive" as never } },
@@ -118,6 +147,7 @@ export async function listWorkOrders(
       where,
       include: {
         machine: { select: { id: true, name: true, code: true } },
+        asset: { select: { id: true, name: true, code: true } },
         type: { select: { id: true, name: true, code: true, color: true } },
         assignee: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         branch: { select: { id: true, name: true } },
@@ -148,7 +178,9 @@ export async function createWorkOrder(
     input: CreateWorkOrderInput
   }
 ) {
-  const { branchId, machineId } = params.input
+  const target = await resolveWorkOrderTarget(db, params.companyId, params.input)
+  if ("error" in target) return target
+  const { branchId, machineId, assetId } = target
   const branchOk = await db.branch.findFirst({
     where: { id: branchId, companyId: params.companyId, deletedAt: null, isActive: true },
     select: { id: true },
@@ -160,25 +192,35 @@ export async function createWorkOrder(
   if (!permissionCoversBranch(params.roles, "work_orders", "create", branchId, shareCreate)) {
     return { error: "Forbidden" as const, status: 403 as const }
   }
-  const machineOk = await db.machine.findFirst({
-    where: { id: machineId, deletedAt: null, branchId, branch: { companyId: params.companyId } },
-    select: { id: true },
-  })
-  if (!machineOk) {
-    return { error: "Invalid machine for branch" as const, status: 400 as const }
-  }
 
-  const woNumber = await generateWONumber(db, branchId)
-  const { imagesBefore, imagesAfter, ...rest } = params.input
-  const workOrder = await db.workOrder.create({
-    data: {
-      ...rest,
-      woNumber,
-      plannedStart: rest.plannedStart ? new Date(rest.plannedStart) : undefined,
-      plannedEnd: rest.plannedEnd ? new Date(rest.plannedEnd) : undefined,
-      status: "open",
-      createdBy: params.userId,
-    },
+  const { imagesBefore, imagesAfter, typeId, priority, title, description, plannedStart, plannedEnd, assignedTo } =
+    params.input
+  const rest = { typeId, priority, title, description, plannedStart, plannedEnd, assignedTo }
+  const status: WorkOrderStatusName = rest.assignedTo ? "assigned" : "open"
+  const created = await db.$transaction(async (tx) => {
+    const woNumber = await generateWONumber(tx, branchId)
+    const workOrder = await tx.workOrder.create({
+      data: {
+        ...rest,
+        branchId,
+        machineId,
+        assetId,
+        woNumber,
+        workKind: "corrective",
+        plannedStart: rest.plannedStart ? new Date(rest.plannedStart) : undefined,
+        plannedEnd: rest.plannedEnd ? new Date(rest.plannedEnd) : undefined,
+        status,
+        createdBy: params.userId,
+      },
+    })
+    await tx.workOrderStatusHistory.create({
+      data: {
+        workOrderId: workOrder.id,
+        toStatus: status,
+        changedBy: params.userId,
+      },
+    })
+    return { workOrder, woNumber }
   })
 
   if ((imagesBefore && imagesBefore.length > 0) || (imagesAfter && imagesAfter.length > 0)) {
@@ -186,18 +228,76 @@ export async function createWorkOrder(
     const aft = JSON.stringify(imagesAfter ?? [])
     await db.$executeRaw`
       UPDATE work_orders SET images_before = ${bef}::jsonb, images_after = ${aft}::jsonb
-      WHERE id = ${workOrder.id}::uuid
+      WHERE id = ${created.workOrder.id}::uuid
     `
   }
 
-  return { data: workOrder, woNumber }
+  const warning = target.vehicleId ? await openTransportRepairWarning(db, params.companyId, target.vehicleId) : null
+  return { data: created.workOrder, woNumber: created.woNumber, warning }
 }
 
-export async function getWorkOrderDetail(db: PrismaClient, params: { id: string; companyId: string }) {
+/** แจ้งซ่อมทรัพย์สิน (สาขามาจากทรัพย์สิน) หรืองานทั่วไปที่มีแค่สาขา */
+async function resolveWorkOrderTarget(
+  db: PrismaClient,
+  companyId: string,
+  input: { assetId?: string; branchId?: string }
+): Promise<
+  | { branchId: string; machineId: string | null; assetId: string | null; vehicleId: string | null }
+  | { error: string; status: 400 }
+> {
+  if (input.assetId) {
+    const asset = await loadRepairAsset(db, companyId, input.assetId)
+    if (!asset) return { error: "ไม่พบทรัพย์สิน หรือทรัพย์สินถูกปิดใช้ ปลดระวาง หรือจำหน่ายแล้ว", status: 400 }
+    if (input.branchId && input.branchId !== asset.branchId) return { error: "Invalid branch", status: 400 }
+    return {
+      branchId: asset.branchId,
+      machineId: asset.machineId,
+      assetId: asset.id,
+      vehicleId: asset.link?.kind === "vehicle" ? asset.link.id : null,
+    }
+  }
+  if (!input.branchId) return { error: "ต้องเลือกทรัพย์สิน หรือสาขาของงานทั่วไป", status: 400 }
+  return { branchId: input.branchId, machineId: null, assetId: null, vehicleId: null }
+}
+
+/** อ่านอย่างเดียว: ไม่บล็อกการสร้างใบงาน */
+async function openTransportRepairWarning(db: PrismaClient, companyId: string, vehicleId: string) {
+  const open = await db.transportRepairLog.findFirst({
+    where: { companyId, vehicleId, status: { in: ["reported", "in_repair"] } },
+    select: { repairNumber: true },
+    orderBy: { reportedAt: "desc" },
+  })
+  return open ? `รถคันนี้มีใบแจ้งซ่อมขนส่งเปิดอยู่ (${open.repairNumber}) ตรวจว่าไม่ซ้ำงานกัน` : null
+}
+
+export async function loadScopedWorkOrder(
+  db: PrismaClient,
+  params: { id: string; companyId: string; roles: UserRole[]; action: Action }
+) {
+  const workOrder = await db.workOrder.findFirst({
+    where: { id: params.id, branch: { companyId: params.companyId } },
+  })
+  if (!workOrder) return { ok: false as const, error: "Not found" as const, status: 404 as const }
+  const share = await readBranchSharing(db, params.companyId)
+  const action = params.action === "approve" ? "approve" : params.action
+  const shared = action === "approve" ? false : shareFlagFor(action, share.work_orders)
+  if (!permissionCoversBranch(params.roles, "work_orders", action, workOrder.branchId, shared)) {
+    return { ok: false as const, error: "Forbidden" as const, status: 403 as const }
+  }
+  return { ok: true as const, workOrder }
+}
+
+export async function getWorkOrderDetail(
+  db: PrismaClient,
+  params: { id: string; companyId: string; roles: UserRole[] }
+) {
+  const scoped = await loadScopedWorkOrder(db, { ...params, action: "read" })
+  if (!scoped.ok) return scoped
   const wo = await db.workOrder.findFirst({
-    where: { id: params.id, machine: { branch: { companyId: params.companyId } } },
+    where: { id: params.id, branch: { companyId: params.companyId } },
     include: {
       machine: { select: { id: true, name: true, code: true, branchId: true } },
+      asset: { select: { id: true, name: true, code: true, branchId: true } },
       type: { select: { id: true, name: true, code: true } },
       assignee: { select: { id: true, firstName: true, lastName: true } },
       branch: { select: { id: true, name: true } },
@@ -218,23 +318,29 @@ export async function getWorkOrderDetail(db: PrismaClient, params: { id: string;
 
 export async function getWorkOrdersForPage(
   db: PrismaClient,
-  params: { companyId: string; search?: string }
+  params: { companyId: string; roles: UserRole[]; search?: string; machineId?: string; assetId?: string }
 ) {
+  const listed = await listWorkOrders(db, {
+    companyId: params.companyId,
+    roles: params.roles,
+    search: params.search,
+    machineId: params.machineId,
+    assetId: params.assetId,
+    page: 1,
+    pageSize: 200,
+  })
+  if ("error" in listed) return []
+  const ids = listed.data.map((row) => row.id)
   return db.workOrder.findMany({
     where: {
-      machine: { branch: { companyId: params.companyId } },
-      ...(params.search && {
-        OR: [
-          { title: { contains: params.search, mode: "insensitive" } },
-          { woNumber: { contains: params.search, mode: "insensitive" } },
-          { description: { contains: params.search, mode: "insensitive" } },
-          { assignee: { firstName: { contains: params.search, mode: "insensitive" } } },
-          { assignee: { lastName: { contains: params.search, mode: "insensitive" } } },
-        ],
-      }),
+      id: { in: ids },
+      branch: { companyId: params.companyId },
+      ...(params.machineId && { machineId: params.machineId }),
+      ...(params.assetId && { assetId: params.assetId }),
     },
     include: {
-      machine: { select: { id: true, name: true, code: true } },
+      machine: { select: { id: true, name: true, code: true, branchId: true } },
+      asset: { select: { id: true, name: true, code: true, branchId: true } },
       assignee: { select: { id: true, firstName: true, lastName: true } },
       schedule: { select: { id: true, plan: { select: { name: true } } } },
     },
@@ -244,12 +350,16 @@ export async function getWorkOrdersForPage(
 
 export async function getWorkOrderDetailForPage(
   db: PrismaClient,
-  params: { id: string; companyId: string }
+  params: { id: string; companyId: string; roles: UserRole[] }
 ) {
+  const scoped = await loadScopedWorkOrder(db, { ...params, action: "read" })
+  if (!scoped.ok) return null
   const workOrder = await db.workOrder.findFirst({
-    where: { id: params.id, machine: { branch: { companyId: params.companyId } } },
+    where: { id: params.id, branch: { companyId: params.companyId } },
     include: {
-      machine: { select: { id: true, name: true, code: true, branch: { select: { name: true } } } },
+      machine: { select: { id: true, name: true, code: true, branchId: true, branch: { select: { name: true } } } },
+      asset: { select: { id: true, name: true, code: true, branchId: true, branch: { select: { name: true } } } },
+      branch: { select: { name: true } },
       assignee: { select: { id: true, firstName: true, lastName: true } },
       schedule: {
         select: {
@@ -258,8 +368,9 @@ export async function getWorkOrderDetailForPage(
           plan: { select: { name: true, type: { select: { code: true, color: true } } } },
         },
       },
-      checklistResults: { include: { item: true, recorder: { select: { firstName: true, lastName: true } } } },
+      sourceWorkOrder: { select: { id: true, woNumber: true, title: true } },
       parts: { include: { part: { select: { id: true, name: true, code: true, unit: true } } } },
+      statusHistory: { orderBy: { changedAt: "desc" }, take: 20 },
     },
   })
   if (!workOrder) return null
@@ -277,12 +388,10 @@ export async function getWorkOrderDetailForPage(
 
 export async function updateWorkOrder(
   db: PrismaClient,
-  params: { id: string; companyId: string; input: UpdateWorkOrderInput }
+  params: { id: string; companyId: string; roles: UserRole[]; input: UpdateWorkOrderInput }
 ) {
-  const existing = await db.workOrder.findFirst({
-    where: { id: params.id, machine: { branch: { companyId: params.companyId } } },
-  })
-  if (!existing) return null
+  const existing = await loadScopedWorkOrder(db, { ...params, action: "update" })
+  if (!existing.ok) return existing
 
   const { imagesBefore, imagesAfter, plannedStart, plannedEnd, actualStart, actualEnd, ...rest } = params.input
 
@@ -312,9 +421,14 @@ export async function updateWorkOrder(
   return updated
 }
 
-export async function deleteWorkOrder(db: PrismaClient, params: { id: string; companyId: string }) {
+export async function deleteWorkOrder(
+  db: PrismaClient,
+  params: { id: string; companyId: string; roles: UserRole[] }
+) {
+  const scoped = await loadScopedWorkOrder(db, { ...params, action: "delete" })
+  if (!scoped.ok) return scoped
   const wo = await db.workOrder.findFirst({
-    where: { id: params.id, machine: { branch: { companyId: params.companyId } } },
+    where: { id: params.id, branch: { companyId: params.companyId } },
     include: { _count: { select: { transactions: true } } },
   })
 
@@ -327,6 +441,7 @@ export async function deleteWorkOrder(db: PrismaClient, params: { id: string; co
   }
 
   await db.$transaction([
+    db.workOrderStatusHistory.deleteMany({ where: { workOrderId: params.id } }),
     db.workOrderTechnician.deleteMany({ where: { workOrderId: params.id } }),
     db.workOrderPart.deleteMany({ where: { workOrderId: params.id } }),
     db.checklistResult.deleteMany({ where: { workOrderId: params.id } }),
@@ -334,4 +449,81 @@ export async function deleteWorkOrder(db: PrismaClient, params: { id: string; co
   ])
 
   return { success: true }
+}
+
+export async function transitionWorkOrder(
+  db: PrismaClient,
+  params: {
+    id: string
+    companyId: string
+    userId: string
+    roles: UserRole[]
+    input: TransitionWorkOrderInput
+  }
+): Promise<{ data: { id: string; status: string } } | { error: string; status: number }> {
+  const scoped = await loadScopedWorkOrder(db, { ...params, action: "update" })
+  if (!scoped.ok) return scoped
+  const current = scoped.workOrder
+  const hasApprove = permissionCoversBranch(params.roles, "work_orders", "approve", current.branchId, false)
+  const decision = evaluateTransition({
+    from: current.status,
+    to: params.input.toStatus,
+    reason: params.input.reason,
+    hasApprove,
+    assignedTo: params.input.assignedTo ?? current.assignedTo,
+  })
+  if (!decision.ok) return { error: decision.message, status: 400 as const }
+
+  const toStatus = params.input.toStatus as WorkOrderStatusName
+  const reason = params.input.reason?.trim() || null
+  const blocksWhileTiming =
+    toStatus === "ready_for_handover" ||
+    toStatus === "handed_over" ||
+    toStatus === "closed" ||
+    toStatus === "cancelled"
+  const outcome = await db.$transaction(async (tx) => {
+    if (blocksWhileTiming) {
+      const open = await tx.workOrderLaborEntry.count({
+        where: { workOrderId: params.id, endedAt: null },
+      })
+      if (open > 0) return { error: "ยังมีช่างที่จับเวลาค้างอยู่" as const, status: 400 as const }
+      const blankRequired = await tx.checklistResult.count({
+        where: { workOrderId: params.id, status: null, item: { isRequired: true } },
+      })
+      if (blankRequired > 0) {
+        return { error: `ยังมีข้อตรวจบังคับที่ยังไม่บันทึก ${blankRequired} ข้อ`, status: 400 as const }
+      }
+    }
+    const row = await tx.workOrder.update({
+      where: { id: params.id },
+      data: {
+        status: toStatus,
+        ...(decision.rule.needsAssignee && params.input.assignedTo
+          ? { assignedTo: params.input.assignedTo }
+          : {}),
+        ...(toStatus === "closed"
+          ? { closedAt: new Date(), approvedBy: params.userId, approvedAt: new Date() }
+          : {}),
+      },
+    })
+    await tx.workOrderStatusHistory.create({
+      data: {
+        workOrderId: params.id,
+        fromStatus: current.status,
+        toStatus,
+        changedBy: params.userId,
+        reason,
+      },
+    })
+    const scheduleStatus = SCHEDULE_STATUS_FOR[toStatus]
+    if (current.scheduleId && scheduleStatus) {
+      await tx.maintenanceSchedule.update({
+        where: { id: current.scheduleId },
+        data: { status: scheduleStatus },
+      })
+    }
+    return { data: { id: row.id, status: row.status } }
+  })
+
+  return outcome
 }

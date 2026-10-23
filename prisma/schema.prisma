@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── ENUMS ────────────────────────────────────────────────────────────────────
+// โ”€โ”€โ”€ ENUMS โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 enum MachineStatus {
   active
@@ -44,10 +44,26 @@ enum WorkOrderPriority {
 enum WorkOrderStatus {
   draft
   open
+  assigned
   in_progress
   on_hold
+  ready_for_handover
+  handed_over
   completed
+  closed
   cancelled
+}
+
+enum WorkOrderKind {
+  corrective
+  preventive
+  project
+}
+
+enum LaborEntryType {
+  work
+  wait
+  travel
 }
 
 enum ChecklistItemType {
@@ -110,7 +126,7 @@ enum AssetOwnership {
   EXTERNAL
 }
 
-// ─── GROUP 1: ORGANIZATION ────────────────────────────────────────────────────
+// โ”€โ”€โ”€ GROUP 1: ORGANIZATION โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model Company {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -233,15 +249,15 @@ model Department {
   @@map("departments")
 }
 
-// ─── GROUP 2: USERS & RBAC ────────────────────────────────────────────────────
+// โ”€โ”€โ”€ GROUP 2: USERS & RBAC โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model User {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId    String    @map("company_id") @db.Uuid
   employeeCode String?   @map("employee_code") @db.VarChar(50)
-  // Login id (username OR email). Globally unique — no company picker on login (same model as email).
+  // Login id (username OR email). Globally unique โ€” no company picker on login (same model as email).
   username     String    @unique @db.VarChar(50)
-  // email stays globally unique on purpose — see Phase B decision below.
+  // email stays globally unique on purpose โ€” see Phase B decision below.
   email        String    @unique @db.VarChar(255)
   passwordHash String?   @map("password_hash")
   firstName    String    @map("first_name") @db.VarChar(100)
@@ -249,8 +265,8 @@ model User {
   phone        String?   @db.VarChar(20)
   avatarUrl    String?   @map("avatar_url")
   isActive     Boolean   @default(true) @map("is_active")
-  // Override การมองเห็นโมดูล ต่อรายบุคคล — null = ใช้ตาม moduleAccess ของ Role ที่ผูกไว้ (ค่าเริ่มต้น)
-  // เก็บเป็น "all" (string) หรือ array ของ module id เช่น ["machines","reports"] เหมือน Role.permissions.moduleAccess
+  // Override เธเธฒเธฃเธกเธญเธเน€เธซเนเธเนเธกเธ”เธนเธฅ เธ•เนเธญเธฃเธฒเธขเธเธธเธเธเธฅ โ€” null = เนเธเนเธ•เธฒเธก moduleAccess เธเธญเธ Role เธ—เธตเนเธเธนเธเนเธงเน (เธเนเธฒเน€เธฃเธดเนเธกเธ•เนเธ)
+  // เน€เธเนเธเน€เธเนเธ "all" (string) เธซเธฃเธทเธญ array เธเธญเธ module id เน€เธเนเธ ["machines","reports"] เน€เธซเธกเธทเธญเธ Role.permissions.moduleAccess
   moduleAccess Json?     @map("module_access")
   lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -264,7 +280,11 @@ model User {
   workOrdersAssigned     WorkOrder[]            @relation("WOAssignedTo")
   workOrdersCreated      WorkOrder[]            @relation("WOCreatedBy")
   workOrdersApproved     WorkOrder[]            @relation("WOApprovedBy")
+  workOrderStatusChanges WorkOrderStatusHistory[] @relation("WOStatusChangedBy")
   workOrderTechnicians   WorkOrderTechnician[]
+  laborEntries           WorkOrderLaborEntry[] @relation("LaborEntryWorker")
+  laborEntriesCreated    WorkOrderLaborEntry[] @relation("LaborEntryCreatedBy")
+  laborEntriesUpdated    WorkOrderLaborEntry[] @relation("LaborEntryUpdatedBy")
   checklistResults       ChecklistResult[]
   machineImages          MachineImage[]
   machineDocuments       MachineDocument[]
@@ -301,9 +321,9 @@ model User {
   driverLogin            Driver?                @relation("DriverLogin")
   jobStopPunches         JobStopPunch[]         @relation("JobStopPunchRecorder")
 
-  // Phase B decision (2026-07-23): email stays globally @unique permanently — login
+  // Phase B decision (2026-07-23): email stays globally @unique permanently โ€” login
   // may use email or username; both are globally unique (no company picker).
-  // employeeCode is no longer globally unique — company scope is now the sole
+  // employeeCode is no longer globally unique โ€” company scope is now the sole
   // enforced constraint (it's nullable; Postgres composite unique permits many NULLs).
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -347,7 +367,7 @@ model UserBranchRole {
   @@map("user_branch_roles")
 }
 
-// ─── GROUP 3: MACHINE MASTER DATA ─────────────────────────────────────────────
+// โ”€โ”€โ”€ GROUP 3: MACHINE MASTER DATA โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model MachineCategory {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -385,16 +405,18 @@ model Machine {
   description        String?
   // Phase B schema-drift fixup (2026-07-23): these columns existed in the DB via
   // scripts/add-pm-columns.sql but were never modeled in Prisma, so app code had to
-  // read/write them with raw SQL. Now tracked properly — see db-blueprint.md 2.6.
+  // read/write them with raw SQL. Now tracked properly โ€” see db-blueprint.md 2.6.
   pmGeneral          String?       @map("pm_general")
   pmMajor            String?       @map("pm_major")
   attributes         Json?         @db.JsonB
   qrCode             String?       @map("qr_code")
+  assetId            String?       @unique @map("asset_id") @db.Uuid
   createdBy          String?       @map("created_by") @db.Uuid
   createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz
 
+  asset             Asset?                @relation(fields: [assetId], references: [id], onDelete: SetNull)
   branch            Branch                @relation(fields: [branchId], references: [id])
   department        Department?           @relation(fields: [departmentId], references: [id])
   category          MachineCategory       @relation(fields: [categoryId], references: [id])
@@ -407,7 +429,7 @@ model Machine {
   schedules         MaintenanceSchedule[]
   workOrders        WorkOrder[]
 
-  // Phase B: branch scope decided permanently (2026-07-23) — code no longer globally
+  // Phase B: branch scope decided permanently (2026-07-23) โ€” code no longer globally
   // unique, this composite is now the sole enforced constraint.
   @@unique([branchId, code])
   @@index([branchId])
@@ -487,7 +509,7 @@ model MachineSparePart {
   @@map("machine_spare_parts")
 }
 
-// ─── GROUP 4: MAINTENANCE PLANNING ────────────────────────────────────────────
+// โ”€โ”€โ”€ GROUP 4: MAINTENANCE PLANNING โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model MaintenanceType {
   id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -508,7 +530,8 @@ model MaintenanceType {
 
 model MaintenancePlan {
   id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  machineId            String        @map("machine_id") @db.Uuid
+  machineId            String?       @map("machine_id") @db.Uuid
+  assetId              String?       @map("asset_id") @db.Uuid
   typeId               String        @map("type_id") @db.Uuid
   name                 String        @db.VarChar(255)
   description          String?
@@ -525,7 +548,8 @@ model MaintenancePlan {
   createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  machine                Machine                 @relation(fields: [machineId], references: [id])
+  machine                Machine?                @relation(fields: [machineId], references: [id], onDelete: Restrict)
+  asset                  Asset?                  @relation(fields: [assetId], references: [id], onDelete: Restrict)
   type                   MaintenanceType         @relation(fields: [typeId], references: [id])
   assignedRole           Role?                   @relation(fields: [assignedRoleId], references: [id])
   creator                User?                   @relation(fields: [createdBy], references: [id])
@@ -533,17 +557,19 @@ model MaintenancePlan {
   planChecklistTemplates PlanChecklistTemplate[]
 
   @@index([machineId])
+  @@index([assetId])
   @@index([typeId])
   @@index([isActive])
   @@map("maintenance_plans")
 }
 
-// ─── GROUP 5: SCHEDULING & WORK ORDERS ────────────────────────────────────────
+// โ”€โ”€โ”€ GROUP 5: SCHEDULING & WORK ORDERS โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model MaintenanceSchedule {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   planId          String         @map("plan_id") @db.Uuid
-  machineId       String         @map("machine_id") @db.Uuid
+  machineId       String?        @map("machine_id") @db.Uuid
+  assetId         String?        @map("asset_id") @db.Uuid
   dueDate         DateTime       @map("due_date") @db.Date
   plannedStart    DateTime?      @map("planned_start") @db.Timestamptz
   plannedEnd      DateTime?      @map("planned_end") @db.Timestamptz
@@ -552,12 +578,15 @@ model MaintenanceSchedule {
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
-  plan       MaintenancePlan @relation(fields: [planId], references: [id])
-  machine    Machine         @relation(fields: [machineId], references: [id])
-  workOrders WorkOrder[]
+  plan      MaintenancePlan @relation(fields: [planId], references: [id])
+  machine   Machine?        @relation(fields: [machineId], references: [id], onDelete: Restrict)
+  asset     Asset?          @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  workOrder WorkOrder?
 
+  @@unique([planId, dueDate])
   @@index([planId])
   @@index([machineId])
+  @@index([assetId])
   @@index([dueDate, status])
   @@map("maintenance_schedules")
 }
@@ -565,12 +594,16 @@ model MaintenanceSchedule {
 model WorkOrder {
   id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   woNumber         String            @map("wo_number") @db.VarChar(30)
-  scheduleId       String?           @map("schedule_id") @db.Uuid
-  machineId        String            @map("machine_id") @db.Uuid
+  scheduleId       String?           @unique @map("schedule_id") @db.Uuid
+  sourceWorkOrderId       String?    @map("source_work_order_id") @db.Uuid
+  sourceChecklistResultId String?    @unique @map("source_checklist_result_id") @db.Uuid
+  machineId        String?           @map("machine_id") @db.Uuid
+  assetId          String?           @map("asset_id") @db.Uuid
   typeId           String            @map("type_id") @db.Uuid
   branchId         String            @map("branch_id") @db.Uuid
   priority         WorkOrderPriority @default(medium)
   status           WorkOrderStatus   @default(draft)
+  workKind         WorkOrderKind     @default(corrective) @map("work_kind")
   title            String            @db.VarChar(255)
   description      String?
   plannedStart     DateTime?         @map("planned_start") @db.Timestamptz
@@ -594,26 +627,34 @@ model WorkOrder {
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz
 
   schedule         MaintenanceSchedule?   @relation(fields: [scheduleId], references: [id])
-  machine          Machine                @relation(fields: [machineId], references: [id])
+  sourceWorkOrder  WorkOrder?             @relation("WOFollowUp", fields: [sourceWorkOrderId], references: [id], onDelete: SetNull)
+  followUps        WorkOrder[]            @relation("WOFollowUp")
+  sourceChecklistResult ChecklistResult?  @relation("WOFromChecklist", fields: [sourceChecklistResultId], references: [id], onDelete: SetNull)
+  machine          Machine?               @relation(fields: [machineId], references: [id], onDelete: Restrict)
+  asset            Asset?                 @relation(fields: [assetId], references: [id], onDelete: Restrict)
   type             MaintenanceType        @relation(fields: [typeId], references: [id])
   branch           Branch                 @relation(fields: [branchId], references: [id])
   assignee         User?                  @relation("WOAssignedTo", fields: [assignedTo], references: [id])
   creator          User?                  @relation("WOCreatedBy", fields: [createdBy], references: [id])
   approver         User?                  @relation("WOApprovedBy", fields: [approvedBy], references: [id])
   technicians      WorkOrderTechnician[]
+  statusHistory    WorkOrderStatusHistory[]
+  laborEntries     WorkOrderLaborEntry[]
   parts            WorkOrderPart[]
   checklistResults ChecklistResult[]
   transactions     SparePartTransaction[]
 
-  // Phase B: wo_number no longer globally unique — matches the per-branch numbering
+  // Phase B: wo_number no longer globally unique โ€” matches the per-branch numbering
   // scheme already implemented in generate-wo-number.ts; this composite is now the
   // sole enforced constraint.
   @@unique([branchId, woNumber])
   @@index([machineId])
+  @@index([assetId, status])
   @@index([branchId, status])
   @@index([assignedTo, status])
   @@index([plannedStart])
   @@index([woNumber])
+  @@index([sourceWorkOrderId])
   @@map("work_orders")
 }
 
@@ -627,11 +668,53 @@ model WorkOrderTechnician {
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
 
+  @@unique([workOrderId, userId])
   @@index([workOrderId])
   @@map("work_order_technicians")
 }
 
-// ─── GROUP 6: CHECKLIST ───────────────────────────────────────────────────────
+model WorkOrderStatusHistory {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workOrderId String           @map("work_order_id") @db.Uuid
+  fromStatus  WorkOrderStatus? @map("from_status")
+  toStatus    WorkOrderStatus  @map("to_status")
+  changedBy   String?          @map("changed_by") @db.Uuid
+  changedAt   DateTime         @default(now()) @map("changed_at") @db.Timestamptz
+  reason      String?
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  changer   User?     @relation("WOStatusChangedBy", fields: [changedBy], references: [id])
+
+  @@index([workOrderId])
+  @@map("work_order_status_history")
+}
+
+model WorkOrderLaborEntry {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workOrderId String         @map("work_order_id") @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  entryType   LaborEntryType @map("entry_type")
+  startedAt   DateTime       @map("started_at") @db.Timestamptz
+  endedAt     DateTime?      @map("ended_at") @db.Timestamptz
+  waitReason  String?        @map("wait_reason") @db.VarChar(50)
+  note        String?
+  createdBy   String?        @map("created_by") @db.Uuid
+  updatedBy   String?        @map("updated_by") @db.Uuid
+  editReason  String?        @map("edit_reason")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  user      User      @relation("LaborEntryWorker", fields: [userId], references: [id])
+  creator   User?     @relation("LaborEntryCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updater   User?     @relation("LaborEntryUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([workOrderId])
+  @@index([userId, startedAt])
+  @@map("work_order_labor_entries")
+}
+
+// โ”€โ”€โ”€ GROUP 6: CHECKLIST โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model ChecklistTemplate {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -690,21 +773,23 @@ model ChecklistResult {
   workOrderId String      @map("work_order_id") @db.Uuid
   itemId      String      @map("item_id") @db.Uuid
   actualValue String?     @map("actual_value")
-  status      CheckStatus @default(na)
+  status      CheckStatus?
   remark      String?
   photoUrl    String?     @map("photo_url")
   recordedBy  String?     @map("recorded_by") @db.Uuid
-  recordedAt  DateTime    @default(now()) @map("recorded_at") @db.Timestamptz
+  recordedAt  DateTime?   @map("recorded_at") @db.Timestamptz
 
   workOrder WorkOrder     @relation(fields: [workOrderId], references: [id])
   item      ChecklistItem @relation(fields: [itemId], references: [id])
   recorder  User?         @relation(fields: [recordedBy], references: [id])
+  followUp  WorkOrder?    @relation("WOFromChecklist")
 
+  @@unique([workOrderId, itemId])
   @@index([workOrderId])
   @@map("checklist_results")
 }
 
-// ─── GROUP 7: SPARE PARTS & INVENTORY ────────────────────────────────────────
+// โ”€โ”€โ”€ GROUP 7: SPARE PARTS & INVENTORY โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model Supplier {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -724,7 +809,7 @@ model Supplier {
   spareParts SparePart[]
   expenses   Expense[]
 
-  // Phase B: code no longer globally unique — this composite is now the sole
+  // Phase B: code no longer globally unique โ€” this composite is now the sole
   // enforced constraint (allocateUniqueSupplierCode in master-data-service.ts
   // scopes the random-code lookup by companyId to match).
   @@unique([companyId, code])
@@ -773,7 +858,7 @@ model SparePart {
   workOrderParts    WorkOrderPart[]
   machineSpareParts MachineSparePart[]
 
-  // Phase B: code no longer globally unique — this composite is now the sole
+  // Phase B: code no longer globally unique โ€” this composite is now the sole
   // enforced constraint.
   @@unique([companyId, code])
   @@index([code])
@@ -835,7 +920,7 @@ model WorkOrderPart {
   @@map("work_order_parts")
 }
 
-// ─── GROUP 8: NOTIFICATIONS & AUDIT ──────────────────────────────────────────
+// โ”€โ”€โ”€ GROUP 8: NOTIFICATIONS & AUDIT โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model Notification {
   id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -893,7 +978,7 @@ enum PersonnelExitKind {
   INVOLUNTARY
 }
 
-// ─── GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (ซิงค์จาก HIP PremiumTime ต่อสาขา) ─
+// โ”€โ”€โ”€ GROUP 9: HR / PERSONNEL & TIME ATTENDANCE (เธเธดเธเธเนเธเธฒเธ HIP PremiumTime เธ•เนเธญเธชเธฒเธเธฒ) โ”€
 
 model Personnel {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -933,7 +1018,7 @@ model Personnel {
   attendanceDayBranches AttendanceDayBranch[]
   attendanceTimeConfirmations AttendanceTimeConfirmation[]
   /**
-   * สาขาที่พนักงานสามารถลงเวลา/ทำงานได้ (หนึ่งคน — หลายสาขา)
+   * เธชเธฒเธเธฒเธ—เธตเนเธเธเธฑเธเธเธฒเธเธชเธฒเธกเธฒเธฃเธ–เธฅเธเน€เธงเธฅเธฒ/เธ—เธณเธเธฒเธเนเธ”เน (เธซเธเธถเนเธเธเธ โ€” เธซเธฅเธฒเธขเธชเธฒเธเธฒ)
    */
   branchAssignments   PersonnelBranch[]
 
@@ -979,7 +1064,7 @@ enum AttendanceOtDecisionKind {
   NOT_OT
 }
 
-/// แหล่งข้อมูลสแกน 1 แหล่ง (1 ไฟล์ Pm2014.mdb ของสาขา) — โปรแกรมสาขายืนยันตัวด้วย API key ของแถวนี้
+/// เนเธซเธฅเนเธเธเนเธญเธกเธนเธฅเธชเนเธเธ 1 เนเธซเธฅเนเธ (1 เนเธเธฅเน Pm2014.mdb เธเธญเธเธชเธฒเธเธฒ) โ€” เนเธเธฃเนเธเธฃเธกเธชเธฒเธเธฒเธขเธทเธเธขเธฑเธเธ•เธฑเธงเธ”เนเธงเธข API key เธเธญเธเนเธ–เธงเธเธตเน
 model AttendanceDevice {
   id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId         String               @map("company_id") @db.Uuid
@@ -988,10 +1073,10 @@ model AttendanceDevice {
   name              String               @db.VarChar(100)
   /// HIP Machine.MachineNumber / CHECKINOUT.SENSORID
   machineNumber     Int?                 @map("machine_number")
-  /// ส่วนต้นของ key ใช้ค้นหา — key เต็มเก็บเป็น sha256 เท่านั้น
+  /// เธชเนเธงเธเธ•เนเธเธเธญเธ key เนเธเนเธเนเธเธซเธฒ โ€” key เน€เธ•เนเธกเน€เธเนเธเน€เธเนเธ sha256 เน€เธ—เนเธฒเธเธฑเนเธ
   apiKeyPrefix      String?              @unique @map("api_key_prefix") @db.VarChar(16)
   apiKeyHash        String?              @map("api_key_hash") @db.VarChar(64)
-  /// CHECKINOUT.id สูงสุดที่รับแล้ว — ไม่ลดค่าลง
+  /// CHECKINOUT.id เธชเธนเธเธชเธธเธ”เธ—เธตเนเธฃเธฑเธเนเธฅเนเธง โ€” เนเธกเนเธฅเธ”เธเนเธฒเธฅเธ
   lastSourceRowId   Int                  @default(0) @map("last_source_row_id")
   lastSyncedAt      DateTime?            @map("last_synced_at") @db.Timestamptz
   lastClientVersion String?              @map("last_client_version") @db.VarChar(30)
@@ -1010,7 +1095,7 @@ model AttendanceDevice {
   @@map("attendance_devices")
 }
 
-/// เลขสแกนบนเครื่อง (USERINFO.Badgenumber) — เลขเดียวกันต่างเครื่องคือคนละ badge
+/// เน€เธฅเธเธชเนเธเธเธเธเน€เธเธฃเธทเนเธญเธ (USERINFO.Badgenumber) โ€” เน€เธฅเธเน€เธ”เธตเธขเธงเธเธฑเธเธ•เนเธฒเธเน€เธเธฃเธทเนเธญเธเธเธทเธญเธเธเธฅเธฐ badge
 model AttendanceBadge {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId    String    @map("company_id") @db.Uuid
@@ -1037,7 +1122,7 @@ model AttendanceBadge {
   @@map("attendance_badges")
 }
 
-/// ประวัติการซิงค์ 1 ชุดข้อมูล
+/// เธเธฃเธฐเธงเธฑเธ•เธดเธเธฒเธฃเธเธดเธเธเน 1 เธเธธเธ”เธเนเธญเธกเธนเธฅ
 model AttendanceSyncRun {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   deviceId      String   @map("device_id") @db.Uuid
@@ -1057,14 +1142,14 @@ model AttendanceSyncRun {
   @@map("attendance_sync_runs")
 }
 
-/// การสแกนดิบ 1 ครั้ง — ไม่แก้ไขหลังบันทึก
+/// เธเธฒเธฃเธชเนเธเธเธ”เธดเธ 1 เธเธฃเธฑเนเธ โ€” เนเธกเนเนเธเนเนเธเธซเธฅเธฑเธเธเธฑเธเธ—เธถเธ
 model AttendancePunch {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId   String   @map("company_id") @db.Uuid
   branchId    String   @map("branch_id") @db.Uuid
   deviceId    String   @map("device_id") @db.Uuid
   badgeId     String   @map("badge_id") @db.Uuid
-  /// สำเนาจาก badge ตอนผูก เพื่อ query รายคนได้โดยไม่ join
+  /// เธชเธณเน€เธเธฒเธเธฒเธ badge เธ•เธญเธเธเธนเธ เน€เธเธทเนเธญ query เธฃเธฒเธขเธเธเนเธ”เนเนเธ”เธขเนเธกเน join
   personnelId String?  @map("personnel_id") @db.Uuid
   punchAt     DateTime @map("punch_at") @db.Timestamptz
   checkType   String?  @map("check_type") @db.VarChar(5)
@@ -1087,7 +1172,7 @@ model AttendancePunch {
   @@map("attendance_punches")
 }
 
-/// สรุปรายวันต่อคนต่อสาขา — สร้างใหม่จาก attendance_punches ได้เสมอ
+/// เธชเธฃเธธเธเธฃเธฒเธขเธงเธฑเธเธ•เนเธญเธเธเธ•เนเธญเธชเธฒเธเธฒ โ€” เธชเธฃเนเธฒเธเนเธซเธกเนเธเธฒเธ attendance_punches เนเธ”เนเน€เธชเธกเธญ
 model AttendanceDay {
   id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId     String              @map("company_id") @db.Uuid
@@ -1112,7 +1197,7 @@ model AttendanceDay {
   @@map("attendance_days")
 }
 
-/// การยืนยันว่าสแกนนอกเวลาก่อนเข้าหรือหลังเลิกเป็น OT หรือไม่
+/// เธเธฒเธฃเธขเธทเธเธขเธฑเธเธงเนเธฒเธชเนเธเธเธเธญเธเน€เธงเธฅเธฒเธเนเธญเธเน€เธเนเธฒเธซเธฃเธทเธญเธซเธฅเธฑเธเน€เธฅเธดเธเน€เธเนเธ OT เธซเธฃเธทเธญเนเธกเน
 model AttendanceOtDecision {
   id          String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId   String                   @map("company_id") @db.Uuid
@@ -1136,13 +1221,13 @@ model AttendanceOtDecision {
   @@map("attendance_ot_decisions")
 }
 
-/// หมายเหตุรายวันต่อคน ใช้จากปุ่มจัดการในแท็บรายวัน
+/// เธซเธกเธฒเธขเน€เธซเธ•เธธเธฃเธฒเธขเธงเธฑเธเธ•เนเธญเธเธ เนเธเนเธเธฒเธเธเธธเนเธกเธเธฑเธ”เธเธฒเธฃเนเธเนเธ—เนเธเธฃเธฒเธขเธงเธฑเธ
 model AttendanceDayNote {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId   String   @map("company_id") @db.Uuid
   personnelId String   @map("personnel_id") @db.Uuid
   workDate    DateTime @map("work_date") @db.Date
-  /// LATE_START เข้างานช้า, LATE สาย, ABSENT ไม่ได้มา, OTHER อื่นๆ
+  /// LATE_START เน€เธเนเธฒเธเธฒเธเธเนเธฒ, LATE เธชเธฒเธข, ABSENT เนเธกเนเนเธ”เนเธกเธฒ, OTHER เธญเธทเนเธเน
   reason      String?  @db.VarChar(30)
   note        String   @default("") @db.VarChar(500)
   updatedById String   @map("updated_by_id") @db.Uuid
@@ -1158,7 +1243,7 @@ model AttendanceDayNote {
   @@map("attendance_day_notes")
 }
 
-/// วันหยุดที่ประกาศ ใช้กับสาขาที่เลือกเท่านั้น
+/// เธงเธฑเธเธซเธขเธธเธ”เธ—เธตเนเธเธฃเธฐเธเธฒเธจ เนเธเนเธเธฑเธเธชเธฒเธเธฒเธ—เธตเนเน€เธฅเธทเธญเธเน€เธ—เนเธฒเธเธฑเนเธ
 model AttendanceHoliday {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId String   @map("company_id") @db.Uuid
@@ -1187,7 +1272,7 @@ model AttendanceHolidayBranch {
   @@map("attendance_holiday_branches")
 }
 
-/// เวลายืนยันของ HR ต่อคนต่อวัน ไม่เขียนทับเวลาสแกน
+/// เน€เธงเธฅเธฒเธขเธทเธเธขเธฑเธเธเธญเธ HR เธ•เนเธญเธเธเธ•เนเธญเธงเธฑเธ เนเธกเนเน€เธเธตเธขเธเธ—เธฑเธเน€เธงเธฅเธฒเธชเนเธเธ
 model AttendanceTimeConfirmation {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId     String    @map("company_id") @db.Uuid
@@ -1211,7 +1296,7 @@ model AttendanceTimeConfirmation {
   @@map("attendance_time_confirmations")
 }
 
-/// สาขาที่ให้นับคนและ Man hour ในวันนั้น ถ้าไม่มีแถวให้นับที่สาขาหลัก
+/// เธชเธฒเธเธฒเธ—เธตเนเนเธซเนเธเธฑเธเธเธเนเธฅเธฐ Man hour เนเธเธงเธฑเธเธเธฑเนเธ เธ–เนเธฒเนเธกเนเธกเธตเนเธ–เธงเนเธซเนเธเธฑเธเธ—เธตเนเธชเธฒเธเธฒเธซเธฅเธฑเธ
 model AttendanceDayBranch {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId   String   @map("company_id") @db.Uuid
@@ -1233,7 +1318,7 @@ model AttendanceDayBranch {
   @@map("attendance_day_branches")
 }
 
-// ─── TRANSPORT MANAGEMENT SYSTEM (TMS) ───────────────────────────────────────
+// โ”€โ”€โ”€ TRANSPORT MANAGEMENT SYSTEM (TMS) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 enum VehicleStatus {
   available
@@ -1402,11 +1487,13 @@ model TransportVehicle {
   gpsReadAt      DateTime?     @map("gps_read_at") @db.Timestamptz
   notes          String?
   isActive       Boolean       @default(true) @map("is_active")
+  assetId        String?       @unique @map("asset_id") @db.Uuid
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   company     Company              @relation(fields: [companyId], references: [id])
   branch      Branch               @relation(fields: [branchId], references: [id])
+  asset       Asset?               @relation(fields: [assetId], references: [id], onDelete: SetNull)
   assignments JobAssignment[]
   attachments JobAttachment[]
   drivers     Driver[]
@@ -1546,7 +1633,7 @@ model TransportJob {
   attachments JobAttachment[]
   punches     JobStopPunch[]
 
-  // Phase B: this table never got a Phase A composite unique — jobNumber generation
+  // Phase B: this table never got a Phase A composite unique โ€” jobNumber generation
   // in generate-entity-code.ts / job-service.ts already counts per companyId, so the
   // scope is added directly as the sole (non-global) unique constraint.
   @@unique([companyId, jobNumber])
@@ -1660,7 +1747,7 @@ model JobAttachment {
   @@map("job_attachments")
 }
 
-// ─── GROUP: DUE DATE MANAGEMENT (standalone — no FK to PM / machines / drivers) ─
+// โ”€โ”€โ”€ GROUP: DUE DATE MANAGEMENT (standalone โ€” no FK to PM / machines / drivers) โ”€
 
 model DueItem {
   id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1707,7 +1794,7 @@ model DueItemRenewal {
   @@map("due_item_renewals")
 }
 
-// ─── GROUP 12: FINANCE — EXPENSE & COST MANAGEMENT ───────────────────────────
+// โ”€โ”€โ”€ GROUP 12: FINANCE โ€” EXPENSE & COST MANAGEMENT โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 enum ExpenseTransactionType {
   EXPENSE
@@ -1762,7 +1849,7 @@ enum ExpenseCostObjectType {
   OTHER
 }
 
-// Cost behavior of an expense item. Metadata/default only (Phase 1-2) — not
+// Cost behavior of an expense item. Metadata/default only (Phase 1-2) โ€” not
 // an immutable accounting truth; transaction-level override is a later phase.
 enum ExpenseCostType {
   FIXED
@@ -1801,7 +1888,7 @@ model ExpenseCategory {
 }
 
 // Business process that incurs the expense (e.g. Collection, Delivery,
-// Maintenance). NOT a department — organizational responsibility is CostCenter.
+// Maintenance). NOT a department โ€” organizational responsibility is CostCenter.
 model Process {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   companyId String   @map("company_id") @db.Uuid
@@ -2118,7 +2205,7 @@ model FinanceSourceReview {
   @@map("finance_source_reviews")
 }
 
-// ─── GROUP: ASSET REGISTER (Phase 1 — no Machine/Vehicle FK) ─────────────────
+// โ”€โ”€โ”€ GROUP: ASSET REGISTER (Phase 1 โ€” no Machine/Vehicle FK) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
 model Asset {
   id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -2133,6 +2220,8 @@ model Asset {
   details      String?        @db.Text
   acquiredAt   DateTime?      @map("acquired_at") @db.Date
   isActive     Boolean        @default(true) @map("is_active")
+  /// Maintenance PM eligibility. Separate from the QR check plan (pmPlan).
+  maintenancePmEnabled Boolean @default(false) @map("maintenance_pm_enabled")
   createdBy    String?        @map("created_by") @db.Uuid
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
@@ -2143,6 +2232,11 @@ model Asset {
   type    AssetRegisterType @relation(fields: [typeId], references: [id])
   creator User?             @relation("AssetCreatedBy", fields: [createdBy], references: [id])
   pmPlan  AssetPmPlan?
+  machine              Machine?
+  vehicle              TransportVehicle?
+  maintenancePlans     MaintenancePlan[]
+  maintenanceSchedules MaintenanceSchedule[]
+  workOrders           WorkOrder[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -2150,6 +2244,7 @@ model Asset {
   @@index([typeId])
   @@index([status])
   @@index([ownership])
+  @@index([companyId, maintenancePmEnabled])
   @@map("assets")
 }
 

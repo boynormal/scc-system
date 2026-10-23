@@ -44,7 +44,7 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     id: "people_time",
     labelTh: "บุคลากรและเวลา",
     labelEn: "People & Time",
-    description: "ข้อมูลคน · บันทึกเวลา · นำเข้า Excel",
+    description: "ข้อมูลบุคลากร · บันทึกเวลา · วันหยุด · รายงาน · รายการผิดปกติ · ตัวชี้วัด",
     departmentIds: ["people"],
     order: 2,
     accent: "from-rose-500 to-orange-600 shadow-rose-600/30",

@@ -6,6 +6,7 @@ import { GlassButton, GlassCard, GlassInput } from "@/components/glass"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { CategoryLinkedMachinesDialog } from "@/components/settings/category-linked-machines-dialog"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
+import { ChecklistTemplatesTab } from "./checklist-templates-tab"
 
 // ─── CATEGORIES ───────────────────────────────────────────────────────────────
 
@@ -294,30 +295,34 @@ function MaintenanceTypesTab() {
 const TABS = [
   { id: "categories", label: "หมวดหมู่เครื่องจักร" },
   { id: "maintenance-types", label: "ประเภทงานซ่อม (Maintenance Types)" },
-]
+  { id: "checklists", label: "แม่แบบรายการตรวจ (Checklist)" },
+] as const
+
+type TabId = (typeof TABS)[number]["id"]
 
 export function MaintenanceMasterData() {
-  const [activeTab, setActiveTab] = useState<"categories" | "maintenance-types">("categories")
+  const [activeTab, setActiveTab] = useState<TabId>("categories")
 
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">ข้อมูลพื้นฐานงานซ่อมบำรุง</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          หมวดหมู่เครื่องจักรและประเภทงานซ่อมที่ใบสั่งงานกับแผนซ่อมบำรุงอ้างอิง
+          หมวดหมู่เครื่องจักร ประเภทงานซ่อม และแม่แบบรายการตรวจที่ใบสั่งงานกับแผนซ่อมบำรุงอ้างอิง
         </p>
       </div>
 
       <SubTabs
         aria-label="ข้อมูลพื้นฐานงานซ่อมบำรุง"
         activeKey={activeTab}
-        onChange={(id) => setActiveTab(id as "categories" | "maintenance-types")}
+        onChange={(id) => setActiveTab(id as TabId)}
         items={TABS.map((item) => ({ key: item.id, label: item.label }))}
       />
 
       <div>
         {activeTab === "categories" && <CategoriesTab />}
         {activeTab === "maintenance-types" && <MaintenanceTypesTab />}
+        {activeTab === "checklists" && <ChecklistTemplatesTab />}
       </div>
     </div>
   )

@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
     status: searchParams.get("status"),
     priority: searchParams.get("priority"),
     assignedTo: searchParams.get("assignedTo"),
+    machineId: searchParams.get("machineId"),
+    assetId: searchParams.get("assetId"),
     search: searchParams.get("search"),
     page,
     pageSize,
@@ -60,5 +62,5 @@ export async function POST(req: NextRequest) {
     await notifyWOAssigned(result.data.id, parsed.data.assignedTo, parsed.data.title, result.woNumber).catch(() => {})
   }
 
-  return NextResponse.json({ data: result.data }, { status: 201 })
+  return NextResponse.json({ data: result.data, warning: result.warning }, { status: 201 })
 }

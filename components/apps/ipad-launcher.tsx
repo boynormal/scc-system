@@ -392,7 +392,7 @@ function FolderOverlay({
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-black text-slate-950">{line.labelTh}</h2>
-            <p className="line-clamp-1 text-xs text-muted-foreground dark:text-muted-foreground">{line.description}</p>
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground">{line.description}</p>
           </div>
           <button
             type="button"

@@ -9,15 +9,20 @@ import { ArrowLeft, Save, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Select } from "@/components/ui/select"
 import { GlassButton, GlassCard, GlassCardHeader, GlassCardTitle, GlassInput } from "@/components/glass"
+import { ChecklistTemplatePicker } from "../../checklist-template-picker"
+import { pmAssetHint, pmAssetLabel, type PmAssetOption } from "@/components/maintenance/pm-asset-option"
 
 const schema = z.object({
-  machineId: z.string().uuid(),
+  assetId: z.string().optional(),
   typeId: z.string().uuid(),
   name: z.string().min(1, "กรุณากรอกชื่อแผน"),
   description: z.string().optional(),
   frequencyUnit: z.enum(["day", "week", "month", "quarter", "year", "runtime_hour"]),
   frequencyValue: z.coerce.number().int().min(1, "ความถี่ต้องมากกว่า 0"),
-  estimatedDurationMin: z.coerce.number().int().min(1).optional(),
+  estimatedDurationMin: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().min(1, "ต้องมากกว่า 0").optional()
+  ),
   startDate: z.string().min(1, "กรุณาเลือกวันเริ่มต้น"),
   endDate: z.string().optional(),
   leadTimeDays: z.coerce.number().int().min(0).default(7),
@@ -32,39 +37,50 @@ const freqOptions = [
   { value: "month", label: "เดือน" },
   { value: "quarter", label: "ไตรมาส" },
   { value: "year", label: "ปี" },
-  { value: "runtime_hour", label: "ชั่วโมงรัน" },
 ]
 
 export default function EditMaintenancePlanPage() {
   const router = useRouter()
   const params = useParams()
   const planId = params.id as string
-  const [machines, setMachines] = useState<{ id: string; name: string; code: string }[]>([])
+  const [assets, setAssets] = useState<PmAssetOption[] | null>(null)
+  const [legacyMachine, setLegacyMachine] = useState<{ code: string; name: string } | null>(null)
   const [types, setTypes] = useState<{ id: string; name: string; code: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [templateIds, setTemplateIds] = useState<string[]>([])
+  const [legacyRuntime, setLegacyRuntime] = useState(false)
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
+  const selectedAsset = assets?.find((a) => a.id === watch("assetId")) ?? null
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/machines").then((r) => r.json()),
-      fetch("/api/master-data/maintenance-types").then((r) => r.json()),
-      fetch(`/api/maintenance-plans/${planId}`).then((r) => r.json()),
-    ]).then(([m, t, p]) => {
-      setMachines(m.data ?? [])
-      setTypes(t.data ?? [])
-      if (p.data) {
+    fetch(`/api/maintenance-plans/${planId}`)
+      .then((r) => r.json())
+      .then(async (p) => {
         const plan = p.data
+        const [a, t] = await Promise.all([
+          fetch(
+            `/api/maintenance/pm-assets?for=plan&action=update${plan?.assetId ? `&includeId=${plan.assetId}` : ""}`
+          ).then((r) => r.json()),
+          fetch("/api/master-data/maintenance-types").then((r) => r.json()),
+        ])
+        setAssets(a.data ?? [])
+        setTypes(t.data ?? [])
+        if (!plan) return
+        setTemplateIds((plan.planChecklistTemplates ?? []).map((link: { templateId: string }) => link.templateId))
+        setLegacyRuntime(plan.frequencyUnit === "runtime_hour")
+        setLegacyMachine(!plan.assetId && plan.machine ? { code: plan.machine.code, name: plan.machine.name } : null)
         reset({
-          machineId: plan.machineId,
+          assetId: plan.assetId ?? "",
           typeId: plan.typeId,
           name: plan.name,
           description: plan.description ?? "",
@@ -76,20 +92,17 @@ export default function EditMaintenancePlanPage() {
           leadTimeDays: plan.leadTimeDays ?? 7,
           isActive: plan.isActive,
         })
-      }
-      setLoading(false)
-    }).catch(() => {
-      setError("ไม่สามารถโหลดข้อมูลได้")
-      setLoading(false)
-    })
+      })
+      .catch(() => setError("ไม่สามารถโหลดข้อมูลได้"))
+      .finally(() => setLoading(false))
   }, [planId, reset])
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async ({ assetId, ...data }: FormData) => {
     setError(null)
     const res = await fetch(`/api/maintenance-plans/${planId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, ...(assetId ? { assetId } : {}), templateIds }),
     })
     if (res.ok) {
       router.push(`/maintenance/plans/${planId}`)
@@ -129,15 +142,20 @@ export default function EditMaintenancePlanPage() {
           <GlassCardHeader><GlassCardTitle>ข้อมูลพื้นฐาน</GlassCardTitle></GlassCardHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="เครื่องจักร"
-              required
-              error={errors.machineId?.message}
-              {...register("machineId")}
+              label="ทรัพย์สิน"
+              required={!legacyMachine}
+              error={errors.assetId?.message}
+              hint={
+                legacyMachine && !selectedAsset
+                  ? `แผนเดิมของเครื่องจักร ${legacyMachine.code} - ${legacyMachine.name} เลือกทรัพย์สินเพื่อย้ายแผนเข้าทะเบียน`
+                  : pmAssetHint(assets, selectedAsset)
+              }
+              {...register("assetId")}
             >
-              <option value="">เลือกเครื่องจักร</option>
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.code} - {m.name}
+              <option value="">{legacyMachine ? "คงเครื่องจักรเดิม" : "เลือกทรัพย์สิน"}</option>
+              {(assets ?? []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {pmAssetLabel(a)}
                 </option>
               ))}
             </Select>
@@ -189,6 +207,7 @@ export default function EditMaintenancePlanPage() {
                   {f.label}
                 </option>
               ))}
+              {legacyRuntime && <option value="runtime_hour">ชั่วโมงรัน (ยังไม่รองรับ)</option>}
             </Select>
             <GlassInput
               label="ค่าความถี่"
@@ -228,6 +247,12 @@ export default function EditMaintenancePlanPage() {
               {...register("leadTimeDays")}
             />
           </div>
+        </GlassCard>
+
+        <GlassCard>
+          <GlassCardHeader><GlassCardTitle>รายการตรวจ (Checklist)</GlassCardTitle></GlassCardHeader>
+          <ChecklistTemplatePicker value={templateIds} onChange={setTemplateIds} />
+          <p className="mt-2 text-xs text-muted-foreground">ใช้กับใบ PM ที่สร้างหลังบันทึก ใบที่สร้างไปแล้วคงรายการเดิม</p>
         </GlassCard>
 
         <GlassCard>

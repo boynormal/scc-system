@@ -19,6 +19,7 @@ export const GET = withAuth(async (req, _ctx, session) => {
     type: searchParams.get("type"),
     status: searchParams.get("status"),
     ownership: searchParams.get("ownership"),
+    maintenancePm: searchParams.get("maintenancePm"),
     search: searchParams.get("search"),
     page: Number.isFinite(page) ? page : 1,
     pageSize: Number.isFinite(pageSize) ? pageSize : 50,

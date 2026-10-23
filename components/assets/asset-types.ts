@@ -13,6 +13,7 @@ export type AssetDto = {
   details: string | null
   acquiredAt: string | null
   isActive: boolean
+  maintenancePmEnabled: boolean
   createdById: string | null
   createdByName: string | null
   createdAt: string

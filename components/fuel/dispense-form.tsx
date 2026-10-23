@@ -20,10 +20,10 @@ type FuelAsset = {
   code: string
   name: string
   typeName: string
+  fuelMeterType: "ODOMETER" | "HOUR_METER" | "NONE"
   lastOdometer: number | null
   lastHourMeter: number | null
 }
-type MeterType = "ODOMETER" | "HOUR_METER" | "NONE"
 
 export function DispenseForm({
   branches,
@@ -43,7 +43,6 @@ export function DispenseForm({
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [assetsError, setAssetsError] = useState<string | null>(null)
   const [assetId, setAssetId] = useState("")
-  const [meterType, setMeterType] = useState<MeterType>("ODOMETER")
   const [meterReading, setMeterReading] = useState("")
   const [otherName, setOtherName] = useState("")
   const [otherNote, setOtherNote] = useState("")
@@ -60,7 +59,8 @@ export function DispenseForm({
   const asset = assets.find((a) => a.id === assetId) ?? null
   const qty = Number(quantity)
   const afterQty = tank && quantity !== "" && Number.isFinite(qty) ? Math.round((tank.currentQty - qty) * 100) / 100 : null
-  const lastMeter = asset ? (meterType === "ODOMETER" ? asset.lastOdometer : meterType === "HOUR_METER" ? asset.lastHourMeter : null) : null
+  const meterType = asset?.fuelMeterType ?? "NONE"
+  const lastMeter = !asset ? null : meterType === "ODOMETER" ? asset.lastOdometer : meterType === "HOUR_METER" ? asset.lastHourMeter : null
 
   useEffect(() => {
     if (!branchId || targetType !== "ASSET") return
@@ -101,7 +101,6 @@ export function DispenseForm({
           quantity: qty,
           targetType,
           assetId: isAsset ? assetId : null,
-          meterType: isAsset ? meterType : "NONE",
           meterReading: isAsset && meterType !== "NONE" && meterReading !== "" ? Number(meterReading) : null,
           otherTargetName: isAsset ? null : otherName,
           otherTargetNote: isAsset ? null : otherNote || null,
@@ -209,38 +208,34 @@ export function DispenseForm({
                 label={t("asset")}
                 required
                 value={assetId}
-                onChange={(e) => setAssetId(e.target.value)}
+                onChange={(e) => {
+                  setAssetId(e.target.value)
+                  setMeterReading("")
+                }}
                 disabled={!branchId || assetsLoading}
                 placeholder={assets.length ? t("selectAsset") : t("noAssets")}
                 options={assets.map((a) => ({ value: a.id, label: `${a.code} · ${a.name} (${a.typeName})` }))}
                 error={assetsError ?? undefined}
               />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Select
-                label={t("meterType")}
-                value={meterType}
-                onChange={(e) => setMeterType(e.target.value as MeterType)}
-                options={[
-                  { value: "ODOMETER", label: t("meterOdometer") },
-                  { value: "HOUR_METER", label: t("meterHour") },
-                  { value: "NONE", label: t("meterNone") },
-                ]}
-              />
-              {meterType !== "NONE" && (
-                <Input
-                  label={t("meterReading")}
-                  required
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={meterReading}
-                  onChange={(e) => setMeterReading(e.target.value)}
-                  hint={lastMeter !== null ? t("lastMeter", { value: fmtQty(lastMeter) }) : undefined}
-                />
-              )}
-            </div>
+            {asset &&
+              (meterType === "NONE" ? (
+                <p className="text-sm text-foreground">{t("assetNoMeter")}</p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    label={meterType === "ODOMETER" ? t("meterOdometer") : t("meterHour")}
+                    required
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={meterReading}
+                    onChange={(e) => setMeterReading(e.target.value)}
+                    hint={lastMeter !== null ? t("lastMeter", { value: fmtQty(lastMeter) }) : undefined}
+                  />
+                </div>
+              ))}
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">

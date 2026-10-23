@@ -73,9 +73,6 @@ export const dispenseFuelSchema = z
     if (v.targetType === "OTHER" && !v.otherTargetName) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["otherTargetName"], message: "กรุณาระบุผู้รับน้ำมัน" })
     }
-    if (v.meterType !== "NONE" && v.meterReading === null) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["meterReading"], message: "กรุณากรอกเลขไมล์/ชั่วโมง" })
-    }
   })
 
 export const adjustFuelSchema = z.object({
@@ -321,17 +318,23 @@ export async function dispenseFuel(
   assertFuelInBranch(params.roles, branchId, "create")
   const occurredAt = resolveOccurredAt(input.occurredAt)
   const isAsset = input.targetType === "ASSET"
-  const meterType = isAsset ? input.meterType : "NONE"
-  const meterReading = meterType === "NONE" ? null : input.meterReading
 
   const result = await db.$transaction(async (tx) => {
     const tank = await lockTank(tx, params.companyId, input.tankId)
     if (!tank.isActive) throw new ValidationError("ถังนี้ปิดใช้งานแล้ว")
 
+    let meterType: (typeof FUEL_METER_TYPES)[number] = "NONE"
+    let meterReading: number | null = null
     if (isAsset) {
       const asset = await findActiveAsset(tx, { companyId: params.companyId, id: input.assetId! })
       if (!asset) throw new ValidationError("สินทรัพย์ไม่ถูกต้องหรือไม่ได้ใช้งานแล้ว")
       if (asset.branchId !== tank.branchId) throw new ValidationError("สินทรัพย์ต้องอยู่สาขาเดียวกับถังน้ำมัน")
+      // The asset register decides the meter; a meter type sent by the client is ignored.
+      meterType = asset.fuelMeterType
+      if (meterType !== "NONE") {
+        if (input.meterReading === null) throw new ValidationError("กรุณากรอกเลขไมล์/ชั่วโมง")
+        meterReading = input.meterReading
+      }
       if (meterType !== "NONE" && meterReading !== null) {
         const { prev, next } = await meterNeighbours(tx, { assetId: asset.id, meterType, at: occurredAt })
         if (prev && meterReading < toNumber(prev.meterReading)) {

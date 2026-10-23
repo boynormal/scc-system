@@ -7,6 +7,7 @@ import { listAssetRegisterTypes } from "./asset-type-service"
 
 export const ASSET_STATUSES = ["REGISTERED", "ACTIVE", "IDLE", "RETIRED", "DISPOSED"] as const
 export const ASSET_OWNERSHIPS = ["COMPANY", "LEASED", "EXTERNAL"] as const
+export const ASSET_FUEL_METER_TYPES = ["ODOMETER", "HOUR_METER", "NONE"] as const
 
 const DEFAULT_PAGE_SIZE = 50
 
@@ -17,6 +18,7 @@ export const createAssetSchema = z.object({
   typeId: z.string().uuid(),
   status: z.enum(ASSET_STATUSES).optional(),
   ownership: z.enum(ASSET_OWNERSHIPS),
+  fuelMeterType: z.enum(ASSET_FUEL_METER_TYPES).optional(),
   serialNumber: z
     .string()
     .trim()
@@ -157,6 +159,7 @@ function serializeAsset(row: Prisma.AssetGetPayload<{ include: typeof assetInclu
     typeName: row.type.name,
     status: row.status,
     ownership: row.ownership,
+    fuelMeterType: row.fuelMeterType,
     serialNumber: row.serialNumber,
     details: row.details,
     acquiredAt: isoDate(row.acquiredAt),
@@ -282,6 +285,7 @@ export async function createAsset(
         typeId: params.input.typeId,
         status: params.input.status ?? "REGISTERED",
         ownership: params.input.ownership,
+        fuelMeterType: params.input.fuelMeterType ?? "NONE",
         serialNumber: params.input.serialNumber ?? null,
         details: params.input.details ?? null,
         acquiredAt,
@@ -326,6 +330,7 @@ export async function updateAsset(
   if (params.input.typeId !== undefined) data.type = { connect: { id: params.input.typeId } }
   if (params.input.status !== undefined) data.status = params.input.status
   if (params.input.ownership !== undefined) data.ownership = params.input.ownership
+  if (params.input.fuelMeterType !== undefined) data.fuelMeterType = params.input.fuelMeterType
   if (params.input.serialNumber !== undefined) data.serialNumber = params.input.serialNumber
   if (params.input.details !== undefined) data.details = params.input.details
   if (params.input.acquiredAt !== undefined) {

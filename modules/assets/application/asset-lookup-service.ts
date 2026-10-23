@@ -14,6 +14,7 @@ export type AssetLookupRow = {
   name: string
   typeName: string
   status: string
+  fuelMeterType: "ODOMETER" | "HOUR_METER" | "NONE"
 }
 
 const lookupSelect = {
@@ -22,6 +23,7 @@ const lookupSelect = {
   code: true,
   name: true,
   status: true,
+  fuelMeterType: true,
   type: { select: { name: true } },
 } satisfies Prisma.AssetSelect
 
@@ -33,6 +35,7 @@ function toRow(row: Prisma.AssetGetPayload<{ select: typeof lookupSelect }>): As
     name: row.name,
     typeName: row.type.name,
     status: row.status,
+    fuelMeterType: row.fuelMeterType,
   }
 }
 

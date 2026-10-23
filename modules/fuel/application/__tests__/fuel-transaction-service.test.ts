@@ -27,10 +27,13 @@ const TANK_ID = "33333333-3333-4333-8333-333333333333"
 const USER_ID = "44444444-4444-4444-4444-444444444444"
 const ASSET_A = "55555555-5555-4555-8555-555555555555"
 const ASSET_B = "66666666-6666-4666-8666-666666666666"
+const ASSET_C = "77777777-7777-4777-8777-777777777777"
 
-const assetsById: Record<string, { branchId: string; code: string; name: string; typeName: string; status: string }> = {
-  [ASSET_A]: { branchId: BRANCH_A, code: "AST-1", name: "Truck", typeName: "Vehicle", status: "ACTIVE" },
-  [ASSET_B]: { branchId: BRANCH_B, code: "AST-2", name: "Loader", typeName: "Vehicle", status: "ACTIVE" },
+type MockAsset = { branchId: string; code: string; name: string; typeName: string; status: string; fuelMeterType: string }
+const assetsById: Record<string, MockAsset> = {
+  [ASSET_A]: { branchId: BRANCH_A, code: "AST-1", name: "Truck", typeName: "Vehicle", status: "ACTIVE", fuelMeterType: "ODOMETER" },
+  [ASSET_B]: { branchId: BRANCH_B, code: "AST-2", name: "Loader", typeName: "Vehicle", status: "ACTIVE", fuelMeterType: "HOUR_METER" },
+  [ASSET_C]: { branchId: BRANCH_A, code: "AST-3", name: "Pump", typeName: "Machine", status: "ACTIVE", fuelMeterType: "NONE" },
 }
 
 const manager: UserRole[] = [{ branchId: BRANCH_A, branchName: "A", roleName: "Manager", permissions: null }]
@@ -189,6 +192,39 @@ describe("dispenseFuel", () => {
     expect(state.tank.currentQty.toNumber()).toBe(150)
     expect(state.created[0].otherTargetName).toBeNull()
     expect(notifyFuelTankLow).toHaveBeenCalledOnce()
+  })
+
+  it("uses the asset's meter type and ignores the one sent by the client", async () => {
+    const { db, state } = makeDb({ qty: 500, avgCost: 30 })
+    await dispenseFuel(db, {
+      ...base,
+      roles: technician,
+      input: { tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_A, meterType: "HOUR_METER", meterReading: 500 },
+    })
+    expect(state.created[0].meterType).toBe("ODOMETER")
+    expect(state.created[0].meterReading).toBe(500)
+  })
+
+  it("requires a reading when the asset has a meter", async () => {
+    const { db } = makeDb({ qty: 500, avgCost: 30 })
+    await expect(
+      dispenseFuel(db, {
+        ...base,
+        roles: technician,
+        input: { tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_A },
+      })
+    ).rejects.toThrow(/เลขไมล์/)
+  })
+
+  it("drops the reading for an asset without a meter", async () => {
+    const { db, state } = makeDb({ qty: 500, avgCost: 30 })
+    await dispenseFuel(db, {
+      ...base,
+      roles: technician,
+      input: { tankId: TANK_ID, quantity: 10, targetType: "ASSET", assetId: ASSET_C, meterType: "ODOMETER", meterReading: 99 },
+    })
+    expect(state.created[0].meterType).toBe("NONE")
+    expect(state.created[0].meterReading).toBeNull()
   })
 })
 

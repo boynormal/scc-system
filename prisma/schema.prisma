@@ -2250,6 +2250,8 @@ model Asset {
   isActive     Boolean        @default(true) @map("is_active")
   /// Maintenance PM eligibility. Separate from the QR check plan (pmPlan).
   maintenancePmEnabled Boolean @default(false) @map("maintenance_pm_enabled")
+  /// Meter recorded when fuel is dispensed to this asset.
+  fuelMeterType FuelMeterType @default(NONE) @map("fuel_meter_type")
   createdBy    String?        @map("created_by") @db.Uuid
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz

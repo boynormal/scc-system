@@ -9,6 +9,7 @@ export type AssetDto = {
   typeName: string
   status: "REGISTERED" | "ACTIVE" | "IDLE" | "RETIRED" | "DISPOSED"
   ownership: "COMPANY" | "LEASED" | "EXTERNAL"
+  fuelMeterType: "ODOMETER" | "HOUR_METER" | "NONE"
   serialNumber: string | null
   details: string | null
   acquiredAt: string | null

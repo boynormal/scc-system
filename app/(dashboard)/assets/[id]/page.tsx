@@ -48,6 +48,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
     { label: t("type"), value: asset.typeName },
     { label: t("ownership"), value: t(`own_${asset.ownership}`) },
     { label: t("status"), value: t(`st_${asset.status}`) },
+    { label: t("fuelMeterType"), value: t(`meter_${asset.fuelMeterType}`) },
     { label: t("branch"), value: asset.branchName },
     { label: t("serialNumber"), value: asset.serialNumber ?? "—" },
     { label: t("details"), value: asset.details ?? "—" },

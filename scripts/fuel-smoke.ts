@@ -57,6 +57,7 @@ async function main() {
 
   let typeId: string | null = null
   let tankId: string | null = null
+  let restoreMeter: { id: string; fuelMeterType: "ODOMETER" | "HOUR_METER" | "NONE" } | null = null
   try {
     const type = await createFuelType(db, { companyId, roles, input: { name: "Smoke diesel" } })
     typeId = type.data.id
@@ -96,6 +97,8 @@ async function main() {
     const assets = await listFuelAssets(db, { companyId, roles, branchId })
     const asset = assets.data[0]
     if (asset) {
+      restoreMeter = { id: asset.id, fuelMeterType: asset.fuelMeterType }
+      await db.asset.update({ where: { id: asset.id }, data: { fuelMeterType: "ODOMETER" } })
       const now = Date.now()
       const iso = (minsAgo: number) => new Date(now - minsAgo * 60_000).toISOString()
       const base = (asset.lastOdometer ?? 0) + 1000
@@ -167,6 +170,9 @@ async function main() {
       await db.fuelTank.delete({ where: { id: tankId } })
     }
     if (typeId) await db.fuelType.delete({ where: { id: typeId } })
+    if (restoreMeter) {
+      await db.asset.update({ where: { id: restoreMeter.id }, data: { fuelMeterType: restoreMeter.fuelMeterType } })
+    }
     console.log("cleanup done")
   }
 

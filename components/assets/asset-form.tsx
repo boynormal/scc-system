@@ -34,6 +34,7 @@ export function AssetForm({
   const [typeId, setTypeId] = useState(asset?.typeId ?? "")
   const [ownership, setOwnership] = useState(asset?.ownership ?? "COMPANY")
   const [status, setStatus] = useState(asset?.status ?? "REGISTERED")
+  const [fuelMeterType, setFuelMeterType] = useState<AssetDto["fuelMeterType"]>(asset?.fuelMeterType ?? "NONE")
   const [serialNumber, setSerialNumber] = useState(asset?.serialNumber ?? "")
   const [details, setDetails] = useState(asset?.details ?? "")
   const [acquiredAt, setAcquiredAt] = useState(asset?.acquiredAt ?? "")
@@ -76,6 +77,7 @@ export function AssetForm({
       typeId,
       ownership,
       status,
+      fuelMeterType,
       serialNumber: serialNumber || null,
       details: details || null,
       acquiredAt: acquiredAt || null,
@@ -160,6 +162,21 @@ export function AssetForm({
           { value: "DISPOSED", label: t("st_DISPOSED") },
         ]}
       />
+      <div className="space-y-1.5">
+        <Select
+          className={solidField}
+          label={t("fuelMeterType")}
+          required
+          value={fuelMeterType}
+          onChange={(e) => setFuelMeterType(e.target.value as AssetDto["fuelMeterType"])}
+          options={[
+            { value: "NONE", label: t("meter_NONE") },
+            { value: "ODOMETER", label: t("meter_ODOMETER") },
+            { value: "HOUR_METER", label: t("meter_HOUR_METER") },
+          ]}
+        />
+        <p className="text-xs text-muted-foreground">{t("fuelMeterHint")}</p>
+      </div>
       <GlassInput
         className={solidField}
         label={t("serialNumber")}

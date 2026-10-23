@@ -140,7 +140,7 @@ function MasterDataContent() {
 
 export default function TransportMasterDataPage() {
   return (
-    <div className="min-w-0 overflow-x-hidden">
+    <div className="min-w-0">
       <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">กำลังโหลด...</div>}>
         <MasterDataContent />
       </Suspense>

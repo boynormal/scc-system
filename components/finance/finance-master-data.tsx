@@ -10,16 +10,10 @@ import {
   GlassForm,
   GlassFormActions,
   GlassInput,
-  GlassTable,
-  GlassTableBody,
-  GlassTableCell,
-  GlassTableHead,
-  GlassTableHeader,
-  GlassTableRow,
 } from "@/components/glass"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { FinancePageHeader } from "./finance-page-header"
 import { SubTabs } from "@/components/shell/sub-tabs"
-import { FIN_GLASS_PANEL } from "./finance-theme"
 import type {
   CostCenterRow,
   ExpenseCategoryRow,
@@ -163,42 +157,42 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {tab === "types" && (
-        <GlassTable className={cn("rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
-          <GlassTableHeader className="border-slate-200/80 bg-white/70 dark:border-white/10 dark:bg-white/5">
+        <AppDataTablePanel><AppDataTable>
+          <AppDataTableHead>
             <tr>
-              <GlassTableHead>รหัส</GlassTableHead>
-              <GlassTableHead>ชื่อ</GlassTableHead>
-              <GlassTableHead>หมวด</GlassTableHead>
-              <GlassTableHead>หมวดย่อย</GlassTableHead>
-              <GlassTableHead>ลักษณะต้นทุน</GlassTableHead>
-              <GlassTableHead>ทางตรง/อ้อม</GlassTableHead>
-              <GlassTableHead>GL (ชั่วคราว)</GlassTableHead>
-              <GlassTableHead>สถานะ</GlassTableHead>
-              <GlassTableHead className="text-right">การกระทำ</GlassTableHead>
+              <th>รหัส</th>
+              <th>ชื่อ</th>
+              <th>หมวด</th>
+              <th>หมวดย่อย</th>
+              <th>ลักษณะต้นทุน</th>
+              <th>ทางตรง/อ้อม</th>
+              <th>GL (ชั่วคราว)</th>
+              <th>สถานะ</th>
+              <th className="text-right">การกระทำ</th>
             </tr>
-          </GlassTableHeader>
-          <GlassTableBody>
+          </AppDataTableHead>
+          <AppDataTableBody>
             {types.map((row) => (
-              <GlassTableRow key={row.id} className="bg-white/50 dark:bg-transparent">
-                <GlassTableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+              <tr key={row.id}>
+                <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
                   {row.code ?? "—"}
-                </GlassTableCell>
-                <GlassTableCell className="font-medium text-foreground">{row.name}</GlassTableCell>
-                <GlassTableCell className="text-muted-foreground">{row.categoryName ?? "—"}</GlassTableCell>
-                <GlassTableCell className="text-muted-foreground">{row.subcategory ?? "—"}</GlassTableCell>
-                <GlassTableCell className="text-muted-foreground">
+                </td>
+                <td className="px-4 py-3 font-medium text-foreground">{row.name}</td>
+                <td className="px-4 py-3 text-muted-foreground">{row.categoryName ?? "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{row.subcategory ?? "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">
                   {row.defaultCostType ? COST_TYPE_LABELS[row.defaultCostType] : "—"}
-                </GlassTableCell>
-                <GlassTableCell className="text-muted-foreground">
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
                   {row.defaultDirectness ? DIRECTNESS_LABELS[row.defaultDirectness] : "—"}
-                </GlassTableCell>
-                <GlassTableCell className="text-muted-foreground">{row.defaultGlLabel ?? "—"}</GlassTableCell>
-                <GlassTableCell>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{row.defaultGlLabel ?? "—"}</td>
+                <td className="px-4 py-3">
                   <span className={cn("text-xs", row.isActive ? "text-emerald-600" : "text-muted-foreground")}>
                     {row.isActive ? "ใช้งาน" : "ปิด"}
                   </span>
-                </GlassTableCell>
-                <GlassTableCell className="whitespace-nowrap text-right">
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right">
                   {perms.canManageMasters && (
                     <div className="inline-flex gap-2">
                       <Button
@@ -222,11 +216,11 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
                       </Button>
                     </div>
                   )}
-                </GlassTableCell>
-              </GlassTableRow>
+                </td>
+              </tr>
             ))}
-          </GlassTableBody>
-        </GlassTable>
+          </AppDataTableBody>
+        </AppDataTable></AppDataTablePanel>
       )}
 
       {tab === "categories" && (
@@ -252,30 +246,30 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
       )}
 
       {tab === "cost_centers" && (
-        <GlassTable className={cn("rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
-          <GlassTableHeader className="border-slate-200/80 bg-white/70 dark:border-white/10 dark:bg-white/5">
+        <AppDataTablePanel><AppDataTable>
+          <AppDataTableHead>
             <tr>
-              <GlassTableHead className="w-[16%]">รหัส</GlassTableHead>
-              <GlassTableHead className="w-[34%]">ชื่อ</GlassTableHead>
-              <GlassTableHead className="w-[20%]">สาขา</GlassTableHead>
-              <GlassTableHead className="w-[12%]">สถานะ</GlassTableHead>
-              <GlassTableHead className="w-[18%] text-right">การกระทำ</GlassTableHead>
+              <th className="w-[16%]">รหัส</th>
+              <th className="w-[34%]">ชื่อ</th>
+              <th className="w-[20%]">สาขา</th>
+              <th className="w-[12%]">สถานะ</th>
+              <th className="w-[18%] text-right">การกระทำ</th>
             </tr>
-          </GlassTableHeader>
-          <GlassTableBody>
+          </AppDataTableHead>
+          <AppDataTableBody>
             {centers.map((row) => (
-              <GlassTableRow key={row.id} className="bg-white/50 dark:bg-transparent">
-                <GlassTableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+              <tr key={row.id}>
+                <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
                   {row.code ?? "—"}
-                </GlassTableCell>
-                <GlassTableCell className="font-medium text-foreground">{row.name}</GlassTableCell>
-                <GlassTableCell className="text-muted-foreground">{row.branchName ?? "ทุกสาขา"}</GlassTableCell>
-                <GlassTableCell>
+                </td>
+                <td className="px-4 py-3 font-medium text-foreground">{row.name}</td>
+                <td className="px-4 py-3 text-muted-foreground">{row.branchName ?? "ทุกสาขา"}</td>
+                <td className="px-4 py-3">
                   <span className={cn("text-xs", row.isActive ? "text-emerald-600" : "text-muted-foreground")}>
                     {row.isActive ? "ใช้งาน" : "ปิด"}
                   </span>
-                </GlassTableCell>
-                <GlassTableCell className="whitespace-nowrap text-right">
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right">
                   {perms.canManageMasters && (
                     <div className="inline-flex gap-2">
                       <Button
@@ -299,11 +293,11 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
                       </Button>
                     </div>
                   )}
-                </GlassTableCell>
-              </GlassTableRow>
+                </td>
+              </tr>
             ))}
-          </GlassTableBody>
-        </GlassTable>
+          </AppDataTableBody>
+        </AppDataTable></AppDataTablePanel>
       )}
 
       <ExpenseTypeDialog
@@ -364,30 +358,30 @@ function SimpleMasterTable<T extends { id: string; code: string | null; name: st
   onRemove: (id: string) => void
 }) {
   return (
-    <GlassTable className={cn("rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
-      <GlassTableHeader className="border-slate-200/80 bg-white/70 dark:border-white/10 dark:bg-white/5">
+    <AppDataTablePanel><AppDataTable>
+      <AppDataTableHead>
         <tr>
-          <GlassTableHead className="w-[18%]">รหัส</GlassTableHead>
-          <GlassTableHead className="w-[36%]">ชื่อ</GlassTableHead>
-          <GlassTableHead className="w-[22%]">{extraHead}</GlassTableHead>
-          <GlassTableHead className="w-[10%]">สถานะ</GlassTableHead>
-          <GlassTableHead className="w-[14%] text-right">การกระทำ</GlassTableHead>
+          <th className="w-[18%]">รหัส</th>
+          <th className="w-[36%]">ชื่อ</th>
+          <th className="w-[22%]">{extraHead}</th>
+          <th className="w-[10%]">สถานะ</th>
+          <th className="w-[14%] text-right">การกระทำ</th>
         </tr>
-      </GlassTableHeader>
-      <GlassTableBody>
+      </AppDataTableHead>
+      <AppDataTableBody>
         {rows.map((row) => (
-          <GlassTableRow key={row.id} className="bg-white/50 dark:bg-transparent">
-            <GlassTableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+          <tr key={row.id}>
+            <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
               {row.code ?? "—"}
-            </GlassTableCell>
-            <GlassTableCell className="font-medium text-foreground">{row.name}</GlassTableCell>
-            <GlassTableCell className="text-muted-foreground">{extraCell(row)}</GlassTableCell>
-            <GlassTableCell>
+            </td>
+            <td className="px-4 py-3 font-medium text-foreground">{row.name}</td>
+            <td className="px-4 py-3 text-muted-foreground">{extraCell(row)}</td>
+            <td className="px-4 py-3">
               <span className={cn("text-xs", row.isActive ? "text-emerald-600" : "text-muted-foreground")}>
                 {row.isActive ? "ใช้งาน" : "ปิด"}
               </span>
-            </GlassTableCell>
-            <GlassTableCell className="whitespace-nowrap text-right">
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap text-right">
               {canManage && (
                 <div className="inline-flex gap-2">
                   <Button
@@ -411,11 +405,11 @@ function SimpleMasterTable<T extends { id: string; code: string | null; name: st
                   </Button>
                 </div>
               )}
-            </GlassTableCell>
-          </GlassTableRow>
+            </td>
+          </tr>
         ))}
-      </GlassTableBody>
-    </GlassTable>
+      </AppDataTableBody>
+    </AppDataTable></AppDataTablePanel>
   )
 }
 

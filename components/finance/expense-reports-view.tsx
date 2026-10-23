@@ -19,15 +19,8 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassInput } from "@/components/glass"
 import { SubTabs } from "@/components/shell/sub-tabs"
-import {
-  GlassCard,
-  GlassTable,
-  GlassTableBody,
-  GlassTableCell,
-  GlassTableHead,
-  GlassTableHeader,
-  GlassTableRow,
-} from "@/components/glass"
+import { GlassCard } from "@/components/glass"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { FinancePageHeader } from "./finance-page-header"
 import type { CostCenterRow, ExpenseTypeOption, Option, ProcessRow } from "./expense-types"
 import {
@@ -233,7 +226,7 @@ function ReportTable({
   const visible = expanded ? rows : rows.slice(0, preview)
   const hidden = rows.length - visible.length
   return (
-    <GlassCard className={cn("rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
+    <AppDataTablePanel className="p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium tabular-nums text-muted-foreground dark:bg-white/10">
@@ -243,22 +236,23 @@ function ReportTable({
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</p>
       ) : (
-        <GlassTable>
-          <GlassTableHeader>
+        <div className="rounded-lg border border-border">
+        <AppDataTable>
+          <AppDataTableHead>
             <tr>
-              <GlassTableHead>รายการ</GlassTableHead>
-              <GlassTableHead className="whitespace-nowrap text-right">บรรทัด</GlassTableHead>
-              <GlassTableHead className="whitespace-nowrap text-right">สัดส่วน</GlassTableHead>
-              <GlassTableHead className="whitespace-nowrap text-right">ยอดรวม</GlassTableHead>
+              <th>รายการ</th>
+              <th className="whitespace-nowrap text-right">บรรทัด</th>
+              <th className="whitespace-nowrap text-right">สัดส่วน</th>
+              <th className="whitespace-nowrap text-right">ยอดรวม</th>
             </tr>
-          </GlassTableHeader>
-          <GlassTableBody>
+          </AppDataTableHead>
+          <AppDataTableBody>
             {visible.map((r) => {
               const href = hrefFor?.(r)
               const label = translateLabel ? translateLabel(r.key, r.label) : r.label
               return (
-                <GlassTableRow key={r.key}>
-                  <GlassTableCell className="text-foreground">
+                <tr key={r.key}>
+                  <td className="px-4 py-3">
                     {href ? (
                       <Link
                         href={href}
@@ -272,21 +266,22 @@ function ReportTable({
                         {label}
                       </span>
                     )}
-                  </GlassTableCell>
-                  <GlassTableCell className="whitespace-nowrap text-right tabular-nums text-muted-foreground">
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                     {r.count}
-                  </GlassTableCell>
-                  <GlassTableCell className="whitespace-nowrap text-right tabular-nums text-muted-foreground">
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                     {r.percent.toFixed(1)}%
-                  </GlassTableCell>
-                  <GlassTableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums">
                     {formatBaht(r.total)}
-                  </GlassTableCell>
-                </GlassTableRow>
+                  </td>
+                </tr>
               )
             })}
-          </GlassTableBody>
-        </GlassTable>
+          </AppDataTableBody>
+        </AppDataTable>
+        </div>
       )}
       {rows.length > preview && (
         <button
@@ -297,7 +292,7 @@ function ReportTable({
           {expanded ? "ย่อรายการ" : `ดูทั้งหมดอีก ${hidden} รายการ`}
         </button>
       )}
-    </GlassCard>
+    </AppDataTablePanel>
   )
 }
 
@@ -773,7 +768,7 @@ export function ExpenseReportsView() {
           />
         </div>
       ) : (
-      <GlassCard className={cn("rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
+      <AppDataTablePanel className="p-4">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-foreground">กระบวนการ × ประเภทค่าใช้จ่าย</h3>
@@ -795,24 +790,22 @@ export function ExpenseReportsView() {
         {data.matrix.processes.length === 0 || data.matrix.types.length === 0 ? (
           <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</p>
         ) : (
-          <div className="max-h-[34rem] overflow-auto">
-            <table className="w-max min-w-full text-sm">
-              <thead className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/95 text-xs text-muted-foreground dark:border-white/10 dark:bg-slate-900/95">
+          <div className="rounded-lg border border-border">
+            <AppDataTable className="w-max min-w-full">
+              <AppDataTableHead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-white/90 py-2 pr-4 text-left font-medium dark:bg-slate-900/90">
-                    กระบวนการ
-                  </th>
+                  <th className="left-0 z-30">กระบวนการ</th>
                   {matrixTypes.map((t) => (
-                    <th key={t.key} className="max-w-48 whitespace-nowrap px-3 py-2 text-right font-medium">
+                    <th key={t.key} className="max-w-48 whitespace-nowrap text-right">
                       {t.label}
                     </th>
                   ))}
                 </tr>
-              </thead>
-              <tbody>
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {matrixProcesses.map((p) => (
-                  <tr key={p.key} className="border-b border-slate-100/70 dark:border-white/5">
-                    <td className="sticky left-0 z-10 bg-white/90 py-2 pr-4 font-medium text-foreground dark:bg-slate-900/90">
+                  <tr key={p.key}>
+                    <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium dark:bg-slate-900">
                       <Link
                         href={expensesHref(listFilters, { processId: p.key })}
                         className="text-emerald-700 hover:underline dark:text-emerald-300"
@@ -823,7 +816,7 @@ export function ExpenseReportsView() {
                     {matrixTypes.map((t) => {
                       const value = data.matrix.cells[p.key]?.[t.key] ?? 0
                       return (
-                        <td key={t.key} className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                        <td key={t.key} className="whitespace-nowrap px-4 py-2 text-right tabular-nums">
                           {value === 0 ? (
                             <span className="text-muted-foreground">-</span>
                           ) : (
@@ -839,11 +832,11 @@ export function ExpenseReportsView() {
                     })}
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </AppDataTableBody>
+            </AppDataTable>
           </div>
         )}
-      </GlassCard>
+      </AppDataTablePanel>
       )}
 
       {loadedAt && (

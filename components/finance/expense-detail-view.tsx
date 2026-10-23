@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { GlassCard, GlassDialog } from "@/components/glass"
 import { SubTabs } from "@/components/shell/sub-tabs"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { cn, formatDate, formatDateTime } from "@/lib/utils"
 import type { ExpenseAttachmentDto, ExpenseDto, ExpenseLineDto, FinancePerms } from "./expense-types"
 import {
@@ -530,7 +531,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
       )}
 
       {tab === "lines" && (
-        <GlassCard className={cn("p-5 shadow-none", PANEL)}>
+        <AppDataTablePanel className="p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-foreground">รายการค่าใช้จ่าย ({expense.lineCount} รายการ)</h2>
             {canEdit && (
@@ -545,33 +546,33 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
               </Button>
             )}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-200 text-xs text-muted-foreground dark:border-white/10">
+          <div className="rounded-lg border border-border">
+            <AppDataTable>
+              <AppDataTableHead>
                 <tr>
-                  <th className="py-2 pr-3 text-left font-medium">ลำดับ</th>
-                  <th className="py-2 text-left font-medium">รายการ</th>
-                  <th className="py-2 text-left font-medium">หน่วยงาน / วัตถุต้นทุน</th>
-                  <th className="py-2 text-right font-medium">จำนวน</th>
-                  <th className="py-2 text-right font-medium">ราคา/หน่วย</th>
-                  <th className="py-2 text-right font-medium">จำนวนเงิน</th>
-                  <th className="py-2 pl-3 text-left font-medium">อ้างอิง</th>
+                  <th>ลำดับ</th>
+                  <th>รายการ</th>
+                  <th>หน่วยงาน / วัตถุต้นทุน</th>
+                  <th className="text-right">จำนวน</th>
+                  <th className="text-right">ราคา/หน่วย</th>
+                  <th className="text-right">จำนวนเงิน</th>
+                  <th>อ้างอิง</th>
                 </tr>
-              </thead>
-              <tbody>
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {expense.lines.map((l, index) => {
                   const origin = lineOrigin(l)
                   const href = sourceHref(l.sourceType, l.sourceDocumentId)
                   const code = sourceCode(l, origin)
                   const openLabel = l.sourceType === "TRANSPORT_JOB" ? "เปิดใบงาน" : "เปิดเอกสาร"
                   return (
-                    <tr key={l.id} className="border-b border-slate-100 dark:border-white/5">
-                      <td className="py-3 pr-3 tabular-nums text-muted-foreground">{index + 1}</td>
-                      <td className="py-3">
+                    <tr key={l.id}>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">{index + 1}</td>
+                      <td className="px-4 py-3">
                         <div className="font-medium text-foreground">{l.expenseTypeName}</div>
                         {l.description && <div className="text-xs text-muted-foreground">{l.description}</div>}
                       </td>
-                      <td className="py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground">
                         <div>{l.costCenterName ?? "—"}</div>
                         {l.processName && <div className="text-xs">{l.processName}</div>}
                         {l.costObjectLabel && (
@@ -581,16 +582,16 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                           </div>
                         )}
                       </td>
-                      <td className="py-3 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular-nums">
                         {l.pricingMode === "QTY_PRICE" ? `${l.quantity}${l.unitCode ? ` ${l.unitCode}` : ""}` : "—"}
                       </td>
-                      <td className="py-3 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular-nums">
                         {l.pricingMode === "QTY_PRICE" ? formatBaht(l.unitPrice) : "—"}
                       </td>
-                      <td className="py-3 text-right font-semibold tabular-nums text-foreground">
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-foreground">
                         {formatBaht(l.netAmount)}
                       </td>
-                      <td className="py-3 pl-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground">
                         {origin.kind === "บันทึกเอง" ? (
                           "บันทึกเอง"
                         ) : (
@@ -614,8 +615,8 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                     </tr>
                   )
                 })}
-              </tbody>
-            </table>
+              </AppDataTableBody>
+            </AppDataTable>
           </div>
           <div className="mt-4 flex justify-end">
             <div className="w-full max-w-xs space-y-1.5 text-sm">
@@ -633,7 +634,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
               </div>
             </div>
           </div>
-        </GlassCard>
+        </AppDataTablePanel>
       )}
 
       {tab === "related" && (

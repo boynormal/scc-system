@@ -6,6 +6,7 @@ import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassCard, GlassInput } from "@/components/glass"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { cn } from "@/lib/utils"
 import type {
   CostCenterRow,
@@ -431,7 +432,7 @@ export function ExpenseFormPage({
         )}
       </GlassCard>
 
-      <GlassCard className={cn("space-y-3 rounded-[1.5rem] p-5 shadow-none", FIN_GLASS_PANEL)}>
+      <AppDataTablePanel className="space-y-3 p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">
             รายการ ({lines.length} บรรทัด)
@@ -446,30 +447,30 @@ export function ExpenseFormPage({
         {lines.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีบรรทัด กด “เพิ่มบรรทัด” เพื่อเริ่ม</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-200/70 text-xs text-muted-foreground dark:border-white/10">
+          <div className="rounded-lg border border-border">
+            <AppDataTable>
+              <AppDataTableHead>
                 <tr>
-                  <th className="py-2 text-left font-medium">ประเภท / รายละเอียด</th>
-                  <th className="py-2 text-right font-medium">จำนวน</th>
-                  <th className="py-2 text-left font-medium">หน่วย</th>
-                  <th className="py-2 text-right font-medium">ราคา/หน่วย</th>
-                  <th className="py-2 text-right font-medium">จำนวนเงิน</th>
-                  <th className="py-2 text-right font-medium">สุทธิ</th>
-                  <th className="py-2 text-right font-medium">จัดการ</th>
+                  <th>ประเภท / รายละเอียด</th>
+                  <th className="text-right">จำนวน</th>
+                  <th>หน่วย</th>
+                  <th className="text-right">ราคา/หน่วย</th>
+                  <th className="text-right">จำนวนเงิน</th>
+                  <th className="text-right">สุทธิ</th>
+                  <th className="text-right">จัดการ</th>
                 </tr>
-              </thead>
-              <tbody>
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {groups.map(([groupKey, groupLines]) => (
                   <Fragment key={`grp-${groupKey}`}>
-                    <tr className="bg-slate-100/50 dark:bg-white/5">
-                      <td colSpan={7} className="px-1 py-1.5 text-xs font-semibold text-muted-foreground">
+                    <tr data-tone="group" className="bg-slate-100/50 dark:bg-white/5">
+                      <td colSpan={7} className="px-4 py-1.5 text-xs font-semibold">
                         {groupKey === "__manual__" ? "บันทึกเอง" : sourceModuleLabel(groupKey)}
                       </td>
                     </tr>
                     {groupLines.map((l) => (
-                      <tr key={l.key} className="border-b border-slate-100/70 dark:border-white/5">
-                        <td className="py-2">
+                      <tr key={l.key}>
+                        <td className="px-4 py-2">
                           <div className="font-medium text-foreground">{typeName(l.expenseTypeId)}</div>
                           {l.description && <div className="text-xs text-muted-foreground">{l.description}</div>}
                           {l.sourceAmountLocked && (
@@ -478,12 +479,12 @@ export function ExpenseFormPage({
                             </span>
                           )}
                         </td>
-                        <td className="py-2 text-right tabular-nums">{l.pricingMode === "QTY_PRICE" ? l.quantity : "—"}</td>
-                        <td className="py-2">{unitName(l)}</td>
-                        <td className="py-2 text-right tabular-nums">{l.pricingMode === "QTY_PRICE" ? formatBaht(Number(l.unitPrice) || 0) : "—"}</td>
-                        <td className="py-2 text-right tabular-nums">{formatBaht(computeLineAmount(l))}</td>
-                        <td className="py-2 text-right font-semibold tabular-nums text-foreground">{formatBaht(computeLineNet(l))}</td>
-                        <td className="py-2 text-right">
+                        <td className="px-4 py-2 text-right tabular-nums">{l.pricingMode === "QTY_PRICE" ? l.quantity : "—"}</td>
+                        <td className="px-4 py-2">{unitName(l)}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{l.pricingMode === "QTY_PRICE" ? formatBaht(Number(l.unitPrice) || 0) : "—"}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{formatBaht(computeLineAmount(l))}</td>
+                        <td className="px-4 py-2 text-right font-semibold tabular-nums">{formatBaht(computeLineNet(l))}</td>
+                        <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-1">
                             <button type="button" className="rounded p-1 text-muted-foreground hover:bg-slate-200/60 hover:text-foreground dark:hover:bg-white/10" onClick={() => openEditLine(l)}>
                               <Pencil className="h-3.5 w-3.5" />
@@ -499,8 +500,8 @@ export function ExpenseFormPage({
                     ))}
                   </Fragment>
                 ))}
-              </tbody>
-            </table>
+              </AppDataTableBody>
+            </AppDataTable>
           </div>
         )}
 
@@ -524,7 +525,7 @@ export function ExpenseFormPage({
             </div>
           </div>
         )}
-      </GlassCard>
+      </AppDataTablePanel>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         {!lockFinancials && (

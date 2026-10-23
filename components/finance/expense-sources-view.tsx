@@ -10,13 +10,8 @@ import {
   GlassCard,
   GlassDialog,
   GlassInput,
-  GlassTable,
-  GlassTableBody,
-  GlassTableCell,
-  GlassTableHead,
-  GlassTableHeader,
-  GlassTableRow,
 } from "@/components/glass"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { FinancePageHeader } from "./finance-page-header"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { NEW_EXPENSE_SOURCES_KEY, type PrefillPayload } from "./expense-form-page"
@@ -281,21 +276,22 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
         groups.map(([groupKey, group]) => (
           <div key={groupKey} className="space-y-2">
             <h2 className="px-1 text-sm font-semibold text-foreground">{group.label}</h2>
-            <GlassTable className={cn("rounded-[1.5rem] shadow-none", FIN_GLASS_PANEL)}>
-              <GlassTableHeader className="border-slate-200/80 bg-white/70 dark:border-white/10 dark:bg-white/5">
+            <AppDataTablePanel>
+            <AppDataTable>
+              <AppDataTableHead>
                 <tr>
-                  <GlassTableHead className="w-[4%]"> </GlassTableHead>
-                  <GlassTableHead className="whitespace-nowrap">เอกสาร</GlassTableHead>
-                  <GlassTableHead className="whitespace-nowrap">สาขา</GlassTableHead>
-                  <GlassTableHead className="whitespace-nowrap">ประเภท</GlassTableHead>
-                  <GlassTableHead className="whitespace-nowrap">วันที่</GlassTableHead>
-                  <GlassTableHead className="whitespace-nowrap">รถ</GlassTableHead>
-                  <GlassTableHead>รายละเอียด</GlassTableHead>
-                  <GlassTableHead className="whitespace-nowrap text-right">ยอดอ้างอิง</GlassTableHead>
-                  <GlassTableHead className="whitespace-nowrap text-right">การกระทำ</GlassTableHead>
+                  <th className="w-[4%]"> </th>
+                  <th className="whitespace-nowrap">เอกสาร</th>
+                  <th className="whitespace-nowrap">สาขา</th>
+                  <th className="whitespace-nowrap">ประเภท</th>
+                  <th className="whitespace-nowrap">วันที่</th>
+                  <th className="whitespace-nowrap">รถ</th>
+                  <th>รายละเอียด</th>
+                  <th className="whitespace-nowrap text-right">ยอดอ้างอิง</th>
+                  <th className="whitespace-nowrap text-right">การกระทำ</th>
                 </tr>
-              </GlassTableHeader>
-              <GlassTableBody>
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {group.rows.map((row) => {
                   const key = rowKey(row)
                   const isSelected = selected.has(key)
@@ -303,8 +299,8 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                     !perms.canCreate ||
                     (!isSelected && selectedBranch !== null && row.branchId !== selectedBranch)
                   return (
-                    <GlassTableRow key={key} className="bg-white/50 dark:bg-transparent">
-                      <GlassTableCell>
+                    <tr key={key}>
+                      <td className="px-4 py-3">
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded border-slate-300"
@@ -312,8 +308,8 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                           disabled={disabled}
                           onChange={() => toggle(row)}
                         />
-                      </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap">
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <button
                           type="button"
                           className="text-left text-sm font-semibold tabular-nums text-blue-600 hover:underline dark:text-blue-400"
@@ -321,26 +317,26 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                         >
                           {row.documentNo ?? "ดูรายละเอียด"}
                         </button>
-                      </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap text-muted-foreground">
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                         {row.branchName}
-                      </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap font-medium text-foreground">
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">
                         {SOURCE_TYPE_LABELS[row.sourceType] ?? row.sourceType}
-                      </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap tabular-nums text-muted-foreground">
                         {formatDate(row.date)}
-                      </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap">{row.vehicleLabel}</GlassTableCell>
-                      <GlassTableCell className="text-muted-foreground">
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">{row.vehicleLabel}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
                         <span className="line-clamp-1" title={row.description ?? undefined}>
                           {row.description ?? "—"}
                         </span>
-                      </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap text-right tabular-nums text-foreground">
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right tabular-nums text-foreground">
                         {formatReferenceAmount(row.amount)}
-                      </GlassTableCell>
-                      <GlassTableCell className="whitespace-nowrap px-3 text-right">
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-right">
                         <div className="inline-flex items-center justify-end gap-1.5">
                           <Button
                             type="button"
@@ -369,12 +365,13 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                             ไม่มีค่าใช้จ่าย
                           </Button>
                         </div>
-                      </GlassTableCell>
-                    </GlassTableRow>
+                      </td>
+                    </tr>
                   )
                 })}
-              </GlassTableBody>
-            </GlassTable>
+              </AppDataTableBody>
+            </AppDataTable>
+            </AppDataTablePanel>
           </div>
         ))
       )}

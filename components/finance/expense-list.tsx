@@ -10,13 +10,8 @@ import {
   GlassCard,
   GlassInput,
   GlassStatCard,
-  GlassTable,
-  GlassTableBody,
-  GlassTableCell,
-  GlassTableHead,
-  GlassTableHeader,
-  GlassTableRow,
 } from "@/components/glass"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import type {
   CostCenterRow,
   ExpenseDto,
@@ -265,32 +260,33 @@ export function ExpenseList({
           )}
         </GlassCard>
       ) : (
-        <GlassTable className="rounded-[1.5rem] shadow-none">
-          <GlassTableHeader>
+        <AppDataTablePanel>
+        <AppDataTable>
+          <AppDataTableHead>
             <tr>
-              <GlassTableHead className="w-[14%] whitespace-nowrap">เลขที่</GlassTableHead>
-              <GlassTableHead className="w-[10%] whitespace-nowrap">วันที่</GlassTableHead>
-              <GlassTableHead className="w-[16%]">ประเภท</GlassTableHead>
-              <GlassTableHead className="w-[12%] whitespace-nowrap">ต้นทาง</GlassTableHead>
-              <GlassTableHead className="w-[16%]">หน่วยงาน</GlassTableHead>
-              <GlassTableHead className="w-[14%] whitespace-nowrap text-right">ยอดสุทธิ</GlassTableHead>
-              <GlassTableHead className="w-[10%] whitespace-nowrap">สถานะ</GlassTableHead>
+              <th className="w-[14%] whitespace-nowrap">เลขที่</th>
+              <th className="w-[10%] whitespace-nowrap">วันที่</th>
+              <th className="w-[16%]">ประเภท</th>
+              <th className="w-[12%] whitespace-nowrap">ต้นทาง</th>
+              <th className="w-[16%]">หน่วยงาน</th>
+              <th className="w-[14%] whitespace-nowrap text-right">ยอดสุทธิ</th>
+              <th className="w-[10%] whitespace-nowrap">สถานะ</th>
             </tr>
-          </GlassTableHeader>
-          <GlassTableBody>
+          </AppDataTableHead>
+          <AppDataTableBody>
             {items.map((item) => (
-              <GlassTableRow
+              <tr
                 key={item.id}
                 className="cursor-pointer"
                 onClick={() => router.push(`/finance/expenses/${item.id}`)}
               >
-                <GlassTableCell className="whitespace-nowrap font-medium text-foreground">
+                <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">
                   {item.expenseNo}
-                </GlassTableCell>
-                <GlassTableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap tabular-nums text-muted-foreground">
                   {formatDate(item.expenseDate)}
-                </GlassTableCell>
-                <GlassTableCell>
+                </td>
+                <td className="px-4 py-3">
                   <span className="block truncate" title={item.expenseTypeName}>
                     {item.expenseTypeName}
                     {item.lineCount > 1 && (
@@ -300,26 +296,27 @@ export function ExpenseList({
                   <span className="block truncate text-xs text-muted-foreground" title={item.branchName}>
                     {item.branchName}
                   </span>
-                </GlassTableCell>
-                <GlassTableCell className="whitespace-nowrap text-muted-foreground">
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                   {sourceModuleLabel(item.sourceModule)}
-                </GlassTableCell>
-                <GlassTableCell className="text-muted-foreground">
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
                   {item.costCenterName ?? "—"}
-                </GlassTableCell>
-                <GlassTableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
                   {formatBaht(item.netAmount)}
-                </GlassTableCell>
-                <GlassTableCell className="whitespace-nowrap">
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <ExpenseStatusBadge
                     label={EXPENSE_STATUS_LABELS[item.status]}
                     className={EXPENSE_STATUS_BADGE[item.status]}
                   />
-                </GlassTableCell>
-              </GlassTableRow>
+                </td>
+              </tr>
             ))}
-          </GlassTableBody>
-        </GlassTable>
+          </AppDataTableBody>
+        </AppDataTable>
+        </AppDataTablePanel>
       )}
     </div>
   )

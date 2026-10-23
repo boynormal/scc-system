@@ -8,6 +8,7 @@ import { fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { dataPanelClassName } from "@/components/shell/data-panel"
 import { ListFrame } from "@/components/shell/list-frame"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -415,6 +416,7 @@ export function AttendanceExceptionView({
         />
       )}
     <ListFrame
+      plainPanel
       filterOverflow
       filters={
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -431,6 +433,7 @@ export function AttendanceExceptionView({
         </div>
       }
     >
+      <AppDataTablePanel>
       {loading ? (
         <LoadingState title={t("loading")} />
       ) : error ? (
@@ -444,19 +447,18 @@ export function AttendanceExceptionView({
           description={t("exceptions.filteredEmptyDescription")}
         />
       ) : (
-        <div className="max-h-[calc(100vh-9.5rem)] overflow-auto">
-          <table className="w-max text-xs">
-            <thead className="sticky top-0 z-10 bg-background">
-              <tr className="border-b border-border text-left text-foreground">
-                <th className="w-36 px-2 py-1 font-medium">{t("report.name")}</th>
-                <th className="min-w-[36rem] px-2 py-1 font-medium">{t("exceptions.report")}</th>
-                <th className="w-28 whitespace-nowrap px-2 py-1 font-medium">{t("exceptions.inOut")}</th>
-                <th className="w-12 px-2 py-1 text-right font-medium">{t("exceptions.minutes")}</th>
+          <AppDataTable className="text-xs">
+            <AppDataTableHead dense>
+              <tr>
+                <th className="w-36">{t("report.name")}</th>
+                <th className="min-w-[36rem]">{t("exceptions.report")}</th>
+                <th className="w-28 whitespace-nowrap">{t("exceptions.inOut")}</th>
+                <th className="w-12 text-right">{t("exceptions.minutes")}</th>
               </tr>
-            </thead>
+            </AppDataTableHead>
             {visibleGroups.map((group) => (
-              <tbody key={group.date}>
-                <tr className="border-b border-blue-200 bg-blue-100 dark:border-blue-900 dark:bg-blue-950">
+              <AppDataTableBody key={group.date}>
+                <tr data-tone="date" className="bg-blue-100 dark:bg-blue-950">
                   <td colSpan={3} className="px-2 py-0.5 font-semibold text-foreground">
                     <Link
                       className="text-foreground underline-offset-2 hover:underline"
@@ -470,7 +472,7 @@ export function AttendanceExceptionView({
                   </td>
                 </tr>
                 {group.rows.map((row) => (
-                  <tr key={`${group.date}-${row.personnelId}`} className={`border-b border-border ${rowTone(row)}`}>
+                  <tr key={`${group.date}-${row.personnelId}`} data-tone={rowTone(row) ? "status" : undefined} className={rowTone(row)}>
                     <td className="w-36 px-2 py-0.5 font-medium text-foreground">{row.displayName}</td>
                     <td className="min-w-[36rem] px-2 py-0.5">
                       <ExceptionLabel row={row} label={(key) => t(key)} />
@@ -483,11 +485,11 @@ export function AttendanceExceptionView({
                     </td>
                   </tr>
                 ))}
-              </tbody>
+              </AppDataTableBody>
             ))}
-          </table>
-        </div>
+          </AppDataTable>
       )}
+      </AppDataTablePanel>
     </ListFrame>
     </div>
   )

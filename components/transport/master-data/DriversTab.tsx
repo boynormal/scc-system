@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Fragment, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2, ChevronDown, ChevronRight } from "lucide-react"
 import { GlassButton, GlassInput } from "@/components/glass"
-import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { includesSearch, isAutoDriverCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
@@ -361,10 +361,8 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
           </GlassButton>
         </div>
       )}
-      <DataPanel padding="none">
-        <div className="min-w-0 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
+      <AppDataTablePanel>
+          <AppDataTable>
             <colgroup>
               <col className="w-10" />
               <col className="w-[20%]" />
@@ -374,7 +372,7 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
               <col className="w-[20%]" />
               <col className="w-24" />
             </colgroup>
-            <thead className="bg-muted border-b border-border">
+            <AppDataTableHead>
               <tr>
                 <th className="w-10 px-2 py-3"></th>
                 <th className={`${colBranch} font-semibold text-foreground`}>สาขา</th>
@@ -384,25 +382,25 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
                 <th className={`${colVehicle} font-semibold text-foreground`} title="รถที่ใช้งานประจำของคนขับ">รถประจำ</th>
                 <th className="w-24 px-3 py-3"></th>
               </tr>
-            </thead>
-            <tbody>
+            </AppDataTableHead>
+            <AppDataTableBody>
               {editingId === "new" && (
                 <>
-                  <tr className="bg-cyan-50/50">{renderFormMain("new")}</tr>
-                  <tr className="bg-cyan-50/50">{renderFormSubRow()}</tr>
+                  <tr data-tone="edit" className="bg-cyan-50/50">{renderFormMain("new")}</tr>
+                  <tr data-tone="edit" className="bg-cyan-50/50">{renderFormSubRow()}</tr>
                 </>
               )}
               {filtered.map((item) =>
                 editingId === item.id ? (
                   <Fragment key={item.id}>
-                    <tr className="bg-cyan-50/50">{renderFormMain(item.id)}</tr>
-                    <tr className="bg-cyan-50/50">{renderFormSubRow()}</tr>
+                    <tr data-tone="edit" className="bg-cyan-50/50">{renderFormMain(item.id)}</tr>
+                    <tr data-tone="edit" className="bg-cyan-50/50">{renderFormSubRow()}</tr>
                   </Fragment>
                 ) : (
                   <Fragment key={item.id}>
                     <tr
                       key={item.id}
-                      className={`border-t border-border hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}
+                      className={!item.isActive ? "opacity-50" : undefined}
                     >
                       <td className="w-10 px-2 py-3 align-top">
                         <button
@@ -469,11 +467,9 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
                   </td>
                 </tr>
               )}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </DataPanel>
+            </AppDataTableBody>
+          </AppDataTable>
+      </AppDataTablePanel>
     </div>
   )
 }

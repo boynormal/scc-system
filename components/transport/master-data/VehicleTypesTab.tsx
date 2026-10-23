@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment, useMemo, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2, RotateCcw, Plus } from "lucide-react"
 import { GlassInput } from "@/components/glass"
-import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
@@ -219,7 +219,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
   }
 
   const renderEditor = (id: string) => (
-    <tr className="bg-cyan-50/50">
+    <tr data-tone="edit" className="bg-cyan-50/50">
       <td className="px-4 py-3 align-top" colSpan={6}>
         <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
           <div className="space-y-3">
@@ -353,11 +353,9 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
 
   return (
     <div className="space-y-4">
-      <DataPanel padding="none">
-        <div className="min-w-0 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] text-left text-sm">
-            <thead className="bg-muted border-b border-border">
+      <AppDataTablePanel>
+          <AppDataTable>
+            <AppDataTableHead>
               <tr>
                 <th className="w-20 px-4 py-3 font-semibold text-foreground">ลำดับ</th>
                 <th className="min-w-0 px-4 py-3 font-semibold text-foreground">ประเภทรถ</th>
@@ -366,8 +364,8 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                 <th className="px-4 py-3 font-semibold text-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-32"></th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+            </AppDataTableHead>
+            <AppDataTableBody>
               {editingId === "new" && renderEditor("new")}
               {filtered.map((item) =>
                 editingId === item.id ? (
@@ -375,7 +373,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                 ) : (
                   <tr
                     key={item.id}
-                    className={`hover:bg-muted/60 transition-colors ${!item.isActive ? "opacity-50" : ""}`}
+                    className={!item.isActive ? "opacity-50" : undefined}
                   >
                     <td className="px-4 py-3 text-foreground align-top">{item.sortOrder}</td>
                     <td className="px-4 py-3 font-medium text-foreground align-top">{item.name}</td>
@@ -439,11 +437,9 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                   </td>
                 </tr>
               )}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </DataPanel>
+            </AppDataTableBody>
+          </AppDataTable>
+      </AppDataTablePanel>
     </div>
   )
 }

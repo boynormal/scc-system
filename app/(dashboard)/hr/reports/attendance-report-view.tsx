@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl"
 import { FileSpreadsheet } from "lucide-react"
 import { fetchJson } from "@/lib/client-fetch"
 import { ListFrame } from "@/components/shell/list-frame"
+import { AppDataTable, AppDataTableBody, AppDataTableHead } from "@/components/shell/app-data-table"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { GlassDialog } from "@/components/glass"
 import { Button } from "@/components/ui/button"
@@ -291,72 +292,72 @@ export function AttendanceReportView({
             </div>
 
             {view === "day" ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left">
-                      <th className="py-2 pr-3 font-medium">{t("day.date")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.present")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.manHour")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.confirmedOt")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.pendingOt")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("report.leave")}</th>
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <AppDataTable>
+                  <AppDataTableHead sticky={false}>
+                    <tr>
+                      <th>{t("day.date")}</th>
+                      <th className="text-right">{t("report.present")}</th>
+                      <th className="text-right">{t("report.manHour")}</th>
+                      <th className="text-right">{t("report.confirmedOt")}</th>
+                      <th className="text-right">{t("report.pendingOt")}</th>
+                      <th>{t("report.leave")}</th>
                     </tr>
-                  </thead>
-                  <tbody>
+                  </AppDataTableHead>
+                  <AppDataTableBody>
                     {days.map((day) => (
-                      <tr key={day.date} className="border-b border-border">
-                        <td className="py-2 pr-3">
+                      <tr key={day.date}>
+                        <td className="px-4 py-2">
                           <Link className="font-medium text-foreground underline-offset-2 hover:underline" href={`/hr/attendance?${new URLSearchParams({ branchId, tab: "day", date: day.date })}`}>
                             {day.date}
                           </Link>
                         </td>
-                        <td className="py-2 pr-3 text-right font-mono tabular-nums">{day.present}</td>
-                        <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(day.manMinutes)}</td>
-                        <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(day.confirmedOtMinutes)}</td>
-                        <td className={`py-2 pr-3 text-right font-mono tabular-nums ${day.pendingOtCount > 0 ? "text-red-600" : ""}`}>{day.pendingOtCount}</td>
-                        <td className="py-2 pr-3">{leaveText(day.leave, reasonLabel) || "—"}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{day.present}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.manMinutes)}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.confirmedOtMinutes)}</td>
+                        <td className={`px-4 py-2 text-right font-mono tabular-nums ${day.pendingOtCount > 0 ? "text-red-600" : ""}`}>{day.pendingOtCount}</td>
+                        <td className="px-4 py-2">{leaveText(day.leave, reasonLabel) || "—"}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
+                  </AppDataTableBody>
+                </AppDataTable>
               </div>
             ) : people.length === 0 ? (
               <EmptyState icon={FileSpreadsheet} title={t("report.emptyTitle")} description={t("report.emptyDescription")} />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left">
-                      <th className="py-2 pr-3 font-medium">{t("report.name")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("report.department")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.presentDays")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.manHour")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.late")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.otBefore")}</th>
-                      <th className="py-2 pr-3 font-medium text-right">{t("report.otAfter")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("report.leave")}</th>
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <AppDataTable>
+                  <AppDataTableHead sticky={false}>
+                    <tr>
+                      <th>{t("report.name")}</th>
+                      <th>{t("report.department")}</th>
+                      <th className="text-right">{t("report.presentDays")}</th>
+                      <th className="text-right">{t("report.manHour")}</th>
+                      <th className="text-right">{t("report.late")}</th>
+                      <th className="text-right">{t("report.otBefore")}</th>
+                      <th className="text-right">{t("report.otAfter")}</th>
+                      <th>{t("report.leave")}</th>
                     </tr>
-                  </thead>
-                  <tbody>
+                  </AppDataTableHead>
+                  <AppDataTableBody>
                     {people.map((row) => (
-                      <tr key={row.personnelId} className="border-b border-border">
-                        <td className="py-2 pr-3">
+                      <tr key={row.personnelId}>
+                        <td className="px-4 py-2">
                           <button type="button" className="font-medium text-foreground underline-offset-2 hover:underline" onClick={() => setPerson(row)}>
                             {row.displayName}
                           </button>
                         </td>
-                        <td className="py-2 pr-3">{row.departmentName ?? "—"}</td>
-                        <td className="py-2 pr-3 text-right font-mono tabular-nums">{row.presentDays}</td>
-                        <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(row.manMinutes)}</td>
-                        <td className={`py-2 pr-3 text-right font-mono tabular-nums ${row.lateMinutes > 0 ? "text-red-600" : ""}`}>{row.lateMinutes || "—"}</td>
-                        <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(row.otBeforeMinutes)}</td>
-                        <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(row.otAfterMinutes)}</td>
-                        <td className="py-2 pr-3">{leaveText(row.leave, reasonLabel) || "—"}</td>
+                        <td className="px-4 py-2">{row.departmentName ?? "—"}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{row.presentDays}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(row.manMinutes)}</td>
+                        <td className={`px-4 py-2 text-right font-mono tabular-nums ${row.lateMinutes > 0 ? "text-red-600" : ""}`}>{row.lateMinutes || "—"}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(row.otBeforeMinutes)}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(row.otAfterMinutes)}</td>
+                        <td className="px-4 py-2">{leaveText(row.leave, reasonLabel) || "—"}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
+                  </AppDataTableBody>
+                </AppDataTable>
               </div>
             )}
           </div>
@@ -366,31 +367,31 @@ export function AttendanceReportView({
 
       <GlassDialog open={person != null} onOpenChange={(open) => !open && setPerson(null)} title={person ? t("report.personDays", { name: person.displayName }) : ""} solid>
         {person && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-foreground">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="py-2 pr-3 font-medium">{t("day.date")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("day.status")}</th>
-                  <th className="py-2 pr-3 font-medium text-right">{t("report.manHour")}</th>
-                  <th className="py-2 pr-3 font-medium text-right">{t("report.otBefore")}</th>
-                  <th className="py-2 pr-3 font-medium text-right">{t("report.otAfter")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("report.leave")}</th>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <AppDataTable>
+              <AppDataTableHead sticky={false}>
+                <tr>
+                  <th>{t("day.date")}</th>
+                  <th>{t("day.status")}</th>
+                  <th className="text-right">{t("report.manHour")}</th>
+                  <th className="text-right">{t("report.otBefore")}</th>
+                  <th className="text-right">{t("report.otAfter")}</th>
+                  <th>{t("report.leave")}</th>
                 </tr>
-              </thead>
-              <tbody>
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {person.days.map((day) => (
-                  <tr key={day.date} className="border-b border-border">
-                    <td className="py-2 pr-3">{day.date}</td>
-                    <td className="py-2 pr-3">{t(`status.${day.status}`)}</td>
-                    <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(day.manMinutes)}</td>
-                    <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(day.otBeforeMinutes)}</td>
-                    <td className="py-2 pr-3 text-right font-mono tabular-nums">{formatMinutes(day.otAfterMinutes)}</td>
-                    <td className="py-2 pr-3">{day.noteReason ? t(`report.reason.${day.noteReason as (typeof REASONS)[number]}`) : "—"}</td>
+                  <tr key={day.date}>
+                    <td className="px-4 py-2">{day.date}</td>
+                    <td className="px-4 py-2">{t(`status.${day.status}`)}</td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.manMinutes)}</td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.otBeforeMinutes)}</td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.otAfterMinutes)}</td>
+                    <td className="px-4 py-2">{day.noteReason ? t(`report.reason.${day.noteReason as (typeof REASONS)[number]}`) : "—"}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </AppDataTableBody>
+            </AppDataTable>
           </div>
         )}
       </GlassDialog>

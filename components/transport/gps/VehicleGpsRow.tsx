@@ -23,11 +23,11 @@ export function VehicleGpsRow({ vehicle: v, selected, onClick }: Props) {
   return (
     <tr
       onClick={onClick}
+      data-tone={selected ? "selected" : hasAlert ? "alert" : undefined}
       className={cn(
-        "cursor-pointer transition-colors",
+        "cursor-pointer",
         selected && "bg-cyan-50 dark:bg-cyan-950/40",
-        hasAlert && !selected && "bg-red-50/60 dark:bg-red-950/30",
-        !selected && !hasAlert && "hover:bg-muted/60"
+        hasAlert && !selected && "bg-red-50/60 dark:bg-red-950/30"
       )}
     >
       <td className="px-4 py-3">

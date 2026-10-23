@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { GlassDialog } from "@/components/glass"
+import { AppDataTablePanel } from "@/components/shell/app-data-table"
 import type { PmMonthCell } from "@/modules/assets/application/asset-pm-service"
 
 export type PmMonthRow = {
@@ -52,14 +53,15 @@ export function PmMonthGrid({
 
   return (
     <>
-      <div className="w-full overflow-x-auto rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
+      <AppDataTablePanel>
+      <div className="w-full overflow-x-auto rounded-xl">
         <table
-          className="w-full table-fixed border-separate border-spacing-0 bg-[#ffffff] text-xs"
+          className="w-full table-fixed border-separate border-spacing-0 text-xs"
           style={{ minWidth: `max(100%, calc(7rem + ${daysInMonth} * 1.75rem))` }}
         >
           <thead>
             <tr>
-              <th className="sticky left-0 z-20 w-28 border-b border-r border-[#cbd5e1] bg-[#e2e8f0] px-2 py-2 text-left text-xs font-semibold text-[#0f172a] sm:w-44 sm:px-3">
+              <th className="sticky left-0 z-20 w-28 rounded-tl-xl border-b border-r border-border bg-muted px-2 py-2 text-left text-sm font-semibold text-slate-900 dark:text-slate-100 sm:w-44 sm:px-3">
                 {t("assetColumn")}
               </th>
               {days.map((day) => {
@@ -69,12 +71,12 @@ export function PmMonthGrid({
                 return (
                   <th
                     key={day}
-                    className={`border-b border-[#cbd5e1] px-0.5 py-2 text-center font-semibold ${
+                    className={`border-b border-border px-0.5 py-2 text-center text-sm font-semibold last:rounded-tr-xl ${
                       isToday
                         ? "bg-[#2563eb] text-white"
                         : sunday
                           ? "bg-[#fecdd3] text-[#9f1239]"
-                          : "bg-[#e2e8f0] text-[#0f172a]"
+                          : "bg-muted text-slate-900 dark:text-slate-100"
                     }`}
                   >
                     {day}
@@ -86,9 +88,9 @@ export function PmMonthGrid({
           <tbody>
             {rows.map((row) => (
               <tr key={row.assetId}>
-                <th className="sticky left-0 z-10 w-28 border-b border-r border-[#cbd5e1] bg-[#ffffff] px-2 py-2 text-left font-medium text-[#0f172a] sm:w-44 sm:px-3">
+                <th className="sticky left-0 z-10 w-28 border-b border-r border-border bg-white px-2 py-2 text-left font-medium text-foreground dark:bg-slate-900 sm:w-44 sm:px-3">
                   <span className="block truncate">{row.name}</span>
-                  <span className="block truncate text-[11px] font-normal text-[#475569]">{row.branchName}</span>
+                  <span className="block truncate text-[11px] font-normal text-muted-foreground">{row.branchName}</span>
                 </th>
                 {days.map((day) => {
                   const cell = row.cells[String(day)]
@@ -99,7 +101,7 @@ export function PmMonthGrid({
                   return (
                     <td
                       key={day}
-                      className={`border-b border-[#e2e8f0] p-1 text-center ${sunday ? "bg-[#ffe4e6]" : "bg-[#ffffff]"}`}
+                      className={`border-b border-border p-1 text-center ${sunday ? "bg-[#ffe4e6]" : "bg-white/50 dark:bg-transparent"}`}
                     >
                       <button
                         type="button"
@@ -130,6 +132,7 @@ export function PmMonthGrid({
           </tbody>
         </table>
       </div>
+      </AppDataTablePanel>
 
       <GlassDialog
         solid

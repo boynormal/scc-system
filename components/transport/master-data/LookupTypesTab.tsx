@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
 import { GlassInput } from "@/components/glass"
-import { DataPanel } from "@/components/shell/data-panel"
+import { cn } from "@/lib/utils"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
@@ -155,11 +156,9 @@ export function LookupTypesTab({
   }
   return (
     <div className="space-y-4">
-      <DataPanel padding="none">
-        <div className="min-w-0 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="bg-muted border-b border-border">
+      <AppDataTablePanel>
+          <AppDataTable>
+            <AppDataTableHead>
               <tr>
                 <th className="px-4 py-3 font-semibold text-foreground w-20">ลำดับ</th>
                 <th className="px-4 py-3 font-semibold text-foreground">{nameLabel}</th>
@@ -167,13 +166,17 @@ export function LookupTypesTab({
                 <th className="px-4 py-3 font-semibold text-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-32"></th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+            </AppDataTableHead>
+            <AppDataTableBody>
               {editingId === "new" && (
-                <tr className="bg-cyan-50/50">{renderFormCells("new")}</tr>
+                <tr data-tone="edit" className="bg-cyan-50/50">{renderFormCells("new")}</tr>
               )}
               {filtered.map((item) => (
-                <tr key={item.id} className={`hover:bg-muted/60 transition-colors ${!item.isActive ? "opacity-50" : ""}`}>
+                <tr
+                  key={item.id}
+                  data-tone={editingId === item.id ? "edit" : undefined}
+                  className={cn(editingId === item.id && "bg-cyan-50/50", !item.isActive && "opacity-50")}
+                >
                   {editingId === item.id ? (
                     renderFormCells(item.id)
                   ) : (
@@ -231,11 +234,9 @@ export function LookupTypesTab({
                   </td>
                 </tr>
               )}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </DataPanel>
+            </AppDataTableBody>
+          </AppDataTable>
+      </AppDataTablePanel>
     </div>
   )
 }

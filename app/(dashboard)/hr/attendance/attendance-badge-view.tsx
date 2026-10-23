@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
 import { formatDateTime } from "./attendance-format"
 import { PendingFade } from "@/components/shell/nav-pending"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { AttendanceSectionTabs } from "./attendance-chrome"
 
 type Filter = "unmapped" | "mapped" | "all"
@@ -104,7 +105,7 @@ export function AttendanceBadgeView({ branchId, canUpdate }: { branchId: string;
       </GlassCard>
 
       <PendingFade scope="section">
-      <GlassCard padding="none">
+      <AppDataTablePanel>
         {error ? (
           <ErrorState description={error} onRetry={() => void load()} />
         ) : !rows ? (
@@ -116,31 +117,30 @@ export function AttendanceBadgeView({ branchId, canUpdate }: { branchId: string;
             description={t("badges.emptyDescription")}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted text-left text-muted-foreground">
-                  <th className="p-3 font-medium">{t("badges.number")}</th>
-                  <th className="p-3 font-medium">{t("badges.device")}</th>
-                  <th className="p-3 font-medium text-right">{t("badges.punchCount")}</th>
-                  <th className="p-3 font-medium">{t("badges.lastPunch")}</th>
-                  <th className="p-3 font-medium">{t("badges.person")}</th>
-                  {canUpdate && <th className="p-3" />}
+            <AppDataTable>
+              <AppDataTableHead>
+                <tr>
+                  <th>{t("badges.number")}</th>
+                  <th>{t("badges.device")}</th>
+                  <th className="text-right">{t("badges.punchCount")}</th>
+                  <th>{t("badges.lastPunch")}</th>
+                  <th>{t("badges.person")}</th>
+                  {canUpdate && <th />}
                 </tr>
-              </thead>
-              <tbody>
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {rows.map((b) => (
-                  <tr key={b.id} className="border-b border-border last:border-0">
-                    <td className="p-3 font-mono">
+                  <tr key={b.id}>
+                    <td className="px-4 py-3 font-mono">
                       {b.badgeNumber}
                       {b.nameOnDevice && b.nameOnDevice !== b.badgeNumber && (
                         <div className="text-xs text-muted-foreground">{b.nameOnDevice}</div>
                       )}
                     </td>
-                    <td className="p-3 text-muted-foreground">{b.device.name}</td>
-                    <td className="p-3 text-right">{b.punchCount.toLocaleString()}</td>
-                    <td className="p-3 text-muted-foreground">{formatDateTime(b.lastPunchAt, TZ, locale)}</td>
-                    <td className="p-3">
+                    <td className="px-4 py-3 text-muted-foreground">{b.device.name}</td>
+                    <td className="px-4 py-3 text-right">{b.punchCount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDateTime(b.lastPunchAt, TZ, locale)}</td>
+                    <td className="px-4 py-3">
                       {b.personnel ? (
                         <span>
                           {b.personnel.displayName}{" "}
@@ -155,7 +155,7 @@ export function AttendanceBadgeView({ branchId, canUpdate }: { branchId: string;
                       )}
                     </td>
                     {canUpdate && (
-                      <td className="p-3">
+                      <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           {!b.personnel && b.suggestion && (
                             <Button size="sm" disabled={savingId === b.id} onClick={() => void map(b, b.suggestion!.id)}>
@@ -175,11 +175,10 @@ export function AttendanceBadgeView({ branchId, canUpdate }: { branchId: string;
                     )}
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </AppDataTableBody>
+            </AppDataTable>
         )}
-      </GlassCard>
+      </AppDataTablePanel>
       </PendingFade>
 
       {picking && (

@@ -8,7 +8,8 @@ import { Building2, ChevronDown, Clock, FileText, Fingerprint, StickyNote } from
 import { fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { DataPanel } from "@/components/shell/data-panel"
-import { GlassCard, GlassDialog } from "@/components/glass"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
+import { GlassDialog } from "@/components/glass"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -626,7 +627,7 @@ export function AttendanceDayView({
       </DataPanel>
 
       <PendingFade scope="section">
-      <GlassCard padding="none">
+      <AppDataTablePanel>
         {loading ? (
           <LoadingState title={t("loading")} />
         ) : error ? (
@@ -649,10 +650,9 @@ export function AttendanceDayView({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted text-left text-muted-foreground">
+            <AppDataTable className="table-fixed">
+              <AppDataTableHead dense>
+                <tr>
                   <th className="w-[7%] whitespace-nowrap px-2 py-2 font-medium">{t("day.jobGroup")}</th>
                   <th className="w-[11%] px-2 py-2 font-medium">{t("day.person")}</th>
                   <th className="w-[14%] whitespace-nowrap px-2 py-2 font-medium">{t("day.in")}</th>
@@ -664,11 +664,11 @@ export function AttendanceDayView({
                   <th className="w-[6%] whitespace-nowrap px-2 py-2 font-medium">{t("day.countedBranchColumn")}</th>
                   <th className="w-[7%] whitespace-nowrap px-2 py-2 font-medium">{t("day.manage")}</th>
                 </tr>
-              </thead>
-              <tbody>
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {data.rows.map((row) => {
                   return (
-                    <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/40">
+                    <tr key={row.id}>
                         <td className="px-2 py-1.5 text-foreground">{row.jobGroup || "—"}</td>
                         <td className="px-2 py-1.5">
                           <div className="text-foreground">{row.displayName}</div>
@@ -785,11 +785,10 @@ export function AttendanceDayView({
                     </tr>
                   )
                 })}
-              </tbody>
-            </table>
-          </div>
+              </AppDataTableBody>
+            </AppDataTable>
         )}
-      </GlassCard>
+      </AppDataTablePanel>
       </PendingFade>
       <GlassDialog
         solid

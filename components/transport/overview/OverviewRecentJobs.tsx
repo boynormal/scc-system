@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import type { TransportJobStatus } from "@prisma/client"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { formatBangkokYmd } from "@/modules/transport/application/transport-date-utils"
@@ -26,59 +26,57 @@ export function OverviewRecentJobs({ jobs }: { jobs: RecentJob[] }) {
           ดูทั้งหมด →
         </Link>
       </div>
-      <DataPanel>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-foreground">
+      <AppDataTablePanel>
+          <AppDataTable>
+            <AppDataTableHead>
               <tr>
-                <th className="px-4 py-3 text-left">เลขใบงาน</th>
-                <th className="px-4 py-3 text-left">ลูกค้า</th>
-                <th className="px-4 py-3 text-left">รถ / คนขับ</th>
-                <th className="px-4 py-3 text-left">นัดวิ่ง</th>
-                <th className="px-4 py-3 text-left">จุดแวะ</th>
-                <th className="px-4 py-3 text-left">สถานะ</th>
+                <th>เลขใบงาน</th>
+                <th>ลูกค้า</th>
+                <th>รถ / คนขับ</th>
+                <th>นัดวิ่ง</th>
+                <th>จุดแวะ</th>
+                <th>สถานะ</th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-border">
+            </AppDataTableHead>
+            <AppDataTableBody>
               {jobs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-foreground">
+                  <td colSpan={6} className="px-4 py-8 text-center">
                     ยังไม่มีใบงาน
                   </td>
                 </tr>
               ) : (
                 jobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-slate-50/80 dark:hover:bg-muted/40">
+                  <tr key={job.id}>
                     <td className="px-4 py-3 font-medium">
                       <Link href={`/transport/jobs/${job.id}`} className="text-cyan-700 hover:underline dark:text-cyan-300">
                         {job.jobNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-foreground">{job.customerName ?? "—"}</td>
-                    <td className="px-4 py-3 text-foreground">
+                    <td className="px-4 py-3">{job.customerName ?? "—"}</td>
+                    <td className="px-4 py-3">
                       {job.assignment ? (
                         <span>
                           {job.assignment.vehicle.plateNumber} / {job.assignment.driver.firstName}{" "}
                           {job.assignment.driver.lastName}
                         </span>
                       ) : (
-                        <span className="text-foreground">ยังไม่มอบหมาย</span>
+                        <span>ยังไม่มอบหมาย</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-foreground">
+                    <td className="px-4 py-3">
                       {job.scheduledDate ? formatBangkokYmd(job.scheduledDate) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-foreground">{job._count.stops} จุด</td>
+                    <td className="px-4 py-3">{job._count.stops} จุด</td>
                     <td className="px-4 py-3">
                       <JobStatusBadge status={job.status} />
                     </td>
                   </tr>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
-      </DataPanel>
+            </AppDataTableBody>
+          </AppDataTable>
+      </AppDataTablePanel>
     </section>
   )
 }

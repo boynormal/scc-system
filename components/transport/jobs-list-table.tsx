@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { JobRowActions } from "@/components/transport/job-row-actions"
 import type { listJobs } from "@/modules/transport"
@@ -25,10 +25,9 @@ function formatScheduledDate(value: Date | string | null | undefined) {
 
 export function JobsListTable({ items }: Props) {
   return (
-    <DataPanel className="min-w-0">
-      <div className="overflow-x-auto">
-      <table className="w-full min-w-[1100px] text-sm">
-        <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-foreground">
+    <AppDataTablePanel>
+      <AppDataTable>
+        <AppDataTableHead>
           <tr>
             <th className="px-4 py-3 text-left">เลขใบงาน</th>
             <th className="px-4 py-3 text-left">รถ / คนขับ</th>
@@ -41,8 +40,8 @@ export function JobsListTable({ items }: Props) {
             <th className="px-4 py-3 text-left">สถานะ</th>
             <th className="px-4 py-3 text-right">จัดการ</th>
           </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+        </AppDataTableHead>
+        <AppDataTableBody>
           {items.length === 0 ? (
             <tr>
               <td colSpan={10} className="px-4 py-10 text-center text-foreground">
@@ -51,7 +50,7 @@ export function JobsListTable({ items }: Props) {
             </tr>
           ) : (
             items.map((job) => (
-              <tr key={job.id} className="hover:bg-muted/60">
+              <tr key={job.id}>
                 <td className="px-4 py-3">
                   <Link
                     href={`/transport/jobs/${job.id}`}
@@ -96,9 +95,8 @@ export function JobsListTable({ items }: Props) {
               </tr>
             ))
           )}
-        </tbody>
-      </table>
-      </div>
-    </DataPanel>
+        </AppDataTableBody>
+      </AppDataTable>
+    </AppDataTablePanel>
   )
 }

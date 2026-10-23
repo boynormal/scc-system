@@ -11,6 +11,8 @@ export function ListFrame({
   actions,
   filters,
   filterOverflow = false,
+  plainPanel = false,
+  panelClassName,
   children,
   className,
 }: {
@@ -20,6 +22,9 @@ export function ListFrame({
   filters?: ReactNode
   /** Let a filter popover draw outside the panel, such as the shared day picker. */
   filterOverflow?: boolean
+  /** Render children without a panel; the child brings its own, such as `AppDataTablePanel`. */
+  plainPanel?: boolean
+  panelClassName?: string
   children: ReactNode
   className?: string
 }) {
@@ -36,9 +41,13 @@ export function ListFrame({
         </DataPanel>
       ) : null}
       <PendingFade scope="section">
-        <DataPanel padding="none" className="[&_td]:text-foreground [&_th]:text-foreground">
-          {children}
-        </DataPanel>
+        {plainPanel ? (
+          <div className={cn("min-w-0", panelClassName)}>{children}</div>
+        ) : (
+          <DataPanel padding="none" className={cn("[&_td]:text-foreground [&_th]:text-foreground", panelClassName)}>
+            {children}
+          </DataPanel>
+        )}
       </PendingFade>
     </div>
   )

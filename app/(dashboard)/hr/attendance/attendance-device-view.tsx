@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
 import { formatDateTime } from "./attendance-format"
 import { PendingFade } from "@/components/shell/nav-pending"
+import { AppDataTable, AppDataTableBody, AppDataTableHead } from "@/components/shell/app-data-table"
 import { AttendanceSectionTabs } from "./attendance-chrome"
 
 type SyncRun = { id: string; received: number; inserted: number; duplicates: number; newBadges: number; clientVersion: string | null; createdAt: string }
@@ -214,30 +215,32 @@ export function AttendanceDeviceView({
             </div>
 
             {d.syncRuns.length > 0 && (
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-4">
                 <h4 className="text-xs font-medium text-muted-foreground mb-1">{t("devices.recentSyncs")}</h4>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-muted-foreground border-b border-border">
-                      <th className="py-1 pr-3 font-medium">{t("devices.syncAt")}</th>
-                      <th className="py-1 pr-3 font-medium text-right">{t("devices.received")}</th>
-                      <th className="py-1 pr-3 font-medium text-right">{t("devices.inserted")}</th>
-                      <th className="py-1 pr-3 font-medium text-right">{t("devices.duplicates")}</th>
-                      <th className="py-1 pr-3 font-medium text-right">{t("devices.newBadges")}</th>
+                <div className="overflow-x-auto rounded-lg border border-border">
+                <AppDataTable className="text-xs">
+                  <AppDataTableHead sticky={false} dense>
+                    <tr>
+                      <th>{t("devices.syncAt")}</th>
+                      <th className="text-right">{t("devices.received")}</th>
+                      <th className="text-right">{t("devices.inserted")}</th>
+                      <th className="text-right">{t("devices.duplicates")}</th>
+                      <th className="text-right">{t("devices.newBadges")}</th>
                     </tr>
-                  </thead>
-                  <tbody>
+                  </AppDataTableHead>
+                  <AppDataTableBody>
                     {d.syncRuns.map((r) => (
-                      <tr key={r.id} className="border-b border-border last:border-0">
-                        <td className="py-1 pr-3">{formatDateTime(r.createdAt, TZ, locale)}</td>
-                        <td className="py-1 pr-3 text-right">{r.received}</td>
-                        <td className="py-1 pr-3 text-right">{r.inserted}</td>
-                        <td className="py-1 pr-3 text-right">{r.duplicates}</td>
-                        <td className="py-1 pr-3 text-right">{r.newBadges}</td>
+                      <tr key={r.id}>
+                        <td className="px-2 py-1">{formatDateTime(r.createdAt, TZ, locale)}</td>
+                        <td className="px-2 py-1 text-right">{r.received}</td>
+                        <td className="px-2 py-1 text-right">{r.inserted}</td>
+                        <td className="px-2 py-1 text-right">{r.duplicates}</td>
+                        <td className="px-2 py-1 text-right">{r.newBadges}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
+                  </AppDataTableBody>
+                </AppDataTable>
+                </div>
               </div>
             )}
           </GlassCard>

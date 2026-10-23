@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
 import { GlassInput } from "@/components/glass"
 import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { VehicleStatusBadge } from "@/components/transport/vehicle-status-badge"
 import {
   fetchGpsVehicles,
@@ -312,11 +313,9 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
         )}
       </DataPanel>
 
-      <DataPanel padding="none">
-        <div className="min-w-0 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-sm">
-            <thead className="bg-muted border-b border-border">
+      <AppDataTablePanel>
+          <AppDataTable>
+            <AppDataTableHead>
               <tr>
                 <th className="min-w-0 px-4 py-3 font-semibold text-foreground">สาขา</th>
                 <th className="w-28 px-4 py-3 font-semibold text-foreground">ทะเบียน</th>
@@ -329,14 +328,14 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
                 <th className="px-4 py-3 font-semibold text-foreground w-24">สถานะ</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {editingId === "new" && <tr className="bg-cyan-50/50">{renderForm("new")}</tr>}
+            </AppDataTableHead>
+            <AppDataTableBody>
+              {editingId === "new" && <tr data-tone="edit" className="bg-cyan-50/50">{renderForm("new")}</tr>}
               {filtered.map((item) =>
                 editingId === item.id ? (
-                  <tr key={item.id} className="bg-cyan-50/50">{renderForm(item.id, item.gpsDeviceId)}</tr>
+                  <tr key={item.id} data-tone="edit" className="bg-cyan-50/50">{renderForm(item.id, item.gpsDeviceId)}</tr>
                 ) : (
-                  <tr key={item.id} className={`hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}>
+                  <tr key={item.id} className={!item.isActive ? "opacity-50" : undefined}>
                     <td className="px-4 py-3 text-foreground">{item.branch.name}</td>
                     <td className="px-4 py-3 font-mono font-medium">{item.plateNumber}</td>
                     <td className="px-4 py-3 text-foreground">{item.name}</td>
@@ -404,11 +403,9 @@ export function VehiclesTab({ search = "", addRequest = 0 }: Props) {
                   </td>
                 </tr>
               )}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </DataPanel>
+            </AppDataTableBody>
+          </AppDataTable>
+      </AppDataTablePanel>
     </div>
   )
 }

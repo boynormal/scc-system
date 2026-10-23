@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { Filter, Loader2, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react"
 import { GlassButton, GlassInput } from "@/components/glass"
 import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { WheelLayoutDiagram } from "@/components/transport/WheelLayoutDiagram"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
@@ -667,10 +668,9 @@ export function TiresPageClient() {
         </DataPanel>
 
         <div className="space-y-4 min-w-0">
-          <DataPanel padding="none">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left min-w-[820px]">
-                <thead className="bg-muted border-b border-border">
+          <AppDataTablePanel>
+              <AppDataTable>
+                <AppDataTableHead>
                   <tr>
                     <th className="px-4 py-3 font-semibold text-foreground">เอกสาร</th>
                     <th className="px-4 py-3 font-semibold text-foreground">วันที่</th>
@@ -682,8 +682,8 @@ export function TiresPageClient() {
                     <th className="px-4 py-3 font-semibold text-foreground">หมายเหตุ</th>
                     <th className="px-4 py-3 w-24"></th>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
+                </AppDataTableHead>
+                <AppDataTableBody>
                   {loading && (
                     <tr>
                       <td colSpan={9} className="px-2 py-4">
@@ -717,11 +717,8 @@ export function TiresPageClient() {
                       return (
                         <tr
                           key={row.id}
-                          className={
-                            editingId === row.id
-                              ? "bg-cyan-50/70 dark:bg-cyan-950/30"
-                              : "hover:bg-muted/60"
-                          }
+                          data-tone={editingId === row.id ? "edit" : undefined}
+                          className={editingId === row.id ? "bg-cyan-50/70 dark:bg-cyan-950/30" : undefined}
                         >
                           <td className="whitespace-nowrap px-4 py-3 font-mono text-sm font-semibold tabular-nums">
                             {row.tireNumber}
@@ -770,10 +767,9 @@ export function TiresPageClient() {
                         </tr>
                       )
                     })}
-                </tbody>
-              </table>
-            </div>
-          </DataPanel>
+                </AppDataTableBody>
+              </AppDataTable>
+          </AppDataTablePanel>
         </div>
       </div>
     </div>

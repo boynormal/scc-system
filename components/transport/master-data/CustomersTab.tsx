@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
 import { GlassButton, GlassInput } from "@/components/glass"
-import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { includesSearch, isAutoCustomerCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
 import {
@@ -100,7 +100,7 @@ function CustomerFormRows({
 }) {
   return (
     <>
-      <tr className="bg-cyan-50/50">
+      <tr data-tone="edit" className="bg-cyan-50/50">
         <td className="px-3 py-3 align-middle">
           <GlassInput
             value={form.name}
@@ -164,7 +164,7 @@ function CustomerFormRows({
           </div>
         </td>
       </tr>
-      <tr className="bg-cyan-50/30">
+      <tr data-tone="edit" className="bg-cyan-50/30">
         <td colSpan={8} className="px-4 py-3">
           <CustomerLocationField
             key={formKey}
@@ -319,11 +319,9 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
           </GlassButton>
         </div>
       )}
-      <DataPanel padding="none">
-        <div className="min-w-0 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px] text-left text-sm">
-            <thead className="bg-muted border-b border-border">
+      <AppDataTablePanel>
+          <AppDataTable>
+            <AppDataTableHead>
               <tr>
                 <th className="min-w-0 px-4 py-3 font-semibold text-foreground">ชื่อลูกค้า/ปลายทาง</th>
                 <th className="min-w-0 px-4 py-3 font-semibold text-foreground">ที่อยู่</th>
@@ -334,8 +332,8 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                 <th className="px-4 py-3 font-semibold text-foreground w-20">สถานะ</th>
                 <th className="w-44 px-3 py-3"></th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+            </AppDataTableHead>
+            <AppDataTableBody>
               {editingId === "new" && (
                 <CustomerFormRows
                   formKey="new"
@@ -356,7 +354,7 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                     onSave={() => handleSave(item.id)}
                   />
                 ) : (
-                  <tr key={item.id} className={`hover:bg-muted/60 ${!item.isActive ? "opacity-50" : ""}`}>
+                  <tr key={item.id} className={!item.isActive ? "opacity-50" : undefined}>
                     <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
                     <td className="px-4 py-3 text-foreground max-w-xs truncate" title={item.address ?? ""}>
                       {item.address ?? "—"}
@@ -424,11 +422,9 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                   </td>
                 </tr>
               )}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </DataPanel>
+            </AppDataTableBody>
+          </AppDataTable>
+      </AppDataTablePanel>
     </div>
   )
 }

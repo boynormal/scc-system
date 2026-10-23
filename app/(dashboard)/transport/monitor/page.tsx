@@ -9,6 +9,7 @@ import { VehicleGpsCard } from "@/components/transport/gps/VehicleGpsCard"
 import { RefreshCw, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DataPanel } from "@/components/shell/data-panel"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import {
   TransportSearchField,
   TransportSegmentedTabs,
@@ -160,16 +161,14 @@ export default function TransportMonitorPage() {
         )
       })()}
 
-      {/* Table — horizontal scroll inside card when columns exceed viewport */}
-      <DataPanel className="min-w-0">
+      <AppDataTablePanel>
         {error ? (
           <div className="px-6 py-10 text-center text-sm text-red-500">{error}</div>
         ) : loading ? (
           <div className="px-6 py-10 text-center text-sm text-muted-foreground">กำลังโหลดข้อมูล GPS...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] text-sm">
-              <thead className="bg-muted text-xs font-medium uppercase tracking-wider text-foreground">
+            <AppDataTable>
+              <AppDataTableHead>
                 <tr>
                   <th className="px-4 py-3 text-left">ทะเบียน</th>
                   <th className="px-4 py-3 text-left">ความพร้อม</th>
@@ -183,8 +182,8 @@ export default function TransportMonitorPage() {
                   <th className="px-4 py-3 text-left">อัปเดต</th>
                   <th className="px-4 py-3 text-left">Alert</th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+              </AppDataTableHead>
+              <AppDataTableBody>
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">ไม่พบข้อมูล</td>
@@ -199,11 +198,10 @@ export default function TransportMonitorPage() {
                     />
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
+              </AppDataTableBody>
+            </AppDataTable>
         )}
-      </DataPanel>
+      </AppDataTablePanel>
     </div>
   )
 }

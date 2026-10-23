@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server"
 import { ClipboardList } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ListPagination } from "@/components/ui/list-pagination"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { PmRowActions } from "@/components/assets/pm-row-actions"
 import type { PmQrSticker } from "@/components/assets/pm-board-qr"
 
@@ -70,58 +71,55 @@ export async function PmCheckBoard({
     )
   }
 
-  const headClass = "border-b border-[#cbd5e1] bg-[#e2e8f0] px-4 py-3 text-left text-xs font-semibold text-[#0f172a]"
-  const cellClass = "border-b border-[#e2e8f0] bg-[#ffffff] px-4 py-3 text-sm text-[#0f172a]"
-
   return (
-    <div className="overflow-x-auto rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
-        <table className="w-full min-w-[760px] border-separate border-spacing-0 text-sm">
-          <thead>
+    <AppDataTablePanel>
+        <AppDataTable>
+          <AppDataTableHead>
             <tr>
-              <th className={headClass}>{t("colName")}</th>
-              <th className={headClass}>{assetsT("branch")}</th>
-              <th className={headClass}>{assetsT("type")}</th>
-              <th className={headClass}>{t("colStatus")}</th>
-              <th className={headClass}>{t("nextDue")}</th>
-              <th className={headClass}>{t("colInterval")}</th>
-              <th className={headClass}>{t("colItems")}</th>
-              <th className={`${headClass} text-right`}>{assetsT("manage")}</th>
+              <th>{t("colName")}</th>
+              <th>{assetsT("branch")}</th>
+              <th>{assetsT("type")}</th>
+              <th>{t("colStatus")}</th>
+              <th>{t("nextDue")}</th>
+              <th>{t("colInterval")}</th>
+              <th>{t("colItems")}</th>
+              <th className="text-right">{assetsT("manage")}</th>
             </tr>
-          </thead>
-          <tbody>
+          </AppDataTableHead>
+          <AppDataTableBody>
             {rows.map((row) => {
               const sticker = stickerByAsset.get(row.assetId)
               return (
                 <tr key={row.assetId}>
-                  <td className={cellClass}>
+                  <td className="px-4 py-3">
                     <p className="font-semibold">{row.name}</p>
-                    <p className="text-xs text-[#475569]">{row.code}</p>
+                    <p className="text-xs text-muted-foreground">{row.code}</p>
                   </td>
-                  <td className={cellClass}>{row.branchName}</td>
-                  <td className={cellClass}>{row.typeName}</td>
-                  <td className={cellClass}>
+                  <td className="px-4 py-3">{row.branchName}</td>
+                  <td className="px-4 py-3">{row.typeName}</td>
+                  <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClass[row.dueStatus]}`}>
                       {t(`status_${row.dueStatus}`)}
                     </span>
                   </td>
-                  <td className={cellClass}>{row.nextDueDate ?? "—"}</td>
-                  <td className={cellClass}>{row.intervalDays}</td>
-                  <td className={cellClass}>{row.itemCount}</td>
-                  <td className={`${cellClass} text-right`}>
+                  <td className="px-4 py-3">{row.nextDueDate ?? "—"}</td>
+                  <td className="px-4 py-3">{row.intervalDays}</td>
+                  <td className="px-4 py-3">{row.itemCount}</td>
+                  <td className="px-4 py-3 text-right">
                     {sticker ? <PmRowActions sticker={sticker} canUpdate={canUpdate} /> : null}
                   </td>
                 </tr>
               )
             })}
-          </tbody>
-        </table>
-        <ListPagination
-          pathname="/assets"
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          query={query}
-        />
-    </div>
+          </AppDataTableBody>
+        </AppDataTable>
+      <ListPagination
+        pathname="/assets"
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        query={query}
+      />
+    </AppDataTablePanel>
   )
 }

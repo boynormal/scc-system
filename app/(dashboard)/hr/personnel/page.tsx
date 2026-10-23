@@ -21,6 +21,7 @@ import { PersonnelCreateButton } from "./personnel-create-button"
 import { PersonnelRowActions } from "./personnel-row-actions"
 import { personnelDateTimeInput } from "@/modules/hr/application/personnel-date-time"
 import { ListFrame } from "@/components/shell/list-frame"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { compareBranchTabName } from "@/modules/hr/application/branch-tab-order"
 
@@ -133,6 +134,7 @@ export default async function HrPersonnelPage(props: {
         />
       )}
       <ListFrame
+        plainPanel
         filters={
           <Suspense fallback={<div className="h-10 w-full animate-pulse rounded-lg bg-muted" />}>
             <PersonnelFilters
@@ -142,6 +144,7 @@ export default async function HrPersonnelPage(props: {
           </Suspense>
         }
       >
+        <AppDataTablePanel>
         {list.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -150,47 +153,46 @@ export default async function HrPersonnelPage(props: {
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted text-left text-muted-foreground">
-                    <th className="p-3 font-medium">รหัสรายชื่อ</th>
-                    <th className="p-3 font-medium">ชื่อเรียก</th>
-                    <th className="p-3 font-medium">แผนก</th>
-                    <th className="p-3 font-medium">กลุ่มงาน</th>
-                    <th className="p-3 font-medium">สาขา</th>
-                    <th className="p-3 font-medium">สถานะ</th>
-                    <th className="p-3 font-medium text-right">จัดการ</th>
+            <AppDataTable>
+                <AppDataTableHead>
+                  <tr>
+                    <th>รหัสรายชื่อ</th>
+                    <th>ชื่อเรียก</th>
+                    <th>แผนก</th>
+                    <th>กลุ่มงาน</th>
+                    <th>สาขา</th>
+                    <th>สถานะ</th>
+                    <th className="text-right">จัดการ</th>
                   </tr>
-                </thead>
-                <tbody>
+                </AppDataTableHead>
+                <AppDataTableBody>
                   {list.map((p) => {
                     const primary = p.branchAssignments.find((a) => a.isPrimary)?.branch ?? p.branch
                     return (
-                    <tr key={p.id} className="border-b border-border hover:bg-muted/60/80">
-                      <td className="p-3 font-mono text-foreground">
+                    <tr key={p.id}>
+                      <td className="px-4 py-3 font-mono text-foreground">
                         <Link href={`/hr/personnel/${p.id}`} className="text-blue-700 hover:underline">
                           {p.rosterNo}
                         </Link>
                       </td>
-                      <td className="p-3 text-foreground">
+                      <td className="px-4 py-3 text-foreground">
                         <Link href={`/hr/personnel/${p.id}`} className="hover:underline">
                           {p.displayName}
                         </Link>
                       </td>
-                      <td className="p-3 text-foreground">{p.department?.name ?? "—"}</td>
-                      <td className="p-3 text-foreground">{p.jobGroupRef?.name ?? "—"}</td>
-                      <td className="p-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-foreground">{p.department?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-foreground">{p.jobGroupRef?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
                         {primary ? `${primary.code} — ${primary.name}` : "—"}
                       </td>
-                      <td className="p-3">
+                      <td className="px-4 py-3">
                         {p.isActive ? (
                           <Badge className="bg-emerald-100 text-emerald-800">ใช้งาน</Badge>
                         ) : (
                           <Badge variant="outline">ปิด</Badge>
                         )}
                       </td>
-                      <td className="p-3 text-right">
+                      <td className="px-4 py-3 text-right">
                         <PersonnelRowActions
                           person={{
                             id: p.id,
@@ -226,9 +228,8 @@ export default async function HrPersonnelPage(props: {
                     </tr>
                     )
                   })}
-                </tbody>
-              </table>
-            </div>
+                </AppDataTableBody>
+            </AppDataTable>
             <ListPagination
               pathname="/hr/personnel"
               page={page}
@@ -238,6 +239,7 @@ export default async function HrPersonnelPage(props: {
             />
           </>
         )}
+        </AppDataTablePanel>
       </ListFrame>
     </div>
   )

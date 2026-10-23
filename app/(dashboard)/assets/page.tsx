@@ -18,6 +18,7 @@ import { AssetPmToggle } from "@/components/assets/asset-pm-toggle"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
+import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { ModuleTabs } from "@/components/shell/module-tabs"
 import { PmCheckBoard } from "@/components/assets/pm-check-board"
 import { PmCalendarFilters } from "@/components/assets/pm-calendar-filters"
@@ -255,7 +256,7 @@ export default async function AssetsListPage(props: {
         </Suspense>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#cbd5e1] bg-[#ffffff] shadow-sm">
+      <AppDataTablePanel>
         {data.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
@@ -269,62 +270,40 @@ export default async function AssetsListPage(props: {
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#cbd5e1] bg-[#e2e8f0]">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("code")}
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("name")}
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("type")}
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("ownership")}
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("branch")}
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("status")}
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("maintenancePmColumn")}
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-[#0f172a]">
-                      {t("serialNumber")}
-                    </th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-[#0f172a]">
-                      {t("manage")}
-                    </th>
+              <AppDataTable>
+                <AppDataTableHead>
+                  <tr>
+                    <th>{t("code")}</th>
+                    <th>{t("name")}</th>
+                    <th>{t("type")}</th>
+                    <th>{t("ownership")}</th>
+                    <th>{t("branch")}</th>
+                    <th>{t("status")}</th>
+                    <th>{t("maintenancePmColumn")}</th>
+                    <th>{t("serialNumber")}</th>
+                    <th className="text-right">{t("manage")}</th>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e2e8f0] bg-[#ffffff]">
+                </AppDataTableHead>
+                <AppDataTableBody>
                   {data.map((asset) => (
-                    <tr key={asset.id} className="bg-[#ffffff] transition-colors hover:bg-[#f1f5f9]">
-                      <td className="px-5 py-3.5 font-semibold text-[#0f172a]">{asset.code}</td>
-                      <td className="px-5 py-3.5 text-[#0f172a]">
-                        {asset.name}
-                      </td>
-                      <td className="px-5 py-3.5 text-[#334155]">{asset.typeName}</td>
-                      <td className="px-5 py-3.5 text-[#334155]">{t(`own_${asset.ownership}`)}</td>
-                      <td className="px-5 py-3.5 text-[#334155]">{asset.branchName}</td>
-                      <td className="px-5 py-3.5 text-[#334155]">{t(`st_${asset.status}`)}</td>
-                      <td className="px-5 py-3.5">
+                    <tr key={asset.id}>
+                      <td className="px-4 py-3 font-semibold">{asset.code}</td>
+                      <td className="px-4 py-3">{asset.name}</td>
+                      <td className="px-4 py-3">{asset.typeName}</td>
+                      <td className="px-4 py-3">{t(`own_${asset.ownership}`)}</td>
+                      <td className="px-4 py-3">{asset.branchName}</td>
+                      <td className="px-4 py-3">{t(`st_${asset.status}`)}</td>
+                      <td className="px-4 py-3">
                         <AssetPmToggle asset={asset} canUpdate={canUpdate} />
                       </td>
-                      <td className="px-5 py-3.5 text-[#334155]">{asset.serialNumber ?? "—"}</td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">{asset.serialNumber ?? "—"}</td>
+                      <td className="px-4 py-3">
                         <AssetRowActions asset={asset} canUpdate={canUpdate} canDelete={canDelete} />
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </AppDataTableBody>
+              </AppDataTable>
             <ListPagination
               pathname="/assets"
               page={page}
@@ -334,7 +313,7 @@ export default async function AssetsListPage(props: {
             />
           </>
         )}
-      </div>
+      </AppDataTablePanel>
     </div>
     </ModuleBackdrop>
   )

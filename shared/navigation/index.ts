@@ -18,8 +18,8 @@ export {
   parseCompanyNavPreferences,
   sortNavTree,
 } from "./companyNavPreferences"
-export { flattenNavForLauncher, flattenNavForPalette } from "./flattenNav"
-export type { FlatNavItem, LauncherAppItem } from "./flattenNav"
+export { flattenNavForLauncher } from "./flattenNav"
+export type { LauncherAppItem } from "./flattenNav"
 export { DEPARTMENT_BY_ID, DEPARTMENT_REGISTRY } from "./departmentRegistry"
 export type { DepartmentDef } from "./departmentRegistry"
 export { PRODUCT_LINE_BY_ID, PRODUCT_LINE_REGISTRY } from "./productLineRegistry"

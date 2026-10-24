@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ListPagination, SSR_PAGE_SIZE, parsePage } from "@/components/ui/list-pagination"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
-import { ModuleTabs } from "@/components/shell/module-tabs"
+import { NavbarModuleTabs } from "@/components/shell/navbar-module-tabs"
 import { PmCheckBoard } from "@/components/assets/pm-check-board"
 import { PmCalendarFilters } from "@/components/assets/pm-calendar-filters"
 import { PmMonthGrid } from "@/components/assets/pm-month-grid"
@@ -61,7 +61,7 @@ export default async function AssetsListPage(props: {
   ]
   const cookieStore = await cookies()
   const isDark = resolveAppearance(cookieStore.get(APPEARANCE_COOKIE)?.value) === "dark"
-  const tabs = <ModuleTabs items={tabItems} activeKey={tab} aria-label="สินทรัพย์" />
+  const tabs = <NavbarModuleTabs items={tabItems} activeKey={tab} aria-label="สินทรัพย์" />
 
   if (tab === "pm-check") {
     const canUpdatePm =

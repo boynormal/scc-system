@@ -6,15 +6,6 @@ function launcherSortOrder(node: { order?: number; launcher?: NavLauncherMeta })
   return node.order ?? 500
 }
 
-export type FlatNavItem = {
-  href: string
-  label: string
-  moduleId: string
-  keywords: string[]
-  /** ข้อความรวมสำหรับค้นหา */
-  searchText: string
-}
-
 export type LauncherAppItem = {
   moduleId: string
   label: string
@@ -27,44 +18,6 @@ export type LauncherAppItem = {
   searchText: string
   isPrimary: boolean
   badgeKey?: string
-}
-
-function pushLink(
-  out: FlatNavItem[],
-  href: string,
-  label: string,
-  moduleId: string,
-  keywords: string[] | undefined,
-  breadcrumb: string[]
-) {
-  const kw = keywords ?? []
-  const searchText = [label, href, moduleId, ...breadcrumb, ...kw].join(" ").toLowerCase()
-  out.push({
-    href,
-    label: breadcrumb.length ? `${breadcrumb.join(" › ")} › ${label}` : label,
-    moduleId,
-    keywords: kw,
-    searchText,
-  })
-}
-
-/**
- * แปลง tree เป็นรายการลิงก์สำหรับ command palette (เฉพาะ type link)
- */
-export function flattenNavForPalette(nodes: ModuleNavNode[], breadcrumb: string[] = []): FlatNavItem[] {
-  const out: FlatNavItem[] = []
-  for (const n of nodes) {
-    if (n.type === "link") {
-      pushLink(out, n.href, n.label, n.moduleId, n.keywords, breadcrumb)
-    } else if (n.type === "group") {
-      const bc = [...breadcrumb, n.label]
-      out.push(...flattenNavForPalette(n.children, bc))
-    } else if (n.type === "section") {
-      const bc = [...breadcrumb, n.label]
-      out.push(...flattenNavForPalette(n.children, bc))
-    }
-  }
-  return out
 }
 
 function firstLinkHref(nodes: ModuleNavNode[]): string | null {

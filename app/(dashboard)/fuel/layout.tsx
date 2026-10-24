@@ -6,7 +6,7 @@ import type { UserRole } from "@/lib/permissions"
 import { canEnterModuleArea } from "@/shared/permissions/module-access-catalog"
 import { APPEARANCE_COOKIE, resolveAppearance } from "@/shared/appearance"
 import { ModuleBackdrop } from "@/components/shell/module-backdrop"
-import { ModuleTabs } from "@/components/shell/module-tabs"
+import { NavbarModuleTabs } from "@/components/shell/navbar-module-tabs"
 import { canFuelAnywhere } from "@/modules/fuel"
 
 export default async function FuelLayout({ children }: { children: React.ReactNode }) {
@@ -34,10 +34,8 @@ export default async function FuelLayout({ children }: { children: React.ReactNo
 
   return (
     <ModuleBackdrop isDark={isDark}>
-      <div className="relative z-10 min-w-0 space-y-4">
-        <ModuleTabs items={tabs} aria-label={t("moduleTitle")} />
-        {children}
-      </div>
+      <NavbarModuleTabs items={tabs} aria-label={t("moduleTitle")} />
+      <div className="relative z-10 min-w-0">{children}</div>
     </ModuleBackdrop>
   )
 }

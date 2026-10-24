@@ -16,7 +16,7 @@ export type ModuleTabItem = {
 }
 
 const ACTIVE_FILL =
-  "bg-gradient-to-b from-rose-400 via-rose-500 to-rose-600 shadow-[0_8px_16px_rgb(244_63_94/0.45),inset_0_1px_0_rgb(255_255_255/0.7)] ring-1 ring-white/50 dark:from-rose-400 dark:via-rose-500 dark:to-rose-700"
+  "bg-gradient-to-b from-rose-400 via-rose-500 to-rose-600 shadow-[inset_0_1px_0_rgb(255_255_255/0.7)] dark:from-rose-400 dark:via-rose-500 dark:to-rose-700"
 
 function isHrefActive(pathname: string, href: string, exact?: boolean) {
   const path = href.split("?")[0] || href
@@ -47,7 +47,7 @@ export function ModuleTabs({
     <div
       ref={rootRef}
       className={cn(
-        "relative inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border border-white/80 bg-white/40 p-1 shadow-[0_10px_28px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)] backdrop-blur-2xl dark:border-white/20 dark:bg-white/10",
+        "relative inline-flex max-w-full flex-wrap items-center gap-1 overflow-hidden rounded-full border border-white/80 bg-white/40 p-1 shadow-[0_10px_28px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)] backdrop-blur-2xl dark:border-white/20 dark:bg-white/10",
         className
       )}
       aria-label={ariaLabel}

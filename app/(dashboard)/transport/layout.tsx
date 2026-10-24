@@ -49,12 +49,10 @@ export default async function TransportLayout({ children }: { children: React.Re
 
   return (
     <ModuleBackdrop isDark={isDark}>
-      <div className="space-y-6">
-        <TransportModuleTabs tabs={tabs} />
-        <PendingFade scope="module" className="min-w-0">
-          {children}
-        </PendingFade>
-      </div>
+      <TransportModuleTabs tabs={tabs} />
+      <PendingFade scope="module" className="min-w-0">
+        {children}
+      </PendingFade>
     </ModuleBackdrop>
   )
 }

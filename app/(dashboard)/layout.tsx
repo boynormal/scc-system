@@ -12,6 +12,7 @@ import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPrefer
 import { translateNavTree } from "@/shared/navigation/translateNav"
 import { cn } from "@/lib/utils"
 import { NavPendingProvider } from "@/components/shell/nav-pending"
+import { ModuleTabSlotProvider } from "@/components/shell/module-tab-slot"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -48,20 +49,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isDark = appearance === "dark"
 
   return (
-    <div className={cn("relative flex min-h-screen bg-glass-ambient", isDark && "dark")}>
+    <div className={cn("relative flex h-screen overflow-hidden bg-glass-ambient", isDark && "dark")}>
       <NavPendingProvider>
-        <div className="sticky top-0 z-40 h-screen shrink-0 self-start">
-          <Sidebar
-            navItems={navItems}
-            productLineImageOverrides={navPreferences.productLineImageOverrides}
-            moduleImageOverrides={navPreferences.moduleImageOverrides}
-            logoUrl={company?.logoUrl}
-          />
-        </div>
-        <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-          <Header user={session.user} navItems={navItems} appearance={appearance} />
-          <main className="p-6 text-foreground">{children}</main>
-        </div>
+        <ModuleTabSlotProvider>
+          <div className="h-full shrink-0">
+            <Sidebar
+              navItems={navItems}
+              productLineImageOverrides={navPreferences.productLineImageOverrides}
+              moduleImageOverrides={navPreferences.moduleImageOverrides}
+              logoUrl={company?.logoUrl}
+            />
+          </div>
+          <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <Header user={session.user} appearance={appearance} />
+            <main className="p-6 text-foreground">{children}</main>
+          </div>
+        </ModuleTabSlotProvider>
       </NavPendingProvider>
     </div>
   )

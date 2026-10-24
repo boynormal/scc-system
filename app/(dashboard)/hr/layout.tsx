@@ -39,10 +39,8 @@ export default async function HrLayout({ children }: { children: React.ReactNode
 
   return (
     <ModuleBackdrop isDark={isDark}>
-      <div className="space-y-6">
-        <HrModuleTabs tabs={tabs} />
-        <PendingFade scope="module">{children}</PendingFade>
-      </div>
+      <HrModuleTabs tabs={tabs} />
+      <PendingFade scope="module">{children}</PendingFade>
     </ModuleBackdrop>
   )
 }

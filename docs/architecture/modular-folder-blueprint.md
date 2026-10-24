@@ -162,9 +162,9 @@ app/                        # ชั้น adapter เท่านั้น — 
 
 - โฟลเดอร์ `modules/*` พร้อม `README.md` ต่อโมดูล
 - `shared/navigation/moduleRegistry.ts` — tree เมนู (`link` / `group` / `section`) + `moduleId` / `keywords` / `order`
-- `shared/navigation/buildDashboardNav.ts` — merge จาก `companies.settings.nav` + เรียงลำดับ + RBAC; [app/(dashboard)/layout.tsx](../../app/(dashboard)/layout.tsx) ส่ง `navItems` เข้า Sidebar และ Header
+- `shared/navigation/buildDashboardNav.ts` — merge จาก `companies.settings.nav` + เรียงลำดับ + RBAC; [app/(dashboard)/layout.tsx](../../app/(dashboard)/layout.tsx) ส่ง `navItems` เข้า Sidebar
 - `shared/navigation/filterNavByPermission.ts` — กรองเมนูตาม RBAC แบบ recursive
-- Command palette (Ctrl+K) + `GET|PATCH /api/settings/nav-preferences` สำหรับอ่าน/แก้ preferences เมนูต่อบริษัท
+- `GET|PATCH /api/settings/nav-preferences` สำหรับอ่าน/แก้ preferences เมนูต่อบริษัท
 - `shared/db`, `shared/permissions` — re-export จาก `lib/*` สำหรับโค้ดใหม่
 - ตัวอย่าง use-case: [modules/work_orders/application/generate-wo-number.ts](../../modules/work_orders/application/generate-wo-number.ts) ถูกเรียกจาก [app/api/work-orders/route.ts](../../app/api/work-orders/route.ts)
 - `modules/machines/application/machine-service.ts` — แยก list/create/detail/update/delete ออกจาก `app/api/machines/**` แล้ว โดย route ยังเป็น URL เดิม

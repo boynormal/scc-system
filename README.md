@@ -81,7 +81,7 @@ Environment ตัวอย่าง: [`.env.example`](.env.example)
 
 ## Navigation
 
-เมนูหลายโมดูลอยู่ที่ `shared/navigation/moduleRegistry.ts` (pipeline `buildDashboardNav`, `/apps` launcher, command palette) — ตั้งค่าต่อบริษัทผ่าน nav preferences API
+เมนูหลายโมดูลอยู่ที่ `shared/navigation/moduleRegistry.ts` (pipeline `buildDashboardNav`, `/apps` launcher) — ตั้งค่าต่อบริษัทผ่าน nav preferences API
 
 ---
 

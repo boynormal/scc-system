@@ -34,12 +34,10 @@ export default async function FinanceLayout({ children }: { children: React.Reac
 
   return (
     <ModuleBackdrop isDark={isDark}>
-      <div className="space-y-6">
-        <FinanceModuleTabs tabs={tabs} />
-        <PendingFade scope="module" className="min-w-0">
-          {children}
-        </PendingFade>
-      </div>
+      <FinanceModuleTabs tabs={tabs} />
+      <PendingFade scope="module" className="min-w-0">
+        {children}
+      </PendingFade>
     </ModuleBackdrop>
   )
 }

@@ -9,7 +9,7 @@
 - [ops/BACKUP.md](../ops/BACKUP.md) — สำรอง / กู้คืนก่อน migrate
 - [SECURITY.md](../SECURITY.md) — auth, secrets, cron
 
-**ใน repo นี้ (Phase 1 foundation):** มี `modules/*/README`, navigation tree (`link`/`group`/`section`), `buildDashboardNav` (รวม `companies.settings.nav` + RBAC), Sidebar + `/apps` launcher + command palette (Ctrl+K), `GET|PATCH /api/settings/nav-preferences` (hidden/order/pinned + hidden/reorder departments), และตัวอย่าง use-case `modules/work_orders/application/generate-wo-number.ts` — เฟสถัดไปคือย้าย logic จาก API อื่นทีละไฟล์ตาม [contributing-modules.md](./contributing-modules.md)
+**ใน repo นี้ (Phase 1 foundation):** มี `modules/*/README`, navigation tree (`link`/`group`/`section`), `buildDashboardNav` (รวม `companies.settings.nav` + RBAC), Sidebar + `/apps` launcher, `GET|PATCH /api/settings/nav-preferences` (hidden/order/pinned + hidden/reorder departments), และตัวอย่าง use-case `modules/work_orders/application/generate-wo-number.ts` — เฟสถัดไปคือย้าย logic จาก API อื่นทีละไฟล์ตาม [contributing-modules.md](./contributing-modules.md)
 
 **อัปเดต:** `app/api/transport/**` ทั้งหมด (รวม `calendar`, `gps`, `jobs/[id]/stops`, `jobs/[id]/attachments`) ย้าย logic เข้า `modules/transport/application` ครบแล้ว ไม่มี route ที่ query Prisma ตรงเหลืออยู่ในโมดูลนี้
 

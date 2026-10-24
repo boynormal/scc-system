@@ -27,8 +27,9 @@ export function AppDataTable({ children, className }: { children: ReactNode; cla
 }
 
 /**
- * Gray header row, pinned under the 56px navbar while the page scrolls. Pass `sticky={false}` for a
- * table inside a card, a dialog, or a horizontal scroller, which would become the sticky ancestor.
+ * Gray header row, pinned just under the 56px navbar while the page scrolls.
+ * Pass `sticky={false}` for a table inside a card, a dialog, or a horizontal scroller,
+ * which would become the sticky ancestor.
  */
 export function AppDataTableHead({
   children,

@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils"
-import { GlassSurface } from "./glass-surface"
 
 interface GlassNavbarProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode
@@ -7,16 +6,14 @@ interface GlassNavbarProps extends React.HTMLAttributes<HTMLElement> {
 
 export function GlassNavbar({ children, className, ...props }: GlassNavbarProps) {
   return (
-    <GlassSurface
-      as="header"
-      intensity="strong"
+    <header
       className={cn(
-        "sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between rounded-none border-x-0 border-t-0 px-6",
+        "sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-white/40 bg-white/70 px-6 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/25 dark:border-white/10 dark:bg-slate-950/75 dark:supports-[backdrop-filter]:bg-slate-950/30",
         className
       )}
       {...props}
     >
       {children}
-    </GlassSurface>
+    </header>
   )
 }

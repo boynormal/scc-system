@@ -158,7 +158,8 @@
     "themeToDark": "สลับเป็นธีมมืด",
     "preferencesGroup": "การแสดงผล",
     "accountGroup": "บัญชีผู้ใช้",
-    "accountMenu": "เมนูบัญชีผู้ใช้"
+    "accountMenu": "เมนูบัญชีผู้ใช้",
+    "moduleTabsMenu": "แท็บหลัก"
   },
   "nav": {
     "sec_overview": "การจัดการซ่อมบำรุง",

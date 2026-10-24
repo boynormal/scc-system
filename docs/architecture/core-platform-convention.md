@@ -12,7 +12,7 @@
 | Tenant / Org | [`modules/settings`](../../modules/settings) | branches, roles, master-data ที่เป็น settings |
 | Notifications | [`modules/notifications`](../../modules/notifications) | in-app alerts, cron generator |
 | Branding | [`shared/branding.ts`](../../shared/branding.ts) | ชื่อระบบ, tagline, launcher badge |
-| Navigation | `shared/navigation/**` | module registry, nav tree, `/apps` launcher, command palette |
+| Navigation | `shared/navigation/**` | module registry, nav tree, `/apps` launcher |
 | DB access | [`shared/db`](../../shared/db) → [`lib/prisma.ts`](../../lib/prisma.ts) | Prisma client singleton |
 | API error handling | [`lib/errors.ts`](../../lib/errors.ts), [`lib/api-handler.ts`](../../lib/api-handler.ts) | `AppError` subclasses + `withAuth` wrapper |
 

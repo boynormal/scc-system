@@ -158,7 +158,8 @@
     "themeToDark": "Switch to dark theme",
     "preferencesGroup": "Display preferences",
     "accountGroup": "Account",
-    "accountMenu": "Account menu"
+    "accountMenu": "Account menu",
+    "moduleTabsMenu": "Main tabs"
   },
   "nav": {
     "sec_overview": "Maintenance management",

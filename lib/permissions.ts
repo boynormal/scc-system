@@ -23,6 +23,7 @@ export type Resource =
   | "due_dates"
   | "expenses"
   | "expense_masters"
+  | "incomes"
   | "assets"
   | "fuel"
 
@@ -141,6 +142,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     due_dates: ["create", "read", "update", "delete"],
     expenses: ["create", "read", "update", "delete", "approve"],
     expense_masters: ["create", "read", "update", "delete"],
+    incomes: ["create", "read", "update", "delete", "approve"],
     assets: ["create", "read", "update", "delete"],
     fuel: ["create", "read", "update", "delete", "approve"],
   },
@@ -169,6 +171,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     due_dates: ["create", "read", "update"],
     expenses: ["create", "read", "update", "approve"],
     expense_masters: ["read"],
+    incomes: ["create", "read", "update", "approve"],
     assets: ["create", "read", "update"],
     fuel: ["create", "read", "update", "approve"],
   },
@@ -193,6 +196,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     due_dates: ["read", "update"],
     expenses: ["create", "read"],
     expense_masters: ["read"],
+    incomes: ["create", "read"],
     assets: ["read"],
     fuel: ["create", "read"],
   },
@@ -216,6 +220,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     due_dates: ["read"],
     expenses: ["read"],
     expense_masters: ["read"],
+    incomes: ["read"],
     assets: ["read"],
     fuel: ["read"],
   },

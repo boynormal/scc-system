@@ -8,7 +8,9 @@ export default async function FinancePage() {
   const session = await auth()
   if (!session) redirect("/login")
   const roles = session.user.roles as UserRole[]
-  if (!canFinance(roles, "expenses", "read")) redirect("/")
+  const canExpenses = canFinance(roles, "expenses", "read")
+  const canIncomes = canFinance(roles, "incomes", "read")
+  if (!canExpenses && !canIncomes) redirect("/")
 
-  return <FinanceOverview />
+  return <FinanceOverview canExpenses={canExpenses} canIncomes={canIncomes} />
 }

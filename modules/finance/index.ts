@@ -96,3 +96,47 @@ export {
 } from "./application/expense-reports-service"
 
 export { generateExpenseNo } from "./application/generate-expense-no"
+
+export {
+  createIncome,
+  createIncomeSchema,
+  updateIncome,
+  updateIncomeSchema,
+  approveIncome,
+  rejectIncome,
+  markIncomeReceived,
+  receiveIncomeSchema,
+  unreceiveIncome,
+  unreceiveIncomeSchema,
+  deleteIncome,
+  listIncomes,
+  getIncome,
+  getIncomeSummary,
+  listIncomeFormOptions,
+  uploadIncomeFile,
+  readIncomeAttachmentFile,
+  removeIncomeAttachment,
+  incomeAttachmentFilePath,
+  INCOME_STATUSES,
+  type IncomeDto,
+  type IncomeLineDto,
+  type CreateIncomeInput,
+  type UpdateIncomeInput,
+} from "./application/income-service"
+
+export {
+  listIncomeCategories,
+  createIncomeCategory,
+  updateIncomeCategory,
+  deleteIncomeCategory,
+  incomeCategorySchema,
+  listIncomeTypes,
+  createIncomeType,
+  updateIncomeType,
+  deleteIncomeType,
+  incomeTypeSchema,
+} from "./application/income-master-service"
+
+export { getIncomeReport, incomeReportQuerySchema } from "./application/income-reports-service"
+
+export { generateIncomeNo } from "./application/generate-income-no"

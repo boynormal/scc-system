@@ -182,6 +182,9 @@ model Company {
   jobGroups             JobGroup[]
   fuelTypes             FuelType[]
   fuelTanks             FuelTank[]
+  incomes               Income[]
+  incomeTypes           IncomeType[]
+  incomeCategories      IncomeCategory[]
 
   @@map("companies")
 }
@@ -226,6 +229,7 @@ model Branch {
   storedFiles          StoredFile[]
   fuelTanks            FuelTank[]
   fuelTransactions     FuelTransaction[]
+  incomes              Income[]
 
   @@index([companyId])
   @@index([code])
@@ -338,6 +342,11 @@ model User {
   expensesApproved       Expense[]              @relation("ExpenseApprovedBy")
   expensesPaid           Expense[]              @relation("ExpensePaidBy")
   expenseAttachments     ExpenseAttachment[]    @relation("ExpenseAttachmentUploader")
+  incomesCreated         Income[]               @relation("IncomeCreatedBy")
+  incomesEmployee        Income[]               @relation("IncomeEmployee")
+  incomesApproved        Income[]               @relation("IncomeApprovedBy")
+  incomesReceived        Income[]               @relation("IncomeReceivedBy")
+  incomeAttachments      IncomeAttachment[]     @relation("IncomeAttachmentUploader")
   storedFilesUploaded    StoredFile[]           @relation("StoredFileUploader")
   financeSourceReviews   FinanceSourceReview[]  @relation("FinanceSourceReviewReviewedBy")
   assetsCreated          Asset[]                @relation("AssetCreatedBy")
@@ -853,6 +862,7 @@ model Unit {
 
   company      Company       @relation(fields: [companyId], references: [id])
   expenseLines ExpenseLine[]
+  incomeLines  IncomeLine[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1932,6 +1942,7 @@ model Process {
   children        Process[]            @relation("ProcessHierarchy")
   expenseTypeMaps ExpenseTypeProcess[]
   expenseLines    ExpenseLine[]
+  incomeLines     IncomeLine[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -2037,6 +2048,7 @@ model CostCenter {
   expenses        Expense[]
   expenseLines    ExpenseLine[]
   expenseTypeMaps ExpenseTypeCostCenter[]
+  incomeLines     IncomeLine[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -2199,6 +2211,7 @@ model StoredFile {
   branch             Branch              @relation(fields: [branchId], references: [id])
   uploader           User                @relation("StoredFileUploader", fields: [uploadedById], references: [id])
   expenseAttachments ExpenseAttachment[]
+  incomeAttachments  IncomeAttachment[]
 
   @@unique([bucket, objectKey])
   @@index([companyId, module, entityType, entityId])
@@ -2231,6 +2244,169 @@ model FinanceSourceReview {
   @@index([companyId, sourceModule, sourceType, sourceDocumentId])
   @@index([status])
   @@map("finance_source_reviews")
+}
+
+// โ”€โ”€โ”€ GROUP 12b: FINANCE โ€” INCOME โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// Money in (rent, weighing fees, other services). Separate from Expense so
+// expense reports keep summing spend only. Manual entry; no source module, no GL.
+
+enum IncomeStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  RECEIVED
+  REJECTED
+  CANCELLED
+}
+
+/// NONE keeps the per-line tax as entered. The VAT modes compute 7% on (amount − discount);
+/// INCLUSIVE treats that base as already containing the tax.
+enum IncomeTaxMode {
+  NONE
+  VAT_EXCLUSIVE
+  VAT_INCLUSIVE
+}
+
+model IncomeCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  parentId    String?  @map("parent_id") @db.Uuid
+  code        String   @db.VarChar(30)
+  name        String   @db.VarChar(255)
+  description String?
+  sequence    Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company     Company          @relation(fields: [companyId], references: [id])
+  parent      IncomeCategory?  @relation("IncomeCategoryHierarchy", fields: [parentId], references: [id])
+  children    IncomeCategory[] @relation("IncomeCategoryHierarchy")
+  incomeTypes IncomeType[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([parentId])
+  @@map("income_categories")
+}
+
+model IncomeType {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  categoryId  String?  @map("category_id") @db.Uuid
+  code        String   @db.VarChar(30)
+  name        String   @db.VarChar(255)
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company     Company         @relation(fields: [companyId], references: [id])
+  category    IncomeCategory? @relation(fields: [categoryId], references: [id])
+  incomeLines IncomeLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([categoryId])
+  @@map("income_types")
+}
+
+model Income {
+  id             String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String                  @map("company_id") @db.Uuid
+  branchId       String                  @map("branch_id") @db.Uuid
+  incomeNo       String                  @map("income_no") @db.VarChar(30)
+  incomeDate     DateTime                @map("income_date") @db.Date
+  postingDate    DateTime?               @map("posting_date") @db.Date
+  payerName      String                  @map("payer_name") @db.VarChar(255)
+  employeeId     String?                 @map("employee_id") @db.Uuid
+  amount         Decimal                 @default(0) @db.Decimal(14, 2)
+  taxAmount      Decimal                 @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  discountAmount Decimal                 @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  netAmount      Decimal                 @default(0) @map("net_amount") @db.Decimal(14, 2)
+  currency       String                  @default("THB") @db.VarChar(3)
+  notes          String?
+  status         IncomeStatus            @default(DRAFT)
+  paymentMethod  TransportPaymentMethod? @map("payment_method")
+  taxMode        IncomeTaxMode           @default(NONE) @map("tax_mode")
+  receivedAt     DateTime?               @map("received_at") @db.Timestamptz
+  receivedById   String?                 @map("received_by_id") @db.Uuid
+  approvedById   String?                 @map("approved_by_id") @db.Uuid
+  approvedAt     DateTime?               @map("approved_at") @db.Timestamptz
+  createdById    String                  @map("created_by_id") @db.Uuid
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?               @map("deleted_at") @db.Timestamptz
+
+  company     Company            @relation(fields: [companyId], references: [id])
+  branch      Branch             @relation(fields: [branchId], references: [id])
+  employee    User?              @relation("IncomeEmployee", fields: [employeeId], references: [id])
+  approvedBy  User?              @relation("IncomeApprovedBy", fields: [approvedById], references: [id])
+  receivedBy  User?              @relation("IncomeReceivedBy", fields: [receivedById], references: [id])
+  creator     User               @relation("IncomeCreatedBy", fields: [createdById], references: [id])
+  lines       IncomeLine[]
+  attachments IncomeAttachment[]
+
+  @@unique([companyId, incomeNo])
+  @@index([companyId])
+  @@index([branchId])
+  @@index([incomeDate])
+  @@index([status])
+  @@map("incomes")
+}
+
+model IncomeLine {
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String                 @map("company_id") @db.Uuid
+  incomeId       String                 @map("income_id") @db.Uuid
+  lineNo         Int                    @map("line_no")
+  incomeTypeId   String                 @map("income_type_id") @db.Uuid
+  description    String?
+  pricingMode    ExpenseLinePricingMode @default(AMOUNT) @map("pricing_mode")
+  quantity       Decimal                @default(1) @db.Decimal(14, 3)
+  unitId         String?                @map("unit_id") @db.Uuid
+  unitCode       String?                @map("unit_code") @db.VarChar(30)
+  unitPrice      Decimal                @default(0) @map("unit_price") @db.Decimal(14, 2)
+  amount         Decimal                @default(0) @db.Decimal(14, 2)
+  taxAmount      Decimal                @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  discountAmount Decimal                @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  netAmount      Decimal                @default(0) @map("net_amount") @db.Decimal(14, 2)
+  costCenterId   String?                @map("cost_center_id") @db.Uuid
+  processId      String?                @map("process_id") @db.Uuid
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+
+  income     Income      @relation(fields: [incomeId], references: [id], onDelete: Cascade)
+  incomeType IncomeType  @relation(fields: [incomeTypeId], references: [id])
+  costCenter CostCenter? @relation(fields: [costCenterId], references: [id])
+  process    Process?    @relation(fields: [processId], references: [id])
+  unit       Unit?       @relation(fields: [unitId], references: [id])
+
+  @@index([incomeId])
+  @@index([companyId])
+  @@index([incomeTypeId])
+  @@index([costCenterId])
+  @@index([processId])
+  @@index([unitId])
+  @@map("income_lines")
+}
+
+model IncomeAttachment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incomeId     String   @map("income_id") @db.Uuid
+  fileUrl      String   @map("file_url")
+  fileName     String?  @map("file_name") @db.VarChar(255)
+  fileSize     Int?     @map("file_size")
+  uploadedBy   String?  @map("uploaded_by") @db.Uuid
+  storedFileId String?  @unique @map("stored_file_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  income     Income      @relation(fields: [incomeId], references: [id], onDelete: Cascade)
+  uploader   User?       @relation("IncomeAttachmentUploader", fields: [uploadedBy], references: [id])
+  storedFile StoredFile? @relation(fields: [storedFileId], references: [id])
+
+  @@index([incomeId])
+  @@map("income_attachments")
 }
 
 // โ”€โ”€โ”€ GROUP: ASSET REGISTER (Phase 1 โ€” no Machine/Vehicle FK) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€

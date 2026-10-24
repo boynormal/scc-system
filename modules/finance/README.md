@@ -110,3 +110,19 @@ Process × ExpenseType — ตอบว่าแต่ละกระบวน�
 Finance เป็นเจ้าของ Expense แห่งเดียว — manual และ source รวมในชุดข้อมูลเดียวกัน  
 กฎและขอบเขต: [`FINANCE-EXPENSE-OWNERSHIP.md`](./FINANCE-EXPENSE-OWNERSHIP.md)
 
+## รายรับ (Income)
+
+เอกสารแยกจาก Expense (`incomes`, `income_lines`, `income_attachments`) ใช้กับรายรับที่ไม่ใช่การขาย เช่น ค่าเช่า ค่าชั่งรถ บันทึกเองเท่านั้น ไม่มีต้นทางโมดูล วัตถุต้นทุน หรือ GL
+
+- เลขที่ `INC-YYYY-00001` ต่อบริษัทต่อปี (`generateIncomeNo`)
+- `payerName` เป็นข้อความอิสระ ต้องระบุ
+- บรรทัดใช้กติกาเงินเดียวกับ Expense (`QTY_PRICE` หรือ `AMOUNT`, ภาษี, ส่วนลด) และระบุ Cost Center / Process ได้ตามต้องการโดยไม่มี allowlist
+- สถานะ `DRAFT → PENDING → APPROVED → RECEIVED`, `REJECTED`, `CANCELLED`
+  - อนุมัติ/ปฏิเสธ: `incomes.approve` จาก DRAFT/PENDING
+  - รับเงิน/ยกเลิกการรับเงิน: `incomes.update`; ยกเลิกการรับเงินต้องมีเหตุผลและกลับเป็น APPROVED
+  - RECEIVED ล็อกยอดเงิน แก้ได้เฉพาะประเภท รายละเอียด หน่วยงาน กระบวนการ หมายเหตุ พร้อมเหตุผล
+  - ลบ = soft delete เป็น CANCELLED และลบ RECEIVED ไม่ได้
+- ไฟล์แนบผ่าน `StoredFile` (`entityType: "income"`)
+- ข้อมูลพื้นฐาน `income_categories` / `income_types` ใช้สิทธิ์ `expense_masters`
+- รายงาน `/finance/reports?view=incomes` รวม `IncomeLine.netAmount` ไม่นับ CANCELLED/REJECTED คลิกแถวไปที่ `/finance/incomes` พร้อมฟิลเตอร์
+

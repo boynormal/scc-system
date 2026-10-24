@@ -99,6 +99,7 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
     label: "การเงินและบัญชี",
     rows: [
       { resource: "expenses", label: "ค่าใช้จ่าย", actions: CRUD_APPROVE },
+      { resource: "incomes", label: "รายรับ", actions: CRUD_APPROVE },
       { resource: "expense_masters", label: "ข้อมูลพื้นฐานการเงิน", actions: CRUD },
     ],
   },

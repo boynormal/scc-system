@@ -22,6 +22,8 @@ import type {
   FinancePerms,
   ProcessRow,
 } from "./expense-types"
+import type { IncomeCategoryRow, IncomeTypeOption } from "./income-types"
+import { IncomeCategoryDialog, IncomeTypeDialog } from "./income-master-dialogs"
 
 const TX_TYPES = ["EXPENSE", "COST", "INCOME", "ASSET", "LIABILITY"]
 const TX_TYPE_LABELS: Record<string, string> = {
@@ -59,11 +61,13 @@ type RequiredDimensionKey =
   | "requiresCostCenter"
   | "requiresProcess"
 
-type Tab = "types" | "categories" | "processes" | "cost_centers"
+type Tab = "types" | "categories" | "income_types" | "income_categories" | "processes" | "cost_centers"
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "types", label: "ประเภทค่าใช้จ่าย" },
   { key: "categories", label: "หมวดค่าใช้จ่าย" },
+  { key: "income_types", label: "ประเภทรายรับ" },
+  { key: "income_categories", label: "หมวดรายรับ" },
   { key: "processes", label: "กระบวนการ" },
   { key: "cost_centers", label: "หน่วยงาน (Cost Center)" },
 ]
@@ -74,24 +78,34 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
   const [categories, setCategories] = useState<ExpenseCategoryRow[]>([])
   const [processes, setProcesses] = useState<ProcessRow[]>([])
   const [centers, setCenters] = useState<CostCenterRow[]>([])
+  const [incomeTypes, setIncomeTypes] = useState<IncomeTypeOption[]>([])
+  const [incomeCategories, setIncomeCategories] = useState<IncomeCategoryRow[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const [typeDialog, setTypeDialog] = useState<{ open: boolean; row?: ExpenseTypeOption }>({ open: false })
   const [categoryDialog, setCategoryDialog] = useState<{ open: boolean; row?: ExpenseCategoryRow }>({ open: false })
   const [processDialog, setProcessDialog] = useState<{ open: boolean; row?: ProcessRow }>({ open: false })
   const [centerDialog, setCenterDialog] = useState<{ open: boolean; row?: CostCenterRow }>({ open: false })
+  const [incomeTypeDialog, setIncomeTypeDialog] = useState<{ open: boolean; row?: IncomeTypeOption }>({ open: false })
+  const [incomeCategoryDialog, setIncomeCategoryDialog] = useState<{ open: boolean; row?: IncomeCategoryRow }>({
+    open: false,
+  })
 
   const load = useCallback(async () => {
-    const [t, cat, p, c] = await Promise.all([
+    const [t, cat, p, c, it, ic] = await Promise.all([
       fetch("/api/finance/expense-types?includeInactive=1").then((r) => r.json()),
       fetch("/api/finance/expense-categories?includeInactive=1").then((r) => r.json()),
       fetch("/api/finance/processes?includeInactive=1").then((r) => r.json()),
       fetch("/api/finance/cost-centers?includeInactive=1").then((r) => r.json()),
+      fetch("/api/finance/income-types?includeInactive=1").then((r) => r.json()),
+      fetch("/api/finance/income-categories?includeInactive=1").then((r) => r.json()),
     ])
     setTypes((t.data ?? []) as ExpenseTypeOption[])
     setCategories((cat.data ?? []) as ExpenseCategoryRow[])
     setProcesses((p.data ?? []) as ProcessRow[])
     setCenters((c.data ?? []) as CostCenterRow[])
+    setIncomeTypes((it.data ?? []) as IncomeTypeOption[])
+    setIncomeCategories((ic.data ?? []) as IncomeCategoryRow[])
   }, [])
 
   useEffect(() => {
@@ -105,7 +119,11 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
         ? `/api/finance/expense-types/${id}`
         : kind === "categories"
           ? `/api/finance/expense-categories/${id}`
-          : kind === "processes"
+          : kind === "income_types"
+            ? `/api/finance/income-types/${id}`
+            : kind === "income_categories"
+              ? `/api/finance/income-categories/${id}`
+              : kind === "processes"
             ? `/api/finance/processes/${id}`
             : `/api/finance/cost-centers/${id}`
     const res = await fetch(url, { method: "DELETE" })
@@ -120,6 +138,8 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
   function openCreate() {
     if (tab === "types") setTypeDialog({ open: true })
     else if (tab === "categories") setCategoryDialog({ open: true })
+    else if (tab === "income_types") setIncomeTypeDialog({ open: true })
+    else if (tab === "income_categories") setIncomeCategoryDialog({ open: true })
     else if (tab === "processes") setProcessDialog({ open: true })
     else setCenterDialog({ open: true })
   }
@@ -132,7 +152,7 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
     <div className="space-y-6">
       <FinancePageHeader
         title="ข้อมูลพื้นฐานการเงิน"
-        description="จัดการประเภทค่าใช้จ่าย หมวด กระบวนการ และหน่วยงาน (Cost Center)"
+        description="จัดการประเภทค่าใช้จ่าย ประเภทรายรับ หมวด กระบวนการ และหน่วยงาน (Cost Center)"
         actions={
           perms.canManageMasters ? (
             <Button
@@ -231,6 +251,26 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
           canManage={perms.canManageMasters}
           onEdit={(row) => setCategoryDialog({ open: true, row })}
           onRemove={(id) => remove("categories", id)}
+        />
+      )}
+
+      {tab === "income_types" && (
+        <SimpleMasterTable
+          rows={incomeTypes}
+          extraHead="หมวด"
+          extraCell={(r) => r.categoryName ?? "—"}
+          canManage={perms.canManageMasters}
+          onEdit={(row) => setIncomeTypeDialog({ open: true, row })}
+          onRemove={(id) => remove("income_types", id)}
+        />
+      )}
+
+      {tab === "income_categories" && (
+        <SimpleMasterTable
+          rows={incomeCategories}
+          canManage={perms.canManageMasters}
+          onEdit={(row) => setIncomeCategoryDialog({ open: true, row })}
+          onRemove={(id) => remove("income_categories", id)}
         />
       )}
 
@@ -337,6 +377,23 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
           void load()
         }}
       />
+      <IncomeTypeDialog
+        state={incomeTypeDialog}
+        categories={incomeCategories}
+        onOpenChange={(open) => setIncomeTypeDialog((s) => ({ ...s, open }))}
+        onSaved={() => {
+          setIncomeTypeDialog({ open: false })
+          void load()
+        }}
+      />
+      <IncomeCategoryDialog
+        state={incomeCategoryDialog}
+        onOpenChange={(open) => setIncomeCategoryDialog((s) => ({ ...s, open }))}
+        onSaved={() => {
+          setIncomeCategoryDialog({ open: false })
+          void load()
+        }}
+      />
     </div>
   )
 }
@@ -351,8 +408,8 @@ function SimpleMasterTable<T extends { id: string; code: string | null; name: st
   onRemove,
 }: {
   rows: T[]
-  extraHead: string
-  extraCell: (row: T) => string
+  extraHead?: string
+  extraCell?: (row: T) => string
   canManage: boolean
   onEdit: (row: T) => void
   onRemove: (id: string) => void
@@ -363,7 +420,7 @@ function SimpleMasterTable<T extends { id: string; code: string | null; name: st
         <tr>
           <th className="w-[18%]">รหัส</th>
           <th className="w-[36%]">ชื่อ</th>
-          <th className="w-[22%]">{extraHead}</th>
+          {extraHead && <th className="w-[22%]">{extraHead}</th>}
           <th className="w-[10%]">สถานะ</th>
           <th className="w-[14%] text-right">การกระทำ</th>
         </tr>
@@ -375,7 +432,7 @@ function SimpleMasterTable<T extends { id: string; code: string | null; name: st
               {row.code ?? "—"}
             </td>
             <td className="px-4 py-3 font-medium text-foreground">{row.name}</td>
-            <td className="px-4 py-3 text-muted-foreground">{extraCell(row)}</td>
+            {extraCell && <td className="px-4 py-3 text-muted-foreground">{extraCell(row)}</td>}
             <td className="px-4 py-3">
               <span className={cn("text-xs", row.isActive ? "text-emerald-600" : "text-muted-foreground")}>
                 {row.isActive ? "ใช้งาน" : "ปิด"}

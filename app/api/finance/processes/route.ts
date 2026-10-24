@@ -6,7 +6,8 @@ import { forbidUnlessPermission } from "@/lib/require-permission"
 import { createProcess, listProcesses, processSchema } from "@/modules/finance"
 
 export const GET = withAuth(async (req, _ctx, session) => {
-  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "expenses", "read")
+  const roles = session.user.roles as UserRole[]
+  const denied = forbidUnlessPermission(roles, "expenses", "read") && forbidUnlessPermission(roles, "incomes", "read")
   if (denied) return denied
   const { searchParams } = new URL(req.url)
   const result = await listProcesses(prisma, {

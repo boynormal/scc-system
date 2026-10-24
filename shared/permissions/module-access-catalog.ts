@@ -113,11 +113,12 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
   {
     moduleId: "finance",
     label: "การเงินและบัญชี",
-    anyOfResources: ["expenses", "expense_masters"],
+    anyOfResources: ["expenses", "incomes", "expense_masters"],
     navModuleIds: [
       "finance",
       "finance_overview",
       "finance_expenses",
+      "finance_incomes",
       "finance_sources",
       "finance_reports",
       "finance_master_data",

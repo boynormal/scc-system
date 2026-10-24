@@ -23,14 +23,15 @@ function canMasters(roles: UserRole[], action: MasterAction): boolean {
   )
 }
 
-/** Reading master lists is allowed for anyone who can read expenses (needed for form dropdowns). */
+/** Reading master lists is allowed for anyone who can read expenses or incomes (needed for form dropdowns). */
 function canReadForForms(roles: UserRole[]): boolean {
   return (
     isAdminInAnyBranch(roles) ||
     getBranchIds(roles).some(
       (bid) =>
         hasPermission(roles, bid, "expense_masters", "read") ||
-        hasPermission(roles, bid, "expenses", "read")
+        hasPermission(roles, bid, "expenses", "read") ||
+        hasPermission(roles, bid, "incomes", "read")
     )
   )
 }

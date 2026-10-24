@@ -24,3 +24,13 @@ export function getFinancePerms(roles: UserRole[]): FinancePerms {
     canManageMasters: canFinance(roles, "expense_masters", "update"),
   }
 }
+
+export function getIncomePerms(roles: UserRole[]): FinancePerms {
+  return {
+    canCreate: canFinance(roles, "incomes", "create"),
+    canUpdate: canFinance(roles, "incomes", "update"),
+    canDelete: canFinance(roles, "incomes", "delete"),
+    canApprove: canFinance(roles, "incomes", "approve"),
+    canManageMasters: canFinance(roles, "expense_masters", "update"),
+  }
+}

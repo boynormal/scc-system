@@ -1,0 +1,26 @@
+---
+description: Keep port 3000 for the developer's own dev server
+alwaysApply: true
+---
+
+# Dev server port
+
+Port 3000 belongs to the person running this repo. Anything you start must not listen on it.
+
+- Do not run `npm run dev`, `next dev`, `next start`, or the same commands with `-p 3000` / `--port 3000`.
+- Do not stop, kill, or restart a dev server you did not start in this conversation.
+- `npm test` and `npx vitest` do not bind a port. Run them as usual.
+- HTTP checks (smoke scripts, `curl`, fetch) may call `http://localhost:3000` only when a server is already running there. Do not start one to make the check possible.
+- Two `next dev` processes in this repo share `.next` and break each other even on different ports. Do not start `next dev` while one is already running.
+- If a task truly needs its own server, ask first and use another port (for example `3100`). Never take 3000.
+
+```text
+# do not run
+npm run dev
+npx next dev -p 3000
+
+# fine
+npx vitest run
+# request the server the developer already started
+curl http://localhost:3000/login
+```

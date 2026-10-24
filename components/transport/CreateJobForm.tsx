@@ -258,14 +258,14 @@ export function CreateJobForm({ onCancel, onSuccess, compact = false }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
+            className="relative z-10 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-cyan-600 px-5 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
+            className="relative z-10 rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
           >
             {saving ? "กำลังบันทึก..." : "สร้างใบงาน"}
           </button>

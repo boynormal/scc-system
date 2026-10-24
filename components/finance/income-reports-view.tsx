@@ -254,7 +254,7 @@ export function IncomeReportsView({ tabs }: { tabs?: React.ReactNode }) {
               ...REPORT_STATUSES.map((s) => ({ value: s, label: t(`statuses.${s}`) })),
             ]}
           />
-          <Button type="button" className="shrink-0 bg-emerald-600 hover:bg-emerald-700" loading={loading} onClick={apply}>
+          <Button type="button" className="relative z-10 shrink-0 bg-[#059669] hover:bg-[#047857]" loading={loading} onClick={apply}>
             {t("reportApply")}
           </Button>
         </>

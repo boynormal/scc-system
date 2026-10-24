@@ -5,6 +5,7 @@ import { Edit2, Trash2, Save, X, Loader2, RotateCcw, Plus } from "lucide-react"
 import { GlassInput } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { masterPrimaryButtonClass, masterSecondaryButtonClass } from "@/components/transport/master-data/master-data-buttons"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
 import { WheelLayoutDiagram } from "@/components/transport/WheelLayoutDiagram"
@@ -272,7 +273,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                   <button
                     type="button"
                     onClick={resetDefaultLayout}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-cyan-700 hover:bg-cyan-50"
+                    className={`${masterSecondaryButtonClass} px-2 py-1 text-xs`}
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                     ใช้ค่าเริ่มต้น
@@ -280,7 +281,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
                   <button
                     type="button"
                     onClick={addAxle}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-foreground hover:bg-muted"
+                    className={`${masterSecondaryButtonClass} px-2 py-1 text-xs`}
                   >
                     <Plus className="h-3.5 w-3.5" />
                     เพิ่มเพลา
@@ -322,7 +323,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
-                className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-foreground hover:bg-muted"
+                className={`${masterSecondaryButtonClass} px-3 py-1.5 text-sm`}
               >
                 <X className="h-4 w-4" />
                 ยกเลิก
@@ -330,7 +331,7 @@ export function VehicleTypesTab({ search = "", addRequest = 0 }: Props) {
               <button
                 type="button"
                 onClick={() => handleSave(id)}
-                className="inline-flex items-center gap-1 rounded-md bg-cyan-600 px-3 py-1.5 text-sm text-white hover:bg-cyan-700"
+                className={`${masterPrimaryButtonClass} px-3 py-1.5 text-sm`}
               >
                 <Save className="h-4 w-4" />
                 บันทึก

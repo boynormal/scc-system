@@ -228,7 +228,7 @@ export function IncomeDetailView({ income, perms }: { income: IncomeDto; perms: 
               <Button
                 type="button"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="relative z-10 bg-[#059669] hover:bg-[#047857]"
                 icon={<Check className="h-3.5 w-3.5" />}
                 loading={busy === "approve"}
                 onClick={() => void transition("approve")}
@@ -241,7 +241,7 @@ export function IncomeDetailView({ income, perms }: { income: IncomeDto; perms: 
             <Button
               type="button"
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="relative z-10 bg-[#059669] hover:bg-[#047857]"
               icon={<HandCoins className="h-3.5 w-3.5" />}
               onClick={() => setReceiveOpen(true)}
             >
@@ -455,7 +455,7 @@ export function IncomeDetailView({ income, perms }: { income: IncomeDto; perms: 
             <Button
               type="button"
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="relative z-10 bg-[#059669] hover:bg-[#047857]"
               loading={busy === "receive"}
               onClick={() => void submitReceive()}
             >

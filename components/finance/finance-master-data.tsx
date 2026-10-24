@@ -158,7 +158,7 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
             <Button
               type="button"
               icon={<Plus className="h-4 w-4" />}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700"
+              className="relative z-10 rounded-xl bg-[#059669] hover:bg-[#047857]"
               onClick={openCreate}
             >
               เพิ่ม

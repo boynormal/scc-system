@@ -6,6 +6,7 @@ import { GlassButton, GlassInput } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { includesSearch, isAutoDriverCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { masterIconPrimaryClass, masterIconSecondaryClass } from "@/components/transport/master-data/master-data-buttons"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
 import {
   MultiSelectCheckbox,
@@ -264,8 +265,8 @@ export function DriversTab({ search = "", addRequest = 0 }: Props) {
         </select>
       </td>
       <td className="w-24 px-3 py-3 text-right align-top space-x-2">
-        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-foreground hover:text-foreground rounded bg-background"><X className="w-4 h-4" /></button>
-        <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded"><Save className="w-4 h-4" /></button>
+        <button type="button" onClick={() => setEditingId(null)} className={masterIconSecondaryClass}><X className="w-4 h-4" /></button>
+        <button type="button" onClick={() => handleSave(id)} className={masterIconPrimaryClass}><Save className="w-4 h-4" /></button>
       </td>
     </>
   )

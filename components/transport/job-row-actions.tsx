@@ -38,7 +38,7 @@ export function JobRowActions({ jobId, jobStatus }: Props) {
         }}
       >
         <DropdownMenu.Trigger
-          className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          className="relative z-10 inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
         >
           จัดการ
           <ChevronDown className="h-3.5 w-3.5" />

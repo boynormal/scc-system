@@ -28,7 +28,7 @@ export function FinancePageHeader({
       />
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600/90 text-white shadow-md shadow-emerald-600/25 backdrop-blur-sm">
+          <span className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#059669] text-white">
             <Wallet className="h-6 w-6" />
           </span>
           <div className="min-w-0">

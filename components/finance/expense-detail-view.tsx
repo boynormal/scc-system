@@ -339,7 +339,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
           <Button
             type="button"
             size={size}
-            className="bg-emerald-600 shadow-md shadow-emerald-600/20 hover:bg-emerald-700"
+            className="relative z-10 bg-[#059669] hover:bg-[#047857]"
             icon={<Check className="h-3.5 w-3.5" />}
             loading={busy === "approve"}
             onClick={() => void act("approve")}
@@ -351,7 +351,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
           <Button
             type="button"
             size={size}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="relative z-10 bg-[#059669] hover:bg-[#047857]"
             icon={<CreditCard className="h-3.5 w-3.5" />}
             loading={busy === "pay"}
             onClick={() => void act("pay")}

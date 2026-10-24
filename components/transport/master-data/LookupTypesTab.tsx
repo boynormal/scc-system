@@ -6,6 +6,7 @@ import { GlassInput } from "@/components/glass"
 import { cn } from "@/lib/utils"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { masterIconPrimaryClass, masterIconSecondaryClass } from "@/components/transport/master-data/master-data-buttons"
 import { includesSearch } from "@/components/transport/master-data/transport-code-utils"
 import { useTypeConfirm } from "@/components/ui/type-confirm"
 
@@ -138,10 +139,10 @@ export function LookupTypesTab({
       </td>
       <td className="px-4 py-3 align-top">-</td>
       <td className="px-4 py-3 text-right space-x-2 align-top">
-        <button type="button" onClick={() => setEditingId(null)} className="p-1.5 text-foreground hover:text-foreground rounded bg-background">
+        <button type="button" onClick={() => setEditingId(null)} className={masterIconSecondaryClass}>
           <X className="w-4 h-4" />
         </button>
-        <button type="button" onClick={() => handleSave(id)} className="p-1.5 text-cyan-600 hover:text-cyan-700 bg-cyan-50 rounded">
+        <button type="button" onClick={() => handleSave(id)} className={masterIconPrimaryClass}>
           <Save className="w-4 h-4" />
         </button>
       </td>

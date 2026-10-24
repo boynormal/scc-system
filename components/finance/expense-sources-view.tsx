@@ -12,11 +12,10 @@ import {
   GlassInput,
 } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
-import { FinancePageHeader } from "./finance-page-header"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { NEW_EXPENSE_SOURCES_KEY, type PrefillPayload } from "./expense-form-page"
 import type { ExpenseSourceRow, FinancePerms, LineDraft, Option } from "./expense-types"
-import { FIN_GLASS_PANEL, SOURCE_TYPE_LABELS, formatBaht } from "./finance-theme"
+import { FIN_GLASS_PANEL, SOURCE_TYPE_LABELS, formatBaht, solidBlueButtonClass } from "./finance-theme"
 
 function apiErrorMessage(json: unknown, fallback: string) {
   if (!json || typeof json !== "object") return fallback
@@ -38,10 +37,9 @@ function formatReferenceAmount(amount: number | null): string {
   return formatBaht(amount)
 }
 
-const HAS_EXPENSE_BTN =
-  "rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700"
+const HAS_EXPENSE_BTN = cn(solidBlueButtonClass, "rounded-xl")
 const NO_EXPENSE_BTN =
-  "rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:bg-transparent dark:text-slate-300 dark:hover:bg-white/10"
+  "relative z-10 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
 const TABLE_ACTION_BTN = "h-8 shrink-0 whitespace-nowrap px-2.5"
 
 function sourceToLine(row: ExpenseSourceRow): LineDraft {
@@ -224,38 +222,35 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
 
   return (
     <div className="space-y-6">
-      <FinancePageHeader
-        title={`คิวตรวจต้นทาง${loading ? "" : ` (${visibleRows.length})`}`}
-        description="มีค่าใช้จ่ายออกจากคิวเมื่อบันทึกบิลแล้ว"
-        actions={
-          <Button
-            type="button"
-            icon={<Link2 className="h-4 w-4" />}
-            className="rounded-xl bg-emerald-600 shadow-md shadow-emerald-600/20 hover:bg-emerald-700"
-            disabled={!perms.canCreate || selectedRows.length === 0 || differentBranch}
-            onClick={() => createBillFrom(selectedRows)}
-          >
-            มีค่าใช้จ่าย ({selectedRows.length})
-          </Button>
-        }
-      />
-
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {branches.length > 1 && (
-        <SubTabs
-          aria-label="สาขา"
-          activeKey={branchId || "all"}
-          onChange={(id) => selectBranch(id === "all" ? "" : id)}
-          items={[
-            { key: "all", label: "ทั้งหมด", count: rows.length },
-            ...branches.map((b) => ({
-              key: b.id,
-              label: b.name,
-              count: branchCounts.get(b.id) ?? 0,
-            })),
-          ]}
-        />
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {branches.length > 1 ? (
+          <SubTabs
+            aria-label="สาขา"
+            activeKey={branchId || "all"}
+            onChange={(id) => selectBranch(id === "all" ? "" : id)}
+            items={[
+              { key: "all", label: "ทั้งหมด", count: rows.length },
+              ...branches.map((b) => ({
+                key: b.id,
+                label: b.name,
+                count: branchCounts.get(b.id) ?? 0,
+              })),
+            ]}
+          />
+        ) : (
+          <span />
+        )}
+        <Button
+          type="button"
+          icon={<Link2 className="h-4 w-4" />}
+          className={cn(solidBlueButtonClass, "shrink-0 rounded-lg")}
+          disabled={!perms.canCreate || selectedRows.length === 0 || differentBranch}
+          onClick={() => createBillFrom(selectedRows)}
+        >
+          มีค่าใช้จ่าย ({selectedRows.length})
+        </Button>
+      </div>
       {differentBranch && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           เลือกได้เฉพาะต้นทางในสาขาเดียวกันต่อ 1 บิล

@@ -1035,6 +1035,7 @@
     "none": "— ไม่ระบุ —",
     "unspecified": "ไม่ระบุ",
     "dateFrom": "ตั้งแต่วันที่",
+    "month": "เดือน",
     "dateTo": "ถึงวันที่",
     "branch": "สาขา",
     "selectBranch": "— เลือกสาขา —",

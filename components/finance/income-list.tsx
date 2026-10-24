@@ -11,20 +11,19 @@ import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { ListFrame } from "@/components/shell/list-frame"
+import { SubTabs } from "@/components/shell/sub-tabs"
+import { currentFinanceMonth, financeMonthRange, FinanceMonthPicker } from "./finance-month-picker"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { cn, formatDate } from "@/lib/utils"
 import type { CostCenterRow, FinancePerms, Option, ProcessRow } from "./expense-types"
-import { formatBaht } from "./finance-theme"
+import { formatBaht, solidBlueButtonClass } from "./finance-theme"
 import {
   INCOME_STATUS_BADGE,
   INCOME_STATUS_LIST,
   type IncomeDto,
-  type IncomeStatus,
   type IncomeSummary,
   type IncomeTypeOption,
 } from "./income-types"
-
-const STAT_STATUSES: IncomeStatus[] = ["DRAFT", "PENDING", "APPROVED", "RECEIVED"]
 
 export function IncomeList({
   perms,
@@ -51,8 +50,11 @@ export function IncomeList({
   const [costCenterId, setCostCenterId] = useState(searchParams.get("costCenterId") ?? "")
   const [processId, setProcessId] = useState(searchParams.get("processId") ?? "")
   const [status, setStatus] = useState(searchParams.get("status") ?? "")
-  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "")
-  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "")
+  const [month, setMonth] = useState(() => {
+    const from = searchParams.get("dateFrom") ?? ""
+    return /^\d{4}-\d{2}/.test(from) ? from.slice(0, 7) : currentFinanceMonth()
+  })
+  const { dateFrom, dateTo } = financeMonthRange(month)
   const [search, setSearch] = useState("")
 
   useEffect(() => {
@@ -83,6 +85,8 @@ export function IncomeList({
     if (search.trim()) params.set("search", search.trim())
     const summaryParams = new URLSearchParams()
     if (branchId) summaryParams.set("branchId", branchId)
+    if (dateFrom) summaryParams.set("dateFrom", dateFrom)
+    if (dateTo) summaryParams.set("dateTo", dateTo)
     try {
       const [listRes, summaryRes] = await Promise.all([
         fetch(`/api/finance/incomes?${params}`, { cache: "no-store" }),
@@ -100,7 +104,7 @@ export function IncomeList({
     } catch {
       setError(t("loadFailed"))
     }
-  }, [branchId, incomeTypeId, costCenterId, processId, status, dateFrom, dateTo, search, t])
+  }, [branchId, incomeTypeId, costCenterId, processId, status, month, search, t])
 
   useEffect(() => {
     void load()
@@ -115,7 +119,10 @@ export function IncomeList({
   const createLink = perms.canCreate ? (
     <Link
       href="/finance/incomes/new"
-      className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+      className={cn(
+        solidBlueButtonClass,
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"
+      )}
     >
       <Plus className="h-4 w-4" />
       {t("create")}
@@ -124,14 +131,14 @@ export function IncomeList({
 
   return (
     <ListFrame
-      title={t("title")}
-      description={t("description")}
-      actions={createLink}
       plainPanel
+      filterOverflow
       filters={
         <>
-          <Input label={t("dateFrom")} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <Input label={t("dateTo")} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <div className="space-y-1.5">
+            <span className="block text-sm font-medium text-foreground">{t("month")}</span>
+            <FinanceMonthPicker month={month} onChange={setMonth} />
+          </div>
           <Select
             label={t("branch")}
             value={branchId}
@@ -168,16 +175,6 @@ export function IncomeList({
               ...processes.map((p) => ({ value: p.id, label: p.name })),
             ]}
           />
-          <Select
-            label={t("status")}
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="min-w-[8rem]"
-            options={[
-              { value: "", label: t("all") },
-              ...INCOME_STATUS_LIST.map((s) => ({ value: s, label: t(`statuses.${s}`) })),
-            ]}
-          />
           <div className="min-w-[12rem] flex-1">
             <Input
               label={t("search")}
@@ -190,22 +187,17 @@ export function IncomeList({
         </>
       }
     >
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {STAT_STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStatus((cur) => (cur === s ? "" : s))}
-            className={cn(
-              "rounded-xl border border-border bg-background px-3 py-2 text-left transition hover:bg-muted",
-              status === s && "ring-2 ring-emerald-500"
-            )}
-          >
-            <span className="block text-xs text-foreground">{t(`statuses.${s}`)}</span>
-            <span className="block text-lg font-semibold tabular-nums text-foreground">{summary.counts[s]}</span>
-            <span className="block text-xs tabular-nums text-foreground">{formatBaht(summary.totals[s])}</span>
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <SubTabs
+          aria-label={t("status")}
+          activeKey={status || "ALL"}
+          onChange={(key) => setStatus(key === "ALL" ? "" : key)}
+          items={[
+            { key: "ALL", label: t("all"), count: INCOME_STATUS_LIST.reduce((sum, s) => sum + summary.counts[s], 0) },
+            ...INCOME_STATUS_LIST.map((s) => ({ key: s, label: t(`statuses.${s}`), count: summary.counts[s] })),
+          ]}
+        />
+        {createLink}
       </div>
 
       <AppDataTablePanel>

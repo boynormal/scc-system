@@ -5,14 +5,14 @@ type GlassButtonVariant = "primary" | "glass" | "ghost" | "danger" | "outline"
 type GlassButtonSize = "sm" | "md" | "lg"
 
 const variantStyles: Record<GlassButtonVariant, string> = {
-  primary: "bg-blue-600 text-white shadow-sm hover:bg-blue-700",
+  primary: "relative z-10 bg-[#2563eb] text-white hover:bg-[#1d4ed8]",
   glass:
     "border border-glass bg-glass text-foreground shadow-glass backdrop-blur-glass hover:bg-glass-strong",
   ghost:
     "text-muted-foreground hover:bg-white/40 hover:text-foreground dark:hover:bg-white/10",
   danger: "bg-red-600 text-white shadow-sm hover:bg-red-700",
   outline:
-    "border border-border text-foreground hover:bg-white/50 dark:hover:bg-white/10",
+    "relative z-10 border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800",
 }
 
 const sizeStyles: Record<GlassButtonSize, string> = {

@@ -1037,6 +1037,7 @@
     "none": "— None —",
     "unspecified": "Unspecified",
     "dateFrom": "From",
+    "month": "Month",
     "dateTo": "To",
     "branch": "Branch",
     "selectBranch": "— Select branch —",

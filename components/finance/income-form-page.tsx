@@ -412,7 +412,7 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
                     onClick={() => setPaymentMethod(option.value)}
                     className={
                       selected
-                        ? "inline-flex min-h-9 items-center justify-center gap-1 rounded-lg bg-blue-600 px-1.5 py-1.5 text-xs font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        ? "relative z-10 inline-flex min-h-9 items-center justify-center gap-1 rounded-lg bg-[#2563eb] px-1.5 py-1.5 text-xs font-medium text-white hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
                         : "inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border bg-background px-1.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                     }
                   >
@@ -467,7 +467,7 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
           {received ? (
             <Button
               type="button"
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="relative z-10 bg-[#059669] hover:bg-[#047857]"
               loading={saving === "save"}
               onClick={() => void submit(null)}
             >
@@ -480,7 +480,7 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
               </Button>
               <Button
                 type="button"
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="relative z-10 bg-[#059669] hover:bg-[#047857]"
                 loading={saving === "PENDING"}
                 onClick={() => void submit("PENDING")}
               >

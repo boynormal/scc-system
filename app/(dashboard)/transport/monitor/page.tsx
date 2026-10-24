@@ -96,11 +96,11 @@ export default function TransportMonitorPage() {
     <div className="min-w-0 space-y-4 p-4 md:p-6">
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="รถทั้งหมด" value={stats.total} color="bg-muted text-foreground" />
-        <StatCard label="ว่าง" value={stats.available} color="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" />
-        <StatCard label="ไม่ว่าง" value={stats.busy} color={stats.busy > 0 ? "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300" : "bg-muted text-muted-foreground"} />
-        <StatCard label="กำลังวิ่ง" value={stats.moving} color="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" />
-        <StatCard label="มี Alert" value={stats.alert} color={stats.alert > 0 ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300" : "bg-muted text-muted-foreground"} />
+        <StatCard label="รถทั้งหมด" value={stats.total} color="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" />
+        <StatCard label="ว่าง" value={stats.available} color="bg-[#059669] text-white" />
+        <StatCard label="ไม่ว่าง" value={stats.busy} color="bg-[#ea580c] text-white" />
+        <StatCard label="กำลังวิ่ง" value={stats.moving} color="bg-[#2563eb] text-white" />
+        <StatCard label="มี Alert" value={stats.alert} color={stats.alert > 0 ? "bg-[#dc2626] text-white" : "bg-white text-slate-900 dark:bg-slate-900 dark:text-white"} />
       </div>
 
       {/* Filters + Search + Refresh status */}
@@ -208,9 +208,9 @@ export default function TransportMonitorPage() {
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className={cn("rounded-xl border border-border p-3 shadow-sm", color)}>
+    <div className={cn("relative z-10 rounded-xl border border-white/30 p-3 shadow-sm", color)}>
       <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium opacity-75">{label}</p>
+      <p className="text-xs font-medium">{label}</p>
     </div>
   )
 }

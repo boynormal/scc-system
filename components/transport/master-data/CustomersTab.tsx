@@ -6,6 +6,7 @@ import { GlassButton, GlassInput } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { includesSearch, isAutoCustomerCode } from "@/components/transport/master-data/transport-code-utils"
 import { DetailsDisplay, DetailsField } from "@/components/transport/master-data/DetailsField"
+import { masterPrimaryButtonClass, masterSecondaryButtonClass } from "@/components/transport/master-data/master-data-buttons"
 import {
   CustomerLocationDisplay,
   CustomerLocationField,
@@ -148,7 +149,7 @@ function CustomerFormRows({
             <button
               type="button"
               onClick={onCancel}
-              className="inline-flex h-10 items-center gap-1 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted"
+              className={`${masterSecondaryButtonClass} h-10 px-3 text-sm`}
             >
               <X className="h-4 w-4" />
               ปิด
@@ -156,7 +157,7 @@ function CustomerFormRows({
             <button
               type="button"
               onClick={onSave}
-              className="inline-flex h-10 items-center gap-1 rounded-lg bg-cyan-600 px-3 text-sm font-medium text-white hover:bg-cyan-700"
+              className={`${masterPrimaryButtonClass} h-10 px-3 text-sm`}
             >
               <Save className="h-4 w-4" />
               บันทึก

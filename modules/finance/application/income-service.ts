@@ -599,16 +599,29 @@ export async function getIncome(db: PrismaClient, params: { companyId: string; r
 
 export async function getIncomeSummary(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; branchId?: string | null }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    branchId?: string | null
+    dateFrom?: string | null
+    dateTo?: string | null
+  }
 ) {
   if (!canIncomes(params.roles, "read")) throw new ForbiddenError()
+  const where = incomeWhere(
+    params.companyId,
+    params.roles,
+    params.branchId,
+    await companyWide(db, params.companyId, "read")
+  )
+  if (params.dateFrom?.trim() || params.dateTo?.trim()) {
+    const range: Prisma.DateTimeFilter = {}
+    if (params.dateFrom?.trim()) range.gte = parseDateOnly(params.dateFrom.trim())
+    if (params.dateTo?.trim()) range.lte = parseDateOnly(params.dateTo.trim())
+    where.incomeDate = range
+  }
   const rows = await db.income.findMany({
-    where: incomeWhere(
-      params.companyId,
-      params.roles,
-      params.branchId,
-      await companyWide(db, params.companyId, "read")
-    ),
+    where,
     select: { status: true, netAmount: true },
     take: 5000,
   })

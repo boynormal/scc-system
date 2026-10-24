@@ -564,7 +564,7 @@ export function ExpenseReportsView() {
               ...REPORT_STATUSES.map((s) => ({ value: s, label: EXPENSE_STATUS_LABELS[s] })),
             ]}
           />
-          <Button type="button" onClick={applyFilters} loading={loading} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button type="button" onClick={applyFilters} loading={loading} className="relative z-10 bg-[#059669] hover:bg-[#047857]">
             แสดงรายงาน
           </Button>
           <Button

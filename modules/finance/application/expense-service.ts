@@ -2110,12 +2110,25 @@ export async function removeExpenseAttachment(
 
 export async function getExpenseSummary(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; branchId?: string | null }
+  params: {
+    companyId: string
+    roles: UserRole[]
+    branchId?: string | null
+    dateFrom?: string | null
+    dateTo?: string | null
+  }
 ) {
   if (!canExpenses(params.roles, "read")) throw new ForbiddenError()
   const shareView = (await readBranchSharing(db, params.companyId)).finance.view
+  const where = expenseWhere(params.companyId, params.roles, params.branchId, shareView)
+  if (params.dateFrom?.trim() || params.dateTo?.trim()) {
+    const range: Prisma.DateTimeFilter = {}
+    if (params.dateFrom?.trim()) range.gte = parseDateOnly(params.dateFrom.trim())
+    if (params.dateTo?.trim()) range.lte = parseDateOnly(params.dateTo.trim())
+    where.expenseDate = range
+  }
   const rows = await db.expense.findMany({
-    where: expenseWhere(params.companyId, params.roles, params.branchId, shareView),
+    where,
     select: { status: true, netAmount: true },
     take: 5000,
   })

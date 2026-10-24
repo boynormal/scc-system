@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic"
 import { Loader2, MapPin } from "lucide-react"
 import { GlassInput } from "@/components/glass"
+import { masterPrimaryButtonClass, masterSecondaryButtonClass } from "@/components/transport/master-data/master-data-buttons"
 import {
   formatLatLng,
   googleMapsUrl,
@@ -64,7 +65,7 @@ export function CustomerLocationField({ value, onChange }: Props) {
         <button
           type="button"
           onClick={handleUseCurrentLocation}
-          className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
+          className={`${masterSecondaryButtonClass} shrink-0 px-3 py-1.5 text-xs`}
         >
           ใช้ตำแหน่งปัจจุบัน
         </button>
@@ -73,7 +74,7 @@ export function CustomerLocationField({ value, onChange }: Props) {
             href={googleMapsUrl(parsed.lat, parsed.lng)}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 hover:bg-cyan-100"
+            className={`${masterPrimaryButtonClass} shrink-0 px-3 py-1.5 text-xs`}
           >
             เปิด Google Maps
           </a>

@@ -202,33 +202,33 @@ function TransportCalendarContent() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted/60"
+              className="relative z-10 rounded-md border border-slate-300 bg-white p-1.5 text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               type="button"
               onClick={goToday}
-              className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/60"
+              className="relative z-10 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
             >
               วันนี้
             </button>
             <button
               type="button"
               onClick={() => navigate(1)}
-              className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted/60"
+              className="relative z-10 rounded-md border border-slate-300 bg-white p-1.5 text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          <h2 className="truncate text-sm font-semibold text-foreground md:text-base">{label}</h2>
+          <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-white md:text-base">{label}</h2>
         </div>
 
         <div className="flex items-center gap-1.5">
           <select
             value={vehicleFilter}
             onChange={(e) => setVehicleFilter(e.target.value)}
-            className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="relative z-10 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/20 dark:bg-slate-900 dark:text-white"
           >
             <option value="all" style={{ backgroundColor: "#fff", color: "#0f172a" }}>
               รถทุกคัน
@@ -250,19 +250,19 @@ function TransportCalendarContent() {
               fetchVehicles()
               fetchJobs()
             }}
-            className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted/60"
+            className="relative z-10 rounded-md border border-slate-300 bg-white p-1.5 text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
             title={t("refresh")}
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
 
-          <div className="flex rounded-md border border-border bg-muted p-0.5 gap-0.5">
+          <div className="relative z-10 flex gap-0.5 rounded-md border border-slate-300 bg-white p-0.5 dark:border-white/20 dark:bg-slate-900">
             <button
               type="button"
               onClick={() => setView("month")}
               className={cn(
                 "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
-                view === "month" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                view === "month" ? "bg-[#2563eb] text-white" : "text-slate-900 hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800"
               )}
             >
               <CalendarDays className="h-3.5 w-3.5" />
@@ -273,7 +273,7 @@ function TransportCalendarContent() {
               onClick={() => setView("gantt")}
               className={cn(
                 "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
-                view === "gantt" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                view === "gantt" ? "bg-[#2563eb] text-white" : "text-slate-900 hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800"
               )}
             >
               <LayoutList className="h-3.5 w-3.5" />
@@ -297,24 +297,24 @@ function TransportCalendarContent() {
       )}
 
       {/* Summary + priority legend — single compact row */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="rounded-full border border-border bg-card px-2 py-0.5">
-          ใบงานทั้งหมด <strong className="text-foreground">{jobs.length}</strong> ใบ
+      <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-slate-900 dark:text-white">
+        <span className="relative z-10 rounded-full border border-slate-300 bg-white px-2 py-0.5 dark:border-white/20 dark:bg-slate-900">
+          ใบงานทั้งหมด <strong>{jobs.length}</strong> ใบ
         </span>
-        <span className="rounded-full border border-border bg-card px-2 py-0.5">
-          มอบหมายแล้ว <strong className="text-foreground">{jobs.filter((j) => j.vehicle).length}</strong> ใบ
+        <span className="relative z-10 rounded-full border border-slate-300 bg-white px-2 py-0.5 dark:border-white/20 dark:bg-slate-900">
+          มอบหมายแล้ว <strong>{jobs.filter((j) => j.vehicle).length}</strong> ใบ
         </span>
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
+        <span className="relative z-10 rounded-full bg-[#d97706] px-2 py-0.5 font-medium text-white">
           รอมอบหมายรถ <strong>{jobs.filter((j) => !j.vehicle).length}</strong> ใบ
         </span>
-        <span className="mx-0.5 hidden h-3 w-px bg-border sm:inline-block" aria-hidden />
+        <span className="mx-0.5 hidden h-3 w-px bg-slate-400 sm:inline-block" aria-hidden />
         {[
-          { label: "ด่วนมาก", cls: "bg-red-500 text-white" },
-          { label: "สูง", cls: "bg-orange-400 text-white" },
-          { label: "ปกติ", cls: "bg-cyan-500 text-white" },
-          { label: "ต่ำ", cls: "bg-slate-400 text-white" },
+          { label: "ด่วนมาก", cls: "bg-[#dc2626] text-white" },
+          { label: "สูง", cls: "bg-[#ea580c] text-white" },
+          { label: "ปกติ", cls: "bg-[#0891b2] text-white" },
+          { label: "ต่ำ", cls: "bg-[#475569] text-white" },
         ].map((p) => (
-          <span key={p.label} className={cn("rounded-full px-2 py-0.5 font-medium", p.cls)}>
+          <span key={p.label} className={cn("relative z-10 rounded-full px-2 py-0.5 font-medium", p.cls)}>
             {p.label}
           </span>
         ))}

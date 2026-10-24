@@ -165,7 +165,7 @@ export default async function TransportJobsPage({
                   page: result.page - 1,
                   ...queryBase,
                 })}
-                className="rounded-lg border px-3 py-1.5 hover:bg-muted/60"
+                className="relative z-10 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
               >
                 ก่อนหน้า
               </Link>
@@ -177,7 +177,7 @@ export default async function TransportJobsPage({
                   page: result.page + 1,
                   ...queryBase,
                 })}
-                className="rounded-lg border px-3 py-1.5 hover:bg-muted/60"
+                className="relative z-10 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
               >
                 ถัดไป
               </Link>

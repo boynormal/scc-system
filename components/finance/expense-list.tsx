@@ -3,15 +3,13 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Receipt, Search } from "lucide-react"
+import { Plus, Receipt, Search } from "lucide-react"
 import { Select } from "@/components/ui/select"
 import { cn, formatDate } from "@/lib/utils"
-import {
-  GlassCard,
-  GlassInput,
-  GlassStatCard,
-} from "@/components/glass"
+import { GlassCard } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
+import { SubTabs } from "@/components/shell/sub-tabs"
+import { currentFinanceMonth, financeMonthRange, FinanceMonthPicker } from "./finance-month-picker"
 import type {
   CostCenterRow,
   ExpenseDto,
@@ -25,18 +23,12 @@ import {
   EXPENSE_STATUS_BADGE,
   EXPENSE_STATUS_LABELS,
   formatBaht,
+  solidBlueButtonClass,
   sourceModuleLabel,
   type ExpenseStatus,
 } from "./finance-theme"
 import { surfaceFieldClass, surfacePanelClass } from "@/components/shell/surface"
 import { ExpenseStatusBadge } from "./finance-page-header"
-
-const STAT_CARDS: { status: ExpenseStatus; hint: string }[] = [
-  { status: "DRAFT", hint: "ยังไม่ส่ง" },
-  { status: "PENDING", hint: "รออนุมัติ" },
-  { status: "APPROVED", hint: "พร้อมจ่าย" },
-  { status: "PAID", hint: "จ่ายแล้ว" },
-]
 
 export function ExpenseList({
   perms,
@@ -64,8 +56,11 @@ export function ExpenseList({
   const [vendorId] = useState(searchParams.get("vendorId") ?? "")
   const [status, setStatus] = useState(searchParams.get("status") ?? "")
   const [sourceModule] = useState(searchParams.get("sourceModule") ?? "")
-  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "")
-  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "")
+  const [month, setMonth] = useState(() => {
+    const from = searchParams.get("dateFrom") ?? ""
+    return /^\d{4}-\d{2}/.test(from) ? from.slice(0, 7) : currentFinanceMonth()
+  })
+  const { dateFrom, dateTo } = financeMonthRange(month)
   const [search, setSearch] = useState("")
 
   useEffect(() => {
@@ -98,6 +93,8 @@ export function ExpenseList({
     if (search.trim()) params.set("search", search.trim())
     const summaryParams = new URLSearchParams()
     if (branchId) summaryParams.set("branchId", branchId)
+    if (dateFrom) summaryParams.set("dateFrom", dateFrom)
+    if (dateTo) summaryParams.set("dateTo", dateTo)
 
     try {
       const [listRes, summaryRes] = await Promise.all([
@@ -116,7 +113,7 @@ export function ExpenseList({
     } catch {
       setError("โหลดข้อมูลไม่สำเร็จ")
     }
-  }, [branchId, expenseTypeId, costCenterId, processId, vendorId, status, sourceModule, dateFrom, dateTo, search])
+  }, [branchId, expenseTypeId, costCenterId, processId, vendorId, status, sourceModule, month, search])
 
   useEffect(() => {
     void load()
@@ -135,49 +132,13 @@ export function ExpenseList({
     }
   }, [load])
 
-  function toggleStatus(next: ExpenseStatus) {
-    setStatus((current) => (current === next ? "" : next))
-  }
-
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {STAT_CARDS.map((card) => (
-          <button
-            key={card.status}
-            type="button"
-            onClick={() => toggleStatus(card.status)}
-            className={cn(
-              "text-left transition",
-              status === card.status && "rounded-glass ring-2 ring-emerald-400"
-            )}
-          >
-            <GlassStatCard
-              label={EXPENSE_STATUS_LABELS[card.status]}
-              value={String(summary.counts[card.status])}
-              hint={`${card.hint} · ${formatBaht(summary.totals[card.status])}`}
-              icon={Receipt}
-              className={surfacePanelClass}
-            />
-          </button>
-        ))}
-      </div>
-
-      <GlassCard className={cn("flex flex-wrap items-end gap-3 rounded-[1.5rem] shadow-none", surfacePanelClass)}>
-        <GlassInput
-          label="ตั้งแต่วันที่"
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className={surfaceFieldClass}
-        />
-        <GlassInput
-          label="ถึงวันที่"
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className={surfaceFieldClass}
-        />
+      <GlassCard className={cn("relative z-20 flex flex-wrap items-end gap-3 overflow-visible rounded-[1.5rem] shadow-none", surfacePanelClass)}>
+        <div className="space-y-1.5">
+          <span className="block text-sm font-medium text-foreground">เดือน</span>
+          <FinanceMonthPicker month={month} onChange={setMonth} />
+        </div>
         <Select
           label="สาขา"
           value={branchId}
@@ -213,19 +174,6 @@ export function ExpenseList({
             ...processes.map((p) => ({ value: p.id, label: p.name })),
           ]}
         />
-        <Select
-          label="สถานะ"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className={cn("min-w-[10rem]", surfaceFieldClass)}
-          options={[
-            { value: "", label: "ทั้งหมด" },
-            ...(Object.keys(EXPENSE_STATUS_LABELS) as ExpenseStatus[]).map((s) => ({
-              value: s,
-              label: EXPENSE_STATUS_LABELS[s],
-            })),
-          ]}
-        />
         <label className="min-w-[14rem] flex-1 space-y-1.5 text-sm">
           <span className="font-medium text-foreground">ค้นหา</span>
           <span className="relative block">
@@ -240,6 +188,38 @@ export function ExpenseList({
         </label>
       </GlassCard>
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SubTabs
+          aria-label="สถานะ"
+          activeKey={status || "ALL"}
+          onChange={(key) => setStatus(key === "ALL" ? "" : key)}
+          items={[
+            {
+              key: "ALL",
+              label: "ทั้งหมด",
+              count: (Object.keys(EXPENSE_STATUS_LABELS) as ExpenseStatus[]).reduce((sum, s) => sum + summary.counts[s], 0),
+            },
+            ...(Object.keys(EXPENSE_STATUS_LABELS) as ExpenseStatus[]).map((s) => ({
+              key: s,
+              label: EXPENSE_STATUS_LABELS[s],
+              count: summary.counts[s],
+            })),
+          ]}
+        />
+        {perms.canCreate && (
+          <Link
+            href="/finance/expenses/new?manual=1"
+            className={cn(
+              solidBlueButtonClass,
+              "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"
+            )}
+          >
+            <Plus className="h-4 w-4" />
+            บันทึกค่าใช้จ่าย
+          </Link>
+        )}
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
       {items.length === 0 && !error ? (
         <GlassCard className={cn("flex flex-col items-center justify-center py-12 text-center", surfacePanelClass)}>
@@ -253,7 +233,10 @@ export function ExpenseList({
           {perms.canCreate && (
             <Link
               href="/finance/expenses/new?manual=1"
-              className="mt-4 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className={cn(
+                solidBlueButtonClass,
+                "mt-4 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium"
+              )}
             >
               บันทึกค่าใช้จ่าย
             </Link>

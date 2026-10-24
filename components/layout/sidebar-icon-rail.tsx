@@ -35,7 +35,7 @@ export function SidebarIconRail({
   const isAppsPage = pathMatchesHref(pathname, "/apps")
 
   return (
-    <aside className="relative w-16 bg-card border-r border-border flex flex-col h-full shrink-0 min-h-0 z-30">
+    <aside className="relative z-30 flex h-full w-16 min-h-0 shrink-0 flex-col border-r border-white/30 bg-transparent backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10">
       <div className="py-4 flex flex-col items-center border-b border-border shrink-0">
         <Link
           href="/apps"

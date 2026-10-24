@@ -65,7 +65,7 @@ function NavGroup({
           "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
           isActive
             ? "bg-blue-50 text-blue-700"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            : "text-foreground hover:bg-muted"
         )}
       >
         <ModuleIcon iconKey={node.icon} imageUrl={imageUrl} />
@@ -117,7 +117,7 @@ export function SidebarNavTree({
           return (
             <div key={node.key} className={cn(depth > 0 && "mt-1")}>
               <p
-                className="px-3 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                className="px-3 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground"
                 role="presentation"
               >
                 {node.label}
@@ -154,7 +154,7 @@ export function SidebarNavTree({
           "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
           isActive
             ? "bg-blue-600 text-white shadow-sm"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            : "text-foreground hover:bg-muted"
         )
 
         if (isExternalHref(node.href)) {

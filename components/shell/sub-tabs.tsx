@@ -57,7 +57,7 @@ export function SubTabs({
           size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-1.5 text-sm",
           active
             ? "text-white dark:text-white"
-            : "text-slate-700/80 hover:bg-white/40 hover:text-slate-900 dark:text-foreground/70 dark:hover:bg-white/10 dark:hover:text-foreground"
+            : "text-foreground hover:bg-white/40 dark:hover:bg-white/10"
         )
         const badge =
           typeof item.count === "number" ? (
@@ -68,7 +68,7 @@ export function SubTabs({
                   ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
                   : active
                     ? "bg-white/25 text-white"
-                    : "bg-white/70 text-slate-800 dark:bg-white/15 dark:text-slate-100"
+                    : "bg-white/70 text-foreground dark:bg-white/15"
               )}
             >
               {item.count}

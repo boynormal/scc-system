@@ -52,17 +52,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className={cn("relative flex h-screen overflow-hidden bg-glass-ambient", isDark && "dark")}>
       <NavPendingProvider>
         <ModuleTabSlotProvider>
-          <div className="h-full shrink-0">
+          <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <Header user={session.user} appearance={appearance} />
+            <main className="-mt-14 pb-6 pl-[5.5rem] pr-6 pt-20 text-foreground">{children}</main>
+          </div>
+          <div className="absolute inset-y-0 left-0 z-40 h-full">
             <Sidebar
               navItems={navItems}
               productLineImageOverrides={navPreferences.productLineImageOverrides}
               moduleImageOverrides={navPreferences.moduleImageOverrides}
               logoUrl={company?.logoUrl}
             />
-          </div>
-          <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-            <Header user={session.user} appearance={appearance} />
-            <main className="p-6 text-foreground">{children}</main>
           </div>
         </ModuleTabSlotProvider>
       </NavPendingProvider>

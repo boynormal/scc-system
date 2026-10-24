@@ -61,7 +61,7 @@ export function ModuleTabs({
           "relative z-10 rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-300",
           active
             ? "text-white dark:text-white"
-            : "text-slate-700/80 hover:bg-white/40 hover:text-slate-900 dark:text-foreground/70 dark:hover:bg-white/10 dark:hover:text-foreground"
+            : "text-foreground hover:bg-white/40 dark:hover:bg-white/10"
         )
 
         if (onChange) {

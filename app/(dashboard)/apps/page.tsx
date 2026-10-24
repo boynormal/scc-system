@@ -50,7 +50,7 @@ export default async function AppsPage() {
   }))
 
   return (
-    <div className="-m-6 h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="-mb-6 -ml-[5.5rem] -mr-6 -mt-20 h-screen overflow-hidden">
       <IpadLauncher
         apps={apps}
         pinnedModuleIds={navPreferences.pinnedModuleIds}

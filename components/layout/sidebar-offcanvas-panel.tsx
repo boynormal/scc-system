@@ -79,7 +79,7 @@ export function SidebarOffCanvasPanel({
         aria-hidden={!open}
         aria-label={productLine ? `เมนู ${productLine.labelTh}` : undefined}
         className={cn(
-          "fixed top-0 z-50 h-full w-60 bg-card border-r border-border shadow-lg flex flex-col outline-none transition-[transform,left] duration-200 ease-out",
+          "fixed top-0 z-50 flex h-full w-60 flex-col border-r border-white/30 bg-transparent shadow-lg outline-none backdrop-blur-2xl backdrop-saturate-150 transition-[transform,left] duration-200 ease-out dark:border-white/10",
           open ? "left-16 translate-x-0" : "left-0 -translate-x-full pointer-events-none invisible"
         )}
       >
@@ -119,7 +119,7 @@ export function SidebarOffCanvasPanel({
               moduleImageOverrides={moduleImageOverrides}
             />
           ) : (
-            <p className="px-3 text-sm text-muted-foreground">ไม่มีเมนูในกลุ่มนี้</p>
+            <p className="px-3 text-sm text-foreground">ไม่มีเมนูในกลุ่มนี้</p>
           )}
         </nav>
 
@@ -128,7 +128,7 @@ export function SidebarOffCanvasPanel({
             <Link
               href="/settings/company-logo"
               onClick={handleClose}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               <ImageIcon className="h-4 w-4 shrink-0" />
               <span className="min-w-0 truncate">{t("settings_company_logo")}</span>
@@ -136,7 +136,7 @@ export function SidebarOffCanvasPanel({
             <Link
               href="/settings/home-screen"
               onClick={handleClose}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               <LayoutGrid className="h-4 w-4 shrink-0" />
               <span className="min-w-0 truncate">{t("settings_home_screen")}</span>

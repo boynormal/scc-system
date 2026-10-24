@@ -21,7 +21,7 @@ interface HeaderProps {
 export default function Header({ user, appearance }: HeaderProps) {
   const t = useTranslations("header")
   return (
-    <GlassNavbar className="gap-3">
+    <GlassNavbar className="gap-3 pl-[5.5rem]">
       <ModuleTabSlotTarget className="flex min-w-0 flex-1 items-center overflow-hidden" />
       <div className="flex shrink-0 items-center gap-3">
         <div

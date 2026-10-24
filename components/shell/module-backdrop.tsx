@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
-/** Default frame for a module page sitting inside the dashboard main padding. */
-export const modulePageClassName = "-m-6 min-h-[calc(100vh-3.5rem)] overflow-visible p-6"
+/** Default frame for a module page. It reaches up behind the navbar so the gray shell does not show there. */
+export const modulePageClassName =
+  "-mb-6 -ml-[5.5rem] -mr-6 -mt-20 min-h-screen overflow-visible pb-6 pl-[5.5rem] pr-6 pt-20"
 
 export function ModuleBackdrop({
   isDark,

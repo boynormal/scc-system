@@ -6,45 +6,46 @@ import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import {
   ArrowLeft,
+  Camera,
   Check,
   CreditCard,
   ExternalLink,
-  MoreHorizontal,
+  History,
   Paperclip,
   Pencil,
-  Plus,
   Trash2,
+  Undo2,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GlassCard, GlassDialog } from "@/components/glass"
-import { SubTabs } from "@/components/shell/sub-tabs"
-import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
+import { AppDataTable, AppDataTableBody, AppDataTableHead } from "@/components/shell/app-data-table"
 import { cn, formatDate, formatDateTime } from "@/lib/utils"
 import type { ExpenseAttachmentDto, ExpenseDto, ExpenseLineDto, FinancePerms } from "./expense-types"
-import {
-  formatExpenseSourceOrigin,
-  summarizeExpenseSourceOrigin,
-  type SourceOriginDisplay,
-} from "./expense-source-origin"
+import { formatExpenseSourceOrigin, type SourceOriginDisplay } from "./expense-source-origin"
 import {
   COST_OBJECT_TYPE_LABELS,
-  EXPENSE_STATUS_BADGE,
   EXPENSE_STATUS_LABELS,
   formatBaht,
+  solidBlueButtonClass,
+  solidEmeraldButtonClass,
+  solidRedButtonClass,
+  solidYellowButtonClass,
   type ExpenseStatus,
 } from "./finance-theme"
-import { ExpenseStatusBadge } from "./finance-page-header"
+import { IncomeFileThumbs } from "./income-file-thumbs"
 
 const PANEL =
   "rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_24px_rgb(15_23_42/0.06)] dark:border-white/10 dark:bg-slate-900/50 dark:shadow-[0_12px_32px_rgb(0_0_0/0.35)]"
 
-const TABS = [
-  { id: "overview", label: "ภาพรวม" },
-  { id: "lines", label: "รายการค่าใช้จ่าย" },
-  { id: "related", label: "เอกสารที่เกี่ยวข้อง" },
-  { id: "files", label: "ไฟล์แนบ" },
-  { id: "history", label: "ประวัติการดำเนินการ" },
-]
+const STATUS_CHIP_CLASS: Record<ExpenseStatus, string> = {
+  DRAFT: "bg-[#eab308] text-[#1c1917]",
+  PENDING: "bg-[#d97706] text-white",
+  APPROVED: "bg-[#2563eb] text-white",
+  PAID: "bg-[#16a34a] text-white",
+  REJECTED: "bg-[#dc2626] text-white",
+  CANCELLED: "bg-[#64748b] text-white",
+}
 
 function dash(value: ReactNode) {
   return value ?? "—"
@@ -81,47 +82,6 @@ function sourceCode(line: ExpenseLineDto, origin: SourceOriginDisplay) {
   return line.sourceDocumentNo ?? origin.reference
 }
 
-function SourceLink({
-  origin,
-  sourceType,
-  sourceDocumentId,
-  documentNo,
-}: {
-  origin: SourceOriginDisplay
-  sourceType?: string | null
-  sourceDocumentId?: string | null
-  documentNo?: string | null
-}) {
-  if (origin.kind === "บันทึกเอง") return <span>บันทึกเอง</span>
-  const href = sourceHref(sourceType, sourceDocumentId)
-  const code = documentNo ?? origin.reference
-  const openLabel = sourceType === "TRANSPORT_JOB" ? "เปิดใบงาน" : "เปิดเอกสาร"
-  return (
-    <span className="flex flex-col items-end gap-0.5">
-      <span>{origin.kind}</span>
-      {code && <span className="font-medium tabular-nums">{code}</span>}
-      {href && (
-        <Link
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-        >
-          {openLabel}
-          <ExternalLink className="h-3 w-3" />
-        </Link>
-      )}
-    </span>
-  )
-}
-
-function formatFileSize(size: number | null): string {
-  if (size == null) return ""
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
-
 function apiErrorMessage(
   json: { error?: unknown; code?: string },
   status: number,
@@ -140,10 +100,9 @@ function apiErrorMessage(
 export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; perms: FinancePerms }) {
   const router = useRouter()
   const tFiles = useTranslations("expenseFiles")
-  const [tab, setTab] = useState("overview")
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [moreOpen, setMoreOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [unpayOpen, setUnpayOpen] = useState(false)
   const [unpayReason, setUnpayReason] = useState("")
   const [files, setFiles] = useState<ExpenseAttachmentDto[]>(expense.attachments)
@@ -159,9 +118,6 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
   const canUnpay = perms.canApprove && status === "PAID"
   const canDelete = perms.canDelete && status !== "PAID"
   const unpayReasonOk = unpayReason.trim().length >= 1 && unpayReason.trim().length <= 500
-  const headerOrigin = summarizeExpenseSourceOrigin(expense.lines)
-  const primaryLinked = expense.lines.find((l) => l.sourceKind !== "MANUAL" && (l.sourceModule || l.sourceType))
-
   const relatedSources = useMemo(() => {
     const seen = new Set<string>()
     const rows: {
@@ -206,7 +162,6 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
 
   async function act(action: "approve" | "reject" | "pay" | "delete") {
     setBusy(action)
-    setMoreOpen(false)
     setError(null)
     const method = action === "delete" ? "DELETE" : "POST"
     const url =
@@ -309,15 +264,15 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
     }
   }
 
-  function ActionCluster({ compact }: { compact?: boolean }) {
-    const size = compact ? "sm" : "md"
+  function ActionCluster() {
+    const size = "sm"
     return (
       <div className="relative flex flex-wrap items-center justify-end gap-2">
         {canClassify && (
           <Button
             type="button"
-            variant="outline"
             size={size}
+            className={solidYellowButtonClass}
             icon={<Pencil className="h-3.5 w-3.5" />}
             onClick={() => router.push(`/finance/expenses/${expense.id}/edit`)}
           >
@@ -327,8 +282,8 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
         {canEdit && (
           <Button
             type="button"
-            variant="outline"
             size={size}
+            className={solidYellowButtonClass}
             icon={<Pencil className="h-3.5 w-3.5" />}
             onClick={() => router.push(`/finance/expenses/${expense.id}/edit`)}
           >
@@ -339,7 +294,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
           <Button
             type="button"
             size={size}
-            className="relative z-10 bg-[#059669] hover:bg-[#047857]"
+            className={solidEmeraldButtonClass}
             icon={<Check className="h-3.5 w-3.5" />}
             loading={busy === "approve"}
             onClick={() => void act("approve")}
@@ -351,7 +306,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
           <Button
             type="button"
             size={size}
-            className="relative z-10 bg-[#059669] hover:bg-[#047857]"
+            className={solidEmeraldButtonClass}
             icon={<CreditCard className="h-3.5 w-3.5" />}
             loading={busy === "pay"}
             onClick={() => void act("pay")}
@@ -359,196 +314,148 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
             จ่ายแล้ว
           </Button>
         )}
-        {(canDelete || canPay || canApprove || canReject || canUnpay) && (
-          <div className="relative">
-            <Button
-              type="button"
-              variant="outline"
-              size={size}
-              icon={<MoreHorizontal className="h-4 w-4" />}
-              aria-label="เมนูเพิ่มเติม"
-              onClick={() => setMoreOpen((open) => !open)}
-            >
-              {""}
-            </Button>
-            {moreOpen && (
-              <div className="absolute right-0 z-30 mt-1 min-w-[10rem] rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-slate-900">
-                {canReject && (
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                    onClick={() => void act("reject")}
-                  >
-                    ปฏิเสธ
-                  </button>
-                )}
-                {canPay && (
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-white/5"
-                    onClick={() => void act("pay")}
-                  >
-                    ทำเครื่องหมายจ่ายแล้ว
-                  </button>
-                )}
-                {canUnpay && (
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                    onClick={() => {
-                      setMoreOpen(false)
-                      setUnpayReason("")
-                      setUnpayOpen(true)
-                    }}
-                  >
-                    ยกเลิกการจ่าย
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                    onClick={() => void act("delete")}
-                  >
-                    ลบ
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+        {canReject && (
+          <Button
+            type="button"
+            size={size}
+            className={solidYellowButtonClass}
+            icon={<X className="h-3.5 w-3.5" />}
+            loading={busy === "reject"}
+            onClick={() => void act("reject")}
+          >
+            ปฏิเสธ
+          </Button>
+        )}
+        {canUnpay && (
+          <Button
+            type="button"
+            size={size}
+            className={solidYellowButtonClass}
+            icon={<Undo2 className="h-3.5 w-3.5" />}
+            onClick={() => {
+              setUnpayReason("")
+              setUnpayOpen(true)
+            }}
+          >
+            ยกเลิกการจ่าย
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            type="button"
+            size={size}
+            className={solidRedButtonClass}
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            loading={busy === "delete"}
+            onClick={() => void act("delete")}
+          >
+            ลบ
+          </Button>
         )}
       </div>
     )
   }
 
-  const statusBadgeClass =
-    status === "DRAFT"
-      ? "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-400/30 dark:bg-orange-500/15 dark:text-orange-200"
-      : EXPENSE_STATUS_BADGE[status]
-
   return (
-    <div className="space-y-4 pb-4">
+    <div className="min-w-0 space-y-4 pb-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="ghost"
             size="sm"
+            className="relative z-10 bg-transparent text-foreground hover:bg-transparent"
             icon={<ArrowLeft className="h-4 w-4" />}
             onClick={() => router.push("/finance/expenses")}
           >
             กลับ
           </Button>
           <h1 className="text-xl font-bold tracking-tight text-foreground">{expense.expenseNo}</h1>
-          <ExpenseStatusBadge label={EXPENSE_STATUS_LABELS[status]} className={statusBadgeClass} />
         </div>
-        <ActionCluster compact />
+        <ActionCluster />
       </div>
-      <p className="text-sm text-muted-foreground">
-        {expense.branchName}
-        {" · "}
-        {formatDate(expense.expenseDate)}
-        {expense.vendorName ? ` · ${expense.vendorName}` : ""}
-      </p>
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border border-slate-300 bg-[#ffffff] px-4 py-2.5 dark:border-white/15 dark:bg-[#0f172a]">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-semibold text-[#0f172a] dark:text-white">สถานะ</span>
+            <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold", STATUS_CHIP_CLASS[status])}>
+              {EXPENSE_STATUS_LABELS[status]}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-[#0f172a] dark:text-white">
+            {expense.branchName}
+            {" · "}
+            {formatDate(expense.expenseDate)}
+            {expense.vendorName ? ` · ${expense.vendorName}` : ""}
+          </p>
+        </div>
+        <p className="text-sm font-medium text-[#0f172a] dark:text-white">
+          สร้างเมื่อ {formatDateTime(expense.createdAt)}
+          {expense.createdByName ? ` โดย ${expense.createdByName}` : ""}
+        </p>
+      </div>
 
       {error && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      <SubTabs
-        aria-label="ส่วนของบิลค่าใช้จ่าย"
-        activeKey={tab}
-        onChange={setTab}
-        items={TABS.map((item) => ({ key: item.id, label: item.label }))}
-      />
-
-      {tab === "overview" && (
-        <div className="space-y-4">
-          <GlassCard className={cn("px-5 py-4 shadow-none", PANEL)}>
-            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground">ยอดสุทธิ</p>
-                <p className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-300">
-                  {formatBaht(expense.netAmount)}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-end gap-x-6 gap-y-2 text-sm">
-                <div>
-                  <p className="text-xs text-muted-foreground">จำนวนเงิน</p>
-                  <p className="tabular-nums font-medium text-foreground">{formatBaht(expense.amount)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">ภาษี</p>
-                  <p className="tabular-nums font-medium text-foreground">{formatBaht(expense.taxAmount)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">ส่วนลด</p>
-                  <p className="tabular-nums font-medium text-foreground">{formatBaht(expense.discountAmount)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">รายการ</p>
-                  <p className="font-medium text-foreground">{expense.lineCount}</p>
-                </div>
-              </div>
-            </div>
-          </GlassCard>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <GlassCard className={cn("p-5 shadow-none", PANEL)}>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">ข้อมูลเอกสาร</h2>
-              <InfoRow label="สาขา" value={expense.branchName} />
-              <InfoRow label="วันที่เอกสาร" value={formatDate(expense.expenseDate)} />
-              <InfoRow label="วันที่ลงบัญชี" value={formatDate(expense.postingDate)} />
-              <InfoRow label="ผู้ขาย" value={expense.vendorName} />
-              <InfoRow label="พนักงาน" value={expense.employeeName} />
-              <InfoRow label="สร้างโดย" value={expense.createdByName} />
-              {expense.notes && <InfoRow label="หมายเหตุ" value={expense.notes} />}
-            </GlassCard>
-
-            <GlassCard className={cn("p-5 shadow-none", PANEL)}>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">ข้อมูลที่เกี่ยวข้อง</h2>
-              <InfoRow
-                label="ต้นทาง"
-                value={
-                  <SourceLink
-                    origin={headerOrigin}
-                    sourceType={primaryLinked?.sourceType}
-                    sourceDocumentId={primaryLinked?.sourceDocumentId}
-                    documentNo={primaryLinked?.sourceDocumentNo}
-                  />
-                }
-              />
-              {headerOrigin.kind !== "บันทึกเอง" &&
-                (primaryLinked?.sourceDocumentNo || headerOrigin.reference) && (
-                <InfoRow
-                  label="เอกสารอ้างอิง"
-                  value={primaryLinked?.sourceDocumentNo ?? headerOrigin.reference}
-                />
-              )}
-            </GlassCard>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        <GlassCard className={cn("p-5 shadow-none", PANEL)}>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-foreground">ข้อมูลเอกสาร</h2>
+            <Button
+              type="button"
+              size="sm"
+              className={solidBlueButtonClass}
+              icon={<History className="h-3.5 w-3.5" />}
+              onClick={() => setHistoryOpen(true)}
+            >
+              ประวัติการดำเนินการ
+            </Button>
           </div>
-        </div>
-      )}
-
-      {tab === "lines" && (
-        <AppDataTablePanel className="p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-foreground">รายการค่าใช้จ่าย ({expense.lineCount} รายการ)</h2>
-            {canEdit && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                icon={<Plus className="h-3.5 w-3.5" />}
-                onClick={() => router.push(`/finance/expenses/${expense.id}/edit`)}
-              >
-                เพิ่มรายการ
-              </Button>
+          <InfoRow label="สาขา" value={expense.branchName} />
+          <InfoRow label="วันที่เอกสาร" value={formatDate(expense.expenseDate)} />
+          <InfoRow label="วันที่ลงบัญชี" value={formatDate(expense.postingDate)} />
+          <InfoRow label="ผู้ขาย" value={expense.vendorName} />
+          <InfoRow label="พนักงาน" value={expense.employeeName} />
+          <InfoRow label="สร้างโดย" value={expense.createdByName} />
+          <InfoRow label="หมายเหตุ" value={expense.notes} />
+          <div className="mt-4 border-t border-slate-100 pt-4 dark:border-white/10">
+            <h3 className="mb-2 text-sm font-semibold text-foreground">เอกสารที่เกี่ยวข้อง</h3>
+            {relatedSources.length === 0 ? (
+              <p className="text-sm text-muted-foreground">บิลนี้บันทึกเอง ไม่มีเอกสารต้นทางจากโมดูลอื่น</p>
+            ) : (
+              <ul className="divide-y divide-slate-100 dark:divide-white/10">
+                {relatedSources.map((row) => (
+                  <li key={row.key} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium text-foreground">{row.origin.kind}</div>
+                      <div className="truncate text-muted-foreground tabular-nums">{row.documentNo ?? "—"}</div>
+                    </div>
+                    {row.href && (
+                      <Link
+                        href={row.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex shrink-0 items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        {row.type === "TRANSPORT_JOB" ? "เปิดใบงาน" : "เปิดเอกสาร"}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-          <div className="rounded-lg border border-border">
+        </GlassCard>
+
+        <div className="min-w-0 space-y-4 lg:col-span-2">
+        <GlassCard className={cn("p-5 shadow-none", PANEL)}>
+          <h2 className="mb-4 text-sm font-semibold text-foreground">รายการค่าใช้จ่าย ({expense.lineCount} รายการ)</h2>
+          <div className="overflow-x-auto rounded-lg border border-border">
             <AppDataTable>
-              <AppDataTableHead>
+              <AppDataTableHead sticky={false}>
                 <tr>
                   <th>ลำดับ</th>
                   <th>รายการ</th>
@@ -618,11 +525,77 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
               </AppDataTableBody>
             </AppDataTable>
           </div>
-          <div className="mt-4 flex justify-end">
-            <div className="w-full max-w-xs space-y-1.5 text-sm">
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{tFiles("title")}</h3>
+                {canAttach && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className={cn(solidBlueButtonClass, "inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium")}>
+                      <Camera className="h-3.5 w-3.5" />
+                      {uploading ? tFiles("uploading") : tFiles("takePhoto")}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        capture="environment"
+                        className="sr-only"
+                        disabled={uploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          e.target.value = ""
+                          if (file) void uploadAttachment(file)
+                        }}
+                      />
+                    </label>
+                    <label className={cn(solidBlueButtonClass, "inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium")}>
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {uploading ? tFiles("uploading") : tFiles("attach")}
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
+                        className="sr-only"
+                        disabled={uploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          e.target.value = ""
+                          if (file) void uploadAttachment(file)
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+              {files.length === 0 ? (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Paperclip className="h-4 w-4" />
+                  {tFiles("empty")}
+                </p>
+              ) : (
+                <IncomeFileThumbs
+                  removeLabel={tFiles("remove")}
+                  removingKey={busy}
+                  onRemove={canAttach ? (key) => void removeAttachment(key) : undefined}
+                  items={files.map((file) => {
+                    const name = file.fileName ?? tFiles("unnamed")
+                    return {
+                      key: file.id,
+                      name,
+                      href: file.fileUrl,
+                      preview: !name.toLowerCase().endsWith(".pdf"),
+                      removable: canAttach,
+                    }
+                  })}
+                />
+              )}
+            </div>
+            <div className="w-full shrink-0 space-y-1.5 text-sm sm:max-w-xs">
               <div className="flex justify-between text-muted-foreground">
                 <span>รวม</span>
                 <span className="tabular-nums text-foreground">{formatBaht(expense.amount)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>ส่วนลด</span>
+                <span className="tabular-nums text-foreground">{formatBaht(expense.discountAmount)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>ภาษี</span>
@@ -634,144 +607,35 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
               </div>
             </div>
           </div>
-        </AppDataTablePanel>
-      )}
-
-      {tab === "related" && (
-        <GlassCard className={cn("p-5 shadow-none", PANEL)}>
-          <h2 className="mb-3 text-sm font-semibold text-foreground">เอกสารที่เกี่ยวข้อง</h2>
-          {relatedSources.length === 0 ? (
-            <p className="text-sm text-muted-foreground">บิลนี้บันทึกเอง ไม่มีเอกสารต้นทางจากโมดูลอื่น</p>
-          ) : (
-            <ul className="divide-y divide-slate-100 dark:divide-white/10">
-              {relatedSources.map((row) => (
-                <li key={row.key} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <div>
-                    <div className="font-medium text-foreground">{row.origin.kind}</div>
-                    <div className="text-muted-foreground tabular-nums">{row.documentNo ?? "—"}</div>
-                  </div>
-                  {row.href && (
-                    <Link
-                      href={row.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      {row.type === "TRANSPORT_JOB" ? "เปิดใบงาน" : "เปิดเอกสาร"}
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
         </GlassCard>
-      )}
-
-      {tab === "files" && (
-        <GlassCard className={cn("p-5 shadow-none", PANEL)}>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-foreground">{tFiles("title")}</h2>
-            {canAttach && (
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white/90 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted dark:border-white/15 dark:bg-transparent">
-                <Paperclip className="h-3.5 w-3.5" />
-                {uploading ? tFiles("uploading") : tFiles("attach")}
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
-                  className="sr-only"
-                  disabled={uploading}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    e.target.value = ""
-                    if (file) void uploadAttachment(file)
-                  }}
-                />
-              </label>
-            )}
-          </div>
-          {files.length === 0 ? (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Paperclip className="h-4 w-4" />
-              {tFiles("empty")}
-            </p>
-          ) : (
-            <ul className="divide-y divide-slate-100 dark:divide-white/10">
-              {files.map((file) => (
-                <li key={file.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-foreground">{file.fileName ?? tFiles("unnamed")}</span>
-                    {file.fileSize != null && (
-                      <span className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}</span>
-                    )}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-3">
-                    <a href={file.fileUrl} className="text-blue-600 hover:underline dark:text-blue-400" target="_blank" rel="noreferrer">
-                      {tFiles("open")}
-                    </a>
-                    {canAttach && (
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 text-red-600 hover:underline disabled:opacity-50 dark:text-red-400"
-                        disabled={busy === file.id}
-                        onClick={() => void removeAttachment(file.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {busy === file.id ? tFiles("removing") : tFiles("remove")}
-                      </button>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </GlassCard>
-      )}
-
-      {tab === "history" && (
-        <GlassCard className={cn("p-5 shadow-none", PANEL)}>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">ประวัติการดำเนินการ</h2>
-          <ol className="space-y-4">
-            {history.map((event, index) => (
-              <li key={event.id} className="flex gap-3">
-                <span
-                  className={cn(
-                    "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                    index === history.length - 1
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-                      : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
-                  )}
-                >
-                  {index + 1}
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{event.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateTime(event.at)}
-                    {event.by ? ` · ${event.by}` : ""}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </GlassCard>
-      )}
-
-      <div className="sticky bottom-0 z-20 -mx-6 mt-2 border-t border-slate-200/80 bg-white/90 px-6 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/80">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">สถานะ</span>
-              <ExpenseStatusBadge label={EXPENSE_STATUS_LABELS[status]} className={statusBadgeClass} />
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              สร้างเมื่อ {formatDateTime(expense.createdAt)}
-              {expense.createdByName ? ` โดย ${expense.createdByName}` : ""}
-            </p>
-          </div>
-          <ActionCluster compact />
         </div>
       </div>
+
+      <GlassDialog open={historyOpen} onOpenChange={setHistoryOpen} title="ประวัติการดำเนินการ" solid>
+        <ol className="space-y-4">
+          {history.map((event, index) => (
+            <li key={event.id} className="flex gap-3">
+              <span
+                className={cn(
+                  "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                  index === history.length - 1
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-slate-100 text-slate-600"
+                )}
+              >
+                {index + 1}
+              </span>
+              <div>
+                <p className="text-sm font-medium text-[#0f172a]">{event.title}</p>
+                <p className="text-xs text-[#475569]">
+                  {formatDateTime(event.at)}
+                  {event.by ? ` · ${event.by}` : ""}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </GlassDialog>
 
       <GlassDialog
         open={unpayOpen}
@@ -800,7 +664,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
           />
         </label>
         <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setUnpayOpen(false)}>
+          <Button type="button" size="sm" className={solidBlueButtonClass} onClick={() => setUnpayOpen(false)}>
             ยกเลิก
           </Button>
           <Button

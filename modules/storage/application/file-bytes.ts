@@ -93,12 +93,20 @@ export function buildObjectKey(parts: {
   }
 }
 
-export function contentDispositionAttachment(originalName: string): string {
+function contentDisposition(originalName: string, kind: "inline" | "attachment"): string {
   const stripped = originalName.replace(/[\r\n]/g, "")
   const ascii = stripped.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_").trim() || "file"
   const encoded = encodeURIComponent(stripped).replace(
     /['()*]/g,
     (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`
   )
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded || "file"}`
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encoded || "file"}`
+}
+
+export function contentDispositionAttachment(originalName: string): string {
+  return contentDisposition(originalName, "attachment")
+}
+
+export function contentDispositionInline(originalName: string): string {
+  return contentDisposition(originalName, "inline")
 }

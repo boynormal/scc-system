@@ -1,11 +1,23 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { Check, ChevronRight, Coins, Delete, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { GlassDialog, GlassInput } from "@/components/glass"
 import { cn } from "@/lib/utils"
-import type { CostCenterRow, DiscountKind, ExpenseTypeOption, LineDraft, ProcessRow, UnitOption } from "./expense-types"
+import {
+  TAX_MODES,
+  VAT_RATE,
+  type CostCenterRow,
+  type DiscountKind,
+  type ExpenseTypeOption,
+  type LineDraft,
+  type ProcessRow,
+  type TaxMode,
+  type UnitOption,
+} from "./expense-types"
 import {
   applyTypeChange,
   costCenterOptions,
@@ -13,41 +25,24 @@ import {
   processOptions,
   validateLineDraft,
 } from "./expense-form-validation"
-import {
-  COST_OBJECT_TYPE_LABELS,
-  PRICING_MODE_LABELS,
-  formatBaht,
-  sourceModuleLabel,
-} from "./finance-theme"
+import { COST_OBJECT_TYPE_LABELS, PRICING_MODE_LABELS, formatBaht, sourceModuleLabel } from "./finance-theme"
+import { ExpenseTypePicker, defaultExpenseCategoryKey } from "./expense-type-picker"
 
 const COST_OBJECT_TYPES = ["VEHICLE", "MACHINE", "TIRE", "JOB", "CUSTOMER", "PRODUCT", "PROJECT", "LOCATION", "OTHER"]
-const UNCATEGORIZED = "__none__"
-
-function typeGroups(types: ExpenseTypeOption[], keepId: string) {
-  const map = new Map<string, { key: string; label: string; items: ExpenseTypeOption[] }>()
-  for (const t of types) {
-    if (!t.isActive && t.id !== keepId) continue
-    const key = t.categoryId ?? UNCATEGORIZED
-    const label = t.categoryName?.trim() || "อื่นๆ"
-    const g = map.get(key) ?? { key, label, items: [] }
-    g.items.push(t)
-    map.set(key, g)
-  }
-  return [...map.values()]
-}
 
 export function newLineDraft(): LineDraft {
   return {
     key: `line-${Math.random().toString(36).slice(2, 10)}`,
     expenseTypeId: "",
     description: "",
-    pricingMode: "QTY_PRICE",
+    pricingMode: "AMOUNT",
     quantity: "1",
     unitId: "",
     unitCode: "",
     unitPrice: "",
     amount: "",
     taxAmount: "",
+    taxMode: "NONE",
     discountAmount: "",
     discountKind: "BAHT",
     costCenterId: "",
@@ -68,6 +63,36 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100
 }
 
+type MoneyField = "quantity" | "unitPrice" | "amount" | "discountAmount"
+
+const PAD_KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "back"] as const
+
+function typeDigit(current: string, key: string, maxDecimals: number, replace: boolean): string | null {
+  if (key === "back") return replace ? "" : current.slice(0, -1)
+  let base = replace ? "" : current
+  if (key === ".") {
+    if (base.includes(".")) return null
+    return `${base === "" ? "0" : base}.`
+  }
+  if (base === "0") base = ""
+  const dot = base.indexOf(".")
+  if (dot >= 0 && base.length - dot - 1 >= maxDecimals) return null
+  return base + key
+}
+
+function sanitizeDecimal(raw: string, maxDecimals: number, maxValue?: number): string {
+  const cleaned = raw.replace(/[^\d.]/g, "")
+  if (cleaned === "") return ""
+  const dot = cleaned.indexOf(".")
+  let whole = (dot >= 0 ? cleaned.slice(0, dot) : cleaned).replace(/\./g, "")
+  const frac = dot >= 0 ? cleaned.slice(dot + 1).replace(/\./g, "").slice(0, maxDecimals) : ""
+  whole = whole.replace(/^0+(?=\d)/, "")
+  if (whole === "") whole = dot >= 0 ? "0" : ""
+  const next = dot >= 0 ? `${whole}.${frac}` : whole
+  if (maxValue != null && next !== "" && next !== "0." && Number(next) > maxValue) return String(maxValue)
+  return next
+}
+
 export function computeLineAmount(draft: Pick<LineDraft, "pricingMode" | "quantity" | "unitPrice" | "amount">): number {
   if (draft.pricingMode === "QTY_PRICE") {
     const qty = Number(draft.quantity) || 0
@@ -86,12 +111,34 @@ export function computeDiscountBaht(draft: LineDraft): number {
   return round2(raw)
 }
 
-export function computeLineNet(draft: LineDraft): number {
-  const amount = computeLineAmount(draft)
-  const tax = Number(draft.taxAmount) || 0
-  const discount = computeDiscountBaht(draft)
-  const net = amount + tax - discount
-  return net < 0 ? 0 : round2(net)
+/**
+ * Mirrors computeLineTax on the server: 7% on max(0, amount − discount).
+ * `useStored` keeps the saved tax for paid bills, whose money cannot change.
+ */
+export function computeLineTax(draft: LineDraft, useStored = false): number {
+  if (useStored) return round2(Number(draft.taxAmount) || 0)
+  const base = Math.max(0, round2(computeLineAmount(draft) - computeDiscountBaht(draft)))
+  if (draft.taxMode === "VAT_EXCLUSIVE") return round2(base * VAT_RATE)
+  if (draft.taxMode === "VAT_INCLUSIVE") return round2((base * VAT_RATE) / (1 + VAT_RATE))
+  return 0
+}
+
+export function computeLineNet(draft: LineDraft, useStored = false): number {
+  const base = Math.max(0, round2(computeLineAmount(draft) - computeDiscountBaht(draft)))
+  if (draft.taxMode === "VAT_INCLUSIVE") return base
+  return round2(base + computeLineTax(draft, useStored))
+}
+
+const TAX_MODE_LABELS: Record<TaxMode, string> = {
+  NONE: "ไม่มี",
+  VAT_EXCLUSIVE: "VAT 7% แยก",
+  VAT_INCLUSIVE: "VAT 7% รวม",
+}
+
+const NET_HINTS: Record<TaxMode, string> = {
+  NONE: "จำนวนเงิน − ส่วนลด",
+  VAT_EXCLUSIVE: "จำนวนเงิน − ส่วนลด + VAT 7%",
+  VAT_INCLUSIVE: "จำนวนเงิน − ส่วนลด รวม VAT 7% แล้ว",
 }
 
 export function ExpenseLineDialog({
@@ -124,7 +171,10 @@ export function ExpenseLineDialog({
   const legacy = isLegacyUnrestricted(selectedType)
 
   const preview = useMemo(() => computeLineAmount(draft), [draft])
-  const net = useMemo(() => computeLineNet(draft), [draft])
+  const net = useMemo(() => computeLineNet(draft, lockFinancials), [draft, lockFinancials])
+  const tax = useMemo(() => computeLineTax(draft, lockFinancials), [draft, lockFinancials])
+  const legacyTax =
+    !lockFinancials && initial.taxMode === "NONE" && draft.taxMode === "NONE" ? Number(initial.taxAmount) || 0 : 0
 
   const showCostCenter = Boolean(selectedType?.requiresCostCenter || draft.costCenterId || legacy)
   const showProcess = Boolean(selectedType?.requiresProcess || draft.processId)
@@ -136,21 +186,14 @@ export function ExpenseLineDialog({
 
   const ccChoices = costCenterOptions(selectedType, costCenters, draft.costCenterId)
   const processChoices = processOptions(selectedType, processes, draft.processId)
-  const groups = useMemo(() => typeGroups(types, draft.expenseTypeId), [types, draft.expenseTypeId])
-  const [categoryKey, setCategoryKey] = useState(
-    () => types.find((t) => t.id === initial.expenseTypeId)?.categoryId ?? groups[0]?.key ?? UNCATEGORIZED
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerCategoryKey, setPickerCategoryKey] = useState<string | null>(() =>
+    defaultExpenseCategoryKey(types, initial.expenseTypeId)
   )
-
-  useEffect(() => {
-    setCategoryKey((current) => {
-      const fromType = types.find((t) => t.id === draft.expenseTypeId)?.categoryId ?? UNCATEGORIZED
-      if (draft.expenseTypeId && groups.some((g) => g.key === fromType)) return fromType
-      if (groups.some((g) => g.key === current)) return current
-      return groups[0]?.key ?? UNCATEGORIZED
-    })
-  }, [draft.expenseTypeId, types, groups])
-
-  const visibleTypes = groups.find((g) => g.key === categoryKey)?.items ?? groups[0]?.items ?? []
+  const [activeField, setActiveField] = useState<MoneyField>(
+    initial.pricingMode === "QTY_PRICE" ? "unitPrice" : "amount"
+  )
+  const [replaceNext, setReplaceNext] = useState(true)
 
   function set<K extends keyof LineDraft>(field: K, value: LineDraft[K]) {
     setDraft((d) => ({ ...d, [field]: value }))
@@ -159,6 +202,61 @@ export function ExpenseLineDialog({
   function changeType(typeId: string) {
     const type = types.find((t) => t.id === typeId)
     setDraft((d) => applyTypeChange(d, type))
+  }
+
+  function fieldLocked(field: MoneyField): boolean {
+    return field === "discountAmount" ? lockFinancials : financialLocked
+  }
+
+  function fieldMax(field: MoneyField): number | undefined {
+    return field === "discountAmount" && draft.discountKind === "PERCENT" ? 100 : undefined
+  }
+
+  function focusField(field: MoneyField) {
+    setActiveField(field)
+    setReplaceNext(true)
+  }
+
+  function onMoneyInput(field: MoneyField, raw: string) {
+    set(field, sanitizeDecimal(raw, field === "quantity" ? 3 : 2, fieldMax(field)))
+    setReplaceNext(false)
+  }
+
+  function pressKey(key: string) {
+    if (fieldLocked(activeField)) return
+    const next = typeDigit(draft[activeField], key, activeField === "quantity" ? 3 : 2, replaceNext)
+    if (next === null) return
+    const max = fieldMax(activeField)
+    if (max != null && Number(next) > max) return
+    set(activeField, next)
+    setReplaceNext(false)
+  }
+
+  const boxClass = (field: MoneyField) =>
+    cn(
+      "flex items-center rounded-xl border bg-background px-3",
+      activeField === field && !fieldLocked(field) ? "border-[#2563eb] ring-2 ring-[#2563eb]" : "border-border",
+      fieldLocked(field) && "bg-muted"
+    )
+
+  function moneyBox(field: MoneyField, suffix: string | null, size: "md" | "lg" = "lg", ariaLabel?: string) {
+    return (
+      <div className={boxClass(field)}>
+        <input
+          inputMode="decimal"
+          aria-label={ariaLabel}
+          value={draft[field]}
+          disabled={fieldLocked(field)}
+          onFocus={() => focusField(field)}
+          onChange={(e) => onMoneyInput(field, e.target.value)}
+          className={cn(
+            "w-full bg-transparent font-medium text-foreground outline-none disabled:cursor-not-allowed",
+            size === "lg" ? "py-2.5 text-lg" : "py-2 text-base"
+          )}
+        />
+        {suffix && <span className="shrink-0 text-sm text-foreground">{suffix}</span>}
+      </div>
+    )
   }
 
   function changeUnit(unitId: string) {
@@ -172,6 +270,7 @@ export function ExpenseLineDialog({
         ? { ...d, pricingMode: mode, unitId: "", unitCode: "", quantity: "1" }
         : { ...d, pricingMode: mode }
     )
+    focusField(mode === "QTY_PRICE" ? "unitPrice" : "amount")
   }
 
   function submit() {
@@ -213,68 +312,21 @@ export function ExpenseLineDialog({
     } else {
       setDraft((d) => ({ ...d, discountKind: kind, discountAmount: baht ? String(baht) : "" }))
     }
+    focusField("discountAmount")
   }
 
   return (
+    <>
     <GlassDialog
       open={open}
-      onOpenChange={(o) => !o && onClose()}
-      title="รายการค่าใช้จ่าย (บรรทัด)"
-      className="max-w-5xl"
+      onOpenChange={(o) => !o && !pickerOpen && onClose()}
+      title="บันทึกรายการค่าใช้จ่าย"
+      className="max-w-4xl"
+      solid
     >
-      <div className="-mx-5 -my-4 flex min-h-[28rem] flex-col md:max-h-[calc(85vh-4.5rem)] md:flex-row">
-        <aside className="flex w-full shrink-0 flex-col bg-slate-800 p-3 text-white md:w-[22rem] lg:w-[26rem] dark:bg-slate-950">
-          <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-            ประเภทค่าใช้จ่าย <span className="text-red-400">*</span>
-          </p>
-          {groups.length > 1 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {groups.map((g) => (
-                <button
-                  key={g.key}
-                  type="button"
-                  onClick={() => setCategoryKey(g.key)}
-                  className={cn(
-                    "rounded-full px-2.5 py-1 text-xs font-medium",
-                    categoryKey === g.key
-                      ? "bg-emerald-500 text-white"
-                      : "bg-white/10 text-slate-200 hover:bg-white/20"
-                  )}
-                >
-                  {g.label}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-2 overflow-y-auto pr-0.5">
-            {visibleTypes.map((t) => {
-              const selected = draft.expenseTypeId === t.id
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    changeType(t.id)
-                    setError(null)
-                  }}
-                  className={cn(
-                    "flex min-h-[4.5rem] items-center justify-center rounded-xl px-2 py-2 text-center text-xs font-semibold leading-snug shadow-sm",
-                    selected
-                      ? "bg-emerald-500 text-white ring-2 ring-emerald-300"
-                      : "bg-white text-slate-800 hover:bg-emerald-50 dark:bg-white dark:text-slate-800"
-                  )}
-                >
-                  {t.name}
-                </button>
-              )
-            })}
-            {visibleTypes.length === 0 && (
-              <p className="col-span-3 py-8 text-center text-sm text-slate-400">ไม่มีประเภทในหมวดนี้</p>
-            )}
-          </div>
-        </aside>
-
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+      <div className="space-y-5">
+      <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="min-w-0 space-y-3">
         {lockFinancials && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
             บิลจ่ายแล้ว — แก้ได้เฉพาะประเภท หน่วยงาน กระบวนการ รายละเอียด และหน่วยนับ ยอดเงินถูกล็อก
@@ -294,139 +346,173 @@ export function ExpenseLineDialog({
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5">
-          <span className="text-xs text-muted-foreground">ประเภทที่เลือก</span>
-          <p className="font-medium text-foreground">{selectedType?.name ?? "— กดปุ่มด้านซ้ายเพื่อเลือก —"}</p>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="shrink-0 whitespace-nowrap text-base font-medium text-foreground">
+              ประเภทค่าใช้จ่าย<span className="ml-1 text-red-500">*</span>
+            </span>
+            {selectedType?.defaultGlLabel && (
+              <p className="min-w-0 truncate text-right text-xs text-foreground">
+                บัญชีชั่วคราว (ยังไม่ผ่าน GL): {selectedType.defaultGlLabel}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setPickerOpen(true)}
+            className="flex w-full items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-left hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/20"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#2563eb] text-white">
+              <Wallet className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
+              {selectedType?.name ?? "— เลือกประเภท —"}
+            </span>
+            <span className="shrink-0 text-xs font-medium text-blue-700 dark:text-blue-300">เปลี่ยนประเภท</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-foreground" />
+          </button>
         </div>
-        {selectedType?.defaultGlLabel && (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-muted-foreground dark:border-white/10 dark:bg-white/5">
-            บัญชีชั่วคราว (ยังไม่ผ่าน GL): {selectedType.defaultGlLabel}
-          </p>
-        )}
 
-        <GlassInput
-          label="รายละเอียด"
-          value={draft.description}
-          onChange={(e) => set("description", e.target.value)}
-          placeholder="รายละเอียดบรรทัดนี้"
-        />
+        <div className="space-y-1.5">
+          <div className="flex flex-nowrap items-center justify-between gap-3">
+            <span className="shrink-0 whitespace-nowrap text-base font-medium text-foreground">จำนวนเงิน</span>
+            {!locked && !lockFinancials && (
+              <div className="inline-flex shrink-0 flex-nowrap rounded-lg bg-muted p-1">
+                {(["AMOUNT", "QTY_PRICE"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => changePricingMode(mode)}
+                    className={cn(
+                      "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
+                      draft.pricingMode === mode ? "bg-[#2563eb] text-white" : "text-foreground hover:bg-background"
+                    )}
+                  >
+                    {PRICING_MODE_LABELS[mode]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-        {!locked && !lockFinancials && (
-          <div className="space-y-1.5">
-            <span className="block text-sm font-medium text-foreground">วิธีคิดเงิน</span>
-            <div className="inline-flex rounded-xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/10 dark:bg-white/5">
-              {(["QTY_PRICE", "AMOUNT"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => changePricingMode(mode)}
-                  className={
-                    draft.pricingMode === mode
-                      ? "rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow"
-                      : "rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-                  }
-                >
-                  {PRICING_MODE_LABELS[mode]}
-                </button>
-              ))}
+          {draft.pricingMode === "QTY_PRICE" ? (
+            <div className="grid items-end gap-2 sm:grid-cols-3">
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-foreground">จำนวน</span>
+                {moneyBox("quantity", null, "md")}
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-foreground">
+                  หน่วย<span className="ml-0.5 text-red-500">*</span>
+                </span>
+                <Select
+                  id="expense-line-unit"
+                  aria-label="หน่วย"
+                  required
+                  value={draft.unitId}
+                  onChange={(e) => changeUnit(e.target.value)}
+                  placeholder="— เลือกหน่วย —"
+                  disabled={locked && !lockFinancials}
+                  className="h-10 rounded-xl py-0 text-base font-medium leading-10"
+                  options={[
+                    ...units.filter((u) => u.isActive || u.id === draft.unitId).map((u) => ({
+                      value: u.id,
+                      label: `${u.name} (${u.code})`,
+                    })),
+                    ...(draft.unitId && !units.some((u) => u.id === draft.unitId)
+                      ? [{ value: draft.unitId, label: draft.unitCode || draft.unitId }]
+                      : []),
+                  ]}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-foreground">ราคา/หน่วย</span>
+                {moneyBox("unitPrice", "บาท", "md")}
+              </label>
             </div>
-          </div>
-        )}
+          ) : (
+            moneyBox("amount", "บาท", "lg", "จำนวนเงิน")
+          )}
+        </div>
 
-        {draft.pricingMode === "QTY_PRICE" ? (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <GlassInput
-              label="จำนวน"
-              type="number"
-              min={0}
-              step="0.001"
-              value={draft.quantity}
-              onChange={(e) => set("quantity", e.target.value)}
-              disabled={financialLocked}
-            />
-            <Select
-              label="หน่วย"
-              required
-              value={draft.unitId}
-              onChange={(e) => changeUnit(e.target.value)}
-              placeholder="— เลือกหน่วย —"
-              disabled={locked && !lockFinancials}
-              options={[
-                ...units.filter((u) => u.isActive || u.id === draft.unitId).map((u) => ({
-                  value: u.id,
-                  label: `${u.name} (${u.code})`,
-                })),
-                ...(draft.unitId && !units.some((u) => u.id === draft.unitId)
-                  ? [{ value: draft.unitId, label: draft.unitCode || draft.unitId }]
-                  : []),
-              ]}
-            />
-            <GlassInput
-              label="ราคา/หน่วย"
-              type="number"
-              min={0}
-              step="0.01"
-              value={draft.unitPrice}
-              onChange={(e) => set("unitPrice", e.target.value)}
-              disabled={financialLocked}
-            />
-          </div>
-        ) : (
-          <GlassInput
-            label="จำนวนเงิน"
-            type="number"
-            min={0}
-            step="0.01"
-            value={draft.amount}
-            onChange={(e) => set("amount", e.target.value)}
-            disabled={financialLocked}
-          />
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <GlassInput
-            label="ภาษี"
-            type="number"
-            min={0}
-            step="0.01"
-            value={draft.taxAmount}
-            onChange={(e) => set("taxAmount", e.target.value)}
-            disabled={lockFinancials}
-          />
-          <div className="space-y-1.5">
-            <span className="block text-sm font-medium text-foreground">ส่วนลด</span>
-            <div className="flex gap-2">
-              <GlassInput
-                type="number"
-                min={0}
-                max={draft.discountKind === "PERCENT" ? 100 : undefined}
-                step="0.01"
-                value={draft.discountAmount}
-                onChange={(e) => set("discountAmount", e.target.value)}
-                className="flex-1"
-                disabled={lockFinancials}
-              />
-              <div className="inline-flex shrink-0 self-end rounded-xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/10 dark:bg-white/5">
+        <div className="space-y-1.5">
+          <div className="flex flex-nowrap items-center justify-between gap-3">
+            <span className="shrink-0 whitespace-nowrap text-base font-medium text-foreground">ส่วนลด (ถ้ามี)</span>
+            {!lockFinancials && (
+              <div className="inline-flex shrink-0 flex-nowrap rounded-lg bg-muted p-1" role="group" aria-label="หน่วยส่วนลด">
                 {(["BAHT", "PERCENT"] as const).map((kind) => (
                   <button
                     key={kind}
                     type="button"
-                    onClick={() => !lockFinancials && setDiscountKind(kind)}
-                    className={
-                      draft.discountKind === kind
-                        ? "rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white shadow"
-                        : "rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-                    }
+                    aria-pressed={draft.discountKind === kind}
+                    onClick={() => setDiscountKind(kind)}
+                    className={cn(
+                      "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
+                      draft.discountKind === kind ? "bg-[#2563eb] text-white" : "text-foreground hover:bg-background"
+                    )}
                   >
                     {kind === "BAHT" ? "บาท" : "%"}
                   </button>
                 ))}
               </div>
-            </div>
-            {draft.discountKind === "PERCENT" && Number(draft.discountAmount) > 0 && (
-              <p className="text-xs text-muted-foreground">คิดเป็น {formatBaht(computeDiscountBaht(draft))}</p>
             )}
           </div>
+          {moneyBox("discountAmount", draft.discountKind === "PERCENT" ? "%" : "บาท", "lg", "ส่วนลด")}
+          {draft.discountKind === "PERCENT" && Number(draft.discountAmount) > 0 && (
+            <p className="text-sm text-foreground">คิดเป็น {formatBaht(computeDiscountBaht(draft))}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+            <span className="shrink-0 whitespace-nowrap text-base font-medium text-foreground">ภาษี</span>
+            {lockFinancials ? (
+              <span className="text-sm font-medium text-foreground">{TAX_MODE_LABELS[draft.taxMode]}</span>
+            ) : (
+              <div className="inline-flex shrink-0 flex-nowrap rounded-lg bg-muted p-1" role="group" aria-label="ภาษี">
+                {TAX_MODES.map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={draft.taxMode === mode}
+                    onClick={() => set("taxMode", mode)}
+                    className={cn(
+                      "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
+                      draft.taxMode === mode ? "bg-[#2563eb] text-white" : "text-foreground hover:bg-background"
+                    )}
+                  >
+                    {TAX_MODE_LABELS[mode]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {(draft.taxMode !== "NONE" || tax > 0) && (
+            <p className="text-sm text-foreground">
+              {draft.taxMode === "VAT_INCLUSIVE" ? "ภาษีที่รวมอยู่" : "ภาษี"} {formatBaht(tax)}
+            </p>
+          )}
+          {legacyTax > 0 && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              บรรทัดนี้เคยกรอกภาษี {formatBaht(legacyTax)} เอง ถ้าบันทึกเป็น ไม่มี ภาษีจะเป็น 0 — เลือก VAT ถ้าบิลมีภาษี
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+              <Coins className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold text-blue-800">สุทธิ</p>
+              <p className="text-xs text-blue-800">
+                ({lockFinancials && draft.taxMode === "NONE" && tax > 0 ? "จำนวนเงิน − ส่วนลด + ภาษี" : NET_HINTS[draft.taxMode]})
+              </p>
+            </div>
+          </div>
+          <p className="text-2xl font-bold tabular-nums text-blue-700">{formatBaht(net)}</p>
         </div>
 
         {(showCostCenter || showProcess) && (
@@ -511,23 +597,94 @@ export function ExpenseLineDialog({
           />
         )}
 
-        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-sm dark:border-emerald-500/20 dark:bg-emerald-500/10">
-          <span className="text-muted-foreground">
-            จำนวนเงิน {formatBaht(preview)} · สุทธิ
-          </span>
-          <span className="font-semibold text-emerald-700 dark:text-emerald-300">{formatBaht(net)}</span>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            ยกเลิก
-          </Button>
-          <Button type="button" onClick={submit}>
-            บันทึกบรรทัด
-          </Button>
-        </div>
+        <div className="min-w-0 space-y-2">
+          {!lockFinancials && (
+            <>
+              <div className="rounded-xl bg-muted px-4 py-3">
+                <p className="text-sm font-medium text-foreground">กดตัวเลข</p>
+                <div className="mt-1 flex items-end justify-between gap-2">
+                  <span className="min-w-0 truncate text-3xl font-semibold tabular-nums text-foreground">
+                    {draft[activeField] || "0"}
+                  </span>
+                  <span className="pb-1 text-sm text-foreground">
+                    {activeField === "quantity"
+                      ? ""
+                      : activeField === "discountAmount" && draft.discountKind === "PERCENT"
+                        ? "%"
+                        : "บาท"}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {PAD_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-label={key === "back" ? "ลบตัวเลข" : key}
+                    disabled={fieldLocked(activeField)}
+                    onClick={() => pressKey(key)}
+                    className="inline-flex min-h-14 items-center justify-center rounded-xl border border-border bg-background text-xl font-semibold text-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {key === "back" ? <Delete className="h-5 w-5" /> : key}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="space-y-1.5">
+            <span className="block whitespace-nowrap text-base font-medium text-foreground">รายละเอียด</span>
+            <Input
+              value={draft.description}
+              placeholder="รายละเอียดบรรทัดนี้"
+              onChange={(e) => set("description", e.target.value)}
+              className="py-2.5 text-base"
+            />
+          </div>
+          <div className="space-y-2 pt-2">
+            <Button
+              type="button"
+              size="lg"
+              className="h-16 w-full bg-[#2563eb] px-6 text-lg font-semibold text-white hover:bg-[#1d4ed8]"
+              icon={<Check className="h-5 w-5" />}
+              onClick={submit}
+            >
+              บันทึกบรรทัด
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className="h-16 w-full border border-slate-300 bg-[#e2e8f0] px-6 text-lg font-semibold text-[#0f172a] hover:bg-[#cbd5e1]"
+              onClick={onClose}
+            >
+              ยกเลิก
+            </Button>
+          </div>
         </div>
       </div>
+      </div>
     </GlassDialog>
+
+    <GlassDialog
+      open={open && pickerOpen}
+      onOpenChange={setPickerOpen}
+      title="เลือกหมวดและประเภทค่าใช้จ่าย"
+      className="max-w-6xl"
+      solid
+    >
+      <ExpenseTypePicker
+        types={types}
+        categoryKey={pickerCategoryKey}
+        typeId={draft.expenseTypeId}
+        onPickCategory={setPickerCategoryKey}
+        onPickType={(id) => {
+          changeType(id)
+          setError(null)
+          setPickerOpen(false)
+        }}
+      />
+    </GlassDialog>
+    </>
   )
 }

@@ -43,10 +43,7 @@ export function GlassDialog({
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <div
-        className={cn(
-          "absolute inset-0",
-          solid ? "bg-slate-900/50" : "bg-slate-900/20 backdrop-blur-md dark:bg-slate-950/35"
-        )}
+        className="absolute inset-0 bg-slate-900/20 backdrop-blur-md dark:bg-slate-950/35"
         role="presentation"
         onClick={() => onOpenChange(false)}
       />

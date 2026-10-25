@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api-handler"
 import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
 import { readIncomeAttachmentFile } from "@/modules/finance"
-import { contentDispositionAttachment } from "@/modules/storage"
+import { contentDispositionAttachment, contentDispositionInline } from "@/modules/storage"
 
 export const runtime = "nodejs"
 
@@ -21,7 +21,9 @@ export const GET = withAuth(async (_req, ctx, session) => {
     headers: {
       "Content-Type": file.contentType,
       "Content-Length": String(file.bytes.length),
-      "Content-Disposition": contentDispositionAttachment(file.originalName),
+      "Content-Disposition": file.contentType.startsWith("image/")
+        ? contentDispositionInline(file.originalName)
+        : contentDispositionAttachment(file.originalName),
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "private, no-store",
     },

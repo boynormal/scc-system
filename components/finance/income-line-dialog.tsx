@@ -94,6 +94,19 @@ function typeDigit(current: string, key: string, maxDecimals: number, replace: b
   return base + key
 }
 
+function sanitizeDecimal(raw: string, maxDecimals: number, maxValue?: number): string {
+  const cleaned = raw.replace(/[^\d.]/g, "")
+  if (cleaned === "") return ""
+  const dot = cleaned.indexOf(".")
+  let whole = (dot >= 0 ? cleaned.slice(0, dot) : cleaned).replace(/\./g, "")
+  const frac = dot >= 0 ? cleaned.slice(dot + 1).replace(/\./g, "").slice(0, maxDecimals) : ""
+  whole = whole.replace(/^0+(?=\d)/, "")
+  if (whole === "") whole = dot >= 0 ? "0" : ""
+  let next = dot >= 0 ? `${whole}.${frac}` : whole
+  if (maxValue != null && next !== "" && next !== "0." && Number(next) > maxValue) return String(maxValue)
+  return next
+}
+
 const PAD_KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "back"] as const
 
 export function IncomeLineDialog({
@@ -168,6 +181,12 @@ export function IncomeLineDialog({
     set(field, value)
   }
 
+  function onMoneyInput(field: MoneyField, raw: string) {
+    const maxDecimals = field === "quantity" ? 3 : 2
+    writeField(field, sanitizeDecimal(raw, maxDecimals, field === "discount" ? 100 : undefined))
+    setReplaceNext(false)
+  }
+
   function focusField(field: MoneyField) {
     setActiveField(field)
     setReplaceNext(true)
@@ -188,7 +207,7 @@ export function IncomeLineDialog({
   const boxClass = (field: MoneyField) =>
     cn(
       "flex items-center rounded-xl border bg-background px-3",
-      activeField === field ? "border-emerald-500 ring-2 ring-emerald-500" : "border-border",
+      activeField === field ? "border-[#2563eb] ring-2 ring-[#2563eb]" : "border-border",
       lockFinancials && "bg-muted"
     )
 
@@ -214,6 +233,7 @@ export function IncomeLineDialog({
       className="max-w-4xl"
       solid
     >
+      <div className="space-y-5">
       <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-3">
           {lockFinancials && (
@@ -227,15 +247,15 @@ export function IncomeLineDialog({
               type="button"
               aria-haspopup="dialog"
               onClick={() => setPickerOpen(true)}
-              className="flex w-full items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+              className="flex w-full items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-left hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/20"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#2563eb] text-white">
                 <Wallet className="h-4 w-4" />
               </span>
               <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
                 {types.find((x) => x.id === draft.incomeTypeId)?.name ?? typeName}
               </span>
-              <span className="shrink-0 text-xs font-medium text-emerald-700 dark:text-emerald-300">{t("changeType")}</span>
+              <span className="shrink-0 text-xs font-medium text-blue-700 dark:text-blue-300">{t("changeType")}</span>
               <ChevronRight className="h-4 w-4 shrink-0 text-foreground" />
             </button>
           </div>
@@ -255,7 +275,7 @@ export function IncomeLineDialog({
                       }}
                       className={cn(
                         "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
-                        draft.pricingMode === mode ? "bg-emerald-600 text-white" : "text-foreground hover:bg-background"
+                        draft.pricingMode === mode ? "bg-[#2563eb] text-white" : "text-foreground hover:bg-background"
                       )}
                     >
                       {t(mode === "AMOUNT" ? "modeAmount" : "modeQtyPrice")}
@@ -275,10 +295,7 @@ export function IncomeLineDialog({
                       value={draft.quantity}
                       disabled={lockFinancials}
                       onFocus={() => focusField("quantity")}
-                      onChange={(e) => {
-                        set("quantity", e.target.value)
-                        setReplaceNext(false)
-                      }}
+                      onChange={(e) => onMoneyInput("quantity", e.target.value)}
                       className="w-full bg-transparent py-2 text-base font-medium text-foreground outline-none disabled:cursor-not-allowed"
                     />
                   </div>
@@ -302,10 +319,7 @@ export function IncomeLineDialog({
                       value={draft.unitPrice}
                       disabled={lockFinancials}
                       onFocus={() => focusField("unitPrice")}
-                      onChange={(e) => {
-                        set("unitPrice", e.target.value)
-                        setReplaceNext(false)
-                      }}
+                      onChange={(e) => onMoneyInput("unitPrice", e.target.value)}
                       className="w-full bg-transparent py-2 text-base font-medium text-foreground outline-none disabled:cursor-not-allowed"
                     />
                     <span className="shrink-0 text-sm text-foreground">{t("bahtUnit")}</span>
@@ -319,10 +333,7 @@ export function IncomeLineDialog({
                   value={draft.amount}
                   disabled={lockFinancials}
                   onFocus={() => focusField("amount")}
-                  onChange={(e) => {
-                    set("amount", e.target.value)
-                    setReplaceNext(false)
-                  }}
+                  onChange={(e) => onMoneyInput("amount", e.target.value)}
                   className="w-full bg-transparent py-2.5 text-lg font-medium text-foreground outline-none disabled:cursor-not-allowed"
                 />
                 <span className="shrink-0 text-sm text-foreground">{t("bahtUnit")}</span>
@@ -343,7 +354,7 @@ export function IncomeLineDialog({
                       onClick={() => selectChoice(mode)}
                       className={cn(
                         "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
-                        choice === mode ? "bg-emerald-600 text-white" : "text-foreground hover:bg-background"
+                        choice === mode ? "bg-[#2563eb] text-white" : "text-foreground hover:bg-background"
                       )}
                     >
                       {t(mode === "baht" ? "discountBaht" : "discountPercent")}
@@ -359,10 +370,7 @@ export function IncomeLineDialog({
                 value={choice === "custom" ? discountPercent : discountBaht}
                 disabled={lockFinancials}
                 onFocus={() => focusField(choice === "custom" ? "discount" : "discountBaht")}
-                onChange={(e) => {
-                  writeField(choice === "custom" ? "discount" : "discountBaht", e.target.value)
-                  setReplaceNext(false)
-                }}
+                onChange={(e) => onMoneyInput(choice === "custom" ? "discount" : "discountBaht", e.target.value)}
                 className="w-full bg-transparent py-2.5 text-lg font-medium text-foreground outline-none disabled:cursor-not-allowed"
               />
               <span className="shrink-0 text-sm text-foreground">{choice === "custom" ? "%" : t("bahtUnit")}</span>
@@ -372,32 +380,17 @@ export function IncomeLineDialog({
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
                 <Coins className="h-5 w-5" />
               </span>
               <div className="min-w-0">
-                <p className="font-semibold text-emerald-800">{t("netAmount")}</p>
-                <p className="text-xs text-emerald-800">({t("netAfterDiscount")})</p>
+                <p className="font-semibold text-blue-800">{t("netAmount")}</p>
+                <p className="text-xs text-blue-800">({t("netAfterDiscount")})</p>
               </div>
             </div>
-            <p className="text-2xl font-bold tabular-nums text-emerald-700">{formatBaht(net)}</p>
-          </div>
-
-          <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3">
-            <Button type="button" variant="outline" size="lg" className="min-h-14 text-base" onClick={onClose}>
-              {t("cancel")}
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              className="min-h-14 bg-emerald-600 text-base hover:bg-emerald-700"
-              icon={<Check className="h-4 w-4" />}
-              onClick={submit}
-            >
-              {t("recordLine")}
-            </Button>
+            <p className="text-2xl font-bold tabular-nums text-blue-700">{formatBaht(net)}</p>
           </div>
         </div>
 
@@ -436,6 +429,26 @@ export function IncomeLineDialog({
             />
           </div>
         </div>
+      </div>
+      <div className="flex items-center justify-center gap-3">
+        <Button
+          type="button"
+          size="lg"
+          className="h-16 w-56 border border-slate-300 bg-[#e2e8f0] px-6 text-lg font-semibold text-[#0f172a] hover:bg-[#cbd5e1]"
+          onClick={onClose}
+        >
+          {t("cancel")}
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          className="h-16 w-56 bg-[#2563eb] px-6 text-lg font-semibold text-white hover:bg-[#1d4ed8]"
+          icon={<Check className="h-5 w-5" />}
+          onClick={submit}
+        >
+          {t("recordLine")}
+        </Button>
+      </div>
       </div>
     </GlassDialog>
 

@@ -39,6 +39,10 @@ export const EXPENSE_SOURCE_KINDS = ["MANUAL", "MODULE", "IMPORT"] as const
 
 export const EXPENSE_PRICING_MODES = ["QTY_PRICE", "AMOUNT"] as const
 
+export const EXPENSE_TAX_MODES = ["NONE", "VAT_EXCLUSIVE", "VAT_INCLUSIVE"] as const
+export type ExpenseTaxModeValue = (typeof EXPENSE_TAX_MODES)[number]
+export const EXPENSE_VAT_RATE = 0.07
+
 export const EXPENSE_COST_OBJECT_TYPES = [
   "VEHICLE",
   "MACHINE",
@@ -70,6 +74,7 @@ export const expenseLineInputSchema = z.object({
   unitPrice: moneySchema.optional(),
   amount: moneySchema.optional(),
   taxAmount: moneySchema.optional(),
+  taxMode: z.enum(EXPENSE_TAX_MODES).optional(),
   discountAmount: moneySchema.optional(),
   costCenterId: z.string().uuid().nullable().optional(),
   processId: z.string().uuid().nullable().optional(),
@@ -258,6 +263,27 @@ function computeNet(amount: number, tax: number, discount: number): number {
   return net < 0 ? 0 : round2(net)
 }
 
+/**
+ * Tax from the line mode on base = max(0, amount − discount):
+ * NONE: tax 0, net = base. VAT_EXCLUSIVE: tax = 7% of base, net = base + tax.
+ * VAT_INCLUSIVE: base already holds the tax, tax = base × 7/107, net = base.
+ */
+function computeLineTax(
+  amount: number,
+  discount: number,
+  mode: ExpenseTaxModeValue
+): { taxAmount: number; netAmount: number } {
+  const base = Math.max(0, round2(amount - discount))
+  if (mode === "VAT_EXCLUSIVE") {
+    const taxAmount = round2(base * EXPENSE_VAT_RATE)
+    return { taxAmount, netAmount: round2(base + taxAmount) }
+  }
+  if (mode === "VAT_INCLUSIVE") {
+    return { taxAmount: round2((base * EXPENSE_VAT_RATE) / (1 + EXPENSE_VAT_RATE)), netAmount: base }
+  }
+  return { taxAmount: 0, netAmount: base }
+}
+
 function isSourceModule(value: unknown): value is (typeof EXPENSE_SOURCE_MODULES)[number] {
   return typeof value === "string" && (EXPENSE_SOURCE_MODULES as readonly string[]).includes(value)
 }
@@ -324,6 +350,7 @@ type ResolvedLine = {
   unitPrice: number
   amount: number
   taxAmount: number
+  taxMode: ExpenseTaxModeValue
   discountAmount: number
   netAmount: number
   costCenterId: string | null
@@ -671,9 +698,9 @@ async function resolveBill(
       unitPrice = amount
     }
 
-    const taxAmount = round2(input.taxAmount ?? 0)
+    const taxMode = input.taxMode ?? "NONE"
     const discountAmount = round2(input.discountAmount ?? 0)
-    const netAmount = computeNet(amount, taxAmount, discountAmount)
+    const { taxAmount, netAmount } = computeLineTax(amount, discountAmount, taxMode)
 
     const sourceModule = linked ? (input.sourceModule as (typeof EXPENSE_SOURCE_MODULES)[number]) : null
     const sourceType = linked ? input.sourceType ?? null : null
@@ -716,6 +743,7 @@ async function resolveBill(
       unitPrice,
       amount,
       taxAmount,
+      taxMode,
       discountAmount,
       netAmount,
       costCenterId: dims.costCenterId,
@@ -765,6 +793,7 @@ function toLineCreate(companyId: string, line: ResolvedLine): Prisma.ExpenseLine
     unitPrice: line.unitPrice,
     amount: line.amount,
     taxAmount: line.taxAmount,
+    taxMode: line.taxMode,
     discountAmount: line.discountAmount,
     netAmount: line.netAmount,
     ...(line.costCenterId ? { costCenter: { connect: { id: line.costCenterId } } } : {}),
@@ -862,6 +891,7 @@ function serializeLine(line: ExpenseLineRow) {
     unitPrice: Number(line.unitPrice),
     amount: Number(line.amount),
     taxAmount: Number(line.taxAmount),
+    taxMode: line.taxMode,
     discountAmount: Number(line.discountAmount),
     netAmount: Number(line.netAmount),
     costCenterId: line.costCenterId,
@@ -1167,6 +1197,7 @@ function paidLineFinancialsChanged(
     unitPrice: unknown
     amount: unknown
     taxAmount: unknown
+    taxMode: string
     discountAmount: unknown
     sourceKind: string
     sourceModule: string | null
@@ -1184,6 +1215,7 @@ function paidLineFinancialsChanged(
   if (input.unitPrice != null && !moneyEq(input.unitPrice, Number(row.unitPrice))) return true
   if (input.amount != null && !moneyEq(input.amount, Number(row.amount))) return true
   if (input.taxAmount != null && !moneyEq(input.taxAmount, Number(row.taxAmount))) return true
+  if (input.taxMode && input.taxMode !== row.taxMode) return true
   if (input.discountAmount != null && !moneyEq(input.discountAmount, Number(row.discountAmount))) return true
   if (input.sourceKind && input.sourceKind !== row.sourceKind) return true
   if (input.sourceModule !== undefined && !sameNullable(input.sourceModule, row.sourceModule)) return true
@@ -1229,6 +1261,7 @@ export async function updatePaidExpenseMetadata(
           unitPrice: true,
           amount: true,
           taxAmount: true,
+          taxMode: true,
           discountAmount: true,
           costCenterId: true,
           processId: true,
@@ -2209,6 +2242,7 @@ export async function listExpenseEmployees(
 
 export {
   computeNet as _computeNetForTests,
+  computeLineTax as _computeLineTaxForTests,
   assertLineDimensions as _assertLineDimensionsForTests,
   assertHeaderVendor as _assertHeaderVendorForTests,
   bangkokYearMonth as _bangkokYearMonthForTests,

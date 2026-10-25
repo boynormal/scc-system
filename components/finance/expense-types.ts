@@ -11,6 +11,9 @@ export type ExpenseAttachmentDto = {
 export type PricingMode = "QTY_PRICE" | "AMOUNT"
 export type SourceKind = "MANUAL" | "MODULE" | "IMPORT"
 export type DiscountKind = "BAHT" | "PERCENT"
+export type TaxMode = "NONE" | "VAT_EXCLUSIVE" | "VAT_INCLUSIVE"
+export const TAX_MODES: TaxMode[] = ["NONE", "VAT_EXCLUSIVE", "VAT_INCLUSIVE"]
+export const VAT_RATE = 0.07
 
 export type UnitOption = {
   id: string
@@ -30,7 +33,9 @@ export type LineDraft = {
   unitCode: string
   unitPrice: string
   amount: string
+  /** Stored tax; only shown for legacy NONE lines until the bill is saved again. */
   taxAmount: string
+  taxMode: TaxMode
   discountAmount: string
   discountKind: DiscountKind
   costCenterId: string
@@ -61,6 +66,7 @@ export type ExpenseLineDto = {
   unitPrice: number
   amount: number
   taxAmount: number
+  taxMode: TaxMode
   discountAmount: number
   netAmount: number
   costCenterId: string | null

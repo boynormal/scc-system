@@ -94,8 +94,10 @@ const baht = new Intl.NumberFormat("th-TH", {
 })
 
 /** Opaque fills. A translucent color on the module gradient looks washed out. */
-export const solidBlueButtonClass = "relative z-10 bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
-export const solidEmeraldButtonClass = "relative z-10 bg-[#059669] text-white hover:bg-[#047857]"
+export const solidBlueButtonClass = "relative z-10 border-transparent bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
+export const solidEmeraldButtonClass = "relative z-10 border-transparent bg-[#059669] text-white hover:bg-[#047857]"
+export const solidYellowButtonClass = "relative z-10 border-transparent bg-[#eab308] text-[#1c1917] hover:bg-[#ca8a04]"
+export const solidRedButtonClass = "relative z-10 border-transparent bg-[#dc2626] text-white hover:bg-[#b91c1c]"
 
 export function formatBaht(value: number): string {
   return baht.format(value)

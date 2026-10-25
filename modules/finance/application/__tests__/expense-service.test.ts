@@ -8,6 +8,7 @@ import {
   createExpenseSchema,
   expenseLineInputSchema,
   _computeNetForTests as computeNet,
+  _computeLineTaxForTests as computeLineTax,
   _assertLineDimensionsForTests as assertLineDimensions,
   _assertHeaderVendorForTests as assertHeaderVendor,
   type TypeDimensionMeta,
@@ -78,6 +79,24 @@ describe("computeNet", () => {
 
   it("rounds to 2 decimals", () => {
     expect(computeNet(10.005, 0, 0)).toBe(10.01)
+  })
+})
+
+describe("computeLineTax", () => {
+  it("charges no tax without a VAT mode", () => {
+    expect(computeLineTax(1000, 100, "NONE")).toEqual({ taxAmount: 0, netAmount: 900 })
+  })
+
+  it("adds 7% on amount minus discount when VAT is exclusive", () => {
+    expect(computeLineTax(1000, 100, "VAT_EXCLUSIVE")).toEqual({ taxAmount: 63, netAmount: 963 })
+  })
+
+  it("extracts 7/107 when VAT is inclusive and keeps the base as net", () => {
+    expect(computeLineTax(1000, 100, "VAT_INCLUSIVE")).toEqual({ taxAmount: 58.88, netAmount: 900 })
+  })
+
+  it("never taxes a negative base", () => {
+    expect(computeLineTax(100, 500, "VAT_EXCLUSIVE")).toEqual({ taxAmount: 0, netAmount: 0 })
   })
 })
 

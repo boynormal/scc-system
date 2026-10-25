@@ -126,6 +126,7 @@ function draft(over: Partial<LineDraft> & { expenseTypeId: string }): LineDraft 
     unitPrice: "",
     amount: "100",
     taxAmount: "",
+    taxMode: "NONE",
     discountAmount: "",
     discountKind: "BAHT",
     costCenterId: "",

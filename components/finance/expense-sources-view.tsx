@@ -56,6 +56,7 @@ function sourceToLine(row: ExpenseSourceRow): LineDraft {
     unitPrice: locked ? String(row.amount) : "",
     amount: locked ? String(row.amount) : "",
     taxAmount: "",
+    taxMode: "NONE",
     discountAmount: "",
     discountKind: "BAHT",
     costCenterId: "",

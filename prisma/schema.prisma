@@ -2130,6 +2130,8 @@ model ExpenseLine {
   unitPrice        Decimal                @default(0) @map("unit_price") @db.Decimal(14, 2)
   amount           Decimal                @default(0) @db.Decimal(14, 2)
   taxAmount        Decimal                @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  // Tax is computed from this mode (7% on amount − discount); see IncomeTaxMode.
+  taxMode          IncomeTaxMode          @default(NONE) @map("tax_mode")
   discountAmount   Decimal                @default(0) @map("discount_amount") @db.Decimal(14, 2)
   netAmount        Decimal                @default(0) @map("net_amount") @db.Decimal(14, 2)
   costCenterId     String?                @map("cost_center_id") @db.Uuid

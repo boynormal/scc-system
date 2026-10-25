@@ -3,6 +3,7 @@ export { createObjectStorage, logS3Failure, type ObjectStorage } from "./infra/s
 export {
   buildObjectKey,
   contentDispositionAttachment,
+  contentDispositionInline,
   inspectUpload,
   safeOriginalName,
   sha256Hex,

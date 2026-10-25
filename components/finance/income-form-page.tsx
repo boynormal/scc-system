@@ -3,17 +3,20 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { Banknote, CreditCard, Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react"
+import { Banknote, Camera, CreditCard, Paperclip, Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { PageHeader } from "@/components/shell/page-header"
 import { DataPanel } from "@/components/shell/data-panel"
+import { GlassDialog } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead } from "@/components/shell/app-data-table"
 import type { Option, UnitOption } from "./expense-types"
-import { formatBaht } from "./finance-theme"
+import { formatBaht, solidBlueButtonClass } from "./finance-theme"
 import {
   INCOME_TAX_MODES,
+  type IncomeAttachmentDto,
   type IncomeCategoryRow,
   type IncomeDto,
   type IncomeLineDraft,
@@ -23,6 +26,12 @@ import {
 import { IncomeLineDialog, incomeLineAmount, incomeLineMoney, incomeLineNet, newIncomeLineDraft } from "./income-line-dialog"
 import { IncomeTypePicker, defaultIncomeCategoryId } from "./income-type-picker"
 import { IncomePrintButtons } from "./income-print-buttons"
+import { IncomeFileThumbs } from "./income-file-thumbs"
+
+const addLineButtonClass =
+  "relative z-10 flex w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-blue-300 bg-blue-100 py-10 text-sm font-medium text-blue-900 hover:border-blue-400 hover:bg-blue-200 dark:border-blue-400/40 dark:bg-blue-500/20 dark:text-blue-100 dark:hover:bg-blue-500/30"
+
+type PendingImage = { key: string; file: File; url: string }
 
 function todayYmdBangkok() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" })
@@ -57,6 +66,7 @@ function errorText(json: { error?: unknown }, fallback: string): string {
 
 export function IncomeFormPage({ item }: { item?: IncomeDto }) {
   const t = useTranslations("financeIncome")
+  const tFiles = useTranslations("expenseFiles")
   const router = useRouter()
   const received = item?.status === "RECEIVED"
 
@@ -79,8 +89,12 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
   const [editing, setEditing] = useState<IncomeLineDraft | null>(null)
   const [pickerCategoryId, setPickerCategoryId] = useState<string | null>(null)
   const [pickerTypeId, setPickerTypeId] = useState("")
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [savedId, setSavedId] = useState<string | undefined>(item?.id)
+  const [images, setImages] = useState<PendingImage[]>([])
+  const [savedImages, setSavedImages] = useState<IncomeAttachmentDto[]>(item?.attachments ?? [])
 
   useEffect(() => {
     void Promise.all([
@@ -134,14 +148,16 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
   function pickType(typeId: string) {
     if (received) return
     setPickerTypeId(typeId)
+    setPickerOpen(false)
     setError(null)
     setEditing({ ...newIncomeLineDraft(), incomeTypeId: typeId })
   }
 
   function addLine() {
-    if (!pickerTypeId) return setError(t("errPickType"))
+    if (received) return
     setError(null)
-    setEditing({ ...newIncomeLineDraft(), incomeTypeId: pickerTypeId })
+    setPickerTypeId("")
+    setPickerOpen(true)
   }
 
   function removeLine(key: string) {
@@ -175,6 +191,44 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
     }
   }
 
+  function addImages(list: FileList | null) {
+    if (!list || list.length === 0) return
+    const next = [...list]
+      .filter((file) => file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name))
+      .map((file) => ({
+        key: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
+        file,
+        url: URL.createObjectURL(file),
+      }))
+    if (next.length === 0) {
+      setError(t("attachImage"))
+      return
+    }
+    setError(null)
+    setImages((prev) => [...prev, ...next])
+  }
+
+  function removeImage(key: string) {
+    setImages((prev) => {
+      const found = prev.find((image) => image.key === key)
+      if (found) URL.revokeObjectURL(found.url)
+      return prev.filter((image) => image.key !== key)
+    })
+  }
+
+  async function uploadImages(incomeId: string) {
+    const pending = images
+    for (const image of pending) {
+      const form = new FormData()
+      form.append("file", image.file)
+      const res = await fetch(`/api/finance/incomes/${incomeId}/files`, { method: "POST", body: form })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(errorText(json, tFiles("uploadFailed")))
+      URL.revokeObjectURL(image.url)
+      setImages((prev) => prev.filter((item) => item.key !== image.key))
+    }
+  }
+
   async function submit(status: "DRAFT" | "PENDING" | null) {
     if (!received) {
       if (!branchId) return setError(t("errBranch"))
@@ -199,8 +253,9 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
           lines: lines.map(linePayload),
         }
     try {
-      const res = await fetch(item ? `/api/finance/incomes/${item.id}` : "/api/finance/incomes", {
-        method: item ? "PATCH" : "POST",
+      const targetId = savedId
+      const res = await fetch(targetId ? `/api/finance/incomes/${targetId}` : "/api/finance/incomes", {
+        method: targetId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
@@ -209,8 +264,20 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
         setError(errorText(json, t("saveFailed")))
         return
       }
-      const id = (json.data?.id as string | undefined) ?? item?.id
-      router.push(id ? `/finance/incomes/${id}` : "/finance/incomes")
+      const id = (json.data?.id as string | undefined) ?? targetId
+      if (!id) {
+        router.push("/finance/incomes")
+        router.refresh()
+        return
+      }
+      setSavedId(id)
+      try {
+        await uploadImages(id)
+      } catch (uploadError) {
+        setError(uploadError instanceof Error ? uploadError.message : tFiles("uploadFailed"))
+        return
+      }
+      router.push(`/finance/incomes/${id}`)
       router.refresh()
     } catch {
       setError(t("saveFailed"))
@@ -229,9 +296,10 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-      <DataPanel padding="sm">
-        <h2 className="sr-only">{t("docInfo")}</h2>
-        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <DataPanel padding="md">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">{t("docInfo")}</h2>
+        <div className="space-y-3">
           <Select
             label={t("branch")}
             required
@@ -273,35 +341,20 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
           />
           <Input label={t("notes")} value={notes} onChange={(e) => setNotes(e.target.value)} />
           {received && (
-            <div className="sm:col-span-2 lg:col-span-3 2xl:col-span-6">
-              <Input
-                label={t("reason")}
-                required
-                maxLength={500}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder={t("reasonPlaceholder")}
-              />
-            </div>
+            <Input
+              label={t("reason")}
+              required
+              maxLength={500}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={t("reasonPlaceholder")}
+            />
           )}
         </div>
       </DataPanel>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <DataPanel padding="md" className="min-w-0">
-        <IncomeTypePicker
-          types={types}
-          categories={categories}
-          categoryId={pickerCategoryId}
-          typeId={pickerTypeId}
-          disabled={received}
-          onPickCategory={setPickerCategoryId}
-          onPickType={pickType}
-        />
-      </DataPanel>
-
-      <DataPanel padding="md" className="min-w-0 xl:sticky xl:top-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <DataPanel padding="md" className="min-w-0 lg:col-span-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <ShoppingCart className="h-4 w-4" />
             {t("cartTitle")}
@@ -309,11 +362,6 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
               {t("cartCount", { count: lines.length })}
             </span>
           </h2>
-          {!received && (
-            <Button type="button" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={addLine}>
-              {t("addLine")}
-            </Button>
-          )}
         </div>
 
         {lines.length === 0 ? (
@@ -321,11 +369,11 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
             type="button"
             disabled={received}
             onClick={addLine}
-            className="flex w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border py-10 text-sm text-foreground hover:bg-muted"
+            className={addLineButtonClass}
           >
             <Plus className="h-5 w-5" />
             {t("cartEmpty")}
-            <span className="text-xs text-muted-foreground">{t("cartEmptyHint")}</span>
+            <span className="text-xs font-normal text-blue-700 dark:text-blue-200">{t("cartEmptyHint")}</span>
           </button>
         ) : (
           <div className="max-h-72 overflow-auto rounded-lg border border-border [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10">
@@ -391,39 +439,114 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
           </div>
         )}
 
-        <div className="mt-3 grid items-end gap-3 sm:grid-cols-2">
-          <div className="min-w-0 space-y-1.5">
-            <span className="block text-sm font-medium text-foreground">{t("paymentMethod")}</span>
-            <div className="grid grid-cols-2 gap-1.5" role="group" aria-label={t("paymentMethod")}>
-              {(
-                [
-                  { value: "cash", label: t("paymentMethods.cash"), icon: Banknote },
-                  { value: "credit", label: t("paymentMethods.credit"), icon: CreditCard },
-                ] as const
-              ).map((option) => {
-                const selected = paymentMethod === option.value
-                const Icon = option.icon
-                return (
-                  <button
-                    key={option.value || "none"}
-                    type="button"
-                    disabled={received}
-                    aria-pressed={selected}
-                    onClick={() => setPaymentMethod(option.value)}
-                    className={
-                      selected
-                        ? "relative z-10 inline-flex min-h-9 items-center justify-center gap-1 rounded-lg bg-[#2563eb] px-1.5 py-1.5 text-xs font-medium text-white hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
-                        : "inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border bg-background px-1.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                    }
-                  >
-                    {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-                    <span className="truncate">{option.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+        {!received && lines.length > 0 && (
+          <button
+            type="button"
+            onClick={addLine}
+            className={cn("mt-3", addLineButtonClass)}
+          >
+            <Plus className="h-5 w-5" />
+            {t("addItem")}
+            <span className="text-xs font-normal text-blue-700 dark:text-blue-200">{t("cartEmptyHint")}</span>
+          </button>
+        )}
+
+        <div className="mt-3 grid items-stretch gap-3 sm:grid-cols-2">
           <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-foreground">{tFiles("title")}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className={cn(solidBlueButtonClass, "inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium")}>
+                  <Camera className="h-3.5 w-3.5" />
+                  {tFiles("takePhoto")}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    capture="environment"
+                    className="sr-only"
+                    onChange={(e) => {
+                      addImages(e.target.files)
+                      e.target.value = ""
+                    }}
+                  />
+                </label>
+                <label className={cn(solidBlueButtonClass, "inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium")}>
+                  <Paperclip className="h-3.5 w-3.5" />
+                  {tFiles("attach")}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                    multiple
+                    className="sr-only"
+                    onChange={(e) => {
+                      addImages(e.target.files)
+                      e.target.value = ""
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+            {images.length === 0 && savedImages.length === 0 ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Paperclip className="h-4 w-4" />
+                {tFiles("empty")}
+              </p>
+            ) : (
+              <IncomeFileThumbs
+                removeLabel={tFiles("remove")}
+                onRemove={removeImage}
+                items={[
+                  ...savedImages.map((image) => ({
+                    key: image.id,
+                    name: image.fileName ?? tFiles("unnamed"),
+                    href: image.fileUrl,
+                    preview: true,
+                    removable: false,
+                  })),
+                  ...images.map((image) => ({
+                    key: image.key,
+                    name: image.file.name,
+                    href: image.url,
+                    preview: true,
+                    removable: true,
+                  })),
+                ]}
+              />
+            )}
+          </div>
+
+          <div className="min-w-0 space-y-3">
+            <div className="space-y-1.5">
+              <span className="block text-sm font-medium text-foreground">{t("paymentMethod")}</span>
+              <div className="grid grid-cols-2 gap-1.5" role="group" aria-label={t("paymentMethod")}>
+                {(
+                  [
+                    { value: "cash", label: t("paymentMethods.cash"), icon: Banknote },
+                    { value: "credit", label: t("paymentMethods.credit"), icon: CreditCard },
+                  ] as const
+                ).map((option) => {
+                  const selected = paymentMethod === option.value
+                  const Icon = option.icon
+                  return (
+                    <button
+                      key={option.value || "none"}
+                      type="button"
+                      disabled={received}
+                      aria-pressed={selected}
+                      onClick={() => setPaymentMethod(option.value)}
+                      className={
+                        selected
+                          ? "relative z-10 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-3 py-3 text-base font-semibold text-white hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
+                          : "inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-3 text-base font-semibold text-slate-900 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/20 dark:bg-slate-900 dark:text-white"
+                      }
+                    >
+                      {Icon && <Icon className="h-5 w-5 shrink-0" />}
+                      <span className="truncate">{option.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
             <Select
               label={t("taxMode")}
               required
@@ -433,41 +556,41 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
               className="py-1.5"
               options={INCOME_TAX_MODES.map((m) => ({ value: m, label: t(`taxModes.${m}`) }))}
             />
+            <div className="space-y-1.5 text-sm text-foreground">
+              <div className="flex justify-between">
+                <span>{t("totalAmount")}</span>
+                <span className="tabular-nums">{formatBaht(totals.amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{t("discount")}</span>
+                <span className="tabular-nums">{formatBaht(totals.discount)}</span>
+              </div>
+              {taxMode === "VAT_INCLUSIVE" && (
+                <div className="flex justify-between">
+                  <span>{t("beforeVat")}</span>
+                  <span className="tabular-nums">{formatBaht(totals.net - totals.tax)}</span>
+                </div>
+              )}
+              {(taxMode !== "NONE" || totals.tax > 0) && (
+                <div className="flex justify-between">
+                  <span>{t("vatLabel")}</span>
+                  <span className="tabular-nums">{formatBaht(totals.tax)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between rounded-lg bg-emerald-500/15 px-3 py-2">
+                <span className="font-medium">{t("netAmount")}</span>
+                <span className="text-lg font-bold tabular-nums">{formatBaht(totals.net)}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="mt-3 space-y-1.5 text-sm text-foreground">
-          <div className="flex justify-between">
-            <span>{t("totalAmount")}</span>
-            <span className="tabular-nums">{formatBaht(totals.amount)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>{t("discount")}</span>
-            <span className="tabular-nums">{formatBaht(totals.discount)}</span>
-          </div>
-          {taxMode === "VAT_INCLUSIVE" && (
-            <div className="flex justify-between">
-              <span>{t("beforeVat")}</span>
-              <span className="tabular-nums">{formatBaht(totals.net - totals.tax)}</span>
-            </div>
-          )}
-          {(taxMode !== "NONE" || totals.tax > 0) && (
-            <div className="flex justify-between">
-              <span>{t("vatLabel")}</span>
-              <span className="tabular-nums">{formatBaht(totals.tax)}</span>
-            </div>
-          )}
-          <div className="flex items-center justify-between rounded-lg bg-emerald-500/15 px-3 py-2">
-            <span className="font-medium">{t("netAmount")}</span>
-            <span className="text-lg font-bold tabular-nums">{formatBaht(totals.net)}</span>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap justify-end gap-2">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
           {received ? (
             <Button
               type="button"
-              className="relative z-10 bg-[#059669] hover:bg-[#047857]"
+              size="lg"
+              className="h-16 w-56 bg-[#2563eb] text-lg font-semibold text-white hover:bg-[#1d4ed8]"
               loading={saving === "save"}
               onClick={() => void submit(null)}
             >
@@ -475,12 +598,19 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
             </Button>
           ) : (
             <>
-              <Button type="button" variant="outline" loading={saving === "DRAFT"} onClick={() => void submit("DRAFT")}>
+              <Button
+                type="button"
+                size="lg"
+                className="h-16 w-56 border border-slate-300 bg-[#e2e8f0] text-lg font-semibold text-[#0f172a] hover:bg-[#cbd5e1]"
+                loading={saving === "DRAFT"}
+                onClick={() => void submit("DRAFT")}
+              >
                 {t("saveDraft")}
               </Button>
               <Button
                 type="button"
-                className="relative z-10 bg-[#059669] hover:bg-[#047857]"
+                size="lg"
+                className="h-16 w-56 bg-[#2563eb] text-lg font-semibold text-white hover:bg-[#1d4ed8]"
                 loading={saving === "PENDING"}
                 onClick={() => void submit("PENDING")}
               >
@@ -491,6 +621,18 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
         </div>
       </DataPanel>
       </div>
+
+      <GlassDialog open={pickerOpen} onOpenChange={setPickerOpen} title={t("pickTypeTitle")} className="max-w-3xl" solid>
+        <IncomeTypePicker
+          types={types}
+          categories={categories}
+          categoryId={pickerCategoryId}
+          typeId={pickerTypeId}
+          disabled={received}
+          onPickCategory={setPickerCategoryId}
+          onPickType={pickType}
+        />
+      </GlassDialog>
 
       {editing && (
         <IncomeLineDialog

@@ -299,6 +299,16 @@ export function buildExceptionGroups(facts: ReportFact[]): ExceptionGroup[] {
     }))
 }
 
+/** วันนี้ยังไม่จบ จึงยังไม่มีเวลาออก ซ่อนคนที่ผิดปกติแค่เพราะลืมสแกนออก */
+export function omitTodayOpenForgotScans(groups: ExceptionGroup[], today: string): ExceptionGroup[] {
+  return groups.flatMap((group) => {
+    if (group.date !== today) return [group]
+    const rows = group.rows.filter((row) => row.status !== "SINGLE_PUNCH" || row.late || row.noteReason != null || Boolean(row.note))
+    if (rows.length === 0) return []
+    return [{ ...group, rows, minutes: rows.reduce((sum, row) => sum + row.minutes, 0) }]
+  })
+}
+
 export type DepartmentFilterMode = "only" | "except"
 
 /** An empty selection keeps every row in both modes. A null key matches rows without a department. */

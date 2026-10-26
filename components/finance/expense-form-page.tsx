@@ -13,6 +13,7 @@ import { DataPanel } from "@/components/shell/data-panel"
 import { AppDataTable, AppDataTableBody, AppDataTableHead } from "@/components/shell/app-data-table"
 import { cn } from "@/lib/utils"
 import type {
+  AssetOption,
   CostCenterRow,
   ExpenseAttachmentDto,
   ExpenseDto,
@@ -20,7 +21,6 @@ import type {
   FinancePerms,
   LineDraft,
   Option,
-  ProcessRow,
   UnitOption,
 } from "./expense-types"
 import {
@@ -31,7 +31,13 @@ import {
   computeLineTax,
   newLineDraft,
 } from "./expense-line-dialog"
-import { anyLineRequiresVendor, applyTypeChange, validateExpenseForm } from "./expense-form-validation"
+import {
+  anyLineRequiresVendor,
+  applyTypeChange,
+  prefillSourceCostCenter,
+  transportCostCenterId,
+  validateExpenseForm,
+} from "./expense-form-validation"
 import { ExpenseTypePicker, defaultExpenseCategoryKey } from "./expense-type-picker"
 import { formatBaht, solidBlueButtonClass, sourceModuleLabel } from "./finance-theme"
 import { IncomeFileThumbs } from "./income-file-thumbs"
@@ -87,7 +93,6 @@ function itemToDrafts(item: ExpenseDto): LineDraft[] {
     discountAmount: l.discountAmount ? String(l.discountAmount) : "",
     discountKind: "BAHT" as const,
     costCenterId: l.costCenterId ?? "",
-    processId: l.processId ?? "",
     costObjectType: l.costObjectType ?? "",
     costObjectId: l.costObjectId ?? "",
     costObjectLabel: l.costObjectLabel ?? "",
@@ -117,10 +122,10 @@ export function ExpenseFormPage({
   const [branches, setBranches] = useState<Option[]>([])
   const [types, setTypes] = useState<ExpenseTypeOption[]>([])
   const [costCenters, setCostCenters] = useState<CostCenterRow[]>([])
-  const [processes, setProcesses] = useState<ProcessRow[]>([])
   const [vendors, setVendors] = useState<Option[]>([])
   const [employees, setEmployees] = useState<Option[]>([])
   const [units, setUnits] = useState<UnitOption[]>([])
+  const [assets, setAssets] = useState<AssetOption[]>([])
 
   const [branchId, setBranchId] = useState(item?.branchId ?? "")
   const [expenseDate, setExpenseDate] = useState(item?.expenseDate ?? todayYmdBangkok())
@@ -150,23 +155,25 @@ export function ExpenseFormPage({
       fetch("/api/finance/branches", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/expense-types", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/cost-centers", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/finance/processes", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/vendors", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/employees", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/master-data/units", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/finance/assets", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([b, t, c, p, v, e, u]) => {
+      .then(([b, t, c, v, e, u, a]) => {
         const branchRows = (b.data ?? []) as Option[]
         setBranches(branchRows)
         const typeRows = (t.data ?? []) as ExpenseTypeOption[]
         setTypes(typeRows)
         setPickerCategoryKey((cur) => cur ?? defaultExpenseCategoryKey(typeRows, ""))
-        setCostCenters((c.data ?? []) as CostCenterRow[])
-        setProcesses((p.data ?? []) as ProcessRow[])
+        const costCenterRows = (c.data ?? []) as CostCenterRow[]
+        setCostCenters(costCenterRows)
+        const transportCcId = transportCostCenterId(costCenterRows)
         setVendors((v.data ?? []) as Option[])
         setEmployees((e.data ?? []) as Option[])
         const unitRows = (u.data ?? []) as UnitOption[]
         setUnits(unitRows)
+        setAssets((a.data ?? []) as AssetOption[])
         setLines((prev) =>
           prev.map((l) => {
             if (l.unitId || !l.unitCode) return l
@@ -185,7 +192,7 @@ export function ExpenseFormPage({
               if (raw) {
                 const payload = JSON.parse(raw) as PrefillPayload
                 if (payload.lines?.length) {
-                  setLines(payload.lines)
+                  setLines(payload.lines.map((l) => prefillSourceCostCenter(l, transportCcId)))
                   if (payload.branchId) setBranchId(payload.branchId)
                   if (payload.expenseDate) setExpenseDate(payload.expenseDate)
                   if (payload.paymentMethod) setPaymentMethod(payload.paymentMethod)
@@ -357,30 +364,30 @@ export function ExpenseFormPage({
         notes: notes || null,
         ...(lockFinancials ? { reason: reason.trim() } : {}),
         lines: lines.map((l) => {
-          const original = item?.lines.find((row) => row.id === l.key)
+          const saved = item?.lines.find((row) => row.id === l.key)
+          const paid = lockFinancials ? saved : undefined
           return {
           ...(lockFinancials && /^[0-9a-f-]{36}$/i.test(l.key) ? { id: l.key } : {}),
           expenseTypeId: l.expenseTypeId,
           description: l.description || null,
-          pricingMode: original?.pricingMode ?? l.pricingMode,
-          quantity: original ? original.quantity : Number(l.quantity) || (l.pricingMode === "AMOUNT" ? 1 : 0),
+          pricingMode: paid ? paid.pricingMode : l.pricingMode,
+          quantity: paid ? paid.quantity : Number(l.quantity) || (l.pricingMode === "AMOUNT" ? 1 : 0),
           unitId: l.unitId || null,
           unitCode: l.unitCode || null,
-          unitPrice: original ? original.unitPrice : Number(l.unitPrice) || 0,
-          amount: original ? original.amount : computeLineAmount(l),
-          ...(original && lockFinancials ? { taxAmount: original.taxAmount } : {}),
-          taxMode: original && lockFinancials ? original.taxMode : l.taxMode,
-          discountAmount: original ? original.discountAmount : computeDiscountBaht(l),
+          unitPrice: paid ? paid.unitPrice : Number(l.unitPrice) || 0,
+          amount: paid ? paid.amount : computeLineAmount(l),
+          ...(paid ? { taxAmount: paid.taxAmount } : {}),
+          taxMode: paid ? paid.taxMode : l.taxMode,
+          discountAmount: paid ? paid.discountAmount : computeDiscountBaht(l),
           costCenterId: l.costCenterId || null,
-          processId: l.processId || null,
-          costObjectType: lockFinancials ? (original?.costObjectType ?? null) : l.costObjectType || null,
-          costObjectId: lockFinancials ? (original?.costObjectId ?? null) : l.costObjectId || null,
-          costObjectLabel: lockFinancials ? (original?.costObjectLabel ?? null) : l.costObjectLabel || null,
-          sourceKind: original?.sourceKind ?? l.sourceKind,
-          sourceModule: original?.sourceModule ?? l.sourceModule,
-          sourceType: original?.sourceType ?? l.sourceType,
-          sourceDocumentId: original?.sourceDocumentId ?? l.sourceDocumentId,
-          sourceLineId: original?.sourceLineId ?? l.sourceLineId,
+          costObjectType: lockFinancials ? (saved?.costObjectType ?? null) : l.costObjectType || null,
+          costObjectId: lockFinancials ? (saved?.costObjectId ?? null) : l.costObjectId || null,
+          costObjectLabel: lockFinancials ? (saved?.costObjectLabel ?? null) : l.costObjectLabel || null,
+          sourceKind: saved?.sourceKind ?? l.sourceKind,
+          sourceModule: saved?.sourceModule ?? l.sourceModule,
+          sourceType: saved?.sourceType ?? l.sourceType,
+          sourceDocumentId: saved?.sourceDocumentId ?? l.sourceDocumentId,
+          sourceLineId: saved?.sourceLineId ?? l.sourceLineId,
         }
         }),
       }
@@ -542,7 +549,7 @@ export function ExpenseFormPage({
                           {l.description && <div className="text-xs text-muted-foreground">{l.description}</div>}
                           {l.sourceAmountLocked && (
                             <span className="mt-0.5 inline-block rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
-                              ล็อกจากต้นทาง
+                              ยอดอ้างอิง
                             </span>
                           )}
                         </td>
@@ -761,8 +768,8 @@ export function ExpenseFormPage({
           initial={editingLine}
           types={types}
           costCenters={costCenters}
-          processes={processes}
           units={units}
+          assets={assets}
           lockFinancials={lockFinancials}
           onClose={() => {
             setDialogOpen(false)

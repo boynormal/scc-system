@@ -26,7 +26,7 @@ API: `app/api/finance/**` (thin adapter → application services)
 
 ## ล็อกบรรทัดตาม `sourceKind`
 - **MANUAL** (ไม่มีต้นทาง): แก้ได้ทุกช่อง
-- **MODULE / IMPORT** (ผูกต้นทาง): ฟิลด์ต้นทางถูกล็อก — ยอดถูกล็อกจากต้นทางเฉพาะเมื่อยอดอ้างอิง `> 0`; ถ้า `null`/`0` ให้ Finance กรอกเอง; แก้ได้เฉพาะประเภท/หน่วยงาน/กระบวนการ/วัตถุต้นทุน/รายละเอียด
+- **MODULE / IMPORT** (ผูกต้นทาง): เอกสารต้นทางถูกล็อก — ยอดอ้างอิง `> 0` ถูกใส่เป็นจำนวนเงินเริ่มต้น แต่ Finance แก้ได้เพื่อยืนยันยอดที่จ่ายจริง; ถ้า `null`/`0` ให้กรอกเอง
 
 ## กันผูกต้นทางซ้ำ (Postgres)
 สอง partial unique index บน `expense_lines` (สร้างด้วย SQL เพราะ Prisma ประกาศ partial unique ไม่ได้):
@@ -58,13 +58,13 @@ API: `app/api/finance/**` (thin adapter → application services)
 
 - `requiresVendor` → หัวบิล `Expense.vendorId` (ไม่มี vendor ต่อบรรทัด) ถ้า**บรรทัดใดบรรทัดหนึ่ง**ต้องการผู้ขายแต่หัวบิลว่าง → ปฏิเสธ
 - `requiresCostCenter` → `ExpenseLine.costCenterId`
-- `requiresProcess` → `ExpenseLine.processId` (FK ไป `processes`)
+- มิติกระบวนการ (process) ถูกถอดออกแล้ว (2026-10-26) ทั้งรายรับและรายจ่าย
 - `requiresVehicle` / `requiresMachine` / `requiresLocation` → `costObjectType` ต้องตรง (`VEHICLE` / `MACHINE` / `LOCATION`) และ `costObjectLabel` ไม่ว่าง — ไม่มี Location master
 - ประเภทที่ไม่ตรง (เช่น ต้องการรถแต่ส่ง `MACHINE`) → ปฏิเสธ
-- Allowlist: ถ้าประเภทมี mapping `isAllowed` อย่างน้อย 1 รายการ ต้องเลือกจากชุดนั้น; ช่องว่างใช้ `isDefault` ถ้ามี; **ไม่มี mapping** = เลือกหน่วยงาน/กระบวนการที่ **active ของบริษัท** ได้
+- Allowlist: ถ้าประเภทมี mapping `isAllowed` อย่างน้อย 1 รายการ ต้องเลือกจากชุดนั้น; ช่องว่างใช้ `isDefault` ถ้ามี; **ไม่มี mapping** = เลือกหน่วยงานที่ **active ของบริษัท** ได้
 - `isDefault ⇒ isAllowed` ยังบังคับที่ชั้น master-data
 - ประเภทมรดก (`FUEL`, `TOLL`, …) ที่ `requires_* = false` และไม่มี mapping ยังเลือกอิสระเหมือนเดิม
-- บรรทัด IMPORT/MODULE: ยอดถูกล็อกจากต้นทาง แต่ประเภท / หน่วยงาน / กระบวนการ / วัตถุต้นทุน ยังแก้ได้
+- บรรทัด IMPORT/MODULE: จำนวนเงินเริ่มจากยอดอ้างอิงเมื่อมี และแก้ได้เพื่อยืนยันยอดที่จ่ายจริง ประเภท / หน่วยงาน / วัตถุต้นทุน แก้ได้เช่นกัน
 - `QTY_PRICE` ต้องมี `unitId` จาก Unit master ร่วม (`Settings → Basic Data → Units`) และคัดลอก `Unit.code` ไป `unitCode` เพื่อแสดงผลย้อนหลัง
 - `AMOUNT`: `quantity = 1`, `unitId = null`, `unitPrice = amount` — ไม่แปลงหน่วย
 - `defaultGlLabel` เป็นข้อความอ่านอย่างเดียวบนฟอร์ม — ไม่ใช่ FK และยังไม่ผ่านบัญชี
@@ -83,7 +83,7 @@ Chart of Accounts / GL FK / journal / posting ยังเลื่อนออ�
 รายงานอ่านอย่างเดียวจากบิลที่มีอยู่ ไม่เปลี่ยนกฎ Phase 4 และยังไม่ทำ GL
 
 ### Grain
-- เงิน (`grandTotal`, `byType`, `byProcess`, `byCostCenter`, `byModule`, `byCostObject`, matrix, ยอดตามสาขา/เดือน) = `SUM(ExpenseLine.netAmount)` ของบรรทัดที่ผ่านฟิลเตอร์
+- เงิน (`grandTotal`, `byType`, `byCostCenter`, `byModule`, `byCostObject`, ยอดตามสาขา/เดือน) = `SUM(ExpenseLine.netAmount)` ของบรรทัดที่ผ่านฟิลเตอร์
 - จำนวนบิล (`count` / Bills) = distinct `Expense.id` ที่เป็นเจ้าของบรรทัดเหล่านั้น
 - จำนวนบรรทัด = จำนวน `ExpenseLine` ที่ผ่านฟิลเตอร์
 - ช่วงเวลา = `Expense.expenseDate` (ไม่ใช้ posting date)
@@ -120,7 +120,7 @@ Finance เป็นเจ้าของ Expense แห่งเดียว �
 - สถานะ `DRAFT → PENDING → APPROVED → RECEIVED`, `REJECTED`, `CANCELLED`
   - อนุมัติ/ปฏิเสธ: `incomes.approve` จาก DRAFT/PENDING
   - รับเงิน/ยกเลิกการรับเงิน: `incomes.update`; ยกเลิกการรับเงินต้องมีเหตุผลและกลับเป็น APPROVED
-  - RECEIVED ล็อกยอดเงิน แก้ได้เฉพาะประเภท รายละเอียด หน่วยงาน กระบวนการ หมายเหตุ พร้อมเหตุผล
+  - RECEIVED ล็อกยอดเงิน แก้ได้เฉพาะประเภท รายละเอียด หน่วยงาน หมายเหตุ พร้อมเหตุผล
   - ลบ = soft delete เป็น CANCELLED และลบ RECEIVED ไม่ได้
 - ไฟล์แนบผ่าน `StoredFile` (`entityType: "income"`)
 - ข้อมูลพื้นฐาน `income_categories` / `income_types` ใช้สิทธิ์ `expense_masters`

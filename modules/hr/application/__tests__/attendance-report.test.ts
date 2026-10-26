@@ -4,6 +4,7 @@ import {
   buildAttendanceReport,
   buildExceptionGroups,
   countsOnBranch,
+  omitTodayOpenForgotScans,
   dateKeysInRange,
   filterExceptionGroups,
   type ReportFact,
@@ -109,6 +110,20 @@ describe("buildExceptionGroups", () => {
     expect(groups[0]?.minutes).toBe(13)
     expect(groups[0]?.rows.find((row) => row.displayName === "ต้น")).toMatchObject({ late: true, minutes: 12 })
     expect(groups[0]?.rows.find((row) => row.displayName === "เอ")).toMatchObject({ late: true, minutes: 1 })
+  })
+
+  it("hides today's forgot-scan rows and keeps late, leave, and notes", () => {
+    const groups = buildExceptionGroups([
+      fact({ personnelId: "p1", displayName: "ลืม", status: "SINGLE_PUNCH" }),
+      fact({ personnelId: "p2", displayName: "สาย", status: "SINGLE_PUNCH", lateMinutes: 8 }),
+      fact({ personnelId: "p3", displayName: "ลา", status: "NO_SCAN", noteReason: "SICK", note: "ลา" }),
+      fact({ personnelId: "p4", displayName: "เมื่อวาน", date: "2026-10-17", status: "SINGLE_PUNCH" }),
+    ])
+    const visible = omitTodayOpenForgotScans(groups, "2026-10-18")
+    const today = visible.find((group) => group.date === "2026-10-18")
+    expect(today?.rows.map((row) => row.displayName)).toEqual(["ลา", "สาย"])
+    expect(today?.minutes).toBe(8)
+    expect(visible.find((group) => group.date === "2026-10-17")?.rows).toHaveLength(1)
   })
 
   it("keeps a note-only row at 0 minutes", () => {

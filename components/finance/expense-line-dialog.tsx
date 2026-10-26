@@ -10,11 +10,11 @@ import { cn } from "@/lib/utils"
 import {
   TAX_MODES,
   VAT_RATE,
+  type AssetOption,
   type CostCenterRow,
   type DiscountKind,
   type ExpenseTypeOption,
   type LineDraft,
-  type ProcessRow,
   type TaxMode,
   type UnitOption,
 } from "./expense-types"
@@ -22,13 +22,10 @@ import {
   applyTypeChange,
   costCenterOptions,
   isLegacyUnrestricted,
-  processOptions,
   validateLineDraft,
 } from "./expense-form-validation"
 import { COST_OBJECT_TYPE_LABELS, PRICING_MODE_LABELS, formatBaht, sourceModuleLabel } from "./finance-theme"
 import { ExpenseTypePicker, defaultExpenseCategoryKey } from "./expense-type-picker"
-
-const COST_OBJECT_TYPES = ["VEHICLE", "MACHINE", "TIRE", "JOB", "CUSTOMER", "PRODUCT", "PROJECT", "LOCATION", "OTHER"]
 
 export function newLineDraft(): LineDraft {
   return {
@@ -46,7 +43,6 @@ export function newLineDraft(): LineDraft {
     discountAmount: "",
     discountKind: "BAHT",
     costCenterId: "",
-    processId: "",
     costObjectType: "",
     costObjectId: "",
     costObjectLabel: "",
@@ -146,8 +142,8 @@ export function ExpenseLineDialog({
   initial,
   types,
   costCenters,
-  processes,
   units,
+  assets,
   lockFinancials = false,
   onClose,
   onSave,
@@ -156,8 +152,8 @@ export function ExpenseLineDialog({
   initial: LineDraft
   types: ExpenseTypeOption[]
   costCenters: CostCenterRow[]
-  processes: ProcessRow[]
   units: UnitOption[]
+  assets: AssetOption[]
   lockFinancials?: boolean
   onClose: () => void
   onSave: (draft: LineDraft) => void
@@ -165,8 +161,7 @@ export function ExpenseLineDialog({
   const [draft, setDraft] = useState<LineDraft>(initial)
   const [error, setError] = useState<string | null>(null)
 
-  const locked = Boolean(draft.sourceAmountLocked)
-  const financialLocked = locked || lockFinancials
+  const hasSourceAmount = Boolean(draft.sourceAmountLocked)
   const selectedType = types.find((t) => t.id === draft.expenseTypeId)
   const legacy = isLegacyUnrestricted(selectedType)
 
@@ -177,16 +172,24 @@ export function ExpenseLineDialog({
     !lockFinancials && initial.taxMode === "NONE" && draft.taxMode === "NONE" ? Number(initial.taxAmount) || 0 : 0
 
   const showCostCenter = Boolean(selectedType?.requiresCostCenter || draft.costCenterId || legacy)
-  const showProcess = Boolean(selectedType?.requiresProcess || draft.processId)
-  const showVehicle = Boolean(selectedType?.requiresVehicle || draft.costObjectType === "VEHICLE")
-  const showMachine = Boolean(selectedType?.requiresMachine || draft.costObjectType === "MACHINE")
-  const showLocation = Boolean(selectedType?.requiresLocation || draft.costObjectType === "LOCATION")
-  const showGenericCostObject =
-    legacy && !selectedType?.requiresVehicle && !selectedType?.requiresMachine && !selectedType?.requiresLocation
+  const showMachine = Boolean(selectedType?.requiresMachine)
+  const showLocation = Boolean(selectedType?.requiresLocation)
+  const showAsset = !showMachine && !showLocation
 
   const ccChoices = costCenterOptions(selectedType, costCenters, draft.costCenterId)
-  const processChoices = processOptions(selectedType, processes, draft.processId)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [assetOpen, setAssetOpen] = useState(false)
+  const [assetQuery, setAssetQuery] = useState("")
+  const assetMatches = useMemo(() => {
+    const q = assetQuery.trim().toLowerCase()
+    return assets.filter((a) => !q || a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q))
+  }, [assets, assetQuery])
+  const selectedAsset = assets.find((a) => a.id === draft.costObjectId)
+  const assetText = selectedAsset
+    ? `${selectedAsset.code} — ${selectedAsset.name}`
+    : draft.costObjectLabel.trim()
+      ? `${draft.costObjectType && draft.costObjectType !== "VEHICLE" ? `${COST_OBJECT_TYPE_LABELS[draft.costObjectType] ?? draft.costObjectType} · ` : ""}${draft.costObjectLabel.trim()}`
+      : "— ไม่ระบุ —"
   const [pickerCategoryKey, setPickerCategoryKey] = useState<string | null>(() =>
     defaultExpenseCategoryKey(types, initial.expenseTypeId)
   )
@@ -204,8 +207,8 @@ export function ExpenseLineDialog({
     setDraft((d) => applyTypeChange(d, type))
   }
 
-  function fieldLocked(field: MoneyField): boolean {
-    return field === "discountAmount" ? lockFinancials : financialLocked
+  function fieldLocked(): boolean {
+    return lockFinancials
   }
 
   function fieldMax(field: MoneyField): number | undefined {
@@ -223,7 +226,7 @@ export function ExpenseLineDialog({
   }
 
   function pressKey(key: string) {
-    if (fieldLocked(activeField)) return
+    if (fieldLocked()) return
     const next = typeDigit(draft[activeField], key, activeField === "quantity" ? 3 : 2, replaceNext)
     if (next === null) return
     const max = fieldMax(activeField)
@@ -235,8 +238,8 @@ export function ExpenseLineDialog({
   const boxClass = (field: MoneyField) =>
     cn(
       "flex items-center rounded-xl border bg-background px-3",
-      activeField === field && !fieldLocked(field) ? "border-[#2563eb] ring-2 ring-[#2563eb]" : "border-border",
-      fieldLocked(field) && "bg-muted"
+      activeField === field && !fieldLocked() ? "border-[#2563eb] ring-2 ring-[#2563eb]" : "border-border",
+      fieldLocked() && "bg-muted"
     )
 
   function moneyBox(field: MoneyField, suffix: string | null, size: "md" | "lg" = "lg", ariaLabel?: string) {
@@ -246,7 +249,7 @@ export function ExpenseLineDialog({
           inputMode="decimal"
           aria-label={ariaLabel}
           value={draft[field]}
-          disabled={fieldLocked(field)}
+          disabled={fieldLocked()}
           onFocus={() => focusField(field)}
           onChange={(e) => onMoneyInput(field, e.target.value)}
           className={cn(
@@ -278,11 +281,11 @@ export function ExpenseLineDialog({
       setError("กรุณาเลือกประเภทค่าใช้จ่าย")
       return
     }
-    if (!financialLocked && draft.pricingMode === "AMOUNT" && !(Number(draft.amount) > 0)) {
+    if (!lockFinancials && draft.pricingMode === "AMOUNT" && !(Number(draft.amount) > 0)) {
       setError("กรุณาระบุจำนวนเงิน")
       return
     }
-    if (!financialLocked && draft.pricingMode === "QTY_PRICE" && !(preview > 0)) {
+    if (!lockFinancials && draft.pricingMode === "QTY_PRICE" && !(preview > 0)) {
       setError("จำนวนและราคาต่อหน่วยต้องมากกว่า 0")
       return
     }
@@ -293,7 +296,7 @@ export function ExpenseLineDialog({
         return
       }
     }
-    const dimErr = validateLineDraft(draft, selectedType, { locked: financialLocked })
+    const dimErr = validateLineDraft(draft, selectedType, { locked: lockFinancials })
     if (dimErr) {
       setError(dimErr)
       return
@@ -319,7 +322,7 @@ export function ExpenseLineDialog({
     <>
     <GlassDialog
       open={open}
-      onOpenChange={(o) => !o && !pickerOpen && onClose()}
+      onOpenChange={(o) => !o && !pickerOpen && !assetOpen && onClose()}
       title="บันทึกรายการค่าใช้จ่าย"
       className="max-w-4xl"
       solid
@@ -329,15 +332,15 @@ export function ExpenseLineDialog({
         <div className="min-w-0 space-y-3">
         {lockFinancials && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-            บิลจ่ายแล้ว — แก้ได้เฉพาะประเภท หน่วยงาน กระบวนการ รายละเอียด และหน่วยนับ ยอดเงินถูกล็อก
+            บิลจ่ายแล้ว — แก้ได้เฉพาะประเภท หน่วยงาน รายละเอียด และหน่วยนับ ยอดเงินถูกล็อก
           </p>
         )}
-        {locked && !lockFinancials && (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-            บรรทัดนี้ผูกจากต้นทาง ({sourceModuleLabel(draft.sourceModule)}) — จำนวน/ราคา/ยอดถูกล็อกจากเอกสารต้นทาง แก้ได้เฉพาะประเภท หน่วยงาน กระบวนการ วัตถุต้นทุน และรายละเอียด
+        {hasSourceAmount && !lockFinancials && (
+          <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">
+            บรรทัดนี้ผูกจากต้นทาง ({sourceModuleLabel(draft.sourceModule)}) — ยอดอ้างอิงถูกใส่ให้แล้ว แก้จำนวนเงินได้เพื่อยืนยันยอดที่จ่ายจริง
           </p>
         )}
-        {draft.sourceKind !== "MANUAL" && !locked && !lockFinancials && (
+        {draft.sourceKind !== "MANUAL" && !hasSourceAmount && !lockFinancials && (
           <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">
             บรรทัดนี้ผูกจากต้นทาง ({sourceModuleLabel(draft.sourceModule)}) — ยังไม่มียอดอ้างอิง ให้ Finance กรอกจำนวนเงินเอง
           </p>
@@ -377,7 +380,7 @@ export function ExpenseLineDialog({
         <div className="space-y-1.5">
           <div className="flex flex-nowrap items-center justify-between gap-3">
             <span className="shrink-0 whitespace-nowrap text-base font-medium text-foreground">จำนวนเงิน</span>
-            {!locked && !lockFinancials && (
+            {!lockFinancials && (
               <div className="inline-flex shrink-0 flex-nowrap rounded-lg bg-muted p-1">
                 {(["AMOUNT", "QTY_PRICE"] as const).map((mode) => (
                   <button
@@ -413,7 +416,6 @@ export function ExpenseLineDialog({
                   value={draft.unitId}
                   onChange={(e) => changeUnit(e.target.value)}
                   placeholder="— เลือกหน่วย —"
-                  disabled={locked && !lockFinancials}
                   className="h-10 rounded-xl py-0 text-base font-medium leading-10"
                   options={[
                     ...units.filter((u) => u.isActive || u.id === draft.unitId).map((u) => ({
@@ -515,8 +517,8 @@ export function ExpenseLineDialog({
           <p className="text-2xl font-bold tabular-nums text-blue-700">{formatBaht(net)}</p>
         </div>
 
-        {(showCostCenter || showProcess) && (
-          <div className="grid gap-3 sm:grid-cols-2">
+        {(showCostCenter || showAsset) && (
+          <div className="grid grid-cols-2 gap-3">
             {showCostCenter && (
               <Select
                 label="หน่วยงาน (Cost Center)"
@@ -529,54 +531,27 @@ export function ExpenseLineDialog({
                 ]}
               />
             )}
-            {showProcess && (
-              <Select
-                label="กระบวนการ"
-                required={Boolean(selectedType?.requiresProcess)}
-                value={draft.processId}
-                onChange={(e) => set("processId", e.target.value)}
-                options={[
-                  { value: "", label: selectedType?.requiresProcess ? "— เลือกกระบวนการ —" : "— ไม่ระบุ —" },
-                  ...processChoices.map((p) => ({ value: p.id, label: p.name })),
-                ]}
-              />
+            {showAsset && (
+              <div className="min-w-0 space-y-1.5">
+                <span className="block text-sm font-medium text-foreground">สินทรัพย์</span>
+                <button
+                  type="button"
+                  disabled={lockFinancials}
+                  onClick={() => {
+                    setAssetQuery("")
+                    setAssetOpen(true)
+                  }}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 py-2 text-left text-sm text-foreground hover:border-slate-400 disabled:cursor-not-allowed disabled:bg-muted"
+                >
+                  <span className="min-w-0 truncate">{assetText}</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              </div>
             )}
           </div>
         )}
 
-        {showGenericCostObject && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Select
-              label="ประเภทวัตถุต้นทุน"
-              value={draft.costObjectType}
-              onChange={(e) => set("costObjectType", e.target.value)}
-              disabled={lockFinancials}
-              options={[
-                { value: "", label: "— ไม่ระบุ —" },
-                ...COST_OBJECT_TYPES.map((t) => ({ value: t, label: COST_OBJECT_TYPE_LABELS[t] ?? t })),
-              ]}
-            />
-            <GlassInput
-              label="วัตถุต้นทุน (ป้าย)"
-              value={draft.costObjectLabel}
-              onChange={(e) => set("costObjectLabel", e.target.value)}
-              placeholder="เช่น ทะเบียนรถ / ชื่อเครื่องจักร"
-              disabled={lockFinancials}
-            />
-          </div>
-        )}
-
-        {showVehicle && !showGenericCostObject && (
-          <GlassInput
-            label="รถ"
-            required={Boolean(selectedType?.requiresVehicle)}
-            value={draft.costObjectLabel}
-            onChange={(e) => setDraft((d) => ({ ...d, costObjectType: "VEHICLE", costObjectLabel: e.target.value }))}
-            placeholder="ทะเบียนรถ / ชื่อรถ"
-            disabled={lockFinancials}
-          />
-        )}
-        {showMachine && !showGenericCostObject && (
+        {showMachine && (
           <GlassInput
             label="เครื่องจักร"
             required={Boolean(selectedType?.requiresMachine)}
@@ -586,7 +561,7 @@ export function ExpenseLineDialog({
             disabled={lockFinancials}
           />
         )}
-        {showLocation && !showGenericCostObject && (
+        {showLocation && (
           <GlassInput
             label="สถานที่"
             required={Boolean(selectedType?.requiresLocation)}
@@ -623,7 +598,7 @@ export function ExpenseLineDialog({
                     key={key}
                     type="button"
                     aria-label={key === "back" ? "ลบตัวเลข" : key}
-                    disabled={fieldLocked(activeField)}
+                    disabled={fieldLocked()}
                     onClick={() => pressKey(key)}
                     className="inline-flex min-h-14 items-center justify-center rounded-xl border border-border bg-background text-xl font-semibold text-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -684,6 +659,61 @@ export function ExpenseLineDialog({
           setPickerOpen(false)
         }}
       />
+    </GlassDialog>
+
+    <GlassDialog open={open && assetOpen} onOpenChange={setAssetOpen} title="เลือกสินทรัพย์" className="max-w-md" solid>
+      <div className="space-y-3">
+        <Input
+          autoFocus
+          value={assetQuery}
+          placeholder="ค้นหารหัสหรือชื่อ"
+          onChange={(e) => setAssetQuery(e.target.value)}
+          className="py-2.5 text-base"
+        />
+        <div className="max-h-80 space-y-1 overflow-y-auto" role="listbox" aria-label="สินทรัพย์">
+          <button
+            type="button"
+            onClick={() => {
+              setDraft((d) => ({
+                ...d,
+                costObjectType: selectedType?.requiresVehicle ? "VEHICLE" : "",
+                costObjectId: "",
+                costObjectLabel: "",
+              }))
+              setAssetOpen(false)
+            }}
+            className="flex w-full rounded-lg px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted"
+          >
+            — ไม่ระบุ —
+          </button>
+          {assetMatches.map((asset) => {
+              const selected = asset.id === draft.costObjectId
+              return (
+                <button
+                  key={asset.id}
+                  type="button"
+                  onClick={() => {
+                    setDraft((d) => ({
+                      ...d,
+                      costObjectType: "VEHICLE",
+                      costObjectId: asset.id,
+                      costObjectLabel: `${asset.code} — ${asset.name}`,
+                    }))
+                    setAssetOpen(false)
+                  }}
+                  className={cn(
+                    "flex w-full items-baseline gap-2 rounded-lg px-3 py-2.5 text-left text-sm",
+                    selected ? "bg-[#2563eb] text-white" : "text-foreground hover:bg-muted"
+                  )}
+                >
+                  <span className="shrink-0 font-medium">{asset.code}</span>
+                  <span className="min-w-0 truncate">{asset.name}</span>
+                </button>
+              )
+            })}
+          {assetMatches.length === 0 && <p className="px-3 py-6 text-center text-sm text-foreground">ไม่พบสินทรัพย์</p>}
+        </div>
+      </div>
     </GlassDialog>
     </>
   )

@@ -46,8 +46,6 @@ export type IncomeLineDto = {
   netAmount: number
   costCenterId: string | null
   costCenterName: string | null
-  processId: string | null
-  processName: string | null
 }
 
 export type IncomeDto = {
@@ -124,5 +122,4 @@ export type IncomeLineDraft = {
   taxAmount: string
   discountAmount: string
   costCenterId: string
-  processId: string
 }

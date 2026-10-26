@@ -12,7 +12,7 @@ import {
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { permissionCoversBranch, readBranchSharing, type BranchShareAction } from "@/shared/permissions/branch-sharing"
 import { generateExpenseNo } from "./generate-expense-no"
-import { getTransportCostSourcesByIds, isLockedReferenceAmount } from "@/modules/transport"
+import { getTransportCostSourcesByIds } from "@/modules/transport"
 import {
   assertSourceLinesNotLinked,
   markReviewsExpenseCreated,
@@ -77,7 +77,6 @@ export const expenseLineInputSchema = z.object({
   taxMode: z.enum(EXPENSE_TAX_MODES).optional(),
   discountAmount: moneySchema.optional(),
   costCenterId: z.string().uuid().nullable().optional(),
-  processId: z.string().uuid().nullable().optional(),
   costObjectType: z.enum(EXPENSE_COST_OBJECT_TYPES).nullable().optional(),
   costObjectId: z.string().max(64).nullable().optional(),
   costObjectLabel: z.string().max(255).nullable().optional(),
@@ -323,7 +322,6 @@ function coerceLineInputs(input: CreateExpenseInput | UpdateExpenseInput): Expen
         taxAmount: input.taxAmount ?? 0,
         discountAmount: input.discountAmount ?? 0,
         costCenterId: input.costCenterId ?? null,
-        processId: null,
         unitId: null,
         costObjectType: input.costObjectType ?? null,
         costObjectId: input.costObjectId ?? null,
@@ -354,7 +352,6 @@ type ResolvedLine = {
   discountAmount: number
   netAmount: number
   costCenterId: string | null
-  processId: string | null
   costObjectType: (typeof EXPENSE_COST_OBJECT_TYPES)[number] | null
   costObjectId: string | null
   costObjectLabel: string | null
@@ -383,16 +380,12 @@ export type TypeDimensionMeta = {
   requiresMachine: boolean
   requiresLocation: boolean
   requiresCostCenter: boolean
-  requiresProcess: boolean
   allowedCostCenterIds: string[]
   defaultCostCenterId: string | null
-  allowedProcessIds: string[]
-  defaultProcessId: string | null
 }
 
 export type DimensionLookup = {
   activeCostCenterIds: Set<string>
-  activeProcessIds: Set<string>
   unitsById: Map<string, { code: string }>
 }
 
@@ -448,12 +441,15 @@ function assertCostObjectDimension(
     expected: (typeof EXPENSE_COST_OBJECT_TYPES)[number]
     typeMsg: string
     labelMsg: string
+    optional?: boolean
   }> = [
     {
       flag: type.requiresVehicle,
       expected: "VEHICLE",
       typeMsg: "ประเภทวัตถุต้นทุนต้องเป็นรถ",
       labelMsg: "ต้องระบุรถ",
+      // The line picker can leave the asset blank. A label still has to be a vehicle.
+      optional: true,
     },
     {
       flag: type.requiresMachine,
@@ -470,6 +466,7 @@ function assertCostObjectDimension(
   ]
   for (const rule of rules) {
     if (!rule.flag) continue
+    if (rule.optional && !label) continue
     if (costObjectType !== rule.expected) {
       throw new ValidationError(`${linePrefix(lineNo)}${rule.typeMsg}`)
     }
@@ -486,7 +483,6 @@ export function assertLineDimensions(
     lineNo: number
     pricingMode: (typeof EXPENSE_PRICING_MODES)[number]
     costCenterId: string | null
-    processId: string | null
     unitId: string | null
     costObjectType: (typeof EXPENSE_COST_OBJECT_TYPES)[number] | null
     costObjectLabel: string | null
@@ -495,7 +491,6 @@ export function assertLineDimensions(
   lookup: DimensionLookup
 ): {
   costCenterId: string | null
-  processId: string | null
   unitId: string | null
   unitCode: string | null
   costObjectType: (typeof EXPENSE_COST_OBJECT_TYPES)[number] | null
@@ -511,17 +506,6 @@ export function assertLineDimensions(
     requiredLabel: "ต้องระบุหน่วยงานต้นทุน",
     invalidLabel: "หน่วยงานต้นทุนไม่ถูกต้อง",
     allowlistLabel: "หน่วยงานต้นทุนไม่อยู่ในรายการที่อนุญาต",
-  })
-  const processId = resolveMappedDimension({
-    lineNo: line.lineNo,
-    inputId: line.processId,
-    allowedIds: type.allowedProcessIds,
-    defaultId: type.defaultProcessId,
-    requires: type.requiresProcess,
-    activeIds: lookup.activeProcessIds,
-    requiredLabel: "ต้องระบุกระบวนการ",
-    invalidLabel: "กระบวนการไม่ถูกต้อง",
-    allowlistLabel: "กระบวนการไม่อยู่ในรายการที่อนุญาต",
   })
   const costObject = assertCostObjectDimension(line.lineNo, type, line.costObjectType, line.costObjectLabel)
 
@@ -541,7 +525,6 @@ export function assertLineDimensions(
 
   return {
     costCenterId,
-    processId,
     unitId,
     unitCode,
     costObjectType: costObject.costObjectType,
@@ -562,9 +545,7 @@ function toTypeDimensionMeta(row: {
   requiresMachine: boolean
   requiresLocation: boolean
   requiresCostCenter: boolean
-  requiresProcess: boolean
   costCenterMaps: Array<{ costCenterId: string; isDefault: boolean; isAllowed: boolean }>
-  processMaps: Array<{ processId: string; isDefault: boolean; isAllowed: boolean }>
 }): TypeDimensionMeta {
   return {
     id: row.id,
@@ -573,11 +554,8 @@ function toTypeDimensionMeta(row: {
     requiresMachine: row.requiresMachine,
     requiresLocation: row.requiresLocation,
     requiresCostCenter: row.requiresCostCenter,
-    requiresProcess: row.requiresProcess,
     allowedCostCenterIds: row.costCenterMaps.filter((m) => m.isAllowed).map((m) => m.costCenterId),
     defaultCostCenterId: row.costCenterMaps.find((m) => m.isDefault)?.costCenterId ?? null,
-    allowedProcessIds: row.processMaps.filter((m) => m.isAllowed).map((m) => m.processId),
-    defaultProcessId: row.processMaps.find((m) => m.isDefault)?.processId ?? null,
   }
 }
 
@@ -589,7 +567,7 @@ async function loadDimensionContext(
   const typeIds = [...new Set(lineInputs.map((l) => l.expenseTypeId))]
   const unitIds = [...new Set(lineInputs.map((l) => l.unitId).filter((id): id is string => !!id))]
 
-  const [typeRows, unitRows, costCenters, processes] = await Promise.all([
+  const [typeRows, unitRows, costCenters] = await Promise.all([
     db.expenseType.findMany({
       where: { id: { in: typeIds }, companyId },
       select: {
@@ -599,9 +577,7 @@ async function loadDimensionContext(
         requiresMachine: true,
         requiresLocation: true,
         requiresCostCenter: true,
-        requiresProcess: true,
         costCenterMaps: { select: { costCenterId: true, isDefault: true, isAllowed: true } },
-        processMaps: { select: { processId: true, isDefault: true, isAllowed: true } },
       },
     }),
     unitIds.length
@@ -611,7 +587,6 @@ async function loadDimensionContext(
         })
       : Promise.resolve([] as Array<{ id: string; code: string }>),
     db.costCenter.findMany({ where: { companyId, isActive: true }, select: { id: true } }),
-    db.process.findMany({ where: { companyId, isActive: true }, select: { id: true } }),
   ])
 
   if (typeRows.length !== typeIds.length) throw new ValidationError("ประเภทค่าใช้จ่ายไม่ถูกต้อง")
@@ -620,7 +595,6 @@ async function loadDimensionContext(
     typeById: new Map(typeRows.map((r) => [r.id, toTypeDimensionMeta(r)])),
     lookup: {
       activeCostCenterIds: new Set(costCenters.map((c) => c.id)),
-      activeProcessIds: new Set(processes.map((p) => p.id)),
       unitsById: new Map(unitRows.map((u) => [u.id, { code: u.code }])),
     },
   }
@@ -628,9 +602,9 @@ async function loadDimensionContext(
 
 /**
  * Validate + normalize a set of line inputs into DB-ready lines:
- * - MANUAL lines: amount from qty*price or the entered amount.
- * - Linked TRANSPORT lines: amount is re-derived from the transport module so a
- *   client cannot tamper with a locked amount; tax/discount stay editable.
+ * - Every line keeps the amount finance entered, including lines linked to another
+ *   module. The source amount is only a starting value so the real payment can differ.
+ * - Linked TRANSPORT lines still have to match a real source document.
  * Also computes header roll-ups + the derived header source module.
  * Dimension rules (requires_*, allowlists, vendor, unitId) apply here — not on GET.
  */
@@ -643,7 +617,7 @@ async function resolveBill(
 
   const { typeById, lookup } = await loadDimensionContext(db, params.companyId, lineInputs)
 
-  // Re-derive authoritative amounts for TRANSPORT-linked lines.
+  // Confirm TRANSPORT links point at a real source. The amount stays as entered.
   const transportIdentities = lineInputs
     .filter(
       (l) =>
@@ -674,23 +648,12 @@ async function resolveBill(
 
     if (linked && input.sourceModule === "TRANSPORT") {
       const key = `${input.sourceType}::${input.sourceDocumentId}`
-      const resolved = resolvedSources.get(key)
-      if (!resolved) {
+      if (!resolvedSources.get(key)) {
         throw new ValidationError("ไม่พบเอกสารต้นทาง หรือถูกแก้ไข/ผูกไปแล้ว")
       }
-      if (isLockedReferenceAmount(resolved.amount)) {
-        // Locked fields come from the source, not the client.
-        pricingMode = "AMOUNT"
-        quantity = 1
-        amount = resolved.amount as number
-        unitPrice = resolved.amount as number
-      } else if (pricingMode === "QTY_PRICE") {
-        amount = round2(quantity * unitPrice)
-      } else {
-        quantity = quantity || 1
-        unitPrice = amount
-      }
-    } else if (pricingMode === "QTY_PRICE") {
+    }
+
+    if (pricingMode === "QTY_PRICE") {
       amount = round2(quantity * unitPrice)
     } else {
       // AMOUNT mode: keep entered amount; mirror it onto unit price for display.
@@ -723,7 +686,6 @@ async function resolveBill(
         lineNo,
         pricingMode,
         costCenterId: input.costCenterId ?? null,
-        processId: input.processId ?? null,
         unitId: pricingMode === "QTY_PRICE" ? (input.unitId ?? null) : null,
         costObjectType: input.costObjectType ?? null,
         costObjectLabel: input.costObjectLabel ?? null,
@@ -747,7 +709,6 @@ async function resolveBill(
       discountAmount,
       netAmount,
       costCenterId: dims.costCenterId,
-      processId: dims.processId,
       costObjectType: dims.costObjectType,
       costObjectId: input.costObjectId ?? null,
       costObjectLabel: dims.costObjectLabel,
@@ -797,7 +758,6 @@ function toLineCreate(companyId: string, line: ResolvedLine): Prisma.ExpenseLine
     discountAmount: line.discountAmount,
     netAmount: line.netAmount,
     ...(line.costCenterId ? { costCenter: { connect: { id: line.costCenterId } } } : {}),
-    ...(line.processId ? { process: { connect: { id: line.processId } } } : {}),
     ...(line.unitId ? { unit: { connect: { id: line.unitId } } } : {}),
     costObjectType: line.costObjectType,
     costObjectId: line.costObjectId,
@@ -862,7 +822,6 @@ const expenseInclude = {
     include: {
       expenseType: { select: { id: true, name: true, transactionType: true } },
       costCenter: { select: { id: true, name: true } },
-      process: { select: { id: true, name: true } },
       unit: { select: { id: true, code: true, name: true } },
     },
   },
@@ -896,8 +855,6 @@ function serializeLine(line: ExpenseLineRow) {
     netAmount: Number(line.netAmount),
     costCenterId: line.costCenterId,
     costCenterName: line.costCenter?.name ?? null,
-    processId: line.processId,
-    processName: line.process?.name ?? null,
     costObjectType: line.costObjectType,
     costObjectId: line.costObjectId,
     costObjectLabel: line.costObjectLabel,
@@ -1015,7 +972,6 @@ export async function listExpenses(
     branchId?: string | null
     expenseTypeId?: string | null
     costCenterId?: string | null
-    processId?: string | null
     vendorId?: string | null
     status?: string | null
     sourceModule?: string | null
@@ -1033,13 +989,6 @@ export async function listExpenses(
   if (expenseTypeId) and.push({ lines: { some: { expenseTypeId } } })
   const costCenterId = optionalUuid(params.costCenterId)
   if (costCenterId) and.push({ lines: { some: { costCenterId } } })
-  const processRaw = params.processId?.trim()
-  if (processRaw === "none") {
-    and.push({ lines: { some: { processId: null } } })
-  } else {
-    const processId = optionalUuid(processRaw)
-    if (processId) and.push({ lines: { some: { processId } } })
-  }
   const vendorId = optionalUuid(params.vendorId)
   if (vendorId) where.vendorId = vendorId
   if (params.status && (EXPENSE_STATUSES as readonly string[]).includes(params.status)) {
@@ -1264,7 +1213,6 @@ export async function updatePaidExpenseMetadata(
           taxMode: true,
           discountAmount: true,
           costCenterId: true,
-          processId: true,
           costObjectType: true,
           costObjectId: true,
           costObjectLabel: true,
@@ -1345,7 +1293,6 @@ export async function updatePaidExpenseMetadata(
     expenseTypeId: string
     description: string | null
     costCenterId: string | null
-    processId: string | null
     unitId: string | null
     unitCode: string | null
   }
@@ -1364,7 +1311,6 @@ export async function updatePaidExpenseMetadata(
           lineNo: row.lineNo,
           pricingMode: row.pricingMode,
           costCenterId: input.costCenterId !== undefined ? (input.costCenterId ?? null) : row.costCenterId,
-          processId: input.processId !== undefined ? (input.processId ?? null) : row.processId,
           unitId:
             row.pricingMode === "QTY_PRICE"
               ? (input.unitId !== undefined ? (input.unitId ?? null) : row.unitId)
@@ -1380,7 +1326,6 @@ export async function updatePaidExpenseMetadata(
         expenseTypeId: input.expenseTypeId,
         description: input.description !== undefined ? (input.description ?? null) : row.description,
         costCenterId: dims.costCenterId,
-        processId: dims.processId,
         unitId: dims.unitId,
         unitCode: dims.unitCode,
       })
@@ -1422,7 +1367,6 @@ export async function updatePaidExpenseMetadata(
         expenseTypeId: l.expenseTypeId,
         description: l.description,
         costCenterId: l.costCenterId,
-        processId: l.processId,
         unitId: l.unitId,
         unitCode: l.unitCode,
       })),
@@ -1466,7 +1410,6 @@ export async function updatePaidExpenseMetadata(
           costCenter: patch.costCenterId
             ? { connect: { id: patch.costCenterId } }
             : { disconnect: true },
-          process: patch.processId ? { connect: { id: patch.processId } } : { disconnect: true },
           unit: patch.unitId ? { connect: { id: patch.unitId } } : { disconnect: true },
           unitCode: patch.unitCode,
         },

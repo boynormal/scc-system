@@ -22,6 +22,12 @@ export type UnitOption = {
   isActive: boolean
 }
 
+export type AssetOption = {
+  id: string
+  code: string
+  name: string
+}
+
 /** Client-side editable representation of a single expense line. */
 export type LineDraft = {
   key: string
@@ -39,7 +45,6 @@ export type LineDraft = {
   discountAmount: string
   discountKind: DiscountKind
   costCenterId: string
-  processId: string
   costObjectType: string
   costObjectId: string
   costObjectLabel: string
@@ -71,8 +76,6 @@ export type ExpenseLineDto = {
   netAmount: number
   costCenterId: string | null
   costCenterName: string | null
-  processId: string | null
-  processName: string | null
   costObjectType: string | null
   costObjectId: string | null
   costObjectLabel: string | null
@@ -158,14 +161,10 @@ export type ExpenseTypeOption = {
   requiresMachine: boolean
   requiresLocation: boolean
   requiresCostCenter: boolean
-  requiresProcess: boolean
   isActive: boolean
   costCenterCount: number
-  processCount: number
   allowedCostCenterIds?: string[]
   defaultCostCenterId?: string | null
-  allowedProcessIds?: string[]
-  defaultProcessId?: string | null
 }
 
 export type ExpenseCategoryRow = {
@@ -179,16 +178,7 @@ export type ExpenseCategoryRow = {
   isActive: boolean
 }
 
-export type ProcessRow = {
-  id: string
-  code: string | null
-  name: string
-  parentId: string | null
-  parentName: string | null
-  isActive: boolean
-}
-
-/** A single allowed/default mapping row (cost center or process) for an expense item. */
+/** A single allowed/default cost center mapping row for an expense item. */
 export type ExpenseTypeMapRow = {
   targetId: string
   code: string | null
@@ -220,6 +210,8 @@ export type ExpenseSourceRow = {
   date: string
   vehicleId: string
   vehicleLabel: string
+  assetId: string | null
+  assetLabel: string | null
   amount: number | null
   paymentMethod: "cash" | "credit" | null
   documentNo: string | null

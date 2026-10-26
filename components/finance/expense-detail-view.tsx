@@ -480,9 +480,7 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                         {l.description && <div className="text-xs text-muted-foreground">{l.description}</div>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        <div>{l.costCenterName ?? "—"}</div>
-                        {l.processName && <div className="text-xs">{l.processName}</div>}
-                        {l.costObjectLabel && (
+                        <div>{l.costCenterName ?? "—"}</div>                        {l.costObjectLabel && (
                           <div className="text-xs">
                             {(l.costObjectType ? COST_OBJECT_TYPE_LABELS[l.costObjectType] ?? "" : "")}{" "}
                             {l.costObjectLabel}

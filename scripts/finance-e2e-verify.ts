@@ -88,18 +88,12 @@ async function main() {
   const cc = await db.costCenter.findFirst({
     where: { companyId: company.id, code: "TRANSPORT", isActive: true },
   })
-  const proc = await db.process.findFirst({
-    where: { companyId: company.id, code: "PROC-DELIVERY", isActive: true },
-  })
-  const procMaint = await db.process.findFirst({
-    where: { companyId: company.id, code: "PROC-VEHICLE-MAINTENANCE", isActive: true },
-  })
   const vehicle = await db.transportVehicle.findFirst({
     where: { companyId: company.id },
   })
 
   if (!other || !fuel || !repairType) throw new Error("expense types missing — run seed")
-  if (!cc || !proc || !procMaint) throw new Error("cost center / process missing — run seed")
+  if (!cc) throw new Error("cost center missing — run seed")
 
   const createdIds: string[] = []
   const reviewCleanup: { sourceType: string; sourceDocumentId: string }[] = []
@@ -158,7 +152,6 @@ async function main() {
               pricingMode: "AMOUNT",
               amount: 5000,
               costCenterId: cc.id,
-              processId: proc.id,
               costObjectType: "VEHICLE",
               costObjectId: vehicle?.id ?? "veh-e2e",
               costObjectLabel: vehicle?.plateNumber ?? "E2E-CAR",
@@ -175,7 +168,6 @@ async function main() {
               pricingMode: "AMOUNT",
               amount: 3500,
               costCenterId: cc.id,
-              processId: procMaint.id,
               costObjectType: "VEHICLE",
               costObjectId: vehicle?.id ?? "veh-e2e",
               costObjectLabel: vehicle?.plateNumber ?? "E2E-CAR",
@@ -211,7 +203,6 @@ async function main() {
                 pricingMode: "AMOUNT",
                 amount: 10,
                 costCenterId: cc.id,
-                processId: proc.id,
                 costObjectType: "VEHICLE",
                 costObjectLabel: "X",
               },
@@ -236,7 +227,6 @@ async function main() {
               pricingMode: "AMOUNT" as const,
               amount: l.expenseTypeId === other.id ? 250 : Number(l.amount),
               costCenterId: l.costCenterId,
-              processId: l.processId,
               costObjectType: l.costObjectType,
               costObjectId: l.costObjectId,
               costObjectLabel: l.costObjectLabel,
@@ -468,7 +458,6 @@ async function main() {
               pricingMode: "AMOUNT",
               amount: 1,
               costCenterId: cc.id,
-              processId: procMaint.id,
               costObjectType: "VEHICLE",
               costObjectId: veh.id,
               costObjectLabel: veh.plateNumber,
@@ -482,7 +471,7 @@ async function main() {
         },
       })
       createdIds.push(srcBill.data.id)
-      const lockedAmt = Number(srcBill.data.lines[0].amount)
+      const confirmedAmt = Number(srcBill.data.lines[0].amount)
       const reviewAmt = await db.financeSourceReview.findFirst({
         where: {
           companyId: company.id,
@@ -497,7 +486,7 @@ async function main() {
           srcBill.data.lines[0].sourceType === "TRANSPORT_REPAIR" &&
           srcBill.data.lines[0].sourceDocumentId === repairAmt.id &&
           srcBill.data.lines[0].sourceLineId == null &&
-          lockedAmt === 8500 &&
+          confirmedAmt === 1 &&
           reviewAmt?.status === "EXPENSE_CREATED" &&
           !qAfter.data.some((s) => s.sourceDocumentId === repairAmt.id)
       )
@@ -517,7 +506,6 @@ async function main() {
                 pricingMode: "AMOUNT",
                 amount: 8500,
                 costCenterId: cc.id,
-                processId: procMaint.id,
                 costObjectType: "VEHICLE",
                 costObjectLabel: veh.plateNumber,
                 sourceKind: "IMPORT",
@@ -568,7 +556,6 @@ async function main() {
               pricingMode: "AMOUNT",
               amount: 1200,
               costCenterId: cc.id,
-              processId: procMaint.id,
               costObjectType: "VEHICLE",
               costObjectId: veh.id,
               costObjectLabel: veh.plateNumber,
@@ -613,7 +600,6 @@ async function main() {
               pricingMode: "AMOUNT",
               amount: 1200,
               costCenterId: cc.id,
-              processId: procMaint.id,
               costObjectType: "VEHICLE",
               costObjectId: veh.id,
               costObjectLabel: veh.plateNumber,
@@ -707,7 +693,6 @@ async function main() {
               pricingMode: "AMOUNT",
               amount: 600,
               costCenterId: cc.id,
-              processId: procMaint.id,
               costObjectType: "VEHICLE",
               costObjectId: veh.id,
               costObjectLabel: veh.plateNumber,

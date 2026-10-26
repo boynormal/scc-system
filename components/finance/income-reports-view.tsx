@@ -13,7 +13,7 @@ import { LoadingState } from "@/components/ui/loading-state"
 import { ListFrame } from "@/components/shell/list-frame"
 import { DataPanel } from "@/components/shell/data-panel"
 import { AppDataTable, AppDataTableBody, AppDataTableHead } from "@/components/shell/app-data-table"
-import type { CostCenterRow, Option, ProcessRow } from "./expense-types"
+import type { CostCenterRow, Option } from "./expense-types"
 import { formatBaht } from "./finance-theme"
 import type { IncomeTypeOption } from "./income-types"
 
@@ -26,7 +26,6 @@ type IncomeReportData = {
   receivedTotal: number
   outstandingTotal: number
   byType: Bucket[]
-  byProcess: Bucket[]
   byCostCenter: Bucket[]
   byBranch: Bucket[]
   byMonth: Bucket[]
@@ -37,7 +36,6 @@ type Filters = {
   dateTo: string
   branchId: string
   incomeTypeId: string
-  processId: string
   costCenterId: string
   status: string
 }
@@ -127,7 +125,6 @@ export function IncomeReportsView({ tabs }: { tabs?: React.ReactNode }) {
     dateTo: today,
     branchId: "",
     incomeTypeId: "",
-    processId: "",
     costCenterId: "",
     status: "",
   }
@@ -139,7 +136,6 @@ export function IncomeReportsView({ tabs }: { tabs?: React.ReactNode }) {
   const [truncated, setTruncated] = useState(false)
   const [branches, setBranches] = useState<Option[]>([])
   const [types, setTypes] = useState<IncomeTypeOption[]>([])
-  const [processes, setProcesses] = useState<ProcessRow[]>([])
   const [costCenters, setCostCenters] = useState<CostCenterRow[]>([])
   const requestId = useRef(0)
 
@@ -147,13 +143,11 @@ export function IncomeReportsView({ tabs }: { tabs?: React.ReactNode }) {
     void Promise.all([
       fetch("/api/finance/incomes/options", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/income-types", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/finance/processes", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/cost-centers", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([o, ty, p, c]) => {
+      .then(([o, ty, c]) => {
         setBranches((o.data?.branches ?? []) as Option[])
         setTypes((ty.data ?? []) as IncomeTypeOption[])
-        setProcesses((p.data ?? []) as ProcessRow[])
         setCostCenters((c.data ?? []) as CostCenterRow[])
       })
       .catch(() => undefined)
@@ -221,17 +215,6 @@ export function IncomeReportsView({ tabs }: { tabs?: React.ReactNode }) {
             onChange={(e) => set("incomeTypeId", e.target.value)}
             className="min-w-[9rem]"
             options={[{ value: "", label: t("all") }, ...types.map((x) => ({ value: x.id, label: x.name }))]}
-          />
-          <Select
-            label={t("process")}
-            value={draft.processId}
-            onChange={(e) => set("processId", e.target.value)}
-            className="min-w-[9rem]"
-            options={[
-              { value: "", label: t("all") },
-              { value: "none", label: t("unspecified") },
-              ...processes.map((p) => ({ value: p.id, label: p.name })),
-            ]}
           />
           <Select
             label={t("costCenter")}
@@ -304,11 +287,6 @@ export function IncomeReportsView({ tabs }: { tabs?: React.ReactNode }) {
               title={t("reportByType")}
               rows={data.byType}
               hrefFor={(r) => incomesHref(applied, { incomeTypeId: r.key })}
-            />
-            <BucketTable
-              title={t("reportByProcess")}
-              rows={data.byProcess}
-              hrefFor={(r) => incomesHref(applied, { processId: r.key })}
             />
             <BucketTable
               title={t("reportByCostCenter")}

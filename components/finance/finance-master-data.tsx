@@ -20,7 +20,6 @@ import type {
   ExpenseTypeMapRow,
   ExpenseTypeOption,
   FinancePerms,
-  ProcessRow,
 } from "./expense-types"
 import type { IncomeCategoryRow, IncomeTypeOption } from "./income-types"
 import { IncomeCategoryDialog, IncomeTypeDialog } from "./income-master-dialogs"
@@ -50,7 +49,6 @@ const REQUIRED_DIMENSIONS: { key: RequiredDimensionKey; label: string }[] = [
   { key: "requiresMachine", label: "เครื่องจักร" },
   { key: "requiresLocation", label: "สถานที่" },
   { key: "requiresCostCenter", label: "หน่วยงาน" },
-  { key: "requiresProcess", label: "กระบวนการ" },
 ]
 
 type RequiredDimensionKey =
@@ -59,16 +57,14 @@ type RequiredDimensionKey =
   | "requiresMachine"
   | "requiresLocation"
   | "requiresCostCenter"
-  | "requiresProcess"
 
-type Tab = "types" | "categories" | "income_types" | "income_categories" | "processes" | "cost_centers"
+type Tab = "types" | "categories" | "income_types" | "income_categories" | "cost_centers"
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "types", label: "ประเภทค่าใช้จ่าย" },
   { key: "categories", label: "หมวดค่าใช้จ่าย" },
   { key: "income_types", label: "ประเภทรายรับ" },
   { key: "income_categories", label: "หมวดรายรับ" },
-  { key: "processes", label: "กระบวนการ" },
   { key: "cost_centers", label: "หน่วยงาน (Cost Center)" },
 ]
 
@@ -76,7 +72,6 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
   const [tab, setTab] = useState<Tab>("types")
   const [types, setTypes] = useState<ExpenseTypeOption[]>([])
   const [categories, setCategories] = useState<ExpenseCategoryRow[]>([])
-  const [processes, setProcesses] = useState<ProcessRow[]>([])
   const [centers, setCenters] = useState<CostCenterRow[]>([])
   const [incomeTypes, setIncomeTypes] = useState<IncomeTypeOption[]>([])
   const [incomeCategories, setIncomeCategories] = useState<IncomeCategoryRow[]>([])
@@ -84,7 +79,6 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
 
   const [typeDialog, setTypeDialog] = useState<{ open: boolean; row?: ExpenseTypeOption }>({ open: false })
   const [categoryDialog, setCategoryDialog] = useState<{ open: boolean; row?: ExpenseCategoryRow }>({ open: false })
-  const [processDialog, setProcessDialog] = useState<{ open: boolean; row?: ProcessRow }>({ open: false })
   const [centerDialog, setCenterDialog] = useState<{ open: boolean; row?: CostCenterRow }>({ open: false })
   const [incomeTypeDialog, setIncomeTypeDialog] = useState<{ open: boolean; row?: IncomeTypeOption }>({ open: false })
   const [incomeCategoryDialog, setIncomeCategoryDialog] = useState<{ open: boolean; row?: IncomeCategoryRow }>({
@@ -92,17 +86,15 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
   })
 
   const load = useCallback(async () => {
-    const [t, cat, p, c, it, ic] = await Promise.all([
+    const [t, cat, c, it, ic] = await Promise.all([
       fetch("/api/finance/expense-types?includeInactive=1").then((r) => r.json()),
       fetch("/api/finance/expense-categories?includeInactive=1").then((r) => r.json()),
-      fetch("/api/finance/processes?includeInactive=1").then((r) => r.json()),
       fetch("/api/finance/cost-centers?includeInactive=1").then((r) => r.json()),
       fetch("/api/finance/income-types?includeInactive=1").then((r) => r.json()),
       fetch("/api/finance/income-categories?includeInactive=1").then((r) => r.json()),
     ])
     setTypes((t.data ?? []) as ExpenseTypeOption[])
     setCategories((cat.data ?? []) as ExpenseCategoryRow[])
-    setProcesses((p.data ?? []) as ProcessRow[])
     setCenters((c.data ?? []) as CostCenterRow[])
     setIncomeTypes((it.data ?? []) as IncomeTypeOption[])
     setIncomeCategories((ic.data ?? []) as IncomeCategoryRow[])
@@ -123,9 +115,7 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
             ? `/api/finance/income-types/${id}`
             : kind === "income_categories"
               ? `/api/finance/income-categories/${id}`
-              : kind === "processes"
-            ? `/api/finance/processes/${id}`
-            : `/api/finance/cost-centers/${id}`
+              : `/api/finance/cost-centers/${id}`
     const res = await fetch(url, { method: "DELETE" })
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
@@ -140,19 +130,16 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
     else if (tab === "categories") setCategoryDialog({ open: true })
     else if (tab === "income_types") setIncomeTypeDialog({ open: true })
     else if (tab === "income_categories") setIncomeCategoryDialog({ open: true })
-    else if (tab === "processes") setProcessDialog({ open: true })
     else setCenterDialog({ open: true })
   }
 
   const activeCategories = categories.filter((c) => c.isActive)
   const activeCenters = centers.filter((c) => c.isActive)
-  const activeProcesses = processes.filter((p) => p.isActive)
-
   return (
     <div className="space-y-6">
       <FinancePageHeader
         title="ข้อมูลพื้นฐานการเงิน"
-        description="จัดการประเภทค่าใช้จ่าย ประเภทรายรับ หมวด กระบวนการ และหน่วยงาน (Cost Center)"
+        description="จัดการประเภทค่าใช้จ่าย ประเภทรายรับ หมวด และหน่วยงาน (Cost Center)"
         actions={
           perms.canManageMasters ? (
             <Button
@@ -274,17 +261,6 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
         />
       )}
 
-      {tab === "processes" && (
-        <SimpleMasterTable
-          rows={processes}
-          extraHead="กระบวนการแม่"
-          extraCell={(r) => r.parentName ?? "—"}
-          canManage={perms.canManageMasters}
-          onEdit={(row) => setProcessDialog({ open: true, row })}
-          onRemove={(id) => remove("processes", id)}
-        />
-      )}
-
       {tab === "cost_centers" && (
         <AppDataTablePanel><AppDataTable>
           <AppDataTableHead>
@@ -344,7 +320,6 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
         state={typeDialog}
         categories={activeCategories}
         centers={activeCenters}
-        processes={activeProcesses}
         onOpenChange={(open) => setTypeDialog((s) => ({ ...s, open }))}
         onSaved={() => {
           setTypeDialog({ open: false })
@@ -357,15 +332,6 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
         onOpenChange={(open) => setCategoryDialog((s) => ({ ...s, open }))}
         onSaved={() => {
           setCategoryDialog({ open: false })
-          void load()
-        }}
-      />
-      <ProcessDialog
-        state={processDialog}
-        processes={processes}
-        onOpenChange={(open) => setProcessDialog((s) => ({ ...s, open }))}
-        onSaved={() => {
-          setProcessDialog({ open: false })
           void load()
         }}
       />
@@ -398,7 +364,7 @@ export function FinanceMasterData({ perms }: { perms: FinancePerms }) {
   )
 }
 
-/** Generic table for the simple {code,name,parentName,isActive} masters (categories, processes). */
+/** Generic table for the simple {code,name,parentName,isActive} masters (categories, income types). */
 function SimpleMasterTable<T extends { id: string; code: string | null; name: string; isActive: boolean }>({
   rows,
   extraHead,
@@ -482,14 +448,12 @@ function ExpenseTypeDialog({
   state,
   categories,
   centers,
-  processes,
   onOpenChange,
   onSaved,
 }: {
   state: { open: boolean; row?: ExpenseTypeOption }
   categories: ExpenseCategoryRow[]
   centers: CostCenterRow[]
-  processes: ProcessRow[]
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) {
@@ -509,12 +473,9 @@ function ExpenseTypeDialog({
     requiresMachine: false,
     requiresLocation: false,
     requiresCostCenter: false,
-    requiresProcess: false,
   })
   const [allowedCenters, setAllowedCenters] = useState<Set<string>>(new Set())
   const [defaultCenter, setDefaultCenter] = useState("")
-  const [allowedProcesses, setAllowedProcesses] = useState<Set<string>>(new Set())
-  const [defaultProcess, setDefaultProcess] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -536,14 +497,11 @@ function ExpenseTypeDialog({
       requiresMachine: row?.requiresMachine ?? false,
       requiresLocation: row?.requiresLocation ?? false,
       requiresCostCenter: row?.requiresCostCenter ?? false,
-      requiresProcess: row?.requiresProcess ?? false,
     })
     setIsActive(row?.isActive ?? true)
     setError(null)
     setAllowedCenters(new Set())
     setDefaultCenter("")
-    setAllowedProcesses(new Set())
-    setDefaultProcess("")
     // Load existing mappings when editing.
     if (row) {
       void fetch(`/api/finance/expense-types/${row.id}/cost-centers`)
@@ -553,15 +511,6 @@ function ExpenseTypeDialog({
           setAllowedCenters(new Set(maps.filter((m) => m.isAllowed).map((m) => m.targetId ?? "")))
           const def = maps.find((m) => m.isDefault)
           if (def) setDefaultCenter(def.targetId)
-        })
-        .catch(() => undefined)
-      void fetch(`/api/finance/expense-types/${row.id}/processes`)
-        .then((r) => r.json())
-        .then((j) => {
-          const maps = (j.data ?? []) as ExpenseTypeMapRow[]
-          setAllowedProcesses(new Set(maps.filter((m) => m.isAllowed).map((m) => m.targetId ?? "")))
-          const def = maps.find((m) => m.isDefault)
-          if (def) setDefaultProcess(def.targetId)
         })
         .catch(() => undefined)
     }
@@ -580,19 +529,6 @@ function ExpenseTypeDialog({
     })
   }
 
-  function toggleProcess(id: string) {
-    setAllowedProcesses((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-        if (defaultProcess === id) setDefaultProcess("")
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -603,12 +539,6 @@ function ExpenseTypeDialog({
       isAllowed: true,
       isDefault: id === defaultCenter,
     }))
-    const processesPayload = Array.from(allowedProcesses).map((id) => ({
-      processId: id,
-      isAllowed: true,
-      isDefault: id === defaultProcess,
-    }))
-
     const body = {
       name,
       code: code || null,
@@ -621,7 +551,6 @@ function ExpenseTypeDialog({
       defaultGlLabel: defaultGlLabel || null,
       ...requires,
       costCenters,
-      processes: processesPayload,
       isActive,
     }
 
@@ -740,16 +669,6 @@ function ExpenseTypeDialog({
             onToggle={toggleCenter}
             onSetDefault={setDefaultCenter}
             emptyText="ยังไม่มีหน่วยงานที่ใช้งาน"
-          />
-
-          <SectionLabel>กระบวนการที่อนุญาต</SectionLabel>
-          <MappingPicker
-            items={processes.map((p) => ({ id: p.id, name: p.name }))}
-            allowed={allowedProcesses}
-            defaultId={defaultProcess}
-            onToggle={toggleProcess}
-            onSetDefault={setDefaultProcess}
-            emptyText="ยังไม่มีกระบวนการที่ใช้งาน"
           />
 
           <SectionLabel>สถานะ</SectionLabel>
@@ -908,93 +827,6 @@ function CategoryDialog({
           type="number"
           value={sequence}
           onChange={(e) => setSequence(e.target.value)}
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-          <span>ใช้งาน</span>
-        </label>
-        <GlassFormActions>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            ยกเลิก
-          </Button>
-          <Button type="submit" loading={saving}>
-            บันทึก
-          </Button>
-        </GlassFormActions>
-      </GlassForm>
-    </GlassDialog>
-  )
-}
-
-function ProcessDialog({
-  state,
-  processes,
-  onOpenChange,
-  onSaved,
-}: {
-  state: { open: boolean; row?: ProcessRow }
-  processes: ProcessRow[]
-  onOpenChange: (open: boolean) => void
-  onSaved: () => void
-}) {
-  const row = state.row
-  const [name, setName] = useState("")
-  const [code, setCode] = useState("")
-  const [parentId, setParentId] = useState("")
-  const [isActive, setIsActive] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!state.open) return
-    setName(row?.name ?? "")
-    setCode(row?.code ?? "")
-    setParentId(row?.parentId ?? "")
-    setIsActive(row?.isActive ?? true)
-    setError(null)
-  }, [state.open, row])
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    setError(null)
-    const res = await fetch(row ? `/api/finance/processes/${row.id}` : "/api/finance/processes", {
-      method: row ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, code: code || null, parentId: parentId || null, isActive }),
-    })
-    setSaving(false)
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      setError(typeof json.error === "string" ? json.error : json.error?.message ?? "บันทึกไม่สำเร็จ")
-      return
-    }
-    onSaved()
-  }
-
-  const parentOptions = processes.filter((p) => p.id !== row?.id)
-
-  return (
-    <GlassDialog
-      open={state.open}
-      onOpenChange={onOpenChange}
-      title={row ? "แก้ไขกระบวนการ" : "เพิ่มกระบวนการ"}
-      className="max-w-md"
-    >
-      <GlassForm surfaced={false} onSubmit={onSubmit}>
-        {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-        )}
-        <GlassInput label="ชื่อ" required value={name} onChange={(e) => setName(e.target.value)} />
-        <GlassInput label="รหัส (เว้นว่างเพื่อสร้างอัตโนมัติ)" value={code} onChange={(e) => setCode(e.target.value)} />
-        <Select
-          label="กระบวนการแม่"
-          value={parentId}
-          onChange={(e) => setParentId(e.target.value)}
-          options={[
-            { value: "", label: "— ไม่มี —" },
-            ...parentOptions.map((p) => ({ value: p.id, label: p.name })),
-          ]}
         />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />

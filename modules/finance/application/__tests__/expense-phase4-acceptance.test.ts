@@ -12,17 +12,17 @@ import {
 } from "@/modules/finance/application/expense-service"
 import {
   anyLineRequiresVendor,
+  applyTypeChange,
   costCenterOptions,
-  processOptions,
+  prefillSourceCostCenter,
+  transportCostCenterId,
   validateExpenseForm,
   validateLineDraft,
 } from "@/components/finance/expense-form-validation"
-import type { CostCenterRow, ExpenseTypeOption, LineDraft, ProcessRow } from "@/components/finance/expense-types"
+import type { CostCenterRow, ExpenseTypeOption, LineDraft } from "@/components/finance/expense-types"
 
 const CC_TRANSPORT = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 const CC_MAINT = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-const PROC_COLLECT = "cccccccc-cccc-cccc-cccc-cccccccccccc"
-const PROC_ADMIN = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 const UNIT_L = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 const VENDOR = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 const BRANCH = "11111111-1111-1111-1111-111111111111"
@@ -47,14 +47,10 @@ function typeOpt(over: Partial<ExpenseTypeOption> & Pick<ExpenseTypeOption, "id"
     requiresMachine: false,
     requiresLocation: false,
     requiresCostCenter: false,
-    requiresProcess: false,
     isActive: true,
     costCenterCount: 0,
-    processCount: 0,
     allowedCostCenterIds: [],
     defaultCostCenterId: null,
-    allowedProcessIds: [],
-    defaultProcessId: null,
     ...over,
   }
 }
@@ -67,11 +63,8 @@ const fuel = typeOpt({
   requiresVendor: true,
   requiresVehicle: true,
   requiresCostCenter: true,
-  requiresProcess: true,
   allowedCostCenterIds: [CC_TRANSPORT],
   defaultCostCenterId: CC_TRANSPORT,
-  allowedProcessIds: [PROC_COLLECT],
-  defaultProcessId: PROC_COLLECT,
 })
 const repair = typeOpt({
   id: REPAIR_ID,
@@ -80,11 +73,8 @@ const repair = typeOpt({
   requiresVendor: true,
   requiresVehicle: true,
   requiresCostCenter: true,
-  requiresProcess: true,
   allowedCostCenterIds: [CC_TRANSPORT],
   defaultCostCenterId: CC_TRANSPORT,
-  allowedProcessIds: [PROC_COLLECT],
-  defaultProcessId: PROC_COLLECT,
 })
 const toll = typeOpt({
   id: TOLL_ID,
@@ -92,7 +82,6 @@ const toll = typeOpt({
   name: "ค่าทางด่วน",
   requiresVehicle: true,
   requiresCostCenter: true,
-  requiresProcess: true,
 })
 const water = typeOpt({
   id: WATER_ID,
@@ -109,15 +98,10 @@ const costCenters: CostCenterRow[] = [
   { id: CC_TRANSPORT, code: "TRANSPORT", name: "ขนส่ง", branchId: BRANCH, branchName: "HQ", parentId: null, parentName: null, isActive: true },
   { id: CC_MAINT, code: "MAINTENANCE", name: "ซ่อมบำรุง", branchId: BRANCH, branchName: "HQ", parentId: null, parentName: null, isActive: true },
 ]
-const processes: ProcessRow[] = [
-  { id: PROC_COLLECT, code: "PROC-COLLECTION", name: "จัดเก็บ", parentId: null, parentName: null, isActive: true },
-  { id: PROC_ADMIN, code: "PROC-ADMIN", name: "บริหารงานทั่วไป", parentId: null, parentName: null, isActive: true },
-]
 
 function draft(over: Partial<LineDraft> & { expenseTypeId: string }): LineDraft {
   return {
     key: "k1",
-    expenseTypeId: over.expenseTypeId,
     description: "",
     pricingMode: "AMOUNT",
     quantity: "1",
@@ -130,7 +114,6 @@ function draft(over: Partial<LineDraft> & { expenseTypeId: string }): LineDraft 
     discountAmount: "",
     discountKind: "BAHT",
     costCenterId: "",
-    processId: "",
     costObjectType: "",
     costObjectId: "",
     costObjectLabel: "",
@@ -151,26 +134,22 @@ function fuelMeta(): TypeDimensionMeta {
     requiresMachine: false,
     requiresLocation: false,
     requiresCostCenter: true,
-    requiresProcess: true,
     allowedCostCenterIds: [CC_TRANSPORT],
     defaultCostCenterId: CC_TRANSPORT,
-    allowedProcessIds: [PROC_COLLECT],
-    defaultProcessId: PROC_COLLECT,
   }
 }
 
 const lookup: DimensionLookup = {
   activeCostCenterIds: new Set([CC_TRANSPORT, CC_MAINT]),
-  activeProcessIds: new Set([PROC_COLLECT, PROC_ADMIN]),
   unitsById: new Map([[UNIT_L, { code: "L" }]]),
 }
 
 describe("Expense Phase 4 acceptance (8/8)", () => {
-  it("1. unrestricted type saves without vendor / CC / process", () => {
+  it("1. unrestricted type saves without vendor / CC", () => {
     const line = draft({ expenseTypeId: OTHER_ID, amount: "250" })
     expect(validateExpenseForm({ branchId: BRANCH, vendorId: "", lines: [line], types })).toBeNull()
     const out = assertLineDimensions(
-      { lineNo: 1, pricingMode: "AMOUNT", costCenterId: null, processId: null, unitId: null, costObjectType: null, costObjectLabel: null },
+      { lineNo: 1, pricingMode: "AMOUNT", costCenterId: null, unitId: null, costObjectType: null, costObjectLabel: null },
       {
         id: OTHER_ID,
         requiresVendor: false,
@@ -178,20 +157,16 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
         requiresMachine: false,
         requiresLocation: false,
         requiresCostCenter: false,
-        requiresProcess: false,
         allowedCostCenterIds: [],
         defaultCostCenterId: null,
-        allowedProcessIds: [],
-        defaultProcessId: null,
       },
       lookup
     )
     expect(out.costCenterId).toBeNull()
-    expect(out.processId).toBeNull()
     expect(() => assertHeaderVendor([{ requiresVendor: false }], null)).not.toThrow()
   })
 
-  it("2. fuel requires vendor + default CC/process + vehicle + unit L", () => {
+  it("2. fuel requires vendor + default CC + vehicle + unit L", () => {
     const line = draft({
       expenseTypeId: FUEL_ID,
       pricingMode: "QTY_PRICE",
@@ -201,7 +176,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
       unitPrice: "35",
       amount: "350",
       costCenterId: CC_TRANSPORT,
-      processId: PROC_COLLECT,
       costObjectType: "VEHICLE",
       costObjectLabel: "70-1234",
     })
@@ -211,7 +185,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
         lineNo: 1,
         pricingMode: "QTY_PRICE",
         costCenterId: null,
-        processId: null,
         unitId: UNIT_L,
         costObjectType: "VEHICLE",
         costObjectLabel: "70-1234",
@@ -220,39 +193,35 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
       lookup
     )
     expect(out.costCenterId).toBe(CC_TRANSPORT)
-    expect(out.processId).toBe(PROC_COLLECT)
     expect(out.unitId).toBe(UNIT_L)
     expect(out.unitCode).toBe("L")
     expect(out.costObjectType).toBe("VEHICLE")
     expect(() => assertHeaderVendor([{ requiresVendor: true }], VENDOR)).not.toThrow()
   })
 
-  it("3. fuel without vehicle — UI warn and server reject", () => {
+  it("3. fuel without a vehicle is allowed", () => {
     const line = draft({
       expenseTypeId: FUEL_ID,
       pricingMode: "QTY_PRICE",
       unitId: UNIT_L,
       costCenterId: CC_TRANSPORT,
-      processId: PROC_COLLECT,
       costObjectType: "VEHICLE",
       costObjectLabel: "",
     })
-    expect(validateLineDraft(line, fuel)).toBe("ต้องระบุรถ")
-    expect(() =>
-      assertLineDimensions(
-        {
-          lineNo: 1,
-          pricingMode: "QTY_PRICE",
-          costCenterId: CC_TRANSPORT,
-          processId: PROC_COLLECT,
-          unitId: UNIT_L,
-          costObjectType: "VEHICLE",
-          costObjectLabel: "  ",
-        },
-        fuelMeta(),
-        lookup
-      )
-    ).toThrow("ต้องระบุรถ")
+    expect(validateLineDraft(line, fuel)).toBeNull()
+    const out = assertLineDimensions(
+      {
+        lineNo: 1,
+        pricingMode: "QTY_PRICE",
+        costCenterId: CC_TRANSPORT,
+        unitId: UNIT_L,
+        costObjectType: "VEHICLE",
+        costObjectLabel: "  ",
+      },
+      fuelMeta(),
+      lookup
+    )
+    expect(out.costObjectLabel).toBeNull()
   })
 
   it("4. allowlist — UI hides blocked CC; server rejects if forced", () => {
@@ -264,7 +233,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
       pricingMode: "QTY_PRICE",
       unitId: UNIT_L,
       costCenterId: CC_MAINT,
-      processId: PROC_COLLECT,
       costObjectType: "VEHICLE",
       costObjectLabel: "70-1234",
     })
@@ -275,7 +243,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
           lineNo: 1,
           pricingMode: "QTY_PRICE",
           costCenterId: CC_MAINT,
-          processId: PROC_COLLECT,
           unitId: UNIT_L,
           costObjectType: "VEHICLE",
           costObjectLabel: "70-1234",
@@ -286,13 +253,11 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
     ).toThrow("หน่วยงานต้นทุนไม่อยู่ในรายการที่อนุญาต")
   })
 
-  it("5. no maps — every active company CC and process is selectable", () => {
+  it("5. no maps — every active company CC is selectable", () => {
     expect(costCenterOptions(toll, costCenters, "").map((c) => c.id)).toEqual([CC_TRANSPORT, CC_MAINT])
-    expect(processOptions(toll, processes, "").map((p) => p.id)).toEqual([PROC_COLLECT, PROC_ADMIN])
     const line = draft({
       expenseTypeId: TOLL_ID,
       costCenterId: CC_MAINT,
-      processId: PROC_ADMIN,
       costObjectType: "VEHICLE",
       costObjectLabel: "70-9999",
     })
@@ -302,7 +267,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
         lineNo: 1,
         pricingMode: "AMOUNT",
         costCenterId: CC_MAINT,
-        processId: PROC_ADMIN,
         unitId: null,
         costObjectType: "VEHICLE",
         costObjectLabel: "70-9999",
@@ -314,16 +278,12 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
         requiresMachine: false,
         requiresLocation: false,
         requiresCostCenter: true,
-        requiresProcess: true,
         allowedCostCenterIds: [],
         defaultCostCenterId: null,
-        allowedProcessIds: [],
-        defaultProcessId: null,
       },
       lookup
     )
     expect(out.costCenterId).toBe(CC_MAINT)
-    expect(out.processId).toBe(PROC_ADMIN)
   })
 
   it("6. requiresLocation — type LOCATION + label required", () => {
@@ -340,7 +300,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
           lineNo: 1,
           pricingMode: "AMOUNT",
           costCenterId: CC_TRANSPORT,
-          processId: null,
           unitId: null,
           costObjectType: "OTHER",
           costObjectLabel: "คลัง A",
@@ -352,11 +311,8 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
           requiresMachine: false,
           requiresLocation: true,
           requiresCostCenter: true,
-          requiresProcess: false,
           allowedCostCenterIds: [],
           defaultCostCenterId: null,
-          allowedProcessIds: [],
-          defaultProcessId: null,
         },
         lookup
       )
@@ -366,7 +322,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
         lineNo: 1,
         pricingMode: "AMOUNT",
         costCenterId: CC_TRANSPORT,
-        processId: null,
         unitId: null,
         costObjectType: "LOCATION",
         costObjectLabel: "คลัง A",
@@ -378,11 +333,8 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
         requiresMachine: false,
         requiresLocation: true,
         requiresCostCenter: true,
-        requiresProcess: false,
         allowedCostCenterIds: [],
         defaultCostCenterId: null,
-        allowedProcessIds: [],
-        defaultProcessId: null,
       },
       lookup
     )
@@ -397,7 +349,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
         pricingMode: "QTY_PRICE",
         unitId: UNIT_L,
         costCenterId: CC_TRANSPORT,
-        processId: PROC_COLLECT,
         costObjectType: "VEHICLE",
         costObjectLabel: "70-1234",
       }),
@@ -405,7 +356,6 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
       draft({
         expenseTypeId: REPAIR_ID,
         costCenterId: CC_TRANSPORT,
-        processId: PROC_COLLECT,
         costObjectType: "VEHICLE",
         costObjectLabel: "ซ่อมหน้างาน",
       }),
@@ -418,7 +368,7 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
     expect(validateExpenseForm({ branchId: BRANCH, vendorId: VENDOR, lines, types })).toBeNull()
   })
 
-  it("8. edit payload keeps type / CC / process / unit / cost object", () => {
+  it("8. edit payload keeps type / CC / unit / cost object and drops a legacy processId", () => {
     const parsed = expenseLineInputSchema.safeParse({
       expenseTypeId: FUEL_ID,
       pricingMode: "QTY_PRICE",
@@ -426,19 +376,19 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
       unitId: UNIT_L,
       unitCode: "L",
       unitPrice: 35,
-      processId: PROC_COLLECT,
+      processId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
       costCenterId: CC_TRANSPORT,
       costObjectType: "VEHICLE",
       costObjectLabel: "70-5678",
     })
     expect(parsed.success).toBe(true)
     if (!parsed.success) return
+    expect(parsed.data).not.toHaveProperty("processId")
     const out = assertLineDimensions(
       {
         lineNo: 1,
         pricingMode: "QTY_PRICE",
         costCenterId: parsed.data.costCenterId ?? null,
-        processId: parsed.data.processId ?? null,
         unitId: parsed.data.unitId ?? null,
         costObjectType: parsed.data.costObjectType ?? null,
         costObjectLabel: parsed.data.costObjectLabel ?? null,
@@ -447,10 +397,129 @@ describe("Expense Phase 4 acceptance (8/8)", () => {
       lookup
     )
     expect(out.costCenterId).toBe(CC_TRANSPORT)
-    expect(out.processId).toBe(PROC_COLLECT)
     expect(out.unitId).toBe(UNIT_L)
     expect(out.unitCode).toBe("L")
     expect(out.costObjectType).toBe("VEHICLE")
     expect(out.costObjectLabel).toBe("70-5678")
+  })
+})
+
+describe("transport-sourced lines start in the ขนส่ง cost center", () => {
+  const transportLine = (over: Partial<LineDraft> = {}) =>
+    draft({
+      expenseTypeId: "",
+      sourceKind: "MODULE",
+      sourceModule: "TRANSPORT",
+      sourceType: "TRANSPORT_JOB",
+      costObjectType: "JOB",
+      costObjectLabel: "TJ-2026-00009",
+      ...over,
+    })
+
+  it("matches the active cost center named ขนส่ง only", () => {
+    expect(transportCostCenterId(costCenters)).toBe(CC_TRANSPORT)
+    expect(transportCostCenterId(costCenters.filter((c) => c.id !== CC_TRANSPORT))).toBe("")
+    expect(
+      transportCostCenterId(costCenters.map((c) => (c.id === CC_TRANSPORT ? { ...c, isActive: false } : c)))
+    ).toBe("")
+  })
+
+  it("fills empty transport lines and leaves other lines alone", () => {
+    expect(prefillSourceCostCenter(transportLine(), CC_TRANSPORT).costCenterId).toBe(CC_TRANSPORT)
+    expect(prefillSourceCostCenter(transportLine({ costCenterId: CC_MAINT }), CC_TRANSPORT).costCenterId).toBe(CC_MAINT)
+    expect(prefillSourceCostCenter(draft({ expenseTypeId: "" }), CC_TRANSPORT).costCenterId).toBe("")
+    expect(prefillSourceCostCenter(transportLine(), "").costCenterId).toBe("")
+  })
+
+  it("keeps the transport cost center over a type default when the type allows it", () => {
+    const tollDefaultMaint = { ...toll, defaultCostCenterId: CC_MAINT }
+    const line = transportLine({ costCenterId: CC_TRANSPORT })
+    expect(applyTypeChange(line, tollDefaultMaint).costCenterId).toBe(CC_TRANSPORT)
+    expect(applyTypeChange(line, fuel).costCenterId).toBe(CC_TRANSPORT)
+  })
+
+  it("drops the transport cost center when the type allowlist excludes it", () => {
+    const maintOnly = { ...water, allowedCostCenterIds: [CC_MAINT], defaultCostCenterId: CC_MAINT }
+    const maintOnlyNoDefault = { ...water, allowedCostCenterIds: [CC_MAINT] }
+    const line = transportLine({ costCenterId: CC_TRANSPORT })
+    expect(applyTypeChange(line, maintOnly).costCenterId).toBe(CC_MAINT)
+    expect(applyTypeChange(line, maintOnlyNoDefault).costCenterId).toBe("")
+  })
+
+  it("a line without a process takes the type default cost center", () => {
+    const next = applyTypeChange(draft({ expenseTypeId: "" }), fuel)
+    expect(next.costCenterId).toBe(CC_TRANSPORT)
+    expect(next).not.toHaveProperty("processId")
+    expect(validateLineDraft({ ...next, costObjectType: "VEHICLE", unitId: UNIT_L, pricingMode: "QTY_PRICE" }, fuel)).toBeNull()
+  })
+
+  it("manual lines still take the type default", () => {
+    const tollDefaultMaint = { ...toll, defaultCostCenterId: CC_MAINT }
+    expect(applyTypeChange(draft({ expenseTypeId: "", costCenterId: CC_TRANSPORT }), tollDefaultMaint).costCenterId).toBe(
+      CC_MAINT
+    )
+  })
+})
+
+describe("asset on expense lines", () => {
+  const ASSET_ID = "31111111-1111-1111-1111-111111111111"
+  const withAsset = (over: Partial<LineDraft> = {}) =>
+    draft({
+      expenseTypeId: "",
+      costObjectType: "VEHICLE",
+      costObjectId: ASSET_ID,
+      costObjectLabel: "AST-001 — รถบรรทุก",
+      ...over,
+    })
+
+  it("keeps the asset when the type does not require a machine or location", () => {
+    for (const type of [other, fuel, toll]) {
+      const next = applyTypeChange(withAsset(), type)
+      expect(next.costObjectType).toBe("VEHICLE")
+      expect(next.costObjectId).toBe(ASSET_ID)
+      expect(next.costObjectLabel).toBe("AST-001 — รถบรรทุก")
+    }
+  })
+
+  it("clears the asset when the new type requires a location", () => {
+    const next = applyTypeChange(withAsset(), water)
+    expect(next.costObjectType).toBe("LOCATION")
+    expect(next.costObjectId).toBe("")
+    expect(next.costObjectLabel).toBe("")
+  })
+
+  it("clears a location when moving to a type without one", () => {
+    const next = applyTypeChange(draft({ expenseTypeId: WATER_ID, costObjectType: "LOCATION", costObjectLabel: "สาขา 1" }), other)
+    expect(next.costObjectType).toBe("")
+    expect(next.costObjectLabel).toBe("")
+  })
+
+  it("accepts a line with no asset on a type that does not need one", () => {
+    const next = applyTypeChange(draft({ expenseTypeId: "", amount: "100", description: "ค่าจอด" }), other)
+    expect(next.costObjectType).toBe("")
+    expect(validateLineDraft(next, other)).toBeNull()
+  })
+
+  it("server accepts an asset on a type without vehicle rules and an empty asset on a vehicle type", () => {
+    const meta = (requiresVehicle: boolean): TypeDimensionMeta => ({
+      id: requiresVehicle ? TOLL_ID : OTHER_ID,
+      requiresVendor: false,
+      requiresVehicle,
+      requiresMachine: false,
+      requiresLocation: false,
+      requiresCostCenter: false,
+      allowedCostCenterIds: [],
+      defaultCostCenterId: null,
+    })
+    const line = (costObjectLabel: string) => ({
+      lineNo: 1,
+      pricingMode: "AMOUNT" as const,
+      costCenterId: null,
+      unitId: null,
+      costObjectType: "VEHICLE" as const,
+      costObjectLabel,
+    })
+    expect(() => assertLineDimensions(line("AST-001 — รถบรรทุก"), meta(false), lookup)).not.toThrow()
+    expect(() => assertLineDimensions(line(""), meta(true), lookup)).not.toThrow()
   })
 })

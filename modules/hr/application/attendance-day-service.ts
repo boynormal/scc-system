@@ -245,7 +245,7 @@ type TimeConfirmationRow = {
   personnel_id: string
   work_date?: string
   confirmed_in: Date
-  confirmed_out: Date
+  confirmed_out: Date | null
   source_first_in: Date | null
   source_last_out: Date | null
 }
@@ -263,11 +263,10 @@ function personDateKey(personnelId: unknown, workDate: unknown): string {
 
 function toStoredConfirmation(row: TimeConfirmationRow): StoredTimeConfirmation | null {
   const confirmedIn = asDate(row.confirmed_in)
-  const confirmedOut = asDate(row.confirmed_out)
-  if (!confirmedIn || !confirmedOut) return null
+  if (!confirmedIn) return null
   return {
     confirmedIn,
-    confirmedOut,
+    confirmedOut: asDate(row.confirmed_out),
     sourceFirstIn: asDate(row.source_first_in),
     sourceLastOut: asDate(row.source_last_out),
   }
@@ -289,8 +288,9 @@ function applyConfirmedTimes(
     scanFirstIn,
     scanLastOut,
     timeConfirmed: effective.confirmed,
+    outConfirmed: storedConfirmation?.confirmedOut != null,
     scanChanged: effective.scanChanged,
-    status: (effective.confirmed ? "COMPLETE" : scanFirstIn ? (scanLastOut ? "COMPLETE" : "SINGLE_PUNCH") : "NO_SCAN") as
+    status: (effective.firstIn && effective.lastOut ? "COMPLETE" : effective.firstIn ? "SINGLE_PUNCH" : "NO_SCAN") as
       | "COMPLETE"
       | "SINGLE_PUNCH"
       | "NO_SCAN",
@@ -745,10 +745,11 @@ export async function saveAttendanceTimeConfirmation(
     `
     return { personnelId: params.personnelId, date: params.date, confirmed: false }
   }
-  if (!inTime || !outTime) throw new ValidationError("ต้องระบุทั้งเวลาเข้าและเวลาออก")
+  if (!inTime) throw new ValidationError("ต้องระบุเวลาเข้าก่อน เวลาออกใส่ทีหลังได้")
   const confirmedIn = zonedDateTime(params.date, inTime, branch.timezone)
-  const confirmedOut = zonedDateTime(params.date, outTime, branch.timezone)
-  if (!confirmedIn || !confirmedOut || confirmedOut.getTime() <= confirmedIn.getTime()) {
+  const confirmedOut = outTime ? zonedDateTime(params.date, outTime, branch.timezone) : null
+  if (!confirmedIn || (outTime && !confirmedOut)) throw new ValidationError("เวลาไม่ถูกต้อง")
+  if (confirmedOut && confirmedOut.getTime() <= confirmedIn.getTime()) {
     throw new ValidationError("เวลาออกต้องอยู่หลังเวลาเข้า")
   }
 

@@ -5,10 +5,10 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, Search } from "lucide-react"
 import type { FuelTankDto, FuelTxnDto } from "@/modules/fuel"
+import { GlassDialog } from "@/components/glass"
 import { DataPanel } from "@/components/shell/data-panel"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
 import { fmtMoney, fmtQty, localInputToIso } from "./fuel-format"
@@ -38,32 +38,30 @@ export function DispenseForm({
   const [tanks, setTanks] = useState(initialTanks)
   const [{ branchId, tankId }, setPick] = useState(() => initialBranchTank(branches, initialTanks, presetTankId))
   const [targetType, setTargetType] = useState<"ASSET" | "OTHER">("ASSET")
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [assetSearch, setAssetSearch] = useState("")
   const [assets, setAssets] = useState<FuelAsset[]>([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [assetsError, setAssetsError] = useState<string | null>(null)
-  const [assetId, setAssetId] = useState("")
+  const [asset, setAsset] = useState<FuelAsset | null>(null)
   const [meterReading, setMeterReading] = useState("")
   const [otherName, setOtherName] = useState("")
   const [otherNote, setOtherNote] = useState("")
   const [quantity, setQuantity] = useState("")
-  const [receiverName, setReceiverName] = useState("")
   const [occurredAt, setOccurredAt] = useState("")
   const [remark, setRemark] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<FuelTxnDto | null>(null)
-  const [reloadKey, setReloadKey] = useState(0)
 
   const tank = tanks.find((x) => x.id === tankId) ?? null
-  const asset = assets.find((a) => a.id === assetId) ?? null
   const qty = Number(quantity)
   const afterQty = tank && quantity !== "" && Number.isFinite(qty) ? Math.round((tank.currentQty - qty) * 100) / 100 : null
   const meterType = asset?.fuelMeterType ?? "NONE"
   const lastMeter = !asset ? null : meterType === "ODOMETER" ? asset.lastOdometer : meterType === "HOUR_METER" ? asset.lastHourMeter : null
 
   useEffect(() => {
-    if (!branchId || targetType !== "ASSET") return
+    if (!pickerOpen || !branchId) return
     const controller = new AbortController()
     const timer = setTimeout(() => {
       setAssetsLoading(true)
@@ -84,13 +82,18 @@ export function DispenseForm({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [branchId, targetType, assetSearch, reloadKey, t])
+  }, [pickerOpen, branchId, assetSearch, t])
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault()
     setBusy(true)
     setError(null)
     const isAsset = targetType === "ASSET"
+    if (isAsset && !asset) {
+      setError(t("selectAsset"))
+      setBusy(false)
+      return
+    }
     try {
       const res = await fetchJson<{ data: FuelTxnDto }>("/api/fuel/transactions", {
         method: "POST",
@@ -100,11 +103,10 @@ export function DispenseForm({
           tankId,
           quantity: qty,
           targetType,
-          assetId: isAsset ? assetId : null,
+          assetId: isAsset ? asset?.id : null,
           meterReading: isAsset && meterType !== "NONE" && meterReading !== "" ? Number(meterReading) : null,
           otherTargetName: isAsset ? null : otherName,
           otherTargetNote: isAsset ? null : otherNote || null,
-          receiverName: receiverName || null,
           occurredAt: localInputToIso(occurredAt),
           remark: remark || null,
         }),
@@ -124,13 +126,11 @@ export function DispenseForm({
       setSaved(res.data)
       setQuantity("")
       setMeterReading("")
-      setAssetId("")
+      setAsset(null)
       setOtherName("")
       setOtherNote("")
-      setReceiverName("")
       setOccurredAt("")
       setRemark("")
-      setReloadKey((k) => k + 1)
     } catch (err) {
       setError(err instanceof ClientFetchError ? err.message : t("saveFailed"))
     } finally {
@@ -181,7 +181,8 @@ export function DispenseForm({
           onBranch={(id) => {
             const own = tanks.filter((x) => x.branchId === id)
             setPick({ branchId: id, tankId: own.length === 1 ? own[0].id : "" })
-            setAssetId("")
+            setAsset(null)
+            setMeterReading("")
           }}
           onTank={(id) => setPick((p) => ({ ...p, tankId: id }))}
         />
@@ -197,27 +198,22 @@ export function DispenseForm({
 
         {targetType === "ASSET" ? (
           <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                label={t("searchAsset")}
-                icon={<Search className="h-4 w-4" />}
-                value={assetSearch}
-                onChange={(e) => setAssetSearch(e.target.value)}
+            <div className="space-y-1.5">
+              <span className="block text-sm font-medium text-foreground">
+                {t("asset")}
+                <span className="ml-1 text-red-500">*</span>
+              </span>
+              <button
+                type="button"
                 disabled={!branchId}
-              />
-              <Select
-                label={t("asset")}
-                required
-                value={assetId}
-                onChange={(e) => {
-                  setAssetId(e.target.value)
-                  setMeterReading("")
+                onClick={() => {
+                  setAssetSearch("")
+                  setPickerOpen(true)
                 }}
-                disabled={!branchId || assetsLoading}
-                placeholder={assets.length ? t("selectAsset") : t("noAssets")}
-                options={assets.map((a) => ({ value: a.id, label: `${a.code} · ${a.name} (${a.typeName})` }))}
-                error={assetsError ?? undefined}
-              />
+                className="flex w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-left text-sm text-foreground hover:border-slate-400 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+              >
+                {asset ? `${asset.code} · ${asset.name}` : t("selectAsset")}
+              </button>
             </div>
             {asset &&
               (meterType === "NONE" ? (
@@ -264,7 +260,6 @@ export function DispenseForm({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
           />
-          <Input label={t("receiverName")} maxLength={255} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} />
         </div>
         <OccurredAtField value={occurredAt} onChange={setOccurredAt} />
         <TextArea label={t("remark")} value={remark} onChange={setRemark} />
@@ -275,6 +270,46 @@ export function DispenseForm({
           </Button>
         </div>
       </form>
+
+      <GlassDialog solid open={pickerOpen} onOpenChange={setPickerOpen} title={t("selectAsset")}>
+        <Input
+          label={t("searchAsset")}
+          icon={<Search className="h-4 w-4" />}
+          value={assetSearch}
+          onChange={(e) => setAssetSearch(e.target.value)}
+          autoFocus
+        />
+        <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border">
+          {assetsLoading ? (
+            <p className="px-4 py-6 text-sm text-foreground">{t("loading")}</p>
+          ) : assetsError ? (
+            <p className="px-4 py-6 text-sm text-red-600">{assetsError}</p>
+          ) : assets.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-foreground">{t("noAssets")}</p>
+          ) : (
+            <ul>
+              {assets.map((row) => (
+                <li key={row.id} className="border-b border-border last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAsset(row)
+                      setMeterReading("")
+                      setPickerOpen(false)
+                    }}
+                    className="flex w-full flex-col px-4 py-3 text-left hover:bg-muted"
+                  >
+                    <span className="text-sm font-medium text-foreground">
+                      {row.code} · {row.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{row.typeName}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </GlassDialog>
     </DataPanel>
   )
 }

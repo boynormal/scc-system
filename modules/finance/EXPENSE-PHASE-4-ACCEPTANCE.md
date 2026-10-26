@@ -13,12 +13,12 @@ Regression tests: `modules/finance/application/__tests__/expense-phase4-acceptan
 - Server (`resolveBill` → `assertLineDimensions` / `assertHeaderVendor`) is the source of truth. Client validation is UX only.
 - Rules apply on **create and PATCH only**. GET / list must not fail on historical bills.
 - `requiresVendor` → header `Expense.vendorId`. If **any** line type requires vendor and header vendor is null → reject. No per-line vendor.
-- `requiresCostCenter` → line `costCenterId`. `requiresProcess` → line `processId`.
+- `requiresCostCenter` → line `costCenterId`. The process dimension was removed on 2026-10-26.
 - `requiresVehicle` / `requiresMachine` / `requiresLocation` → matching `costObjectType` + non-empty `costObjectLabel`.
-- Allowlist: any `isAllowed` map → selection must be in that set; empty input uses `isDefault`. **No maps** → any **active** company CC / Process.
+- Allowlist: any `isAllowed` map → selection must be in that set; empty input uses `isDefault`. **No maps** → any **active** company CC.
 - Legacy types (`FUEL`, `TOLL`, `OTHER`, …) with `requires_* = false` and no maps stay unrestricted.
 - `QTY_PRICE` requires `unitId` from shared Unit master; persist `Unit.code` into `unitCode`. `AMOUNT`: `quantity = 1`, `unitId = null`.
-- IMPORT/MODULE: amounts stay locked; type / CC / process / cost object stay editable.
+- IMPORT/MODULE: amounts stay locked; type / CC / cost object stay editable.
 - `defaultGlLabel` is a read-only hint. Not an FK. Not posted.
 
 ## Live run fixtures (DEMO)

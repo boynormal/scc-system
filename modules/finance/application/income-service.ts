@@ -24,7 +24,7 @@ export const INCOME_VAT_RATE = 0.07
 const CREATE_STATUSES = ["DRAFT", "PENDING"] as const
 const EDITABLE_STATUSES: IncomeStatusValue[] = ["DRAFT", "PENDING", "REJECTED"]
 const NO_MATCH_ID = "00000000-0000-0000-0000-000000000000"
-const RECEIVED_LOCKED_MSG = "รายรับที่รับเงินแล้วแก้ได้เฉพาะประเภท รายละเอียด หน่วยงาน กระบวนการ และหมายเหตุ"
+const RECEIVED_LOCKED_MSG = "รายรับที่รับเงินแล้วแก้ได้เฉพาะประเภท รายละเอียด หน่วยงาน และหมายเหตุ"
 
 const moneySchema = z.number().min(0).max(999_999_999)
 const qtySchema = z.number().min(0).max(9_999_999)
@@ -43,7 +43,6 @@ export const incomeLineInputSchema = z.object({
   taxAmount: moneySchema.optional(),
   discountAmount: moneySchema.optional(),
   costCenterId: z.string().uuid().nullable().optional(),
-  processId: z.string().uuid().nullable().optional(),
 })
 
 export type IncomeLineInput = z.infer<typeof incomeLineInputSchema>
@@ -320,7 +319,6 @@ type ResolvedLine = IncomeLineAmounts & {
   unitId: string | null
   unitCode: string | null
   costCenterId: string | null
-  processId: string | null
 }
 
 function linePrefix(lineNo: number): string {
@@ -331,9 +329,8 @@ async function loadLineLookups(db: PrismaClient, companyId: string, lineInputs: 
   const typeIds = [...new Set(lineInputs.map((l) => l.incomeTypeId))]
   const unitIds = [...new Set(lineInputs.map((l) => l.unitId).filter((id): id is string => !!id))]
   const ccIds = [...new Set(lineInputs.map((l) => l.costCenterId).filter((id): id is string => !!id))]
-  const procIds = [...new Set(lineInputs.map((l) => l.processId).filter((id): id is string => !!id))]
 
-  const [types, units, costCenters, processes] = await Promise.all([
+  const [types, units, costCenters] = await Promise.all([
     db.incomeType.findMany({ where: { companyId, id: { in: typeIds } }, select: { id: true } }),
     unitIds.length
       ? db.unit.findMany({ where: { companyId, id: { in: unitIds } }, select: { id: true, code: true } })
@@ -341,15 +338,11 @@ async function loadLineLookups(db: PrismaClient, companyId: string, lineInputs: 
     ccIds.length
       ? db.costCenter.findMany({ where: { companyId, isActive: true, id: { in: ccIds } }, select: { id: true } })
       : Promise.resolve([] as Array<{ id: string }>),
-    procIds.length
-      ? db.process.findMany({ where: { companyId, isActive: true, id: { in: procIds } }, select: { id: true } })
-      : Promise.resolve([] as Array<{ id: string }>),
   ])
   if (types.length !== typeIds.length) throw new ValidationError("ประเภทรายรับไม่ถูกต้อง")
   return {
     unitsById: new Map(units.map((u) => [u.id, u.code])),
     costCenterIds: new Set(costCenters.map((c) => c.id)),
-    processIds: new Set(processes.map((p) => p.id)),
   }
 }
 
@@ -377,10 +370,6 @@ async function resolveIncomeLines(
     if (costCenterId && !lookups.costCenterIds.has(costCenterId)) {
       throw new ValidationError(`${linePrefix(lineNo)}หน่วยงานไม่ถูกต้อง`)
     }
-    const processId = input.processId ?? null
-    if (processId && !lookups.processIds.has(processId)) {
-      throw new ValidationError(`${linePrefix(lineNo)}กระบวนการไม่ถูกต้อง`)
-    }
     return {
       ...amounts,
       lineNo,
@@ -389,7 +378,6 @@ async function resolveIncomeLines(
       unitId,
       unitCode,
       costCenterId,
-      processId,
     }
   })
 }
@@ -409,7 +397,6 @@ function toLineCreate(companyId: string, line: ResolvedLine): Prisma.IncomeLineC
     discountAmount: line.discountAmount,
     netAmount: line.netAmount,
     ...(line.costCenterId ? { costCenter: { connect: { id: line.costCenterId } } } : {}),
-    ...(line.processId ? { process: { connect: { id: line.processId } } } : {}),
     ...(line.unitId ? { unit: { connect: { id: line.unitId } } } : {}),
   }
 }
@@ -428,7 +415,6 @@ const incomeInclude = {
     include: {
       incomeType: { select: { id: true, code: true, name: true } },
       costCenter: { select: { id: true, name: true } },
-      process: { select: { id: true, name: true } },
       unit: { select: { id: true, code: true, name: true } },
     },
   },
@@ -465,8 +451,6 @@ function serializeIncome(row: IncomeRow) {
     netAmount: Number(line.netAmount),
     costCenterId: line.costCenterId,
     costCenterName: line.costCenter?.name ?? null,
-    processId: line.processId,
-    processName: line.process?.name ?? null,
   }))
   return {
     id: row.id,
@@ -523,7 +507,6 @@ export async function listIncomes(
     branchId?: string | null
     incomeTypeId?: string | null
     costCenterId?: string | null
-    processId?: string | null
     status?: string | null
     dateFrom?: string | null
     dateTo?: string | null
@@ -547,13 +530,6 @@ export async function listIncomes(
   } else {
     const costCenterId = optionalUuid(costCenterRaw)
     if (costCenterId) and.push({ lines: { some: { costCenterId } } })
-  }
-  const processRaw = params.processId?.trim()
-  if (processRaw === "none") {
-    and.push({ lines: { some: { processId: null } } })
-  } else {
-    const processId = optionalUuid(processRaw)
-    if (processId) and.push({ lines: { some: { processId } } })
   }
   if (params.status && (INCOME_STATUSES as readonly string[]).includes(params.status)) {
     where.status = params.status as IncomeStatusValue
@@ -862,7 +838,7 @@ function receivedLineFinancialsChanged(
   return false
 }
 
-/** RECEIVED: amounts and header money fields stay locked; type, description, cost center, process, notes may change with a reason. */
+/** RECEIVED: amounts and header money fields stay locked; type, description, cost center, notes may change with a reason. */
 export async function updateReceivedIncomeMetadata(
   db: PrismaClient,
   params: {
@@ -900,7 +876,6 @@ export async function updateReceivedIncomeMetadata(
         taxAmount: true,
         discountAmount: true,
         costCenterId: true,
-        processId: true,
       },
     },
   })
@@ -940,7 +915,6 @@ export async function updateReceivedIncomeMetadata(
     incomeTypeId: string
     description: string | null
     costCenterId: string | null
-    processId: string | null
   }
   const patches: LinePatch[] = []
   if (input.lines) {
@@ -960,12 +934,8 @@ export async function updateReceivedIncomeMetadata(
     for (const line of input.lines) {
       const row = byId.get(line.id as string)!
       const costCenterId = line.costCenterId !== undefined ? (line.costCenterId ?? null) : row.costCenterId
-      const processId = line.processId !== undefined ? (line.processId ?? null) : row.processId
       if (costCenterId && costCenterId !== row.costCenterId && !lookups.costCenterIds.has(costCenterId)) {
         throw new ValidationError(`${linePrefix(row.lineNo)}หน่วยงานไม่ถูกต้อง`)
-      }
-      if (processId && processId !== row.processId && !lookups.processIds.has(processId)) {
-        throw new ValidationError(`${linePrefix(row.lineNo)}กระบวนการไม่ถูกต้อง`)
       }
       patches.push({
         id: row.id,
@@ -973,7 +943,6 @@ export async function updateReceivedIncomeMetadata(
         description:
           line.description !== undefined ? (line.description?.trim() ? line.description.trim() : null) : row.description,
         costCenterId,
-        processId,
       })
     }
   }
@@ -989,7 +958,6 @@ export async function updateReceivedIncomeMetadata(
     incomeTypeId: l.incomeTypeId,
     description: l.description,
     costCenterId: l.costCenterId,
-    processId: l.processId,
   }))
   if (patches.length && JSON.stringify(prevLines) !== JSON.stringify(patches)) {
     oldValues.lines = prevLines
@@ -1004,7 +972,6 @@ export async function updateReceivedIncomeMetadata(
           incomeType: { connect: { id: patch.incomeTypeId } },
           description: patch.description,
           costCenter: patch.costCenterId ? { connect: { id: patch.costCenterId } } : { disconnect: true },
-          process: patch.processId ? { connect: { id: patch.processId } } : { disconnect: true },
         },
       })
     }

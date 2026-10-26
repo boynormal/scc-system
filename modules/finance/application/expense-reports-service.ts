@@ -83,8 +83,6 @@ export type ReportBucket = {
   code?: string | null
 }
 
-export type ReportMatrixAxis = { key: string; label: string; code?: string | null }
-
 export type ExpenseReportData = {
   grandTotal: number
   count: number
@@ -95,14 +93,8 @@ export type ExpenseReportData = {
   byBranch: ReportBucket[]
   byCostCenter: ReportBucket[]
   byType: ReportBucket[]
-  byProcess: ReportBucket[]
   byCostObject: ReportBucket[]
   byMonth: ReportBucket[]
-  matrix: {
-    processes: ReportMatrixAxis[]
-    types: ReportMatrixAxis[]
-    cells: Record<string, Record<string, number>>
-  }
 }
 
 export type ReportLineInput = {
@@ -112,8 +104,6 @@ export type ReportLineInput = {
   sourceModule: string | null
   costCenterId: string | null
   costCenterName?: string | null
-  processId: string | null
-  processName?: string | null
   expenseTypeId: string
   expenseTypeCode?: string | null
   expenseTypeName: string
@@ -133,7 +123,6 @@ export type ReportRowInput = {
 
 export type ReportLineFilters = {
   expenseTypeId?: string | null
-  processId?: string | null
   costCenterId?: string | null
   sourceModule?: string | null
 }
@@ -181,13 +170,6 @@ export function lineMatchesFilters(line: ReportLineInput, filters: ReportLineFil
   const typeId = filters.expenseTypeId?.trim()
   if (typeId && line.expenseTypeId !== typeId) return false
 
-  const processId = filters.processId?.trim()
-  if (processId === NONE_KEY) {
-    if (line.processId != null) return false
-  } else if (processId && line.processId !== processId) {
-    return false
-  }
-
   const ccId = filters.costCenterId?.trim()
   if (ccId && line.costCenterId !== ccId) return false
 
@@ -215,10 +197,8 @@ export function aggregateExpenseReport(
   const byBranch = new Map<string, ReportBucket>()
   const byCostCenter = new Map<string, ReportBucket>()
   const byType = new Map<string, ReportBucket>()
-  const byProcess = new Map<string, ReportBucket>()
   const byCostObject = new Map<string, ReportBucket>()
   const byMonth = new Map<string, ReportBucket>()
-  const cellTotals = new Map<string, number>()
   const billIds = new Set<string>()
   let grandTotal = 0
   let lineCount = 0
@@ -248,26 +228,7 @@ export function aggregateExpenseReport(
         amount,
         line.expenseTypeCode ?? null
       )
-      addTo(
-        byProcess,
-        line.processId ?? NONE_KEY,
-        line.processId ? (line.processName ?? line.processId) : "ไม่ระบุ Process",
-        amount
-      )
       addTo(byCostObject, costObjectKey(line), costObjectLabel(line), amount)
-
-      const cellKey = `${line.processId ?? NONE_KEY}::${line.expenseTypeId}`
-      cellTotals.set(cellKey, round2((cellTotals.get(cellKey) ?? 0) + amount))
-    }
-  }
-
-  const typeBuckets = withPercents(sortByTotal(byType), grandTotal)
-  const processBuckets = withPercents(sortByTotal(byProcess), grandTotal)
-  const cells: Record<string, Record<string, number>> = {}
-  for (const proc of processBuckets) {
-    cells[proc.key] = {}
-    for (const type of typeBuckets) {
-      cells[proc.key][type.key] = cellTotals.get(`${proc.key}::${type.key}`) ?? 0
     }
   }
 
@@ -281,15 +242,9 @@ export function aggregateExpenseReport(
     byModule: withPercents(sortByTotal(byModule), grandTotal),
     byBranch: withPercents(sortByTotal(byBranch), grandTotal),
     byCostCenter: withPercents(sortByTotal(byCostCenter), grandTotal),
-    byType: typeBuckets,
-    byProcess: processBuckets,
+    byType: withPercents(sortByTotal(byType), grandTotal),
     byCostObject: withPercents(sortByTotal(byCostObject), grandTotal),
     byMonth: withPercents(Array.from(byMonth.values()).sort((a, b) => (a.key < b.key ? -1 : 1)), grandTotal),
-    matrix: {
-      processes: processBuckets.map((p) => ({ key: p.key, label: p.label })),
-      types: typeBuckets.map((t) => ({ key: t.key, label: t.label, code: t.code ?? null })),
-      cells,
-    },
   }
 }
 
@@ -298,7 +253,6 @@ export const expenseReportQuerySchema = z.object({
   dateFrom: z.string().nullable().optional(),
   dateTo: z.string().nullable().optional(),
   expenseTypeId: z.string().uuid().nullable().optional(),
-  processId: z.string().nullable().optional(),
   costCenterId: z.string().uuid().nullable().optional(),
   sourceModule: z.string().nullable().optional(),
   vendorId: z.string().uuid().nullable().optional(),
@@ -311,14 +265,6 @@ function lineFilterWhere(filters: ReportLineFilters): Prisma.ExpenseLineWhereInp
   const where: Prisma.ExpenseLineWhereInput = {}
   const typeId = optionalUuid(filters.expenseTypeId)
   if (typeId) where.expenseTypeId = typeId
-
-  const processRaw = filters.processId?.trim()
-  if (processRaw === NONE_KEY) {
-    where.processId = null
-  } else {
-    const processId = optionalUuid(processRaw)
-    if (processId) where.processId = processId
-  }
 
   const ccId = optionalUuid(filters.costCenterId)
   if (ccId) where.costCenterId = ccId
@@ -342,7 +288,6 @@ export async function getExpenseReport(
     dateFrom?: string | null
     dateTo?: string | null
     expenseTypeId?: string | null
-    processId?: string | null
     costCenterId?: string | null
     sourceModule?: string | null
     vendorId?: string | null
@@ -370,7 +315,6 @@ export async function getExpenseReport(
 
   const lineFilters: ReportLineFilters = {
     expenseTypeId: optionalUuid(params.expenseTypeId),
-    processId: params.processId?.trim() === NONE_KEY ? NONE_KEY : optionalUuid(params.processId),
     costCenterId: optionalUuid(params.costCenterId),
     sourceModule: params.sourceModule?.trim() || null,
   }
@@ -398,8 +342,6 @@ export async function getExpenseReport(
           sourceModule: true,
           costCenterId: true,
           costCenter: { select: { name: true } },
-          processId: true,
-          process: { select: { name: true } },
           expenseTypeId: true,
           expenseType: { select: { code: true, name: true } },
           costObjectType: true,
@@ -425,8 +367,6 @@ export async function getExpenseReport(
       sourceModule: l.sourceModule,
       costCenterId: l.costCenterId,
       costCenterName: l.costCenter?.name ?? null,
-      processId: l.processId,
-      processName: l.process?.name ?? null,
       expenseTypeId: l.expenseTypeId,
       expenseTypeCode: l.expenseType.code,
       expenseTypeName: l.expenseType.name,

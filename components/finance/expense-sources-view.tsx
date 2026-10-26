@@ -14,7 +14,8 @@ import {
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { NEW_EXPENSE_SOURCES_KEY, type PrefillPayload } from "./expense-form-page"
-import type { ExpenseSourceRow, FinancePerms, LineDraft, Option } from "./expense-types"
+import { rowKey, sourceToLine } from "./expense-source-line"
+import type { ExpenseSourceRow, FinancePerms, Option } from "./expense-types"
 import { FIN_GLASS_PANEL, SOURCE_TYPE_LABELS, formatBaht, solidBlueButtonClass } from "./finance-theme"
 
 function apiErrorMessage(json: unknown, fallback: string) {
@@ -28,10 +29,6 @@ function apiErrorMessage(json: unknown, fallback: string) {
   return fallback
 }
 
-function rowKey(row: ExpenseSourceRow) {
-  return `${row.sourceType}-${row.sourceId}`
-}
-
 function formatReferenceAmount(amount: number | null): string {
   if (amount == null) return "ยังไม่มียอดอ้างอิง"
   return formatBaht(amount)
@@ -41,37 +38,6 @@ const HAS_EXPENSE_BTN = cn(solidBlueButtonClass, "rounded-xl")
 const NO_EXPENSE_BTN =
   "relative z-10 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
 const TABLE_ACTION_BTN = "h-8 shrink-0 whitespace-nowrap px-2.5"
-
-function sourceToLine(row: ExpenseSourceRow): LineDraft {
-  const locked = row.amount != null && row.amount > 0
-  const isJob = row.suggestedCostObjectType === "JOB"
-  return {
-    key: rowKey(row),
-    expenseTypeId: "",
-    description: row.description ?? "",
-    pricingMode: "AMOUNT",
-    quantity: "1",
-    unitId: "",
-    unitCode: "",
-    unitPrice: locked ? String(row.amount) : "",
-    amount: locked ? String(row.amount) : "",
-    taxAmount: "",
-    taxMode: "NONE",
-    discountAmount: "",
-    discountKind: "BAHT",
-    costCenterId: "",
-    processId: "",
-    costObjectType: row.suggestedCostObjectType,
-    costObjectId: isJob ? row.sourceDocumentId : row.vehicleId,
-    costObjectLabel: isJob ? row.documentNo ?? row.description ?? "" : row.vehicleLabel,
-    sourceKind: row.sourceKind,
-    sourceModule: row.sourceModule,
-    sourceType: row.sourceType,
-    sourceDocumentId: row.sourceDocumentId,
-    sourceLineId: row.sourceLineId,
-    sourceAmountLocked: locked,
-  }
-}
 
 export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
   const router = useRouter()

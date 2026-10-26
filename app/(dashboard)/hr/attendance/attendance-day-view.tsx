@@ -18,6 +18,7 @@ import { LoadingState } from "@/components/ui/loading-state"
 import { AttendanceDayPicker } from "./attendance-day-picker"
 import { PendingFade } from "@/components/shell/nav-pending"
 import { AttendanceSectionTabs } from "./attendance-chrome"
+import { isBeforeCompanyEnd } from "@/modules/hr/application/attendance-man-hour"
 import { formatDateTime, formatMinutes, formatTime, todayInZone } from "./attendance-format"
 
 type DayRow = {
@@ -32,6 +33,7 @@ type DayRow = {
   scanFirstIn: string | null
   scanLastOut: string | null
   timeConfirmed: boolean
+  outConfirmed: boolean
   scanChanged: boolean
   firstInBranchCode: string | null
   lastOutBranchCode: string | null
@@ -77,6 +79,24 @@ type Punch = { id: string; punchAt: string; badgeNumber: string; deviceName: str
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
+function outOriginalAlert(iso: string | null, timeZone: string): boolean {
+  if (!iso) return true
+  return isBeforeCompanyEnd(new Date(iso), timeZone)
+}
+
+function formatDayNote(
+  reason: string | null,
+  note: string | null,
+  label: (key: `day.noteReasons.${NoteReason}`) => string
+): string {
+  const text = note?.trim() ?? ""
+  if (reason && NOTE_REASONS.includes(reason as NoteReason)) {
+    const name = label(`day.noteReasons.${reason as NoteReason}`)
+    return text ? `${name} — ${text}` : name
+  }
+  return text || "—"
+}
+
 function timeInputValue(iso: string | null, timeZone: string): string {
   if (!iso) return ""
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -98,6 +118,7 @@ function ScanCell({
   branchCode,
   timeZone,
   locale,
+  alertOriginal = false,
 }: {
   confirmedIso: string | null
   scanIso: string | null
@@ -106,10 +127,11 @@ function ScanCell({
   branchCode: string | null
   timeZone: string
   locale: string
+  alertOriginal?: boolean
 }) {
   return (
     <div className="flex items-center gap-1">
-      <TimeBox label={originalLabel} value={scanIso ? formatTime(scanIso, timeZone, locale) : "—"} />
+      <TimeBox label={originalLabel} value={scanIso ? formatTime(scanIso, timeZone, locale) : "—"} alert={alertOriginal} />
       {confirmedIso ? (
         <>
           <span className="text-sm font-semibold text-red-600" aria-hidden>
@@ -123,10 +145,10 @@ function ScanCell({
   )
 }
 
-function TimeBox({ label, value, emphasize = false }: { label: string; value: string; emphasize?: boolean }) {
+function TimeBox({ label, value, emphasize = false, alert = false }: { label: string; value: string; emphasize?: boolean; alert?: boolean }) {
   const highlighted = emphasize && value !== "—"
   return (
-    <div className="min-w-[3.4rem] rounded-md border border-border bg-background px-1 py-1 text-center">
+    <div className={cn("min-w-[3.4rem] rounded-md border px-1 py-1 text-center", alert ? "border-red-300 bg-red-100 dark:border-red-500/40 dark:bg-red-950/60" : "border-border bg-background")}>
       <div className="text-[10px] font-medium leading-tight text-foreground">{label}</div>
       <div className={highlighted ? "font-mono text-xs font-semibold text-red-600" : "font-mono text-xs font-semibold text-foreground"}>
         {value}
@@ -687,13 +709,14 @@ export function AttendanceDayView({
                         </td>
                         <td className="px-2 py-1.5">
                           <ScanCell
-                            confirmedIso={row.timeConfirmed ? row.lastOut : null}
+                            confirmedIso={row.outConfirmed ? row.lastOut : null}
                             scanIso={row.scanLastOut}
                             originalLabel={t("day.originalTime")}
                             confirmedLabel={t("day.confirmedTime")}
                             branchCode={row.lastOutBranchCode}
                             timeZone={tz}
                             locale={locale}
+                            alertOriginal={outOriginalAlert(row.scanLastOut, tz)}
                           />
                         </td>
                         <td className="min-w-[4.75rem] px-1 py-1.5 text-right font-mono font-semibold text-foreground">
@@ -735,9 +758,7 @@ export function AttendanceDayView({
                           )}
                         </td>
                         <td className="px-2 py-1.5 text-sm font-medium text-foreground break-words">
-                          {row.noteReason
-                            ? `${t(`day.noteReasons.${row.noteReason}`)}${row.note ? ` — ${row.note}` : ""}`
-                            : "—"}
+                          {formatDayNote(row.noteReason, row.note, (key) => t(key))}
                         </td>
                         <td className="px-2 py-1.5 font-medium text-foreground">
                           {row.countedBranchId !== row.homeBranchId ? row.countedBranchCode : null}
@@ -925,9 +946,7 @@ export function AttendanceDayView({
             <div>
               <div className="text-xs font-semibold">{t("day.note")}</div>
               <p className="mt-1 text-sm font-medium">
-                {manageRow.noteReason
-                  ? `${t(`day.noteReasons.${manageRow.noteReason}`)}${manageRow.note ? ` — ${manageRow.note}` : ""}`
-                  : "—"}
+                {formatDayNote(manageRow.noteReason, manageRow.note, (key) => t(key))}
               </p>
             </div>
           </div>
@@ -1049,6 +1068,7 @@ export function AttendanceDayView({
             </label>
             <label className="block text-sm font-medium" htmlFor="confirm-time-out">
               {t("day.timeOut")}
+              <span className="ml-1 font-normal text-muted-foreground">{t("day.timeOutOptional")}</span>
               <input
                 id="confirm-time-out"
                 type="time"
@@ -1074,6 +1094,7 @@ export function AttendanceDayView({
         {manageRow && manageStep === "note" && (
           <div className="space-y-3 text-foreground">
             <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("day.noteReasonOptional")}</p>
               {NOTE_REASONS.map((reason) => (
                 <label key={reason} className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
                   <input
@@ -1082,6 +1103,11 @@ export function AttendanceDayView({
                     checked={reasonDraft === reason}
                     disabled={!canUpdate}
                     onChange={() => setReasonDraft(reason)}
+                    onClick={(event) => {
+                      if (reasonDraft !== reason) return
+                      event.preventDefault()
+                      setReasonDraft(null)
+                    }}
                   />
                   {t(`day.noteReasons.${reason}`)}
                 </label>

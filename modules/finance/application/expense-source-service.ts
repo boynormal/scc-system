@@ -238,9 +238,8 @@ export type ResolvedSource = {
 }
 
 /**
- * Re-derive authoritative amounts for TRANSPORT source lines from the transport
- * module. Returns a map keyed by `${sourceType}::${sourceDocumentId}`.
- * Null/0 amounts are present so Finance can enter the bill amount.
+ * Load TRANSPORT source rows for linked lines. Keyed by `${sourceType}::${sourceDocumentId}`.
+ * `amount` is the operational reference. The expense stores the amount finance confirms.
  */
 export async function resolveTransportSources(
   db: PrismaClient,

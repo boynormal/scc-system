@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client"
 
 /** Bump when schema changes require a fresh PrismaClient (dev hot-reload keeps old singleton). */
-const PRISMA_SCHEMA_FINGERPRINT = "20261016-stored-files"
+const PRISMA_SCHEMA_FINGERPRINT = "20261026-drop-finance-process"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -27,7 +27,7 @@ function isStalePrismaClient(client: PrismaClient | undefined): boolean {
     typeof (client as unknown as { machineSparePart?: unknown }).machineSparePart === "undefined" ||
     typeof (client as unknown as { personnel?: unknown }).personnel === "undefined" ||
     typeof (client as unknown as { expenseCategory?: unknown }).expenseCategory === "undefined" ||
-    typeof (client as unknown as { process?: unknown }).process === "undefined"
+    typeof (client as unknown as { expenseTypeCostCenter?: unknown }).expenseTypeCostCenter === "undefined"
   )
 }
 

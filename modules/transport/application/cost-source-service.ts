@@ -10,6 +10,9 @@ export type TransportCostSource = {
   date: string
   vehicleId: string
   vehicleLabel: string
+  /** Asset linked to the vehicle; `null` when the vehicle has none. */
+  assetId: string | null
+  assetLabel: string | null
   /** Reference amount only. `null` ≠ `0`. Not an Expense. */
   amount: number | null
   paymentMethod: "cash" | "credit" | null
@@ -41,6 +44,18 @@ export function jobSourceIdentity(jobId: string): {
   return { sourceType: "TRANSPORT_JOB", sourceDocumentId: jobId, sourceLineId: null }
 }
 
+type VehicleRow = {
+  id: string
+  plateNumber: string
+  asset?: { id: string; code: string; name: string; deletedAt: Date | null } | null
+}
+
+function vehicleAsset(vehicle: VehicleRow | null | undefined): { assetId: string | null; assetLabel: string | null } {
+  const asset = vehicle?.asset
+  if (!asset || asset.deletedAt) return { assetId: null, assetLabel: null }
+  return { assetId: asset.id, assetLabel: `${asset.code} — ${asset.name}` }
+}
+
 type RepairRow = {
   id: string
   branchId: string
@@ -50,7 +65,7 @@ type RepairRow = {
   paymentMethod: "cash" | "credit" | null
   symptom: string
   repairNumber: string
-  vehicle: { id: string; plateNumber: string } | null
+  vehicle: VehicleRow | null
 }
 
 type TireRow = {
@@ -61,7 +76,7 @@ type TireRow = {
   cost: unknown
   paymentMethod: "cash" | "credit" | null
   tireNumber: string
-  vehicle: { id: string; plateNumber: string } | null
+  vehicle: VehicleRow | null
 }
 
 type JobRow = {
@@ -74,7 +89,7 @@ type JobRow = {
   updatedAt: Date
   assignment: {
     vehicleId: string
-    vehicle: { id: string; plateNumber: string } | null
+    vehicle: VehicleRow | null
   } | null
 }
 
@@ -86,6 +101,7 @@ export function mapRepair(r: RepairRow): TransportCostSource {
     date: r.reportedAt.toISOString(),
     vehicleId: r.vehicleId,
     vehicleLabel: r.vehicle?.plateNumber ?? "-",
+    ...vehicleAsset(r.vehicle),
     amount: toReferenceAmount(r.repairCost),
     paymentMethod: r.paymentMethod ?? null,
     documentNo: r.repairNumber,
@@ -101,6 +117,7 @@ export function mapTire(t: TireRow): TransportCostSource {
     date: t.workDate.toISOString(),
     vehicleId: t.vehicleId,
     vehicleLabel: t.vehicle?.plateNumber ?? "-",
+    ...vehicleAsset(t.vehicle),
     amount: toReferenceAmount(t.cost),
     paymentMethod: t.paymentMethod ?? null,
     documentNo: t.tireNumber,
@@ -119,6 +136,7 @@ export function mapJob(j: JobRow): TransportCostSource {
     date: date.toISOString(),
     vehicleId: j.assignment?.vehicleId ?? "",
     vehicleLabel: j.assignment?.vehicle?.plateNumber ?? "-",
+    ...vehicleAsset(j.assignment?.vehicle),
     amount: null,
     paymentMethod: null,
     documentNo: j.jobNumber,
@@ -126,7 +144,13 @@ export function mapJob(j: JobRow): TransportCostSource {
   }
 }
 
-const vehicleSelect = { select: { id: true, plateNumber: true } } as const
+const vehicleSelect = {
+  select: {
+    id: true,
+    plateNumber: true,
+    asset: { select: { id: true, code: true, name: true, deletedAt: true } },
+  },
+} as const
 const jobInclude = { assignment: { include: { vehicle: vehicleSelect } } } as const
 
 function branchWhere(branchIds: string[] | null) {

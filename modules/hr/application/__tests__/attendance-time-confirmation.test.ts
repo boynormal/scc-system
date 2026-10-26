@@ -28,6 +28,19 @@ describe("effectiveDayTimes", () => {
     expect(missing.confirmed).toBe(true)
   })
 
+  it("keeps a confirmed clock-in when the clock-out is still empty", () => {
+    const times = effectiveDayTimes(null, null, {
+      confirmedIn: at("01:00"),
+      confirmedOut: null,
+      sourceFirstIn: null,
+      sourceLastOut: null,
+    })
+    expect(times.confirmed).toBe(true)
+    expect(times.firstIn).toEqual(at("01:00"))
+    expect(times.lastOut).toBeNull()
+    expect(summarizeManHour(times.firstIn!, times.lastOut, TZ).lateMinutes).toBe(0)
+  })
+
   it("keeps the confirmation and flags a scan that arrived afterwards", () => {
     const times = effectiveDayTimes(at("01:40"), at("10:20"), {
       confirmedIn: at("01:00"),

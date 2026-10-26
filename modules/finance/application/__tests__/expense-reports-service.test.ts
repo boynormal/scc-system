@@ -13,8 +13,8 @@ const BRANCH_B = "12222222-2222-2222-2222-222222222222"
 const FUEL = "22222222-2222-2222-2222-222222222222"
 const TOLL = "23333333-3333-3333-3333-333333333333"
 const REPAIR = "24444444-4444-4444-4444-444444444444"
-const PROC_TRANSPORT = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-const PROC_MAINT = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+const CC_TRANSPORT = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+const CC_MAINT = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 const BILL_A = "99999999-9999-9999-9999-999999999999"
 
 const adminRoles: UserRole[] = [
@@ -29,8 +29,6 @@ function line(over: Partial<ReportRowInput["lines"][number]> & Pick<ReportRowInp
     sourceModule: null,
     costCenterId: null,
     costCenterName: null,
-    processId: null,
-    processName: null,
     expenseTypeCode: null,
     costObjectType: null,
     costObjectId: null,
@@ -52,37 +50,38 @@ function billA(): ReportRowInput {
         expenseTypeCode: "EXP-0301",
         expenseTypeName: "น้ำมันเชื้อเพลิง",
         netAmount: 5000,
-        processId: PROC_TRANSPORT,
-        processName: "ขนส่ง",
+        costCenterId: CC_TRANSPORT,
+        costCenterName: "ขนส่ง",
       }),
       line({
         expenseTypeId: TOLL,
         expenseTypeCode: "EXP-0202",
         expenseTypeName: "ค่าทางด่วน",
         netAmount: 1000,
-        processId: PROC_TRANSPORT,
-        processName: "ขนส่ง",
+        costCenterId: CC_TRANSPORT,
+        costCenterName: "ขนส่ง",
       }),
       line({
         expenseTypeId: REPAIR,
         expenseTypeCode: "EXP-0602",
         expenseTypeName: "ค่าซ่อมรถ",
         netAmount: 2000,
-        processId: PROC_MAINT,
-        processName: "ซ่อมบำรุง",
+        costCenterId: CC_MAINT,
+        costCenterName: "ซ่อมบำรุง",
       }),
     ],
   }
 }
 
 describe("expenseReportQuerySchema", () => {
-  it("accepts processId=none and sourceModule=MANUAL", () => {
+  it("accepts sourceModule=MANUAL and drops a legacy processId", () => {
     const ok = expenseReportQuerySchema.safeParse({
       processId: "none",
       sourceModule: "MANUAL",
       status: "APPROVED",
     })
     expect(ok.success).toBe(true)
+    if (ok.success) expect(ok.data).not.toHaveProperty("processId")
   })
 })
 
@@ -106,24 +105,21 @@ describe("Expense Reporting MVP", () => {
     expect(byId[FUEL].count).toBe(1)
   })
 
-  it("3. by Process split", () => {
+  it("3. by cost center split", () => {
     const out = aggregateExpenseReport([billA()])
-    const byId = Object.fromEntries(out.byProcess.map((b) => [b.key, b]))
-    expect(byId[PROC_TRANSPORT].total).toBe(6000)
-    expect(byId[PROC_TRANSPORT].label).toBe("ขนส่ง")
-    expect(byId[PROC_MAINT].total).toBe(2000)
+    const byId = Object.fromEntries(out.byCostCenter.map((b) => [b.key, b]))
+    expect(byId[CC_TRANSPORT].total).toBe(6000)
+    expect(byId[CC_TRANSPORT].label).toBe("ขนส่ง")
+    expect(byId[CC_MAINT].total).toBe(2000)
   })
 
-  it("4. Process × ExpenseType matrix equals line sums", () => {
+  it("4. the report has no process buckets or process matrix", () => {
     const out = aggregateExpenseReport([billA()])
-    expect(out.matrix.cells[PROC_TRANSPORT][FUEL]).toBe(5000)
-    expect(out.matrix.cells[PROC_TRANSPORT][TOLL]).toBe(1000)
-    expect(out.matrix.cells[PROC_TRANSPORT][REPAIR]).toBe(0)
-    expect(out.matrix.cells[PROC_MAINT][REPAIR]).toBe(2000)
-    expect(out.matrix.cells[PROC_MAINT][FUEL]).toBe(0)
+    expect(out).not.toHaveProperty("byProcess")
+    expect(out).not.toHaveProperty("matrix")
   })
 
-  it("5. NULL process is labeled ไม่ระบุ Process and stays in grandTotal", () => {
+  it("5. NULL dimensions are labeled and stay in grandTotal", () => {
     const historical: ReportRowInput = {
       id: "88888888-8888-8888-8888-888888888888",
       branchId: BRANCH_A,
@@ -135,7 +131,6 @@ describe("Expense Reporting MVP", () => {
           expenseTypeCode: "OTHER",
           expenseTypeName: "อื่นๆ",
           netAmount: 250,
-          processId: null,
           costCenterId: null,
           costObjectType: null,
         }),
@@ -143,23 +138,20 @@ describe("Expense Reporting MVP", () => {
     }
     const out = aggregateExpenseReport([historical])
     expect(out.grandTotal).toBe(250)
-    expect(out.byProcess[0].key).toBe("none")
-    expect(out.byProcess[0].label).toBe("ไม่ระบุ Process")
+    expect(out.byCostCenter[0].key).toBe("none")
     expect(out.byCostCenter[0].label).toBe("ไม่ระบุหน่วยงาน")
     expect(out.byCostObject[0].label).toBe("ไม่ระบุ")
     expect(out.byModule[0].key).toBe("MANUAL")
   })
 
-  it("6. Process=Transport filter: total 6000, bills 1, lines 2; type and matrix follow", () => {
-    const out = aggregateExpenseReport([billA()], { processId: PROC_TRANSPORT })
+  it("6. cost center filter: total 6000, bills 1, lines 2; type totals follow", () => {
+    const out = aggregateExpenseReport([billA()], { costCenterId: CC_TRANSPORT })
     expect(out.grandTotal).toBe(6000)
     expect(out.count).toBe(1)
     expect(out.lineCount).toBe(2)
     expect(out.byType.map((b) => b.key).sort()).toEqual([FUEL, TOLL].sort())
     expect(out.byType.find((b) => b.key === REPAIR)).toBeUndefined()
-    expect(out.matrix.processes.map((p) => p.key)).toEqual([PROC_TRANSPORT])
-    expect(out.matrix.cells[PROC_TRANSPORT][FUEL]).toBe(5000)
-    expect(out.matrix.cells[PROC_TRANSPORT][TOLL]).toBe(1000)
+    expect(Object.fromEntries(out.byType.map((b) => [b.key, b.total]))).toEqual({ [FUEL]: 5000, [TOLL]: 1000 })
   })
 
   it("7. no double counting: billCount is 1, total is line sum not header+lines", () => {
@@ -184,7 +176,6 @@ describe("Expense Reporting MVP", () => {
               expenseTypeId: FUEL,
               expenseTypeName: "น้ำมันเชื้อเพลิง",
               netAmount: 10,
-              processId: null,
               costCenterId: null,
               costObjectType: null,
               costObjectId: null,
@@ -210,13 +201,13 @@ describe("lineMatchesFilters", () => {
     expenseTypeId: FUEL,
     expenseTypeName: "น้ำมัน",
     netAmount: 1,
-    processId: PROC_TRANSPORT,
+    costCenterId: CC_TRANSPORT,
     sourceModule: null,
   })
 
-  it("processId=none matches only null process", () => {
-    expect(lineMatchesFilters(sample, { processId: "none" })).toBe(false)
-    expect(lineMatchesFilters({ ...sample, processId: null }, { processId: "none" })).toBe(true)
+  it("costCenterId matches only that cost center", () => {
+    expect(lineMatchesFilters(sample, { costCenterId: CC_TRANSPORT })).toBe(true)
+    expect(lineMatchesFilters(sample, { costCenterId: CC_MAINT })).toBe(false)
   })
 
   it("sourceModule=MANUAL matches only null module", () => {

@@ -30,7 +30,6 @@ export function newIncomeLineDraft(): IncomeLineDraft {
     taxAmount: "",
     discountAmount: "",
     costCenterId: "",
-    processId: "",
   }
 }
 

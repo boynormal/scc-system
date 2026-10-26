@@ -34,7 +34,7 @@ export function ListFrame({
         <PageHeader title={title ?? ""} description={description} actions={actions} />
       ) : null}
       {filters ? (
-        <DataPanel padding="sm" className={filterOverflow ? "relative z-20 overflow-visible" : undefined}>
+        <DataPanel padding="sm" className={filterOverflow ? "relative z-[21] overflow-visible" : undefined}>
           <div className={cn("flex items-end gap-2 text-foreground", filterOverflow ? "overflow-visible" : "overflow-x-auto")}>
             {filters}
           </div>

@@ -18,11 +18,10 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { GlassInput } from "@/components/glass"
-import { SubTabs } from "@/components/shell/sub-tabs"
 import { GlassCard } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { FinancePageHeader } from "./finance-page-header"
-import type { CostCenterRow, ExpenseTypeOption, Option, ProcessRow } from "./expense-types"
+import type { CostCenterRow, ExpenseTypeOption, Option } from "./expense-types"
 import {
   EXPENSE_STATUS_LABELS,
   FIN_GLASS_FIELD,
@@ -41,14 +40,11 @@ type Bucket = {
   code?: string | null
 }
 
-type MatrixAxis = { key: string; label: string; code?: string | null }
-
 type ReportFilters = {
   dateFrom: string
   dateTo: string
   branchId: string
   expenseTypeId: string
-  processId: string
   costCenterId: string
   sourceModule: string
   vendorId: string
@@ -65,14 +61,8 @@ type ReportData = {
   byBranch: Bucket[]
   byCostCenter: Bucket[]
   byType: Bucket[]
-  byProcess: Bucket[]
   byCostObject: Bucket[]
   byMonth: Bucket[]
-  matrix: {
-    processes: MatrixAxis[]
-    types: MatrixAxis[]
-    cells: Record<string, Record<string, number>>
-  }
 }
 
 const EMPTY: ReportData = {
@@ -85,10 +75,8 @@ const EMPTY: ReportData = {
   byBranch: [],
   byCostCenter: [],
   byType: [],
-  byProcess: [],
   byCostObject: [],
   byMonth: [],
-  matrix: { processes: [], types: [], cells: {} },
 }
 
 const REPORT_STATUSES: ExpenseStatus[] = ["DRAFT", "PENDING", "APPROVED", "PAID"]
@@ -303,7 +291,6 @@ export function ExpenseReportsView() {
     dateTo: today,
     branchId: "",
     expenseTypeId: "",
-    processId: "",
     costCenterId: "",
     sourceModule: "",
     vendorId: "",
@@ -314,7 +301,6 @@ export function ExpenseReportsView() {
   const [dateTo, setDateTo] = useState(today)
   const [branchId, setBranchId] = useState("")
   const [expenseTypeId, setExpenseTypeId] = useState("")
-  const [processId, setProcessId] = useState("")
   const [costCenterId, setCostCenterId] = useState("")
   const [sourceModule, setSourceModule] = useState("")
   const [vendorId, setVendorId] = useState("")
@@ -324,14 +310,11 @@ export function ExpenseReportsView() {
   const [loadedAt, setLoadedAt] = useState<string | null>(null)
   const [truncated, setTruncated] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
-  const [detailView, setDetailView] = useState<"breakdown" | "matrix">("breakdown")
-  const [matrixExpanded, setMatrixExpanded] = useState(false)
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(initialFilters)
   const requestId = useRef(0)
 
   const [branches, setBranches] = useState<Option[]>([])
   const [types, setTypes] = useState<ExpenseTypeOption[]>([])
-  const [processes, setProcesses] = useState<ProcessRow[]>([])
   const [costCenters, setCostCenters] = useState<CostCenterRow[]>([])
   const [vendors, setVendors] = useState<Option[]>([])
 
@@ -339,14 +322,12 @@ export function ExpenseReportsView() {
     void Promise.all([
       fetch("/api/finance/branches", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/expense-types", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/finance/processes", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/cost-centers", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/vendors", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([b, t, p, c, v]) => {
+      .then(([b, t, c, v]) => {
         setBranches((b.data ?? []) as Option[])
         setTypes((t.data ?? []) as ExpenseTypeOption[])
-        setProcesses((p.data ?? []) as ProcessRow[])
         setCostCenters((c.data ?? []) as CostCenterRow[])
         setVendors((v.data ?? []) as Option[])
       })
@@ -386,7 +367,7 @@ export function ExpenseReportsView() {
   }, [load])
 
   const hasExtraFilters = Boolean(
-    branchId || expenseTypeId || processId || costCenterId || sourceModule || vendorId || status
+    branchId || expenseTypeId || costCenterId || sourceModule || vendorId || status
   )
   const isCurrentMonth = dateFrom === bangkokMonthStart() && dateTo === today
   const isTwoMonths = dateFrom === addMonthsYmd(bangkokMonthStart(), -1) && dateTo === today
@@ -405,7 +386,6 @@ export function ExpenseReportsView() {
     setDateTo(reset.dateTo)
     setBranchId("")
     setExpenseTypeId("")
-    setProcessId("")
     setCostCenterId("")
     setSourceModule("")
     setVendorId("")
@@ -423,7 +403,6 @@ export function ExpenseReportsView() {
       dateTo,
       branchId,
       expenseTypeId,
-      processId,
       costCenterId,
       sourceModule,
       vendorId,
@@ -434,7 +413,6 @@ export function ExpenseReportsView() {
   function exportCsv() {
     const sections: Array<[string, Bucket[]]> = [
       ["ตามประเภท", data.byType],
-      ["ตามกระบวนการ", data.byProcess],
       ["ตามหน่วยงาน", data.byCostCenter],
       ["ตามโมดูลต้นทาง", data.byModule],
       ["ตามวัตถุต้นทุน", data.byCostObject],
@@ -470,13 +448,6 @@ export function ExpenseReportsView() {
   }
 
   const billsHref = expensesHref(listFilters)
-  const matrixProcesses = matrixExpanded
-    ? data.matrix.processes
-    : data.matrix.processes.slice(0, 8)
-  const matrixTypes = matrixExpanded ? data.matrix.types : data.matrix.types.slice(0, 8)
-  const matrixIsLimited =
-    data.matrix.processes.length > matrixProcesses.length ||
-    data.matrix.types.length > matrixTypes.length
   const presetClass = (active: boolean) =>
     cn(
       "rounded-full border px-3 py-1 text-xs font-medium",
@@ -489,7 +460,7 @@ export function ExpenseReportsView() {
     <div className="space-y-6">
       <FinancePageHeader
         title="รายงานค่าใช้จ่าย"
-        description="สรุปยอดสุทธิตามประเภทและกระบวนการ — ไม่รวมรายการยกเลิก/ปฏิเสธ"
+        description="สรุปยอดสุทธิตามประเภทและหน่วยงาน — ไม่รวมรายการยกเลิก/ปฏิเสธ"
         actions={
           <>
             <Button variant="outline" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={exportCsv} disabled={loading}>
@@ -585,17 +556,6 @@ export function ExpenseReportsView() {
             onChange={(e) => setExpenseTypeId(e.target.value)}
             className={cn("min-w-[12rem]", FIN_GLASS_FIELD)}
             options={[{ value: "", label: "ทั้งหมด" }, ...types.map((t) => ({ value: t.id, label: typeOptionLabel(t) }))]}
-          />
-          <Select
-            label="กระบวนการ"
-            value={processId}
-            onChange={(e) => setProcessId(e.target.value)}
-            className={cn("min-w-[12rem]", FIN_GLASS_FIELD)}
-            options={[
-              { value: "", label: "ทั้งหมด" },
-              { value: "none", label: "ไม่ระบุ Process" },
-              ...processes.map((p) => ({ value: p.id, label: p.name })),
-            ]}
           />
           <Select
             label="หน่วยงาน"
@@ -718,126 +678,39 @@ export function ExpenseReportsView() {
           <h2 className="text-lg font-bold text-foreground">รายละเอียดเชิงวิเคราะห์</h2>
           <p className="text-sm text-muted-foreground">กดรายการเพื่อเจาะไปยังบิลต้นทาง</p>
         </div>
-        <SubTabs
-          size="sm"
-          aria-label="มุมมองรายละเอียด"
-          activeKey={detailView}
-          onChange={(id) => setDetailView(id as "breakdown" | "matrix")}
-          items={[
-            { key: "breakdown", label: "แยกตามมิติ" },
-            { key: "matrix", label: "ตารางไขว้" },
-          ]}
-        />
       </div>
 
-      {detailView === "breakdown" ? (
-        <div className="grid items-start gap-3 xl:grid-cols-2">
-          <ReportTable
-            title="ค่าใช้จ่ายตามประเภท"
-            rows={data.byType}
-            hrefFor={(r) => expensesHref(listFilters, { expenseTypeId: r.key })}
-            preview={10}
-          />
-          <ReportTable
-            title="ค่าใช้จ่ายตามกระบวนการ"
-            rows={data.byProcess}
-            hrefFor={(r) => expensesHref(listFilters, { processId: r.key })}
-          />
-          <ReportTable
-            title="ตามหน่วยงาน"
-            rows={data.byCostCenter}
-            hrefFor={(r) =>
-              r.key === "none" ? null : expensesHref(listFilters, { costCenterId: r.key })
-            }
-          />
-          <ReportTable
-            title="ตามโมดูลต้นทาง"
-            rows={data.byModule}
-            translateLabel={(key) => SOURCE_MODULE_LABELS[key] ?? key}
-            hrefFor={(r) => expensesHref(listFilters, { sourceModule: r.key })}
-          />
-          <ReportTable title="ตามวัตถุต้นทุน" rows={data.byCostObject} />
-          <ReportTable
-            title="ตามสาขา"
-            rows={data.byBranch}
-            hrefFor={(r) => expensesHref(listFilters, { branchId: r.key })}
-          />
-          <ReportTable
-            title="ตามเดือน"
-            rows={data.byMonth.map((row) => ({ ...row, label: formatMonthLabel(row.key) }))}
-          />
-        </div>
-      ) : (
-      <AppDataTablePanel className="p-4">
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">กระบวนการ × ประเภทค่าใช้จ่าย</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              แสดงมิติที่มียอดสูงสุดก่อน เพื่อให้ตารางยังอ่านง่ายเมื่อข้อมูลเพิ่มขึ้น
-            </p>
-          </div>
-          {matrixIsLimited && (
-            <Button type="button" size="sm" variant="outline" onClick={() => setMatrixExpanded(true)}>
-              แสดงตารางทั้งหมด
-            </Button>
-          )}
-          {matrixExpanded && (
-            <Button type="button" size="sm" variant="ghost" onClick={() => setMatrixExpanded(false)}>
-              ย่อตาราง
-            </Button>
-          )}
-        </div>
-        {data.matrix.processes.length === 0 || data.matrix.types.length === 0 ? (
-          <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</p>
-        ) : (
-          <div className="rounded-lg border border-border">
-            <AppDataTable className="w-max min-w-full">
-              <AppDataTableHead>
-                <tr>
-                  <th className="left-0 z-30">กระบวนการ</th>
-                  {matrixTypes.map((t) => (
-                    <th key={t.key} className="max-w-48 whitespace-nowrap text-right">
-                      {t.label}
-                    </th>
-                  ))}
-                </tr>
-              </AppDataTableHead>
-              <AppDataTableBody>
-                {matrixProcesses.map((p) => (
-                  <tr key={p.key}>
-                    <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium dark:bg-slate-900">
-                      <Link
-                        href={expensesHref(listFilters, { processId: p.key })}
-                        className="text-emerald-700 hover:underline dark:text-emerald-300"
-                      >
-                        {p.label}
-                      </Link>
-                    </td>
-                    {matrixTypes.map((t) => {
-                      const value = data.matrix.cells[p.key]?.[t.key] ?? 0
-                      return (
-                        <td key={t.key} className="whitespace-nowrap px-4 py-2 text-right tabular-nums">
-                          {value === 0 ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : (
-                            <Link
-                              href={expensesHref(listFilters, { processId: p.key, expenseTypeId: t.key })}
-                              className="font-medium text-foreground hover:text-emerald-700 hover:underline dark:hover:text-emerald-300"
-                            >
-                              {formatBaht(value)}
-                            </Link>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </AppDataTableBody>
-            </AppDataTable>
-          </div>
-        )}
-      </AppDataTablePanel>
-      )}
+      <div className="grid items-start gap-3 xl:grid-cols-2">
+        <ReportTable
+          title="ค่าใช้จ่ายตามประเภท"
+          rows={data.byType}
+          hrefFor={(r) => expensesHref(listFilters, { expenseTypeId: r.key })}
+          preview={10}
+        />
+        <ReportTable
+          title="ตามหน่วยงาน"
+          rows={data.byCostCenter}
+          hrefFor={(r) =>
+            r.key === "none" ? null : expensesHref(listFilters, { costCenterId: r.key })
+          }
+        />
+        <ReportTable
+          title="ตามโมดูลต้นทาง"
+          rows={data.byModule}
+          translateLabel={(key) => SOURCE_MODULE_LABELS[key] ?? key}
+          hrefFor={(r) => expensesHref(listFilters, { sourceModule: r.key })}
+        />
+        <ReportTable title="ตามวัตถุต้นทุน" rows={data.byCostObject} />
+        <ReportTable
+          title="ตามสาขา"
+          rows={data.byBranch}
+          hrefFor={(r) => expensesHref(listFilters, { branchId: r.key })}
+        />
+        <ReportTable
+          title="ตามเดือน"
+          rows={data.byMonth.map((row) => ({ ...row, label: formatMonthLabel(row.key) }))}
+        />
+      </div>
 
       {loadedAt && (
         <p className="text-xs text-muted-foreground">อัปเดตล่าสุด {loadedAt}</p>

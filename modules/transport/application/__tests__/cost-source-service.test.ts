@@ -100,3 +100,53 @@ describe("mapRepair / mapTire / mapJob", () => {
     expect(row).not.toHaveProperty("stops")
   })
 })
+
+describe("vehicle asset on cost sources", () => {
+  const ASSET: { id: string; code: string; name: string; deletedAt: Date | null } = {
+    id: "a1",
+    code: "AST-001",
+    name: "รถบรรทุก 6 ล้อ",
+    deletedAt: null,
+  }
+  const tire = (vehicle: typeof VEHICLE & { asset?: typeof ASSET | null }) =>
+    mapTire({
+      id: "t1",
+      branchId: "b1",
+      workDate: new Date("2026-08-02T00:00:00.000Z"),
+      vehicleId: "v1",
+      cost: null,
+      paymentMethod: null,
+      tireNumber: "TY-2026-00001",
+      vehicle,
+    })
+
+  it("passes the linked asset id and label", () => {
+    const row = tire({ ...VEHICLE, asset: ASSET })
+    expect(row.assetId).toBe("a1")
+    expect(row.assetLabel).toBe("AST-001 — รถบรรทุก 6 ล้อ")
+    expect(row.documentNo).toBe("TY-2026-00001")
+  })
+
+  it("leaves the asset empty when the vehicle has none or it was deleted", () => {
+    expect(tire({ ...VEHICLE, asset: null }).assetId).toBeNull()
+    expect(tire(VEHICLE).assetId).toBeNull()
+    expect(tire({ ...VEHICLE, asset: { ...ASSET, deletedAt: new Date() } }).assetId).toBeNull()
+    expect(tire({ ...VEHICLE, asset: null }).documentNo).toBe("TY-2026-00001")
+  })
+
+  it("takes the asset from the job's assigned vehicle", () => {
+    const job = {
+      id: "job-1",
+      branchId: "b1",
+      jobNumber: "JOB-001",
+      customerName: null,
+      scheduledDate: null,
+      createdAt: new Date("2026-08-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-03T00:00:00.000Z"),
+    }
+    const linked = mapJob({ ...job, assignment: { vehicleId: "v1", vehicle: { ...VEHICLE, asset: ASSET } } })
+    expect(linked.assetId).toBe("a1")
+    expect(linked.documentNo).toBe("JOB-001")
+    expect(mapJob({ ...job, assignment: null }).assetId).toBeNull()
+  })
+})

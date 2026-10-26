@@ -1,38 +1,65 @@
-import type { CostCenterRow, ExpenseTypeOption, LineDraft, ProcessRow } from "./expense-types"
+import type { CostCenterRow, ExpenseTypeOption, LineDraft } from "./expense-types"
 
 export function isLegacyUnrestricted(type?: ExpenseTypeOption | null): boolean {
   if (!type) return true
   const noRequires =
     !type.requiresCostCenter &&
-    !type.requiresProcess &&
     !type.requiresVehicle &&
     !type.requiresMachine &&
     !type.requiresLocation
-  const noMaps = (type.allowedCostCenterIds?.length ?? 0) === 0 && (type.allowedProcessIds?.length ?? 0) === 0
+  const noMaps = (type.allowedCostCenterIds?.length ?? 0) === 0
   return noRequires && noMaps
+}
+
+export const TRANSPORT_COST_CENTER_NAME = "ขนส่ง"
+
+/** Active cost center that transport-sourced lines start with, if the company has one. */
+export function transportCostCenterId(costCenters: CostCenterRow[]): string {
+  return costCenters.find((c) => c.isActive && c.name.trim() === TRANSPORT_COST_CENTER_NAME)?.id ?? ""
+}
+
+export function prefillSourceCostCenter(line: LineDraft, transportCcId: string): LineDraft {
+  if (line.sourceModule !== "TRANSPORT" || line.costCenterId || !transportCcId) return line
+  return { ...line, costCenterId: transportCcId }
 }
 
 export function applyTypeChange(draft: LineDraft, type: ExpenseTypeOption | undefined): LineDraft {
   if (!type) return { ...draft, expenseTypeId: "" }
   const allowedCc = type.allowedCostCenterIds ?? []
-  const allowedProc = type.allowedProcessIds ?? []
   const next: LineDraft = { ...draft, expenseTypeId: type.id }
+  const keepSourceCc =
+    draft.sourceModule === "TRANSPORT" &&
+    Boolean(draft.costCenterId) &&
+    (allowedCc.length === 0 || allowedCc.includes(draft.costCenterId))
 
-  if (type.defaultCostCenterId) {
-    next.costCenterId = type.defaultCostCenterId
-  } else if (allowedCc.length && next.costCenterId && !allowedCc.includes(next.costCenterId)) {
-    next.costCenterId = ""
+  if (!keepSourceCc) {
+    if (type.defaultCostCenterId) {
+      next.costCenterId = type.defaultCostCenterId
+    } else if (allowedCc.length && next.costCenterId && !allowedCc.includes(next.costCenterId)) {
+      next.costCenterId = ""
+    }
   }
 
-  if (type.defaultProcessId) {
-    next.processId = type.defaultProcessId
-  } else if (allowedProc.length && next.processId && !allowedProc.includes(next.processId)) {
-    next.processId = ""
+  const expected = type.requiresVehicle
+    ? "VEHICLE"
+    : type.requiresMachine
+      ? "MACHINE"
+      : type.requiresLocation
+        ? "LOCATION"
+        : null
+  if (expected) {
+    if (next.costObjectType !== expected) {
+      if (next.costObjectType) {
+        next.costObjectId = ""
+        next.costObjectLabel = ""
+      }
+      next.costObjectType = expected
+    }
+  } else if (next.costObjectType === "MACHINE" || next.costObjectType === "LOCATION") {
+    next.costObjectType = ""
+    next.costObjectId = ""
+    next.costObjectLabel = ""
   }
-
-  if (type.requiresVehicle) next.costObjectType = "VEHICLE"
-  else if (type.requiresMachine) next.costObjectType = "MACHINE"
-  else if (type.requiresLocation) next.costObjectType = "LOCATION"
 
   return next
 }
@@ -50,10 +77,6 @@ function allowlistOrActive<T extends { id: string; isActive: boolean }>(
 
 export function costCenterOptions(type: ExpenseTypeOption | undefined, costCenters: CostCenterRow[], currentId: string) {
   return allowlistOrActive(costCenters, type?.allowedCostCenterIds, currentId)
-}
-
-export function processOptions(type: ExpenseTypeOption | undefined, processes: ProcessRow[], currentId: string) {
-  return allowlistOrActive(processes, type?.allowedProcessIds, currentId)
 }
 
 export function anyLineRequiresVendor(lines: LineDraft[], types: ExpenseTypeOption[]): boolean {
@@ -77,18 +100,6 @@ export function validateLineDraft(
     return "หน่วยงานต้นทุนไม่อยู่ในรายการที่อนุญาต"
   }
 
-  if (type.requiresProcess && !draft.processId && !type.defaultProcessId) {
-    return "ต้องระบุกระบวนการ"
-  }
-  const allowedProc = type.allowedProcessIds ?? []
-  if (allowedProc.length && draft.processId && !allowedProc.includes(draft.processId)) {
-    return "กระบวนการไม่อยู่ในรายการที่อนุญาต"
-  }
-
-  if (type.requiresVehicle) {
-    if (draft.costObjectType !== "VEHICLE") return "ประเภทวัตถุต้นทุนต้องเป็นรถ"
-    if (!draft.costObjectLabel.trim()) return "ต้องระบุรถ"
-  }
   if (type.requiresMachine) {
     if (draft.costObjectType !== "MACHINE") return "ประเภทวัตถุต้นทุนต้องเป็นเครื่องจักร"
     if (!draft.costObjectLabel.trim()) return "ต้องระบุเครื่องจักร"

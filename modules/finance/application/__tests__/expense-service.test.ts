@@ -18,8 +18,6 @@ import {
 const CC_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 const CC_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 const CC_OUT = "cccccccc-cccc-cccc-cccc-cccccccccccc"
-const PROC_A = "dddddddd-dddd-dddd-dddd-dddddddddddd"
-const PROC_OUT = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 const UNIT_L = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 
 function meta(over: Partial<TypeDimensionMeta> = {}): TypeDimensionMeta {
@@ -30,18 +28,14 @@ function meta(over: Partial<TypeDimensionMeta> = {}): TypeDimensionMeta {
     requiresMachine: false,
     requiresLocation: false,
     requiresCostCenter: false,
-    requiresProcess: false,
     allowedCostCenterIds: [],
     defaultCostCenterId: null,
-    allowedProcessIds: [],
-    defaultProcessId: null,
     ...over,
   }
 }
 
 const lookup: DimensionLookup = {
   activeCostCenterIds: new Set([CC_A, CC_B]),
-  activeProcessIds: new Set([PROC_A]),
   unitsById: new Map([[UNIT_L, { code: "L" }]]),
 }
 
@@ -50,7 +44,6 @@ function line(
     lineNo: number
     pricingMode: "QTY_PRICE" | "AMOUNT"
     costCenterId: string | null
-    processId: string | null
     unitId: string | null
     costObjectType: (typeof EXPENSE_COST_OBJECT_TYPES)[number] | null
     costObjectLabel: string | null
@@ -60,7 +53,6 @@ function line(
     lineNo: 1,
     pricingMode: "AMOUNT" as const,
     costCenterId: null,
-    processId: null,
     unitId: null,
     costObjectType: null,
     costObjectLabel: null,
@@ -212,10 +204,10 @@ describe("expenseLineInputSchema", () => {
     expect(ok.success).toBe(true)
   })
 
-  it("round-trips processId, unitId, and LOCATION", () => {
+  it("round-trips unitId and LOCATION, and drops a legacy processId", () => {
     const ok = expenseLineInputSchema.safeParse({
       expenseTypeId: "22222222-2222-2222-2222-222222222222",
-      processId: PROC_A,
+      processId: "dddddddd-dddd-dddd-dddd-dddddddddddd",
       unitId: UNIT_L,
       unitCode: "L",
       costObjectType: "LOCATION",
@@ -223,7 +215,7 @@ describe("expenseLineInputSchema", () => {
     })
     expect(ok.success).toBe(true)
     if (ok.success) {
-      expect(ok.data.processId).toBe(PROC_A)
+      expect(ok.data).not.toHaveProperty("processId")
       expect(ok.data.unitId).toBe(UNIT_L)
       expect(ok.data.costObjectType).toBe("LOCATION")
     }
@@ -276,22 +268,6 @@ describe("assertLineDimensions", () => {
     ).toThrow("หน่วยงานต้นทุนไม่อยู่ในรายการที่อนุญาต")
   })
 
-  it("requires a process when the type says so", () => {
-    expect(() =>
-      assertLineDimensions(line({}), meta({ requiresProcess: true }), lookup)
-    ).toThrow("ต้องระบุกระบวนการ")
-  })
-
-  it("rejects a process outside the allowlist", () => {
-    expect(() =>
-      assertLineDimensions(
-        line({ processId: PROC_OUT }),
-        meta({ allowedProcessIds: [PROC_A] }),
-        lookup
-      )
-    ).toThrow("กระบวนการไม่อยู่ในรายการที่อนุญาต")
-  })
-
   it("allows any active company cost center when the type has no maps", () => {
     const out = assertLineDimensions(line({ costCenterId: CC_B }), meta(), lookup)
     expect(out.costCenterId).toBe(CC_B)
@@ -307,9 +283,12 @@ describe("assertLineDimensions", () => {
     expect(() =>
       assertLineDimensions(line({ costObjectType: "MACHINE", costObjectLabel: "X" }), meta({ requiresVehicle: true }), lookup)
     ).toThrow("ประเภทวัตถุต้นทุนต้องเป็นรถ")
-    expect(() =>
-      assertLineDimensions(line({ costObjectType: "VEHICLE", costObjectLabel: "  " }), meta({ requiresVehicle: true }), lookup)
-    ).toThrow("ต้องระบุรถ")
+    const blank = assertLineDimensions(
+      line({ costObjectType: "VEHICLE", costObjectLabel: "  " }),
+      meta({ requiresVehicle: true }),
+      lookup
+    )
+    expect(blank.costObjectLabel).toBeNull()
     const ok = assertLineDimensions(
       line({ costObjectType: "VEHICLE", costObjectLabel: "70-1234" }),
       meta({ requiresVehicle: true }),
@@ -361,7 +340,7 @@ describe("assertLineDimensions", () => {
   it("keeps legacy types unrestricted (no requires, no maps)", () => {
     const out = assertLineDimensions(line({}), meta(), lookup)
     expect(out.costCenterId).toBeNull()
-    expect(out.processId).toBeNull()
+    expect(out).not.toHaveProperty("processId")
     expect(out.costObjectType).toBeNull()
   })
 })

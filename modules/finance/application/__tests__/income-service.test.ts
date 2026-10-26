@@ -27,8 +27,6 @@ const LINE = "66666666-6666-6666-6666-666666666666"
 const TYPE = "77777777-7777-7777-7777-777777777777"
 const TYPE_2 = "78777777-7777-7777-7777-777777777777"
 const CC = "88888888-8888-8888-8888-888888888888"
-const PROC = "99999999-9999-9999-9999-999999999999"
-
 const manager: UserRole[] = [
   {
     branchId: BRANCH_A,
@@ -98,10 +96,8 @@ function row(over: { status?: string; branchId?: string } = {}) {
         discountAmount: 0,
         netAmount: 1070,
         costCenterId: null,
-        processId: null,
         incomeType: { id: TYPE, code: "IT-0001", name: "ค่าเช่า" },
         costCenter: null,
-        process: null,
         unit: null,
       },
     ],
@@ -304,7 +300,6 @@ describe("RECEIVED edits", () => {
           taxAmount: 70,
           discountAmount: 0,
           costCenterId: null,
-          processId: null,
         },
       ],
     }
@@ -324,7 +319,6 @@ describe("RECEIVED edits", () => {
       incomeType: { findMany: vi.fn().mockResolvedValue([{ id: TYPE_2 }]) },
       unit: { findMany: vi.fn().mockResolvedValue([]) },
       costCenter: { findMany: vi.fn().mockResolvedValue([{ id: CC }]) },
-      process: { findMany: vi.fn().mockResolvedValue([{ id: PROC }]) },
       auditLog: { create: vi.fn().mockResolvedValue({}) },
       $transaction: vi.fn(),
     }
@@ -351,14 +345,14 @@ describe("RECEIVED edits", () => {
     })
   })
 
-  it("allows type, cost center, and process changes with a reason", async () => {
+  it("allows type and cost center changes with a reason", async () => {
     const db = receivedDb()
     await updateIncome(asDb(db), {
       ...base,
       roles: clerk,
       input: {
         reason: "จัดประเภทใหม่",
-        lines: [{ id: LINE, incomeTypeId: TYPE_2, costCenterId: CC, processId: PROC, description: "ค่าเช่าห้อง" }],
+        lines: [{ id: LINE, incomeTypeId: TYPE_2, costCenterId: CC, description: "ค่าเช่าห้อง" }],
       },
     })
     expect(db.incomeLine.update).toHaveBeenCalledTimes(1)
@@ -432,8 +426,8 @@ describe("aggregateIncomeReport", () => {
       branchName: "A",
       incomeDate: "2026-10-01",
       lines: [
-        { netAmount: 1000, incomeTypeId: TYPE, incomeTypeCode: "IT-0001", incomeTypeName: "ค่าเช่า", costCenterId: CC, costCenterName: "ขนส่ง", processId: null },
-        { netAmount: 200, incomeTypeId: TYPE_2, incomeTypeName: "ค่าชั่ง", costCenterId: null, processId: PROC, processName: "ชั่งรถ" },
+        { netAmount: 1000, incomeTypeId: TYPE, incomeTypeCode: "IT-0001", incomeTypeName: "ค่าเช่า", costCenterId: CC, costCenterName: "ขนส่ง" },
+        { netAmount: 200, incomeTypeId: TYPE_2, incomeTypeName: "ค่าชั่ง", costCenterId: null },
       ],
     },
     {
@@ -442,7 +436,7 @@ describe("aggregateIncomeReport", () => {
       branchId: BRANCH_B,
       branchName: "B",
       incomeDate: "2026-11-03",
-      lines: [{ netAmount: 300, incomeTypeId: TYPE_2, incomeTypeName: "ค่าชั่ง", costCenterId: null, processId: PROC, processName: "ชั่งรถ" }],
+      lines: [{ netAmount: 300, incomeTypeId: TYPE_2, incomeTypeName: "ค่าชั่ง", costCenterId: null }],
     },
     {
       id: "r3",
@@ -450,7 +444,7 @@ describe("aggregateIncomeReport", () => {
       branchId: BRANCH_A,
       branchName: "A",
       incomeDate: "2026-10-02",
-      lines: [{ netAmount: 9999, incomeTypeId: TYPE, incomeTypeName: "ค่าเช่า", costCenterId: null, processId: null }],
+      lines: [{ netAmount: 9999, incomeTypeId: TYPE, incomeTypeName: "ค่าเช่า", costCenterId: null }],
     },
     {
       id: "r4",
@@ -458,7 +452,7 @@ describe("aggregateIncomeReport", () => {
       branchId: BRANCH_A,
       branchName: "A",
       incomeDate: "2026-10-02",
-      lines: [{ netAmount: 8888, incomeTypeId: TYPE, incomeTypeName: "ค่าเช่า", costCenterId: null, processId: null }],
+      lines: [{ netAmount: 8888, incomeTypeId: TYPE, incomeTypeName: "ค่าเช่า", costCenterId: null }],
     },
   ]
 
@@ -475,11 +469,12 @@ describe("aggregateIncomeReport", () => {
     ])
     expect(r.byType[0]?.label).toBe("IT-0001 · ค่าเช่า")
     expect(r.byMonth.map((b) => b.key)).toEqual(["2026-10", "2026-11"])
-    expect(r.byProcess.find((b) => b.key === "none")?.total).toBe(1000)
+    expect(r.byCostCenter.find((b) => b.key === "none")?.total).toBe(500)
+    expect(r).not.toHaveProperty("byProcess")
   })
 
   it("applies line filters including the none key", () => {
-    expect(aggregateIncomeReport(rows, { processId: PROC }).grandTotal).toBe(500)
+    expect(aggregateIncomeReport(rows, { costCenterId: CC }).grandTotal).toBe(1000)
     expect(aggregateIncomeReport(rows, { costCenterId: "none" }).grandTotal).toBe(500)
     expect(aggregateIncomeReport(rows, { incomeTypeId: TYPE }).grandTotal).toBe(1000)
   })

@@ -52,7 +52,7 @@ async function nextMasterCode(count: number, prefix: string): Promise<string> {
  */
 async function assertNoHierarchyCycle(
   db: PrismaClient,
-  model: "expenseCategory" | "process",
+  model: "expenseCategory",
   id: string,
   parentId: string
 ): Promise<void> {
@@ -63,10 +63,10 @@ async function assertNoHierarchyCycle(
     if (current === id) throw new ValidationError("ความสัมพันธ์รายการแม่-ลูกวนซ้ำ")
     if (visited.has(current)) break
     visited.add(current)
-    const node: { parentId: string | null } | null =
-      model === "expenseCategory"
-        ? await db.expenseCategory.findUnique({ where: { id: current }, select: { parentId: true } })
-        : await db.process.findUnique({ where: { id: current }, select: { parentId: true } })
+    const node: { parentId: string | null } | null = await db[model].findUnique({
+      where: { id: current },
+      select: { parentId: true },
+    })
     current = node?.parentId ?? null
   }
 }
@@ -79,18 +79,10 @@ const costCenterMapInput = z.object({
   isAllowed: z.boolean().optional(),
 })
 
-const processMapInput = z.object({
-  processId: z.string().uuid(),
-  isDefault: z.boolean().optional(),
-  isAllowed: z.boolean().optional(),
-})
-
 type NormalizedCostCenterMap = { costCenterId: string; isDefault: boolean; isAllowed: boolean }
-type NormalizedProcessMap = { processId: string; isDefault: boolean; isAllowed: boolean }
 
-/** Test-only handles for the pure mapping-normalization invariants. */
+/** Test-only handle for the pure mapping-normalization invariants. */
 export const _normalizeCostCenterMapsForTests = normalizeCostCenterMaps
-export const _normalizeProcessMapsForTests = normalizeProcessMaps
 
 /**
  * Enforce mapping invariants (constraints 4-5): isDefault ⇒ isAllowed, no
@@ -114,22 +106,6 @@ function normalizeCostCenterMaps(
   return out
 }
 
-function normalizeProcessMaps(input: z.infer<typeof processMapInput>[]): NormalizedProcessMap[] {
-  const seen = new Set<string>()
-  let defaults = 0
-  const out: NormalizedProcessMap[] = []
-  for (const m of input) {
-    if (seen.has(m.processId)) throw new ValidationError("กระบวนการซ้ำในรายการที่อนุญาต")
-    seen.add(m.processId)
-    const isDefault = m.isDefault ?? false
-    const isAllowed = isDefault ? true : m.isAllowed ?? true
-    if (isDefault) defaults += 1
-    out.push({ processId: m.processId, isDefault, isAllowed })
-  }
-  if (defaults > 1) throw new ValidationError("กำหนดกระบวนการเริ่มต้นได้เพียงรายการเดียว")
-  return out
-}
-
 async function assertActiveCostCenters(
   db: PrismaClient,
   companyId: string,
@@ -140,18 +116,6 @@ async function assertActiveCostCenters(
     where: { companyId, isActive: true, id: { in: ids } },
   })
   if (found !== ids.length) throw new ValidationError("มีหน่วยงานที่ไม่ถูกต้องหรือถูกปิดใช้งาน")
-}
-
-async function assertActiveProcesses(
-  db: PrismaClient,
-  companyId: string,
-  ids: string[]
-): Promise<void> {
-  if (ids.length === 0) return
-  const found = await db.process.count({
-    where: { companyId, isActive: true, id: { in: ids } },
-  })
-  if (found !== ids.length) throw new ValidationError("มีกระบวนการที่ไม่ถูกต้องหรือถูกปิดใช้งาน")
 }
 
 async function assertCategoryValid(
@@ -184,9 +148,7 @@ export const expenseTypeSchema = z.object({
   requiresMachine: z.boolean().optional(),
   requiresLocation: z.boolean().optional(),
   requiresCostCenter: z.boolean().optional(),
-  requiresProcess: z.boolean().optional(),
   costCenters: z.array(costCenterMapInput).optional(),
-  processes: z.array(processMapInput).optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -209,14 +171,11 @@ function serializeExpenseType(r: {
   requiresMachine: boolean
   requiresLocation: boolean
   requiresCostCenter: boolean
-  requiresProcess: boolean
   isActive: boolean
-  _count?: { costCenterMaps: number; processMaps: number }
+  _count?: { costCenterMaps: number }
   costCenterMaps?: Array<{ costCenterId: string; isDefault: boolean; isAllowed: boolean }>
-  processMaps?: Array<{ processId: string; isDefault: boolean; isAllowed: boolean }>
 }) {
   const ccMaps = r.costCenterMaps ?? []
-  const procMaps = r.processMaps ?? []
   return {
     id: r.id,
     code: r.code,
@@ -234,14 +193,10 @@ function serializeExpenseType(r: {
     requiresMachine: r.requiresMachine,
     requiresLocation: r.requiresLocation,
     requiresCostCenter: r.requiresCostCenter,
-    requiresProcess: r.requiresProcess,
     isActive: r.isActive,
     costCenterCount: r._count?.costCenterMaps ?? ccMaps.length,
-    processCount: r._count?.processMaps ?? procMaps.length,
     allowedCostCenterIds: ccMaps.filter((m) => m.isAllowed).map((m) => m.costCenterId),
     defaultCostCenterId: ccMaps.find((m) => m.isDefault)?.costCenterId ?? null,
-    allowedProcessIds: procMaps.filter((m) => m.isAllowed).map((m) => m.processId),
-    defaultProcessId: procMaps.find((m) => m.isDefault)?.processId ?? null,
   }
 }
 
@@ -257,9 +212,8 @@ export async function listExpenseTypes(
     },
     include: {
       category: { select: { name: true } },
-      _count: { select: { costCenterMaps: true, processMaps: true } },
+      _count: { select: { costCenterMaps: true } },
       costCenterMaps: { select: { costCenterId: true, isDefault: true, isAllowed: true } },
-      processMaps: { select: { processId: true, isDefault: true, isAllowed: true } },
     },
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     take: 500,
@@ -290,29 +244,6 @@ export async function getExpenseTypeCostCenters(
   }
 }
 
-/** Allowed/default processes for one expense item. */
-export async function getExpenseTypeProcesses(
-  db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; id: string }
-) {
-  if (!canReadForForms(params.roles)) throw new ForbiddenError()
-  const rows = await db.expenseTypeProcess.findMany({
-    where: { expenseTypeId: params.id, companyId: params.companyId },
-    include: { process: { select: { code: true, name: true, isActive: true } } },
-    orderBy: [{ isDefault: "desc" }],
-  })
-  return {
-    data: rows.map((r) => ({
-      targetId: r.processId,
-      code: r.process.code,
-      name: r.process.name,
-      isActive: r.process.isActive,
-      isDefault: r.isDefault,
-      isAllowed: r.isAllowed,
-    })),
-  }
-}
-
 export async function createExpenseType(
   db: PrismaClient,
   params: { companyId: string; roles: UserRole[]; input: ExpenseTypeInput }
@@ -333,9 +264,7 @@ export async function createExpenseType(
   if (params.input.categoryId) await assertCategoryValid(db, params.companyId, params.input.categoryId)
 
   const ccMaps = params.input.costCenters ? normalizeCostCenterMaps(params.input.costCenters) : []
-  const procMaps = params.input.processes ? normalizeProcessMaps(params.input.processes) : []
   await assertActiveCostCenters(db, params.companyId, ccMaps.map((m) => m.costCenterId))
-  await assertActiveProcesses(db, params.companyId, procMaps.map((m) => m.processId))
 
   const row = await db.$transaction(async (tx) => {
     const created = await tx.expenseType.create({
@@ -355,12 +284,11 @@ export async function createExpenseType(
         requiresMachine: params.input.requiresMachine ?? false,
         requiresLocation: params.input.requiresLocation ?? false,
         requiresCostCenter: params.input.requiresCostCenter ?? false,
-        requiresProcess: params.input.requiresProcess ?? false,
         isActive: params.input.isActive ?? true,
       },
       include: {
         category: { select: { name: true } },
-        _count: { select: { costCenterMaps: true, processMaps: true } },
+        _count: { select: { costCenterMaps: true } },
       },
     })
     if (ccMaps.length) {
@@ -369,17 +297,6 @@ export async function createExpenseType(
           companyId: params.companyId,
           expenseTypeId: created.id,
           costCenterId: m.costCenterId,
-          isDefault: m.isDefault,
-          isAllowed: m.isAllowed,
-        })),
-      })
-    }
-    if (procMaps.length) {
-      await tx.expenseTypeProcess.createMany({
-        data: procMaps.map((m) => ({
-          companyId: params.companyId,
-          expenseTypeId: created.id,
-          processId: m.processId,
           isDefault: m.isDefault,
           isAllowed: m.isAllowed,
         })),
@@ -413,9 +330,7 @@ export async function updateExpenseType(
   if (params.input.categoryId) await assertCategoryValid(db, params.companyId, params.input.categoryId)
 
   const ccMaps = params.input.costCenters ? normalizeCostCenterMaps(params.input.costCenters) : undefined
-  const procMaps = params.input.processes ? normalizeProcessMaps(params.input.processes) : undefined
   if (ccMaps) await assertActiveCostCenters(db, params.companyId, ccMaps.map((m) => m.costCenterId))
-  if (procMaps) await assertActiveProcesses(db, params.companyId, procMaps.map((m) => m.processId))
 
   const row = await db.$transaction(async (tx) => {
     const updated = await tx.expenseType.update({
@@ -435,12 +350,11 @@ export async function updateExpenseType(
         ...(params.input.requiresMachine !== undefined ? { requiresMachine: params.input.requiresMachine } : {}),
         ...(params.input.requiresLocation !== undefined ? { requiresLocation: params.input.requiresLocation } : {}),
         ...(params.input.requiresCostCenter !== undefined ? { requiresCostCenter: params.input.requiresCostCenter } : {}),
-        ...(params.input.requiresProcess !== undefined ? { requiresProcess: params.input.requiresProcess } : {}),
         ...(params.input.isActive !== undefined ? { isActive: params.input.isActive } : {}),
       },
       include: {
         category: { select: { name: true } },
-        _count: { select: { costCenterMaps: true, processMaps: true } },
+        _count: { select: { costCenterMaps: true } },
       },
     })
     if (ccMaps) {
@@ -457,26 +371,12 @@ export async function updateExpenseType(
         })
       }
     }
-    if (procMaps) {
-      await tx.expenseTypeProcess.deleteMany({ where: { expenseTypeId: params.id } })
-      if (procMaps.length) {
-        await tx.expenseTypeProcess.createMany({
-          data: procMaps.map((m) => ({
-            companyId: params.companyId,
-            expenseTypeId: params.id,
-            processId: m.processId,
-            isDefault: m.isDefault,
-            isAllowed: m.isAllowed,
-          })),
-        })
-      }
-    }
     // Re-read counts after mapping sync so the response reflects current state.
     const fresh = await tx.expenseType.findUniqueOrThrow({
       where: { id: params.id },
       include: {
         category: { select: { name: true } },
-        _count: { select: { costCenterMaps: true, processMaps: true } },
+        _count: { select: { costCenterMaps: true } },
       },
     })
     return fresh ?? updated
@@ -648,145 +548,6 @@ export async function deleteExpenseCategory(
     return { data: { id: params.id, deactivated: true } }
   }
   await db.expenseCategory.delete({ where: { id: params.id } })
-  return { data: { id: params.id, deactivated: false } }
-}
-
-// ─── Processes ─────────────────────────────────────────────────────────────────
-
-export const processSchema = z.object({
-  code: z.string().max(30).nullable().optional(),
-  name: z.string().trim().min(1).max(255),
-  parentId: z.string().uuid().nullable().optional(),
-  isActive: z.boolean().optional(),
-})
-
-export type ProcessInput = z.infer<typeof processSchema>
-
-async function assertParentProcessInCompany(
-  db: PrismaClient,
-  companyId: string,
-  parentId: string
-): Promise<void> {
-  const parent = await db.process.findFirst({
-    where: { id: parentId, companyId },
-    select: { id: true },
-  })
-  if (!parent) throw new ValidationError("ไม่พบกระบวนการแม่")
-}
-
-export async function listProcesses(
-  db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; includeInactive?: boolean }
-) {
-  if (!canReadForForms(params.roles)) throw new ForbiddenError()
-  const rows = await db.process.findMany({
-    where: {
-      companyId: params.companyId,
-      ...(params.includeInactive ? {} : { isActive: true }),
-    },
-    include: { parent: { select: { name: true } } },
-    orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    take: 500,
-  })
-  return {
-    data: rows.map((r) => ({
-      id: r.id,
-      code: r.code,
-      name: r.name,
-      parentId: r.parentId,
-      parentName: r.parent?.name ?? null,
-      isActive: r.isActive,
-    })),
-  }
-}
-
-export async function createProcess(
-  db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; input: ProcessInput }
-) {
-  if (!canMasters(params.roles, "create")) throw new ForbiddenError()
-  const code = params.input.code?.trim()
-    ? normalizeCode(params.input.code)
-    : await nextMasterCode(
-        await db.process.count({ where: { companyId: params.companyId } }),
-        "PROC"
-      )
-  const dup = await db.process.findFirst({
-    where: { companyId: params.companyId, code },
-    select: { id: true },
-  })
-  if (dup) throw new ValidationError("รหัสกระบวนการซ้ำ")
-  if (params.input.parentId) await assertParentProcessInCompany(db, params.companyId, params.input.parentId)
-
-  const row = await db.process.create({
-    data: {
-      companyId: params.companyId,
-      code,
-      name: params.input.name,
-      parentId: params.input.parentId ?? null,
-      isActive: params.input.isActive ?? true,
-    },
-  })
-  return {
-    data: { id: row.id, code: row.code, name: row.name, parentId: row.parentId, isActive: row.isActive },
-  }
-}
-
-export async function updateProcess(
-  db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; id: string; input: Partial<ProcessInput> }
-) {
-  if (!canMasters(params.roles, "update")) throw new ForbiddenError()
-  const existing = await db.process.findFirst({
-    where: { id: params.id, companyId: params.companyId },
-    select: { id: true },
-  })
-  if (!existing) throw new NotFoundError("ไม่พบกระบวนการ")
-
-  const code = params.input.code?.trim() ? normalizeCode(params.input.code) : undefined
-  if (code) {
-    const dup = await db.process.findFirst({
-      where: { companyId: params.companyId, code, id: { not: params.id } },
-      select: { id: true },
-    })
-    if (dup) throw new ValidationError("รหัสกระบวนการซ้ำ")
-  }
-  if (params.input.parentId) {
-    await assertParentProcessInCompany(db, params.companyId, params.input.parentId)
-    await assertNoHierarchyCycle(db, "process", params.id, params.input.parentId)
-  }
-
-  const row = await db.process.update({
-    where: { id: params.id },
-    data: {
-      ...(code ? { code } : {}),
-      ...(params.input.name ? { name: params.input.name } : {}),
-      ...(params.input.parentId !== undefined ? { parentId: params.input.parentId } : {}),
-      ...(params.input.isActive !== undefined ? { isActive: params.input.isActive } : {}),
-    },
-  })
-  return {
-    data: { id: row.id, code: row.code, name: row.name, parentId: row.parentId, isActive: row.isActive },
-  }
-}
-
-export async function deleteProcess(
-  db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; id: string }
-) {
-  if (!canMasters(params.roles, "delete")) throw new ForbiddenError()
-  const existing = await db.process.findFirst({
-    where: { id: params.id, companyId: params.companyId },
-    select: { id: true },
-  })
-  if (!existing) throw new NotFoundError("ไม่พบกระบวนการ")
-  const inUse = await db.expenseTypeProcess.count({ where: { processId: params.id } })
-  const hasChildren = await db.process.count({ where: { parentId: params.id } })
-  if (inUse > 0 || hasChildren > 0) {
-    await db.process.update({ where: { id: params.id }, data: { isActive: false } })
-    return { data: { id: params.id, deactivated: true } }
-  }
-  await db.process.delete({ where: { id: params.id } })
   return { data: { id: params.id, deactivated: false } }
 }
 

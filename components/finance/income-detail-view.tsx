@@ -350,7 +350,7 @@ export function IncomeDetailView({ income, perms }: { income: IncomeDto; perms: 
                   <tr>
                     <th>#</th>
                     <th>{t("type")}</th>
-                    <th>{t("costCenter")} / {t("process")}</th>
+                    <th>{t("costCenter")}</th>
                     <th className="text-right">{t("quantity")}</th>
                     <th className="text-right">{t("unitPrice")}</th>
                     <th className="text-right">{t("netAmount")}</th>
@@ -365,9 +365,7 @@ export function IncomeDetailView({ income, perms }: { income: IncomeDto; perms: 
                         {l.description && <div className="text-xs text-muted-foreground">{l.description}</div>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        <div>{l.costCenterName ?? "—"}</div>
-                        {l.processName && <div className="text-xs">{l.processName}</div>}
-                      </td>
+                        <div>{l.costCenterName ?? "—"}</div>                      </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {l.pricingMode === "QTY_PRICE" ? `${l.quantity}${l.unitCode ? ` ${l.unitCode}` : ""}` : "—"}
                       </td>

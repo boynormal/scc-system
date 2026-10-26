@@ -51,7 +51,6 @@ function itemToDrafts(item: IncomeDto): IncomeLineDraft[] {
     taxAmount: l.taxAmount ? String(l.taxAmount) : "",
     discountAmount: l.discountAmount ? String(l.discountAmount) : "",
     costCenterId: l.costCenterId ?? "",
-    processId: l.processId ?? "",
   }))
 }
 
@@ -171,7 +170,6 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
         incomeTypeId: l.incomeTypeId,
         description: l.description.trim() || null,
         costCenterId: l.costCenterId || null,
-        processId: l.processId || null,
       }
     }
     const qty = l.pricingMode === "QTY_PRICE"
@@ -187,7 +185,6 @@ export function IncomeFormPage({ item }: { item?: IncomeDto }) {
       taxAmount: incomeLineMoney(l, taxMode).tax,
       discountAmount: Number(l.discountAmount) || 0,
       costCenterId: l.costCenterId || null,
-      processId: l.processId || null,
     }
   }
 

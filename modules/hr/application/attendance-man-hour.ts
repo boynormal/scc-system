@@ -36,6 +36,10 @@ export type StoredOtDecision = {
   otMinutes: number
 }
 
+export function isBeforeCompanyEnd(at: Date, timeZone: string): boolean {
+  return localMinutes(at, timeZone) < COMPANY_WORK_RULE.endMinute
+}
+
 function localMinutes(at: Date, timeZone: string): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,

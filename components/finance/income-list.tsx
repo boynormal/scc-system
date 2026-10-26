@@ -15,7 +15,7 @@ import { SubTabs } from "@/components/shell/sub-tabs"
 import { currentFinanceMonth, financeMonthRange, FinanceMonthPicker } from "./finance-month-picker"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { cn, formatDate } from "@/lib/utils"
-import type { CostCenterRow, FinancePerms, Option, ProcessRow } from "./expense-types"
+import type { CostCenterRow, FinancePerms, Option } from "./expense-types"
 import { formatBaht, solidBlueButtonClass } from "./finance-theme"
 import {
   INCOME_STATUS_BADGE,
@@ -42,13 +42,11 @@ export function IncomeList({
   const [branches, setBranches] = useState<Option[]>([])
   const [types, setTypes] = useState<IncomeTypeOption[]>([])
   const [costCenters, setCostCenters] = useState<CostCenterRow[]>([])
-  const [processes, setProcesses] = useState<ProcessRow[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const [branchId, setBranchId] = useState(searchParams.get("branchId") ?? "")
   const [incomeTypeId, setIncomeTypeId] = useState(searchParams.get("incomeTypeId") ?? "")
   const [costCenterId, setCostCenterId] = useState(searchParams.get("costCenterId") ?? "")
-  const [processId, setProcessId] = useState(searchParams.get("processId") ?? "")
   const [status, setStatus] = useState(searchParams.get("status") ?? "")
   const [month, setMonth] = useState(() => {
     const from = searchParams.get("dateFrom") ?? ""
@@ -62,13 +60,11 @@ export function IncomeList({
       fetch("/api/finance/incomes/options", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/income-types", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/finance/cost-centers", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/finance/processes", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([o, ty, c, p]) => {
+      .then(([o, ty, c]) => {
         setBranches((o.data?.branches ?? []) as Option[])
         setTypes((ty.data ?? []) as IncomeTypeOption[])
         setCostCenters((c.data ?? []) as CostCenterRow[])
-        setProcesses((p.data ?? []) as ProcessRow[])
       })
       .catch(() => undefined)
   }, [])
@@ -78,7 +74,6 @@ export function IncomeList({
     if (branchId) params.set("branchId", branchId)
     if (incomeTypeId) params.set("incomeTypeId", incomeTypeId)
     if (costCenterId) params.set("costCenterId", costCenterId)
-    if (processId) params.set("processId", processId)
     if (status) params.set("status", status)
     if (dateFrom) params.set("dateFrom", dateFrom)
     if (dateTo) params.set("dateTo", dateTo)
@@ -104,7 +99,7 @@ export function IncomeList({
     } catch {
       setError(t("loadFailed"))
     }
-  }, [branchId, incomeTypeId, costCenterId, processId, status, month, search, t])
+  }, [branchId, incomeTypeId, costCenterId, status, month, search, t])
 
   useEffect(() => {
     void load()
@@ -162,17 +157,6 @@ export function IncomeList({
               { value: "", label: t("all") },
               { value: "none", label: t("unspecified") },
               ...costCenters.map((c) => ({ value: c.id, label: c.name })),
-            ]}
-          />
-          <Select
-            label={t("process")}
-            value={processId}
-            onChange={(e) => setProcessId(e.target.value)}
-            className="min-w-[9rem]"
-            options={[
-              { value: "", label: t("all") },
-              { value: "none", label: t("unspecified") },
-              ...processes.map((p) => ({ value: p.id, label: p.name })),
             ]}
           />
           <div className="min-w-[12rem] flex-1">

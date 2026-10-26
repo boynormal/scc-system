@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
 import { monthKeyOf, shiftMonthKey } from "@/modules/hr/application/attendance-day-calendar"
-import { filterExceptionGroups, type DepartmentFilterMode } from "@/modules/hr/application/attendance-report"
+import { filterExceptionGroups, omitTodayOpenForgotScans, type DepartmentFilterMode } from "@/modules/hr/application/attendance-report"
 import { formatTime } from "../attendance/attendance-format"
 
 type DayStatus = "COMPLETE" | "SINGLE_PUNCH" | "NO_SCAN"
@@ -397,8 +397,8 @@ export function AttendanceExceptionView({
   }, [load])
 
   const visibleGroups = useMemo(
-    () => (groups ? filterExceptionGroups(groups, deptMode, deptSelected) : null),
-    [groups, deptMode, deptSelected]
+    () => (groups ? omitTodayOpenForgotScans(filterExceptionGroups(groups, deptMode, deptSelected), today) : null),
+    [groups, deptMode, deptSelected, today]
   )
 
   return (

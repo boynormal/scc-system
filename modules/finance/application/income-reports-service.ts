@@ -48,7 +48,6 @@ export type IncomeReportData = {
   receivedTotal: number
   outstandingTotal: number
   byType: IncomeReportBucket[]
-  byProcess: IncomeReportBucket[]
   byCostCenter: IncomeReportBucket[]
   byBranch: IncomeReportBucket[]
   byMonth: IncomeReportBucket[]
@@ -61,8 +60,6 @@ export type IncomeReportLine = {
   incomeTypeName: string
   costCenterId: string | null
   costCenterName?: string | null
-  processId: string | null
-  processName?: string | null
 }
 
 export type IncomeReportRow = {
@@ -76,7 +73,6 @@ export type IncomeReportRow = {
 
 export type IncomeReportFilters = {
   incomeTypeId?: string | null
-  processId?: string | null
   costCenterId?: string | null
 }
 
@@ -111,7 +107,6 @@ function monthKey(value: Date | string): string {
 /** Money is SUM of matching IncomeLine.netAmount; bill count is distinct incomes owning those lines. */
 export function aggregateIncomeReport(rows: IncomeReportRow[], filters: IncomeReportFilters = {}): IncomeReportData {
   const byType = new Map<string, IncomeReportBucket>()
-  const byProcess = new Map<string, IncomeReportBucket>()
   const byCostCenter = new Map<string, IncomeReportBucket>()
   const byBranch = new Map<string, IncomeReportBucket>()
   const byMonth = new Map<string, IncomeReportBucket>()
@@ -125,7 +120,6 @@ export function aggregateIncomeReport(rows: IncomeReportRow[], filters: IncomeRe
     const month = monthKey(row.incomeDate)
     for (const line of row.lines) {
       if (filters.incomeTypeId?.trim() && line.incomeTypeId !== filters.incomeTypeId.trim()) continue
-      if (!matchesIdFilter(line.processId, filters.processId)) continue
       if (!matchesIdFilter(line.costCenterId, filters.costCenterId)) continue
       const amount = Number(line.netAmount) || 0
       grandTotal = round2(grandTotal + amount)
@@ -134,7 +128,6 @@ export function aggregateIncomeReport(rows: IncomeReportRow[], filters: IncomeRe
       billIds.add(row.id)
       const code = line.incomeTypeCode?.trim()
       addTo(byType, line.incomeTypeId, code ? `${code} · ${line.incomeTypeName}` : line.incomeTypeName, amount)
-      addTo(byProcess, line.processId ?? NONE_KEY, line.processId ? (line.processName ?? line.processId) : "ไม่ระบุกระบวนการ", amount)
       addTo(byCostCenter, line.costCenterId ?? NONE_KEY, line.costCenterId ? (line.costCenterName ?? line.costCenterId) : "ไม่ระบุหน่วยงาน", amount)
       addTo(byBranch, row.branchId, row.branchName, amount)
       addTo(byMonth, month, month, amount)
@@ -148,7 +141,6 @@ export function aggregateIncomeReport(rows: IncomeReportRow[], filters: IncomeRe
     receivedTotal,
     outstandingTotal: round2(grandTotal - receivedTotal),
     byType: finish(byType, grandTotal),
-    byProcess: finish(byProcess, grandTotal),
     byCostCenter: finish(byCostCenter, grandTotal),
     byBranch: finish(byBranch, grandTotal),
     byMonth: finish(byMonth, grandTotal, true),
@@ -160,7 +152,6 @@ export const incomeReportQuerySchema = z.object({
   dateFrom: z.string().nullable().optional(),
   dateTo: z.string().nullable().optional(),
   incomeTypeId: z.string().uuid().nullable().optional(),
-  processId: z.string().nullable().optional(),
   costCenterId: z.string().nullable().optional(),
   status: z.enum(REPORT_STATUSES).nullable().optional(),
 })
@@ -174,7 +165,6 @@ export async function getIncomeReport(
     dateFrom?: string | null
     dateTo?: string | null
     incomeTypeId?: string | null
-    processId?: string | null
     costCenterId?: string | null
     status?: string | null
   }
@@ -198,12 +188,10 @@ export async function getIncomeReport(
 
   const filters: IncomeReportFilters = {
     incomeTypeId: optionalUuid(params.incomeTypeId),
-    processId: params.processId?.trim() === NONE_KEY ? NONE_KEY : optionalUuid(params.processId),
     costCenterId: params.costCenterId?.trim() === NONE_KEY ? NONE_KEY : optionalUuid(params.costCenterId),
   }
   const lineSome: Prisma.IncomeLineWhereInput = {}
   if (filters.incomeTypeId) lineSome.incomeTypeId = filters.incomeTypeId
-  if (filters.processId) lineSome.processId = filters.processId === NONE_KEY ? null : filters.processId
   if (filters.costCenterId) lineSome.costCenterId = filters.costCenterId === NONE_KEY ? null : filters.costCenterId
   if (Object.keys(lineSome).length) where.lines = { some: lineSome }
 
@@ -223,8 +211,6 @@ export async function getIncomeReport(
           incomeType: { select: { code: true, name: true } },
           costCenterId: true,
           costCenter: { select: { name: true } },
-          processId: true,
-          process: { select: { name: true } },
         },
       },
     },
@@ -245,8 +231,6 @@ export async function getIncomeReport(
       incomeTypeName: l.incomeType.name,
       costCenterId: l.costCenterId,
       costCenterName: l.costCenter?.name ?? null,
-      processId: l.processId,
-      processName: l.process?.name ?? null,
     })),
   }))
 

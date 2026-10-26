@@ -1,6 +1,6 @@
 export type StoredTimeConfirmation = {
   confirmedIn: Date
-  confirmedOut: Date
+  confirmedOut: Date | null
   sourceFirstIn: Date | null
   sourceLastOut: Date | null
 }
@@ -28,7 +28,7 @@ export function effectiveDayTimes(
   }
   return {
     firstIn: confirmation.confirmedIn,
-    lastOut: confirmation.confirmedOut,
+    lastOut: confirmation.confirmedOut ?? scanLastOut,
     confirmed: true,
     scanChanged:
       !sameInstant(confirmation.sourceFirstIn, scanFirstIn) ||

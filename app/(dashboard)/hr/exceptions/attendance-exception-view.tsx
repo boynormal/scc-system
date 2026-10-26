@@ -278,26 +278,24 @@ function DepartmentFilter({
 
   return (
     <div ref={rootRef} className="relative">
-      <Button
+      <button
         type="button"
-        variant="outline"
-        size="sm"
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-controls={dialogId}
         title={chosen.length > 0 ? chosen.join(", ") : undefined}
-        className="h-9 max-w-[18rem] justify-between gap-2 border-slate-300 bg-white px-3 text-sm font-medium text-foreground shadow-sm hover:bg-muted dark:border-white/30 dark:bg-slate-950"
+        className="inline-flex h-9 max-w-[18rem] items-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-foreground shadow-sm hover:bg-slate-50 dark:border-white/30 dark:bg-slate-950"
         onClick={() => setOpen((current) => !current)}
       >
-        <span className="truncate">{summary}</span>
+        <span className="min-w-0 truncate">{summary}</span>
         <ChevronDown className="h-4 w-4 shrink-0" />
-      </Button>
+      </button>
       {open && (
         <div
           id={dialogId}
           role="dialog"
           aria-label={t("report.department")}
-          className={cn(dataPanelClassName, "absolute left-0 top-full z-30 mt-1 w-[18rem] overflow-visible p-3")}
+          className="absolute left-0 top-full z-30 mt-1 w-[18rem] rounded-xl border border-slate-300 bg-white p-3 text-foreground shadow-lg dark:border-white/15 dark:bg-slate-950"
         >
           <div role="radiogroup" aria-label={t("report.department")} className="mb-2 grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
             {(["only", "except"] as const).map((value) => (
@@ -458,7 +456,7 @@ export function AttendanceExceptionView({
             </AppDataTableHead>
             {visibleGroups.map((group) => (
               <AppDataTableBody key={group.date}>
-                <tr data-tone="date" className="bg-blue-100 dark:bg-blue-950">
+                <tr data-tone="date" className="bg-blue-100 hover:!bg-blue-100 dark:bg-blue-950 dark:hover:!bg-blue-950">
                   <td colSpan={3} className="px-2 py-0.5 font-semibold text-foreground">
                     <Link
                       className="text-foreground underline-offset-2 hover:underline"
@@ -472,7 +470,7 @@ export function AttendanceExceptionView({
                   </td>
                 </tr>
                 {group.rows.map((row) => (
-                  <tr key={`${group.date}-${row.personnelId}`} data-tone={rowTone(row) ? "status" : undefined} className={rowTone(row)}>
+                  <tr key={`${group.date}-${row.personnelId}`} data-tone="plain" className="bg-white hover:!bg-white dark:bg-slate-900 dark:hover:!bg-slate-900">
                     <td className="w-36 px-2 py-0.5 font-medium text-foreground">{row.displayName}</td>
                     <td className="min-w-[18rem] px-2 py-0.5">
                       <ExceptionLabel row={row} label={(key) => t(key)} />
@@ -493,16 +491,6 @@ export function AttendanceExceptionView({
     </ListFrame>
     </div>
   )
-}
-
-function rowTone(row: ExceptionRow): string {
-  if (row.noteReason === "ABSENT") return "bg-red-50 dark:bg-red-950/40"
-  if (row.late) return "bg-red-50/70 dark:bg-red-950/30"
-  if (row.noteReason === "SICK") return "bg-amber-50 dark:bg-amber-950/40"
-  if (row.noteReason === "PERSONAL" || row.noteReason === "INTRA_DAY") return "bg-blue-50 dark:bg-blue-950/30"
-  if (row.status === "NO_SCAN") return "bg-red-50 dark:bg-red-950/40"
-  if (row.status === "SINGLE_PUNCH") return "bg-amber-50 dark:bg-amber-950/40"
-  return ""
 }
 
 function reasonVariant(reason: LeaveReason): "danger" | "warning" | "info" {

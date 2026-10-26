@@ -22,7 +22,8 @@ export type TransportCostSource = {
   description: string | null
 }
 
-export const TAKE_LIMIT = 300
+/** Hydrate open sources in batches so a large `IN` list stays bounded. */
+const HYDRATE_CHUNK = 200
 
 /** Keep `null` and `0` distinct. Non-finite values become null. */
 export function toReferenceAmount(value: unknown): number | null {
@@ -162,41 +163,91 @@ function branchWhere(branchIds: string[] | null) {
   }
 }
 
+export type TransportSourceExcludeIds = {
+  repairIds?: string[]
+  tireIds?: string[]
+  jobIds?: string[]
+}
+
+/** Drop ids finance already closed. Order of the remaining ids is preserved. */
+export function omitExcludedIds(ids: string[], excluded: readonly string[] | undefined): string[] {
+  if (!excluded?.length) return ids
+  const skip = new Set(excluded)
+  return ids.filter((id) => !skip.has(id))
+}
+
+function chunkIds(ids: string[]): string[][] {
+  if (ids.length === 0) return []
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += HYDRATE_CHUNK) {
+    chunks.push(ids.slice(i, i + HYDRATE_CHUNK))
+  }
+  return chunks
+}
+
 /**
  * Finance-ready operational events for the review queue:
  * closed repairs, every tire log, completed jobs.
- * Amount is not an eligibility filter. Callers apply RBAC + review exclusion.
+ * Amount is not an eligibility filter. Callers pass ids already linked or
+ * reviewed closed so those rows do not crowd out older open sources.
+ * No row cap: every remaining id is hydrated.
  */
 export async function listTransportCostSources(
   db: PrismaClient,
-  params: { companyId: string; branchIds: string[] | null }
+  params: {
+    companyId: string
+    branchIds: string[] | null
+    excludeIds?: TransportSourceExcludeIds
+  }
 ): Promise<TransportCostSource[]> {
   const scoped = branchWhere(params.branchIds)
+  const exclude = params.excludeIds
 
-  const [repairs, tires, jobs] = await Promise.all([
+  const [repairRows, tireRows, jobRows] = await Promise.all([
     db.transportRepairLog.findMany({
       where: { companyId: params.companyId, status: "closed", ...scoped },
-      include: { vehicle: vehicleSelect },
-      orderBy: { reportedAt: "desc" },
-      take: TAKE_LIMIT,
+      select: { id: true },
     }),
     db.transportTireLog.findMany({
       where: { companyId: params.companyId, ...scoped },
-      include: { vehicle: vehicleSelect },
-      orderBy: { workDate: "desc" },
-      take: TAKE_LIMIT,
+      select: { id: true },
     }),
     db.transportJob.findMany({
       where: { companyId: params.companyId, status: "completed", ...scoped },
-      include: jobInclude,
-      orderBy: { updatedAt: "desc" },
-      take: TAKE_LIMIT,
+      select: { id: true },
     }),
   ])
 
-  return [...repairs.map(mapRepair), ...tires.map(mapTire), ...jobs.map(mapJob)].sort((a, b) =>
-    a.date < b.date ? 1 : -1
+  const repairIds = omitExcludedIds(
+    repairRows.map((row) => row.id),
+    exclude?.repairIds
   )
+  const tireIds = omitExcludedIds(
+    tireRows.map((row) => row.id),
+    exclude?.tireIds
+  )
+  const jobIds = omitExcludedIds(
+    jobRows.map((row) => row.id),
+    exclude?.jobIds
+  )
+  if (repairIds.length + tireIds.length + jobIds.length === 0) return []
+
+  const repairChunks = chunkIds(repairIds)
+  const tireChunks = chunkIds(tireIds)
+  const jobChunks = chunkIds(jobIds)
+  const rounds = Math.max(repairChunks.length, tireChunks.length, jobChunks.length)
+  const parts = await Promise.all(
+    Array.from({ length: rounds }, (_, index) =>
+      getTransportCostSourcesByIds(db, {
+        companyId: params.companyId,
+        repairIds: repairChunks[index] ?? [],
+        tireIds: tireChunks[index] ?? [],
+        jobIds: jobChunks[index] ?? [],
+      })
+    )
+  )
+
+  return parts.flat().sort((a, b) => (a.date < b.date ? 1 : -1))
 }
 
 /**

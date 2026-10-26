@@ -182,6 +182,112 @@ describe("listUnlinkedExpenseSources — finance-ready queue", () => {
     const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
     expect(result.data).toEqual([])
   })
+
+  it("does not cap the queue query with take", async () => {
+    const db = createMockDb()
+    await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
+    for (const call of [
+      ...db.transportRepairLog.findMany.mock.calls,
+      ...db.transportTireLog.findMany.mock.calls,
+      ...db.transportJob.findMany.mock.calls,
+    ]) {
+      expect(call[0].take).toBeUndefined()
+    }
+    expect(db.expenseLine.findMany.mock.calls[0][0].where.sourceDocumentId).toBeUndefined()
+    expect(db.financeSourceReview.findMany.mock.calls[0][0].where.sourceDocumentId).toBeUndefined()
+  })
+
+  it("keeps a completed job older than 300 newer closed jobs", async () => {
+    const db = createMockDb()
+    const jobs = Array.from({ length: 301 }, (_, index) => {
+      const updatedAt = new Date(Date.UTC(2026, 0, 1, 0, 0, index))
+      return {
+        id: `job-${index}`,
+        branchId: BRANCH,
+        jobNumber: `JOB-${index}`,
+        customerName: "A",
+        scheduledDate: updatedAt,
+        createdAt: updatedAt,
+        updatedAt,
+        assignment: { vehicleId: "v1", vehicle },
+      }
+    })
+    const linked = jobs.slice(1, 201)
+    const reviewed = jobs.slice(201)
+    const hydrateIns: string[][] = []
+    db.transportJob.findMany.mockImplementation(async (args: { take?: number; where?: { id?: { in?: string[] } } }) => {
+      expect(args.take).toBeUndefined()
+      const ids = args.where?.id?.in
+      if (ids) {
+        hydrateIns.push(ids)
+        const allow = new Set(ids)
+        return jobs.filter((job) => allow.has(job.id))
+      }
+      return jobs
+    })
+    db.expenseLine.findMany.mockImplementation(async (args: { where?: { sourceDocumentId?: { in?: string[] } } }) => {
+      const rows = linked.map((job) => ({ sourceType: "TRANSPORT_JOB", sourceDocumentId: job.id }))
+      const scoped = args.where?.sourceDocumentId?.in
+      if (!scoped) return rows
+      const allow = new Set(scoped)
+      return rows.filter((row) => allow.has(row.sourceDocumentId))
+    })
+    db.financeSourceReview.findMany.mockImplementation(
+      async (args: { where?: { sourceDocumentId?: { in?: string[] } } }) => {
+        const rows = reviewed.map((job) => ({
+          sourceType: "TRANSPORT_JOB",
+          sourceDocumentId: job.id,
+          sourceLineId: null,
+          status: "NO_EXPENSE" as const,
+        }))
+        const scoped = args.where?.sourceDocumentId?.in
+        if (!scoped) return rows
+        const allow = new Set(scoped)
+        return rows.filter((row) => allow.has(row.sourceDocumentId))
+      }
+    )
+
+    const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
+
+    expect(db.expenseLine.findMany.mock.calls[0][0].where.sourceDocumentId).toBeUndefined()
+    expect(db.financeSourceReview.findMany.mock.calls[0][0].where.sourceDocumentId).toBeUndefined()
+    expect(hydrateIns).toEqual([["job-0"]])
+    expect(result.data.map((row) => row.sourceDocumentId)).toEqual(["job-0"])
+  })
+
+  it("hydrates open jobs in chunks of at most 200", async () => {
+    const db = createMockDb()
+    const jobs = Array.from({ length: 201 }, (_, index) => {
+      const updatedAt = new Date(Date.UTC(2026, 0, 1, 0, 0, index))
+      return {
+        id: `job-${index}`,
+        branchId: BRANCH,
+        jobNumber: `JOB-${index}`,
+        customerName: "A",
+        scheduledDate: updatedAt,
+        createdAt: updatedAt,
+        updatedAt,
+        assignment: { vehicleId: "v1", vehicle },
+      }
+    })
+    const hydrateIns: string[][] = []
+    db.transportJob.findMany.mockImplementation(async (args: { take?: number; where?: { id?: { in?: string[] } } }) => {
+      expect(args.take).toBeUndefined()
+      const ids = args.where?.id?.in
+      if (ids) {
+        hydrateIns.push(ids)
+        const allow = new Set(ids)
+        return jobs.filter((job) => allow.has(job.id))
+      }
+      return jobs
+    })
+
+    const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
+
+    expect(hydrateIns.map((ids) => ids.length)).toEqual([200, 1])
+    expect(result.data).toHaveLength(201)
+    expect(new Set(result.data.map((row) => row.sourceDocumentId))).toEqual(new Set(jobs.map((job) => job.id)))
+  })
 })
 
 describe("markSourceNoExpense", () => {

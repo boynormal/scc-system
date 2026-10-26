@@ -5,6 +5,7 @@ import {
   mapJob,
   mapRepair,
   mapTire,
+  omitExcludedIds,
   toReferenceAmount,
 } from "@/modules/transport/application/cost-source-service"
 
@@ -31,6 +32,17 @@ describe("isLockedReferenceAmount", () => {
     expect(isLockedReferenceAmount(null)).toBe(false)
     expect(isLockedReferenceAmount(0)).toBe(false)
     expect(isLockedReferenceAmount(8500)).toBe(true)
+  })
+})
+
+describe("omitExcludedIds", () => {
+  it("keeps every id when nothing is excluded", () => {
+    expect(omitExcludedIds(["a", "b"], [])).toEqual(["a", "b"])
+    expect(omitExcludedIds(["a", "b"], undefined)).toEqual(["a", "b"])
+  })
+
+  it("drops excluded ids and keeps the rest in order", () => {
+    expect(omitExcludedIds(["a", "b", "c"], ["b", "missing"])).toEqual(["a", "c"])
   })
 })
 

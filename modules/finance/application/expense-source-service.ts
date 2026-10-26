@@ -6,6 +6,7 @@ import {
   getTransportCostSourcesByIds,
   listTransportCostSources,
   type TransportCostSource,
+  type TransportSourceExcludeIds,
 } from "@/modules/transport"
 import {
   reviewBlocksCreate,
@@ -88,10 +89,56 @@ async function loadBranchNames(
   return new Map(rows.map((r) => [r.id, r.name]))
 }
 
+function pushClosedSourceId(
+  bucket: Required<TransportSourceExcludeIds>,
+  sourceType: string | null,
+  sourceDocumentId: string | null
+) {
+  if (!sourceDocumentId) return
+  if (sourceType === "TRANSPORT_REPAIR") bucket.repairIds.push(sourceDocumentId)
+  else if (sourceType === "TRANSPORT_TIRE") bucket.tireIds.push(sourceDocumentId)
+  else if (sourceType === "TRANSPORT_JOB") bucket.jobIds.push(sourceDocumentId)
+}
+
+/** Company-wide closed identities. Not limited to a candidate id window. */
+async function loadClosedTransportSourceIds(
+  db: PrismaClient,
+  companyId: string
+): Promise<Required<TransportSourceExcludeIds>> {
+  const bucket: Required<TransportSourceExcludeIds> = { repairIds: [], tireIds: [], jobIds: [] }
+  const [linked, reviews] = await Promise.all([
+    db.expenseLine.findMany({
+      where: {
+        companyId,
+        sourceModule: "TRANSPORT",
+        sourceLinkActive: true,
+        expense: { deletedAt: null },
+      },
+      select: { sourceType: true, sourceDocumentId: true },
+    }),
+    db.financeSourceReview.findMany({
+      where: {
+        companyId,
+        sourceModule: "TRANSPORT",
+        status: { in: ["NO_EXPENSE", "EXPENSE_CREATED"] },
+      },
+      select: { sourceType: true, sourceDocumentId: true, status: true },
+    }),
+  ])
+  for (const row of linked) pushClosedSourceId(bucket, row.sourceType, row.sourceDocumentId)
+  for (const row of reviews) {
+    if (!reviewBlocksCreate(row.status as FinanceSourceReviewStatus)) continue
+    pushClosedSourceId(bucket, row.sourceType, row.sourceDocumentId)
+  }
+  return bucket
+}
+
 /**
  * List finance-ready operational sources that still need review.
  * Excludes active Expense links and reviews in NO_EXPENSE / EXPENSE_CREATED.
  * Missing review row = PENDING.
+ * Closed rows are loaded for the whole company before the transport read,
+ * so an older open job is not dropped behind a capped window of newer closed jobs.
  */
 export async function listUnlinkedExpenseSources(
   db: PrismaClient,
@@ -109,7 +156,12 @@ export async function listUnlinkedExpenseSources(
     branchIds = [params.branchId]
   }
 
-  const sources = await listTransportCostSources(db, { companyId: params.companyId, branchIds })
+  const excludeIds = await loadClosedTransportSourceIds(db, params.companyId)
+  const sources = await listTransportCostSources(db, {
+    companyId: params.companyId,
+    branchIds,
+    excludeIds,
+  })
   if (sources.length === 0) return { data: [] as ExpenseSourceDto[] }
 
   const ids = sources.map((s) => s.sourceId)

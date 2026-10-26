@@ -532,7 +532,22 @@
       "deptClear": "Clear selection",
       "deptHint": "Nothing selected shows every department",
       "filteredEmptyTitle": "Nothing in the selected departments",
-      "filteredEmptyDescription": "Change the departments or clear the selection"
+      "filteredEmptyDescription": "Change the departments or clear the selection",
+      "staffingTitle": "Headcount",
+      "staffingItem": "Item",
+      "staffingTotalPeople": "All staff",
+      "staffingFullLeave": "Full-day leave",
+      "staffingIntraLeave": "Part-day leave",
+      "staffingLate": "Late",
+      "staffingRemainPeople": "Remaining staff",
+      "manHourTitle": "Man-hour",
+      "manHourHours": "MAN hour",
+      "manHourFullPct": "Full-day %",
+      "manHourIntraPct": "Part-day %",
+      "manHourLost": "Lost time (min)",
+      "manHourRemainPct": "Remaining %",
+      "staffingSum": "Total = {value}",
+      "staffingAvg": "AVG = {value}"
     },
     "status": {
       "COMPLETE": "Complete",

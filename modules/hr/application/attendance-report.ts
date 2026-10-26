@@ -1,5 +1,6 @@
 import { shiftDateKey } from "./attendance-day-calendar"
 import { isDateKey } from "./attendance-daily-summary"
+import { lostWorkMinutes } from "./attendance-man-hour"
 
 export const REPORT_LEAVE_REASONS = ["PERSONAL", "SICK", "ABSENT", "INTRA_DAY"] as const
 export type ReportLeaveReason = (typeof REPORT_LEAVE_REASONS)[number]
@@ -44,6 +45,18 @@ export type ExceptionGroup = {
   date: string
   minutes: number
   rows: ExceptionRow[]
+}
+
+/** One day and one department. Full-day leave is personal plus sick. Absence is not full-day leave. */
+export type StaffingCell = {
+  date: string
+  departmentId: string | null
+  total: number
+  fullLeave: number
+  intraLeave: number
+  late: number
+  manMinutes: number
+  lostMinutes: number
 }
 
 export type ReportPersonDay = {
@@ -270,8 +283,8 @@ function isExceptionFact(fact: ReportFact): boolean {
   return fact.lateMinutes > 0 || fact.status !== "COMPLETE" || leaveReason(fact.noteReason) != null || note.length > 0
 }
 
-/** เฉพาะวันผิดปกติ จัดกลุ่มจากวันที่ใหม่ไปเก่า นาทีของวันคือผลรวมนาทีสาย */
-export function buildExceptionGroups(facts: ReportFact[]): ExceptionGroup[] {
+/** เฉพาะวันผิดปกติ จัดกลุ่มจากวันที่ใหม่ไปเก่า นาทีของวันคือเวลาทำงานที่หายไป */
+export function buildExceptionGroups(facts: ReportFact[], timeZone = "Asia/Bangkok"): ExceptionGroup[] {
   const groups = new Map<string, ExceptionRow[]>()
   for (const fact of facts) {
     if (!isExceptionFact(fact)) continue
@@ -282,7 +295,7 @@ export function buildExceptionGroups(facts: ReportFact[]): ExceptionGroup[] {
       departmentId: fact.departmentId ?? null,
       status: fact.status,
       late: fact.lateMinutes > 0,
-      minutes: fact.lateMinutes,
+      minutes: factLostMinutes(fact, timeZone),
       noteReason: leaveReason(fact.noteReason),
       note: fact.note?.trim() || null,
       firstIn: fact.firstIn ? fact.firstIn.toISOString() : null,
@@ -297,6 +310,38 @@ export function buildExceptionGroups(facts: ReportFact[]): ExceptionGroup[] {
       minutes: rows.reduce((sum, row) => sum + row.minutes, 0),
       rows: rows.sort((a, b) => a.displayName.localeCompare(b.displayName, "th")),
     }))
+}
+
+function factLostMinutes(fact: ReportFact, timeZone: string): number {
+  return fact.firstIn && fact.lastOut ? lostWorkMinutes(fact.firstIn, fact.lastOut, timeZone) : fact.lateMinutes
+}
+
+/** รายวันแยกแผนก สำหรับตารางอัตรากำลังคนและ Man-hour */
+export function buildStaffingCells(facts: ReportFact[], timeZone = "Asia/Bangkok"): StaffingCell[] {
+  const cells = new Map<string, StaffingCell>()
+  for (const fact of facts) {
+    const departmentId = fact.departmentId ?? null
+    const key = `${fact.date}|${departmentId ?? ""}`
+    const cell = cells.get(key) ?? {
+      date: fact.date,
+      departmentId,
+      total: 0,
+      fullLeave: 0,
+      intraLeave: 0,
+      late: 0,
+      manMinutes: 0,
+      lostMinutes: 0,
+    }
+    const reason = leaveReason(fact.noteReason)
+    cell.total += 1
+    if (reason === "PERSONAL" || reason === "SICK") cell.fullLeave += 1
+    if (reason === "INTRA_DAY") cell.intraLeave += 1
+    if (fact.lateMinutes > 0) cell.late += 1
+    cell.manMinutes += fact.manMinutes
+    cell.lostMinutes += factLostMinutes(fact, timeZone)
+    cells.set(key, cell)
+  }
+  return [...cells.values()]
 }
 
 /** วันนี้ยังไม่จบ จึงยังไม่มีเวลาออก ซ่อนคนที่ผิดปกติแค่เพราะลืมสแกนออก */

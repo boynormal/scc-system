@@ -3,6 +3,7 @@ import { summarizeManHour } from "@/modules/hr/application/attendance-man-hour"
 import {
   buildAttendanceReport,
   buildExceptionGroups,
+  buildStaffingCells,
   countsOnBranch,
   omitTodayOpenForgotScans,
   dateKeysInRange,
@@ -124,6 +125,64 @@ describe("buildExceptionGroups", () => {
     expect(today?.rows.map((row) => row.displayName)).toEqual(["ลา", "สาย"])
     expect(today?.minutes).toBe(8)
     expect(visible.find((group) => group.date === "2026-10-17")?.rows).toHaveLength(1)
+  })
+
+  it("counts an afternoon leave from 13:00 to 17:00 as 240 lost minutes", () => {
+    const groups = buildExceptionGroups([
+      fact({
+        personnelId: "p1",
+        displayName: "นีนี",
+        status: "COMPLETE",
+        noteReason: "INTRA_DAY",
+        note: "ปวดหลัง ลา 13.00-17.00",
+        firstIn: at("00:49"),
+        lastOut: at("05:01"),
+      }),
+      fact({
+        personnelId: "p2",
+        displayName: "มาเดอร์แวร์",
+        status: "COMPLETE",
+        noteReason: "INTRA_DAY",
+        note: "ไม่สบาย ลา 13.00-17.00",
+        firstIn: at("00:57"),
+        lastOut: at("05:01"),
+      }),
+    ])
+    expect(groups[0]?.rows.map((row) => row.minutes)).toEqual([240, 240])
+    expect(groups[0]?.minutes).toBe(480)
+  })
+
+  it("splits staffing by department and counts an afternoon leave as 240 lost minutes", () => {
+    const cells = buildStaffingCells([
+      fact({
+        personnelId: "p1",
+        departmentId: "d1",
+        status: "COMPLETE",
+        noteReason: "INTRA_DAY",
+        firstIn: at("00:49"),
+        lastOut: at("05:01"),
+        manMinutes: 240,
+      }),
+      fact({
+        personnelId: "p2",
+        departmentId: "d1",
+        status: "NO_SCAN",
+        noteReason: "SICK",
+      }),
+      fact({
+        personnelId: "p3",
+        departmentId: "d2",
+        status: "COMPLETE",
+        lateMinutes: 12,
+        firstIn: at("01:12"),
+        lastOut: at("10:00"),
+        manMinutes: 468,
+      }),
+    ])
+    const production = cells.find((cell) => cell.departmentId === "d1")
+    const other = cells.find((cell) => cell.departmentId === "d2")
+    expect(production).toMatchObject({ total: 2, fullLeave: 1, intraLeave: 1, late: 0, lostMinutes: 240, manMinutes: 240 })
+    expect(other).toMatchObject({ total: 1, fullLeave: 0, late: 1, lostMinutes: 12, manMinutes: 468 })
   })
 
   it("keeps a note-only row at 0 minutes", () => {

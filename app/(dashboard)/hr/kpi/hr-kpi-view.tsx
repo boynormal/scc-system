@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import {
@@ -45,6 +45,7 @@ import { Select } from "@/components/ui/select"
 import { monthKeyOf } from "@/modules/hr/application/attendance-day-calendar"
 import { formatMinutes } from "../attendance/attendance-format"
 import { MonthPicker } from "../exceptions/attendance-exception-view"
+import { StaffingGrids, type StaffingCell } from "../exceptions/attendance-staffing-grid"
 import type { KpiTab } from "./kpi-tabs"
 
 type CountRow = { name: string; count: number }
@@ -129,6 +130,13 @@ function hours(minutes: number): number {
   return Math.round((minutes / 60) * 10) / 10
 }
 
+function monthRange(month: string, today: string): { from: string; to: string } {
+  const [year, monthNum] = month.split("-").map(Number)
+  const end = new Date(Date.UTC(year!, monthNum!, 0)).getUTCDate()
+  const last = `${month}-${String(end).padStart(2, "0")}`
+  return { from: `${month}-01`, to: month === today.slice(0, 7) && today < last ? today : last }
+}
+
 export function HrKpiView({
   branches,
   counts,
@@ -154,6 +162,10 @@ export function HrKpiView({
   const [data, setData] = useState<KpiData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [staffing, setStaffing] = useState<StaffingCell[]>([])
+  const [offDates, setOffDates] = useState<string[]>([])
+  const [holidayDates, setHolidayDates] = useState<string[]>([])
+  const [staffingLoading, setStaffingLoading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -175,6 +187,52 @@ export function HrKpiView({
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (tab !== "workforce" || branches.length === 0) return
+    let cancelled = false
+    const ids = branchId ? [branchId] : branches.map((branch) => branch.id)
+    const { from, to } = monthRange(month, today)
+    setStaffingLoading(true)
+    void Promise.all(
+      ids.map((id) =>
+        fetchJson<{ data: { staffing?: StaffingCell[]; offDates?: string[]; holidayDates?: string[] } }>(
+          `/api/hr/attendance/reports?${new URLSearchParams({ branchId: id, from, to })}`
+        )
+      )
+    )
+      .then((results) => {
+        if (cancelled) return
+        setStaffing(results.flatMap((result) => result.data.staffing ?? []))
+        const shared = (pick: (result: (typeof results)[number]) => string[]) => {
+          const counts = new Map<string, number>()
+          for (const result of results) {
+            for (const date of pick(result)) counts.set(date, (counts.get(date) ?? 0) + 1)
+          }
+          return [...counts.entries()].filter(([, seen]) => seen === ids.length).map(([date]) => date)
+        }
+        setOffDates(shared((result) => result.data.offDates ?? []))
+        setHolidayDates(shared((result) => result.data.holidayDates ?? []))
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStaffing([])
+          setOffDates([])
+          setHolidayDates([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setStaffingLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [branchId, branches, month, tab, today])
+
+  const departmentSelection = useMemo(
+    () => (departmentId ? new Set<string | null>([departmentId]) : new Set<string | null>()),
+    [departmentId]
+  )
 
   const workforce = data?.workforce
   const turnover = data?.turnover
@@ -265,6 +323,21 @@ export function HrKpiView({
           <>
             {tab === "workforce" && workforce && (
               <section className="space-y-3">
+                {branches.length > 0 ? (
+                  staffingLoading ? (
+                    <LoadingState title="…" />
+                  ) : (
+                    <StaffingGrids
+                      month={month}
+                      today={today}
+                      cells={staffing}
+                      offDates={offDates}
+                      holidayDates={holidayDates}
+                      mode="only"
+                      selected={departmentSelection}
+                    />
+                  )
+                ) : null}
                 <div className="grid gap-3 sm:grid-cols-3">
                   <KpiCard
                     icon={Users}

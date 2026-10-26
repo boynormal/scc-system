@@ -532,7 +532,22 @@
       "deptClear": "ล้างที่เลือก",
       "deptHint": "ไม่เลือกเลย = แสดงทุกแผนก",
       "filteredEmptyTitle": "ไม่มีรายการในแผนกที่เลือก",
-      "filteredEmptyDescription": "ลองเปลี่ยนแผนกที่เลือก หรือล้างที่เลือก"
+      "filteredEmptyDescription": "ลองเปลี่ยนแผนกที่เลือก หรือล้างที่เลือก",
+      "staffingTitle": "อัตรากำลังคน",
+      "staffingItem": "รายการ",
+      "staffingTotalPeople": "พนักงานทั้งหมด/คน",
+      "staffingFullLeave": "ลาเต็มวัน/คน",
+      "staffingIntraLeave": "ลาภายในวัน/คน",
+      "staffingLate": "สาย / คน",
+      "staffingRemainPeople": "พนักงานคงเหลือ / คน",
+      "manHourTitle": "Man-hour",
+      "manHourHours": "MAN hour/ชม",
+      "manHourFullPct": "เต็มวัน %",
+      "manHourIntraPct": "ภายในวัน %",
+      "manHourLost": "เวลาที่หายไป / นาที",
+      "manHourRemainPct": "คงเหลือ %",
+      "staffingSum": "Total = {value}",
+      "staffingAvg": "AVG = {value}"
     },
     "status": {
       "COMPLETE": "ครบ",

@@ -9,6 +9,7 @@ import { effectiveDayTimes, type StoredTimeConfirmation } from "./attendance-tim
 import {
   buildAttendanceReport,
   buildExceptionGroups,
+  buildStaffingCells,
   countsOnBranch,
   dateKeysInRange,
   type ReportFact,
@@ -402,6 +403,10 @@ export async function listAttendanceReport(
     orderBy: { displayName: "asc" },
   })
 
+  const offDates = dates.filter((date) => isOffDay(date, branch.id, holidays))
+  const holidayDates = dates.filter((date) =>
+    holidays.some((holiday) => holiday.branchIds.includes(branch.id) && date >= holiday.startDate && date <= holiday.endDate)
+  )
   const personnelIds = roster.map((person) => person.id)
   if (personnelIds.length === 0) {
     return {
@@ -410,6 +415,9 @@ export async function listAttendanceReport(
       to: params.to,
       ...buildAttendanceReport(dates, []),
       exceptions: buildExceptionGroups([]),
+      staffing: buildStaffingCells([]),
+      offDates,
+      holidayDates,
     }
   }
 
@@ -509,13 +517,17 @@ export async function listAttendanceReport(
   }
 
   const linkedIds = new Set(roster.filter((person) => person.attendanceBadges.length > 0).map((person) => person.id))
+  const linked = facts.filter((fact) => linkedIds.has(fact.personnelId))
 
   return {
     branch: { id: branch.id, code: branch.code, name: branch.name, timezone: branch.timezone },
     from: params.from,
     to: params.to,
     ...buildAttendanceReport(dates, facts),
-    exceptions: buildExceptionGroups(facts.filter((fact) => linkedIds.has(fact.personnelId))),
+    exceptions: buildExceptionGroups(linked, branch.timezone),
+    staffing: buildStaffingCells(linked, branch.timezone),
+    offDates,
+    holidayDates,
   }
 }
 

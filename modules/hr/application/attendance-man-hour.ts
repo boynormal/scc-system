@@ -61,6 +61,17 @@ function otCandidate(at: Date, minutes: number): OtCandidate | null {
   return { at, minutes, needsConfirm: true }
 }
 
+/** นาทีของช่วง 08:00–12:00 และ 13:00–17:00 ที่ไม่มีสแกนครอบ เช่น ออกตอนเที่ยงแล้วไม่กลับบ่ายได้ 240 */
+export function lostWorkMinutes(firstIn: Date, lastOut: Date, timeZone: string): number {
+  const inMinute = localMinutes(firstIn, timeZone)
+  const outMinute = localMinutes(lastOut, timeZone)
+  if (outMinute <= inMinute) return 0
+  const covered =
+    overlap(inMinute, outMinute, COMPANY_WORK_RULE.startMinute, COMPANY_WORK_RULE.breakStartMinute) +
+    overlap(inMinute, outMinute, COMPANY_WORK_RULE.breakEndMinute, COMPANY_WORK_RULE.endMinute)
+  return Math.max(0, 8 * 60 - covered)
+}
+
 /** Man hour ตามช่วงงานบริษัท และรายการ OT ที่ต้องยืนยันจากสแกนแรก/สแกนสุดท้าย */
 export function summarizeManHour(firstIn: Date, lastOut: Date | null, timeZone: string): ManHourResult {
   const inMinute = localMinutes(firstIn, timeZone)

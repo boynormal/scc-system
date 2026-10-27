@@ -5,7 +5,7 @@ function person(partial: Partial<WorkforcePerson> & Pick<WorkforcePerson, "id">)
   return {
     branchId: "b1",
     branchName: "สำนักงาน",
-    departmentName: "ผลิต",
+    jobGroupName: "ผลิต",
     birthDate: null,
     startDate: null,
     endDate: null,
@@ -19,7 +19,7 @@ function person(partial: Partial<WorkforcePerson> & Pick<WorkforcePerson, "id">)
 describe("workforce kpi", () => {
   const people = [
     person({ id: "a", birthDate: "1990-01-01", startDate: "2020-01-01", gender: "MALE" }),
-    person({ id: "b", birthDate: "2000-06-01", startDate: "2024-01-01", gender: "FEMALE", departmentName: "บัญชี" }),
+    person({ id: "b", birthDate: "2000-06-01", startDate: "2024-01-01", gender: "FEMALE", jobGroupName: "บัญชี" }),
     person({ id: "c", isActive: true }),
     person({ id: "d", startDate: "2010-01-01", endDate: "2026-09-01", exitKind: "VOLUNTARY", isActive: false }),
   ]
@@ -31,6 +31,10 @@ describe("workforce kpi", () => {
     expect(kpi.gender).toEqual({ male: 1, female: 1, unspecified: 1 })
     expect(kpi.averageAgeYears).not.toBeNull()
     expect(kpi.ageBands.unknown).toBe(1)
+    expect(kpi.ageByDepartment).toEqual([
+      { name: "ผลิต", total: 2, under30: 0, age30: 1, age40: 0, age50: 0, unknown: 1 },
+      { name: "บัญชี", total: 1, under30: 1, age30: 0, age40: 0, age50: 0, unknown: 0 },
+    ])
   })
 
   it("counts nationality and leaves missing values as unknown", () => {

@@ -13,7 +13,7 @@ export const GET = withAuth(async (req, _ctx, session) => {
     roles: session.user.roles as UserRole[],
     month,
     branchId: searchParams.get("branchId"),
-    departmentId: searchParams.get("departmentId"),
+    jobGroupId: searchParams.get("jobGroupId"),
   })
   return Response.json({ data })
 })

@@ -9,7 +9,7 @@ export type WorkforcePerson = {
   id: string
   branchId: string | null
   branchName: string
-  departmentName: string
+  jobGroupName: string
   birthDate: string | null
   startDate: string | null
   endDate: string | null
@@ -21,13 +21,24 @@ export type WorkforcePerson = {
 
 export type CountRow = { name: string; count: number }
 
+export type AgeBandCounts = {
+  under30: number
+  age30: number
+  age40: number
+  age50: number
+  unknown: number
+}
+
+export type DepartmentAgeRow = { name: string; total: number } & AgeBandCounts
+
 export type WorkforceKpi = {
   headcount: number
   byBranch: CountRow[]
   byDepartment: CountRow[]
   averageTenureYears: number | null
   averageAgeYears: number | null
-  ageBands: { under30: number; age30: number; age40: number; age50: number; unknown: number }
+  ageBands: AgeBandCounts
+  ageByDepartment: DepartmentAgeRow[]
   gender: { male: number; female: number; unspecified: number }
   nationality: { thai: number; myanmar: number; other: number; unknown: number }
 }
@@ -76,6 +87,19 @@ export function employedAt(person: WorkforcePerson, date: string): boolean {
   return person.isActive && !person.endDate
 }
 
+function emptyAgeBands(): AgeBandCounts {
+  return { under30: 0, age30: 0, age40: 0, age50: 0, unknown: 0 }
+}
+
+function ageBandOf(person: WorkforcePerson, asOf: string): keyof AgeBandCounts {
+  if (!person.birthDate) return "unknown"
+  const age = Math.floor(yearsBetween(person.birthDate, asOf))
+  if (age <= 29) return "under30"
+  if (age <= 39) return "age30"
+  if (age <= 49) return "age40"
+  return "age50"
+}
+
 function countBy(people: WorkforcePerson[], nameOf: (person: WorkforcePerson) => string): CountRow[] {
   const counts = new Map<string, number>()
   for (const person of people) {
@@ -91,25 +115,25 @@ export function buildWorkforceKpi(people: WorkforcePerson[], asOf: string): Work
   const employed = people.filter((person) => employedAt(person, asOf))
   const tenure = employed.flatMap((person) => (person.startDate ? [yearsBetween(person.startDate, asOf)] : []))
   const ages = employed.flatMap((person) => (person.birthDate ? [yearsBetween(person.birthDate, asOf)] : []))
-  const ageBands = { under30: 0, age30: 0, age40: 0, age50: 0, unknown: 0 }
+  const ageBands = emptyAgeBands()
+  const byDepartmentAge = new Map<string, DepartmentAgeRow>()
   for (const person of employed) {
-    if (!person.birthDate) {
-      ageBands.unknown += 1
-      continue
-    }
-    const age = Math.floor(yearsBetween(person.birthDate, asOf))
-    if (age <= 29) ageBands.under30 += 1
-    else if (age <= 39) ageBands.age30 += 1
-    else if (age <= 49) ageBands.age40 += 1
-    else ageBands.age50 += 1
+    const band = ageBandOf(person, asOf)
+    ageBands[band] += 1
+    const name = person.jobGroupName || "ยังไม่ระบุ"
+    const row = byDepartmentAge.get(name) ?? { name, total: 0, ...emptyAgeBands() }
+    row.total += 1
+    row[band] += 1
+    byDepartmentAge.set(name, row)
   }
   return {
     headcount: employed.length,
     byBranch: countBy(employed, (person) => person.branchName || "ยังไม่ระบุ"),
-    byDepartment: countBy(employed, (person) => person.departmentName || "ยังไม่ระบุ"),
+    byDepartment: countBy(employed, (person) => person.jobGroupName || "ยังไม่ระบุ"),
     averageTenureYears: average(tenure),
     averageAgeYears: average(ages),
     ageBands,
+    ageByDepartment: [...byDepartmentAge.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "th")),
     gender: {
       male: employed.filter((person) => person.gender === "MALE").length,
       female: employed.filter((person) => person.gender === "FEMALE").length,

@@ -29,7 +29,7 @@ function todayKey(): string {
 
 export async function getHrKpi(
   db: PrismaClient,
-  params: { companyId: string; roles: UserRole[]; month: string; branchId?: string | null; departmentId?: string | null }
+  params: { companyId: string; roles: UserRole[]; month: string; branchId?: string | null; jobGroupId?: string | null }
 ) {
   const readPeople = canReadPersonnel(params.roles)
   const readAttendance = canReadHrAttendance(params.roles)
@@ -55,7 +55,7 @@ export async function getHrKpi(
       where: {
         companyId: params.companyId,
         deletedAt: null,
-        ...(params.departmentId ? { departmentId: params.departmentId } : {}),
+        ...(params.jobGroupId ? { jobGroupId: params.jobGroupId } : {}),
         ...(params.branchId
           ? { branchId: params.branchId }
           : isAdminInAnyBranch(params.roles)
@@ -74,14 +74,14 @@ export async function getHrKpi(
         exitKind: true,
         jobGroup: true,
         branch: { select: { name: true } },
-        department: { select: { name: true } },
+        jobGroupRef: { select: { name: true } },
       },
     })
     const rows: WorkforcePerson[] = people.map((person) => ({
       id: person.id,
       branchId: person.branchId,
       branchName: person.branch?.name ?? "ยังไม่ระบุ",
-      departmentName: person.department?.name ?? person.jobGroup ?? "ยังไม่ระบุ",
+      jobGroupName: person.jobGroupRef?.name ?? person.jobGroup ?? "ยังไม่ระบุ",
       birthDate: dateKey(person.birthDate),
       startDate: dateKey(person.startDate),
       endDate: dateKey(person.endDate),
@@ -105,7 +105,7 @@ export async function getHrKpi(
           branchId,
           from: bounds.start,
           to: bounds.asOf,
-          departmentId: params.departmentId,
+          jobGroupId: params.jobGroupId,
         })
       )
     )

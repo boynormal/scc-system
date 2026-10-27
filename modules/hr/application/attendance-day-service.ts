@@ -364,6 +364,7 @@ export async function listAttendanceReport(
     from: string
     to: string
     departmentId?: string | null
+    jobGroupId?: string | null
   }
 ) {
   const dates = dateKeysInRange(params.from, params.to)
@@ -389,6 +390,7 @@ export async function listAttendanceReport(
       deletedAt: null,
       isActive: true,
       ...(params.departmentId ? { departmentId: params.departmentId } : {}),
+      ...(params.jobGroupId ? { jobGroupId: params.jobGroupId } : {}),
       OR: [{ branchId: branch.id }, ...(movedHere.length ? [{ id: { in: movedHere } }] : [])],
     },
     select: {
@@ -397,6 +399,7 @@ export async function listAttendanceReport(
       jobGroup: true,
       branchId: true,
       departmentId: true,
+      jobGroupId: true,
       department: { select: { name: true } },
       attendanceBadges: { select: { id: true }, take: 1 },
     },
@@ -502,6 +505,7 @@ export async function listAttendanceReport(
         personnelId: person.id,
         displayName: person.displayName,
         departmentId: person.departmentId,
+        jobGroupId: person.jobGroupId,
         departmentName: person.department?.name ?? person.jobGroup,
         status: times.status,
         manMinutes: times.manMinutes,

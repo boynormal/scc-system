@@ -181,7 +181,7 @@ describe("buildExceptionGroups", () => {
     ])
     const production = cells.find((cell) => cell.departmentId === "d1")
     const other = cells.find((cell) => cell.departmentId === "d2")
-    expect(production).toMatchObject({ total: 2, fullLeave: 1, intraLeave: 1, late: 0, lostMinutes: 240, manMinutes: 240 })
+    expect(production).toMatchObject({ total: 2, fullLeave: 1, intraLeave: 1, intraLostMinutes: 240, late: 0, lostMinutes: 240, manMinutes: 240 })
     expect(other).toMatchObject({ total: 1, fullLeave: 0, late: 1, lostMinutes: 12, manMinutes: 468 })
   })
 

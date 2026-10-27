@@ -16,6 +16,7 @@ export type ReportFact = {
   personnelId: string
   displayName: string
   departmentId?: string | null
+  jobGroupId?: string | null
   departmentName: string | null
   status: ReportDayStatus
   manMinutes: number
@@ -51,10 +52,15 @@ export type ExceptionGroup = {
 export type StaffingCell = {
   date: string
   departmentId: string | null
+  jobGroupId: string | null
   total: number
   fullLeave: number
   intraLeave: number
+  /** เวลาที่หายไปของคนที่ลาภายในวัน ไม่รวมนาทีที่มาสาย */
+  intraLostMinutes: number
   late: number
+  /** นาทีที่เข้าหลัง 08:00 */
+  lateMinutes: number
   manMinutes: number
   lostMinutes: number
 }
@@ -321,24 +327,33 @@ export function buildStaffingCells(facts: ReportFact[], timeZone = "Asia/Bangkok
   const cells = new Map<string, StaffingCell>()
   for (const fact of facts) {
     const departmentId = fact.departmentId ?? null
-    const key = `${fact.date}|${departmentId ?? ""}`
+    const jobGroupId = fact.jobGroupId ?? null
+    const key = `${fact.date}|${departmentId ?? ""}|${jobGroupId ?? ""}`
     const cell = cells.get(key) ?? {
       date: fact.date,
       departmentId,
+      jobGroupId,
       total: 0,
       fullLeave: 0,
       intraLeave: 0,
+      intraLostMinutes: 0,
       late: 0,
+      lateMinutes: 0,
       manMinutes: 0,
       lostMinutes: 0,
     }
     const reason = leaveReason(fact.noteReason)
+    const lost = factLostMinutes(fact, timeZone)
     cell.total += 1
     if (reason === "PERSONAL" || reason === "SICK") cell.fullLeave += 1
-    if (reason === "INTRA_DAY") cell.intraLeave += 1
+    if (reason === "INTRA_DAY") {
+      cell.intraLeave += 1
+      cell.intraLostMinutes += Math.max(0, lost - fact.lateMinutes)
+    }
     if (fact.lateMinutes > 0) cell.late += 1
+    cell.lateMinutes += fact.lateMinutes
     cell.manMinutes += fact.manMinutes
-    cell.lostMinutes += factLostMinutes(fact, timeZone)
+    cell.lostMinutes += lost
     cells.set(key, cell)
   }
   return [...cells.values()]

@@ -9,10 +9,13 @@ import type { DepartmentFilterMode } from "@/modules/hr/application/attendance-r
 export type StaffingCell = {
   date: string
   departmentId: string | null
+  jobGroupId: string | null
   total: number
   fullLeave: number
   intraLeave: number
+  intraLostMinutes?: number
   late: number
+  lateMinutes?: number
   manMinutes: number
   lostMinutes: number
 }
@@ -21,7 +24,9 @@ type Day = {
   total: number
   fullLeave: number
   intraLeave: number
+  intraLostMinutes: number
   late: number
+  lateMinutes: number
   manMinutes: number
   lostMinutes: number
 }
@@ -36,19 +41,20 @@ function included(departmentId: string | null, mode: DepartmentFilterMode, selec
   return selected.has(departmentId) === (mode === "only")
 }
 
-function pct(part: number, total: number): number {
-  return total > 0 ? (part / total) * 100 : 0
-}
-
 /** ชั่วโมงที่เหลือหลังหักเวลาที่หายไป เทียบกับเพดานคนทั้งหมด × 8 ชม. */
-function remainPct(day: { total: number; lostMinutes: number }): number {
+function remainPct(day: { total: number; lateMinutes: number; intraLostMinutes: number }): number {
   const capacity = day.total * 8 * 60
   if (capacity <= 0) return 0
-  return (Math.max(0, capacity - day.lostMinutes) / capacity) * 100
+  return (Math.max(0, capacity - day.lateMinutes - day.intraLostMinutes) / capacity) * 100
 }
 
 function formatPct(value: number): string {
   return value.toFixed(1)
+}
+
+function formatHours(minutes: number): string {
+  const hours = minutes / 60
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
 }
 
 type Cell = { text: string; alert?: boolean }
@@ -85,13 +91,15 @@ export function StaffingGrids({
     const byDay = new Map<number, Day>()
     for (const cell of cells) {
       if (!cell.date.startsWith(month) || cell.date > today) continue
-      if (!included(cell.departmentId, mode, selected)) continue
+      if (!included(cell.jobGroupId, mode, selected)) continue
       const day = Number(cell.date.slice(8, 10))
-      const current = byDay.get(day) ?? { total: 0, fullLeave: 0, intraLeave: 0, late: 0, manMinutes: 0, lostMinutes: 0 }
+      const current = byDay.get(day) ?? { total: 0, fullLeave: 0, intraLeave: 0, intraLostMinutes: 0, late: 0, lateMinutes: 0, manMinutes: 0, lostMinutes: 0 }
       current.total += cell.total
       current.fullLeave += cell.fullLeave
       current.intraLeave += cell.intraLeave
+      current.intraLostMinutes += cell.intraLostMinutes ?? 0
       current.late += cell.late
+      current.lateMinutes += cell.lateMinutes ?? 0
       current.manMinutes += cell.manMinutes
       current.lostMinutes += cell.lostMinutes
       byDay.set(day, current)
@@ -115,9 +123,7 @@ export function StaffingGrids({
     const value = working.reduce((total, day) => total + pick(day), 0) / working.length
     return { text: t("exceptions.staffingAvg", { value: value.toFixed(1) }), alert: alert && value > 0 }
   }
-  const totalPeople = sum((day) => day.total)
   const totalFull = sum((day) => day.fullLeave)
-  const totalIntra = sum((day) => day.intraLeave)
   const avgRemain = working.length ? working.reduce((total, day) => total + remainPct(day), 0) / working.length : 0
 
   const numbers = (pick: (day: Day) => number, alert = false): Cell[] =>
@@ -133,6 +139,12 @@ export function StaffingGrids({
       return { text: formatPct(value), alert: alert && value > 0 }
     })
   const summary = (text: string, alert = false): Cell => ({ text, alert })
+  const hours = (pick: (day: Day) => number, alert = false): Cell[] =>
+    days.map((day) => {
+      if (!day) return { text: "" }
+      const minutes = pick(day)
+      return { text: formatHours(minutes), alert: alert && minutes > 0 }
+    })
 
   return (
     <div className="w-full min-w-0 space-y-4">
@@ -175,18 +187,18 @@ export function StaffingGrids({
           ],
           [
             t("exceptions.manHourFullPct"),
-            percents((day) => pct(day.fullLeave, day.total), true),
-            summary(t("exceptions.staffingSum", { value: formatPct(pct(totalFull, totalPeople)) }), totalFull > 0),
+            hours((day) => day.fullLeave * 480, true),
+            summary(t("exceptions.staffingSum", { value: formatHours(sum((day) => day.fullLeave * 480)) }), totalFull > 0),
           ],
           [
             t("exceptions.manHourIntraPct"),
-            percents((day) => pct(day.intraLeave, day.total), true),
-            summary(t("exceptions.staffingSum", { value: formatPct(pct(totalIntra, totalPeople)) }), totalIntra > 0),
+            hours((day) => day.intraLostMinutes, true),
+            summary(t("exceptions.staffingSum", { value: formatHours(sum((day) => day.intraLostMinutes)) }), sum((day) => day.intraLostMinutes) > 0),
           ],
           [
             t("exceptions.manHourLost"),
-            numbers((day) => day.lostMinutes, true),
-            summary(t("exceptions.staffingSum", { value: sum((day) => day.lostMinutes) }), sum((day) => day.lostMinutes) > 0),
+            numbers((day) => day.lateMinutes, true),
+            summary(t("exceptions.staffingSum", { value: sum((day) => day.lateMinutes) }), sum((day) => day.lateMinutes) > 0),
           ],
           [
             t("exceptions.manHourRemainPct"),

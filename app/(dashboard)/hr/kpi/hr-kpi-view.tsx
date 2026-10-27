@@ -56,6 +56,7 @@ type Workforce = {
   averageTenureYears: number | null
   averageAgeYears: number | null
   ageBands: { under30: number; age30: number; age40: number; age50: number; unknown: number }
+  ageByDepartment?: Array<{ name: string; total: number; under30: number; age30: number; age40: number; age50: number; unknown: number }>
   gender: { male: number; female: number; unspecified: number }
   nationality?: { thai: number; myanmar: number; other: number; unknown: number }
 }
@@ -93,8 +94,6 @@ const AMBER = "#d97706"
 const GREEN = "#16a34a"
 const VIOLET = "#7c3aed"
 const SLATE = "#94a3b8"
-const AGE_COLORS = ["#60a5fa", "#3b82f6", "#2563eb", "#1e40af", SLATE]
-
 const TICK = { fill: "currentColor", fontSize: 12 }
 const TOOLTIP_STYLE = {
   backgroundColor: "hsl(var(--background))",
@@ -172,7 +171,7 @@ export function HrKpiView({
     setError(null)
     const params = new URLSearchParams({ month })
     if (branchId) params.set("branchId", branchId)
-    if (departmentId) params.set("departmentId", departmentId)
+    if (departmentId) params.set("jobGroupId", departmentId)
     try {
       const res = await fetchJson<{ data: KpiData }>(`/api/hr/kpi?${params}`)
       setData(res.data)
@@ -388,35 +387,20 @@ export function HrKpiView({
                       ]}
                     />
                   </ChartCard>
-                  <ChartCard title={t("ageBands")} empty={workforce.headcount === 0} emptyText={noData}>
-                    <ColumnBars
-                      unit={t("people")}
-                      rows={[
-                        { name: t("under30"), count: workforce.ageBands.under30 },
-                        { name: t("age30"), count: workforce.ageBands.age30 },
-                        { name: t("age40"), count: workforce.ageBands.age40 },
-                        { name: t("age50"), count: workforce.ageBands.age50 },
-                        { name: t("unknown"), count: workforce.ageBands.unknown },
-                      ]}
-                      colors={AGE_COLORS}
-                    />
-                  </ChartCard>
-                  <ChartCard
-                    title={t("byBranch")}
-                    empty={workforce.byBranch.length === 0}
-                    emptyText={noData}
-                    height={barHeight(workforce.byBranch.length)}
-                  >
-                    <RowBars rows={workforce.byBranch} color={BLUE} unit={t("people")} />
-                  </ChartCard>
                   <div className="lg:col-span-2">
-                    <ChartCard
-                      title={t("byDepartment")}
-                      empty={workforce.byDepartment.length === 0}
-                      emptyText={noData}
-                      height={barHeight(workforce.byDepartment.length)}
-                    >
-                      <RowBars rows={workforce.byDepartment} color={VIOLET} unit={t("people")} />
+                    <ChartCard title={t("ageBands")} empty={workforce.headcount === 0} emptyText={noData} plain>
+                      <AgeByDepartmentTable
+                        rows={workforce.ageByDepartment ?? []}
+                        totalLabel={t("headcount")}
+                        departmentLabel={t("department")}
+                        bands={[
+                          ["under30", t("under30")],
+                          ["age30", t("age30")],
+                          ["age40", t("age40")],
+                          ["age50", t("age50")],
+                          ["unknown", t("unknown")],
+                        ]}
+                      />
                     </ChartCard>
                   </div>
                 </div>
@@ -585,10 +569,6 @@ export function HrKpiView({
   )
 }
 
-function barHeight(count: number): number {
-  return Math.max(224, count * 32 + 24)
-}
-
 function KpiCard({
   icon: Icon,
   tone,
@@ -627,23 +607,88 @@ function ChartCard({
   empty,
   emptyText,
   height = 224,
+  plain = false,
 }: {
   title: string
   children: React.ReactNode
   empty?: boolean
   emptyText?: string
   height?: number
+  plain?: boolean
 }) {
   return (
     <div className="rounded-lg border border-border bg-background p-3">
       <h3 className="mb-2 text-sm font-semibold text-foreground">{title}</h3>
       {empty ? (
         <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">{emptyText}</div>
+      ) : plain ? (
+        children
       ) : (
         <div className="text-foreground" style={{ height }}>
           {children}
         </div>
       )}
+    </div>
+  )
+}
+
+function AgeByDepartmentTable({
+  rows,
+  bands,
+  departmentLabel,
+  totalLabel,
+}: {
+  rows: Array<{ name: string; total: number; under30: number; age30: number; age40: number; age50: number; unknown: number }>
+  bands: Array<["under30" | "age30" | "age40" | "age50" | "unknown", string]>
+  departmentLabel: string
+  totalLabel: string
+}) {
+  const totals = rows.reduce(
+    (sum, row) => {
+      sum.total += row.total
+      for (const [key] of bands) sum[key] += row[key]
+      return sum
+    },
+    { total: 0, under30: 0, age30: 0, age40: 0, age50: 0, unknown: 0 }
+  )
+  const share = (count: number, whole: number) => (count > 0 && whole > 0 ? `${count} (${Math.round((count / whole) * 100)}%)` : "—")
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-separate border-spacing-0 text-sm">
+        <thead>
+          <tr>
+            <th className="border-b border-border px-2 py-1.5 text-left font-medium text-foreground">{departmentLabel}</th>
+            {bands.map(([, label]) => (
+              <th key={label} className="border-b border-border px-2 py-1.5 text-right font-medium text-foreground">
+                {label}
+              </th>
+            ))}
+            <th className="border-b border-border px-2 py-1.5 text-right font-medium text-foreground">{totalLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.name}>
+              <td className="border-b border-border px-2 py-1.5 text-foreground">{row.name}</td>
+              {bands.map(([key, label]) => (
+                <td key={label} className="border-b border-border px-2 py-1.5 text-right font-mono tabular-nums text-foreground">
+                  {share(row[key], row.total)}
+                </td>
+              ))}
+              <td className="border-b border-border px-2 py-1.5 text-right font-mono font-semibold tabular-nums text-foreground">{row.total}</td>
+            </tr>
+          ))}
+          <tr>
+            <td className="px-2 py-1.5 font-semibold text-foreground">{totalLabel}</td>
+            {bands.map(([key, label]) => (
+              <td key={label} className="px-2 py-1.5 text-right font-mono font-semibold tabular-nums text-foreground">
+                {share(totals[key], totals.total)}
+              </td>
+            ))}
+            <td className="px-2 py-1.5 text-right font-mono font-semibold tabular-nums text-foreground">{totals.total}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -690,23 +735,6 @@ function Donut({ slices, total, totalLabel }: { slices: Slice[]; total: number; 
         ))}
       </ul>
     </div>
-  )
-}
-
-function RowBars({ rows, color, unit }: { rows: CountRow[]; color: string; unit: string }) {
-  const sorted = [...rows].sort((a, b) => b.count - a.count)
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={sorted} layout="vertical" margin={{ left: 8, right: 40 }}>
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.4} />
-        <XAxis type="number" allowDecimals={false} tick={TICK} />
-        <YAxis type="category" dataKey="name" width={130} tick={TICK} interval={0} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fillOpacity: 0.08 }} formatter={(v: number) => [`${v} ${unit}`]} />
-        <Bar dataKey="count" fill={color} radius={[0, 4, 4, 0]} barSize={18}>
-          <LabelList dataKey="count" position="right" fill="currentColor" fontSize={12} />
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
   )
 }
 

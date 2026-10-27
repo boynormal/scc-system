@@ -329,6 +329,13 @@ export function HrKpiView({
                     <StaffingGrids
                       month={month}
                       today={today}
+                      place={
+                        branchId
+                          ? branches.find((branch) => branch.id === branchId)?.name ?? ""
+                          : branches.length === 1
+                            ? branches[0]?.name ?? ""
+                            : t("allBranches")
+                      }
                       cells={staffing}
                       offDates={offDates}
                       holidayDates={holidayDates}
@@ -672,7 +679,7 @@ function AgeByDepartmentTable({
               <td className="border-b border-border px-2 py-1.5 text-foreground">{row.name}</td>
               {bands.map(([key, label]) => (
                 <td key={label} className="border-b border-border px-2 py-1.5 text-right font-mono tabular-nums text-foreground">
-                  {share(row[key], row.total)}
+                  {row[key] > 0 ? row[key] : "—"}
                 </td>
               ))}
               <td className="border-b border-border px-2 py-1.5 text-right font-mono font-semibold tabular-nums text-foreground">{row.total}</td>

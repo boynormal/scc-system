@@ -42,10 +42,11 @@ function included(departmentId: string | null, mode: DepartmentFilterMode, selec
 }
 
 /** ชั่วโมงที่เหลือหลังหักเวลาที่หายไป เทียบกับเพดานคนทั้งหมด × 8 ชม. */
-function remainPct(day: { total: number; lateMinutes: number; intraLostMinutes: number }): number {
+function remainPct(day: { total: number; fullLeave: number; lateMinutes: number; intraLostMinutes: number }): number {
   const capacity = day.total * 8 * 60
   if (capacity <= 0) return 0
-  return (Math.max(0, capacity - day.lateMinutes - day.intraLostMinutes) / capacity) * 100
+  const used = day.fullLeave * 8 * 60 + day.intraLostMinutes + day.lateMinutes
+  return (Math.max(0, capacity - used) / capacity) * 100
 }
 
 function formatPct(value: number): string {
@@ -76,6 +77,7 @@ export function StaffingGrids({
   selected,
   offDates = [],
   holidayDates = [],
+  place = "",
 }: {
   month: string
   today: string
@@ -84,6 +86,7 @@ export function StaffingGrids({
   selected: ReadonlySet<string | null>
   offDates?: string[]
   holidayDates?: string[]
+  place?: string
 }) {
   const t = useTranslations("attendance")
   const count = lastDay(month)
@@ -139,6 +142,7 @@ export function StaffingGrids({
       return { text: formatPct(value), alert: alert && value > 0 }
     })
   const summary = (text: string, alert = false): Cell => ({ text, alert })
+  const titled = (title: string) => (place ? `${title} (${place})` : title)
   const hours = (pick: (day: Day) => number, alert = false): Cell[] =>
     days.map((day) => {
       if (!day) return { text: "" }
@@ -149,7 +153,7 @@ export function StaffingGrids({
   return (
     <div className="w-full min-w-0 space-y-4">
       <Grid
-        title={t("exceptions.staffingTitle")}
+        title={titled(t("exceptions.staffingTitle"))}
         titleClass="bg-blue-600 text-white"
         dayClass="bg-blue-100 font-semibold text-blue-950"
         itemLabel={t("exceptions.staffingItem")}
@@ -171,7 +175,7 @@ export function StaffingGrids({
         ]}
       />
       <Grid
-        title={t("exceptions.manHourTitle")}
+        title={titled(t("exceptions.manHourTitle"))}
         titleClass="bg-green-600 text-white"
         dayClass="bg-green-100 font-semibold text-green-950"
         itemLabel={t("exceptions.staffingItem")}

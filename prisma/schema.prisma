@@ -1277,6 +1277,7 @@ model AttendanceDayNote {
   /// LATE_START เน€เธเนเธฒเธเธฒเธเธเนเธฒ, LATE เธชเธฒเธข, ABSENT เนเธกเนเนเธ”เนเธกเธฒ, OTHER เธญเธทเนเธเน
   reason      String?  @db.VarChar(30)
   note        String   @default("") @db.VarChar(500)
+  showOnReport Boolean @default(true) @map("show_on_report")
   updatedById String   @map("updated_by_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz

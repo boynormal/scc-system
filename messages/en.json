@@ -635,6 +635,7 @@
       "note": "Note",
       "noteReasonOptional": "Leave type is optional. A detail alone can be saved",
       "notePlaceholder": "Extra detail",
+      "showNoteOnReport": "Show on the report",
       "saveNote": "Save note",
       "noteReasons": {
         "PERSONAL": "Personal leave",

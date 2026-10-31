@@ -635,6 +635,7 @@
       "note": "หมายเหตุ",
       "noteReasonOptional": "ไม่บังคับเลือกประเภท ใส่รายละเอียดอย่างเดียวได้",
       "notePlaceholder": "รายละเอียดเพิ่มเติม",
+      "showNoteOnReport": "แสดงในรายงาน",
       "saveNote": "บันทึกหมายเหตุ",
       "noteReasons": {
         "PERSONAL": "ลากิจ",

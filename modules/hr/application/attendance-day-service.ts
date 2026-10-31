@@ -49,6 +49,7 @@ export const saveAttendanceDayNoteSchema = z.object({
   date: z.string(),
   reason: z.enum(DAY_NOTE_REASONS).nullable(),
   note: z.string().max(500),
+  showOnReport: z.boolean().optional(),
 })
 
 function assertDateKey(date: string): void {
@@ -176,6 +177,7 @@ export async function listAttendanceDays(
   ])
   const noteByPerson = new Map(notes.map((row) => [row.personnel_id, row.note || null]))
   const reasonByPerson = new Map(notes.map((row) => [row.personnel_id, row.reason]))
+  const showNoteByPerson = new Map(notes.map((row) => [row.personnel_id, row.show_on_report]))
   const decisionByPerson = new Map<string, StoredOtDecision[]>()
   for (const decision of decisions) {
     const list = decisionByPerson.get(decision.personnel_id) ?? []
@@ -196,6 +198,7 @@ export async function listAttendanceDays(
       ...times,
       note: noteByPerson.get(row.personnelId) ?? null,
       noteReason: reasonByPerson.get(row.personnelId) ?? null,
+      showOnReport: showNoteByPerson.get(row.personnelId) ?? true,
       ...countedBranchFields(row.personnelId, homeByPerson, countedBranchByPerson, scanBranchesByPerson, branch),
     }
   })
@@ -216,6 +219,7 @@ export async function listAttendanceDays(
       ...times,
       note: noteByPerson.get(person.id) ?? null,
       noteReason: reasonByPerson.get(person.id) ?? null,
+      showOnReport: showNoteByPerson.get(person.id) ?? true,
       ...countedBranchFields(person.id, homeByPerson, countedBranchByPerson, scanBranchesByPerson, branch),
     }
   })
@@ -442,8 +446,8 @@ export async function listAttendanceReport(
         AND work_date <= ${params.to}::date
         AND personnel_id IN (${Prisma.join(personnelIds.map((id) => Prisma.sql`${id}::uuid`))})
     `,
-    db.$queryRaw<Array<{ personnel_id: string; work_date: string; reason: string | null; note: string | null }>>`
-      SELECT personnel_id, to_char(work_date, 'YYYY-MM-DD') AS work_date, reason, note
+    db.$queryRaw<Array<{ personnel_id: string; work_date: string; reason: string | null; note: string | null; show_on_report: boolean }>>`
+      SELECT personnel_id, to_char(work_date, 'YYYY-MM-DD') AS work_date, reason, note, show_on_report
       FROM attendance_day_notes
       WHERE company_id = ${params.companyId}::uuid
         AND work_date >= ${params.from}::date
@@ -515,7 +519,7 @@ export async function listAttendanceReport(
         otBefore: times.otBefore ? { minutes: times.otBefore.minutes, status: times.otBefore.status } : null,
         otAfter: times.otAfter ? { minutes: times.otAfter.minutes, status: times.otAfter.status } : null,
         noteReason: savedNote?.reason ?? null,
-        note: savedNote?.note?.trim() || null,
+        note: savedNote && savedNote.show_on_report === false ? null : savedNote?.note?.trim() || null,
         firstIn: times.firstIn,
         lastOut: times.lastOut,
       })
@@ -539,8 +543,8 @@ export async function listAttendanceReport(
 
 async function loadDayNotes(db: PrismaClient, companyId: string, date: string, personnelIds: string[]) {
   if (personnelIds.length === 0) return []
-  return db.$queryRaw<Array<{ personnel_id: string; reason: string | null; note: string }>>`
-    SELECT personnel_id, reason, note
+  return db.$queryRaw<Array<{ personnel_id: string; reason: string | null; note: string; show_on_report: boolean }>>`
+    SELECT personnel_id, reason, note, show_on_report
     FROM attendance_day_notes
     WHERE company_id = ${companyId}::uuid
       AND work_date = ${date}::date
@@ -822,11 +826,13 @@ export async function saveAttendanceDayNote(
     date: string
     reason: (typeof DAY_NOTE_REASONS)[number] | null
     note: string
+    showOnReport?: boolean
   }
 ) {
   assertDateKey(params.date)
   await assertHomeBranchPerson(db, params)
   const note = params.note.trim()
+  const showOnReport = params.showOnReport ?? true
   if (!params.reason && !note) {
     await db.$executeRaw`
       DELETE FROM attendance_day_notes
@@ -834,18 +840,19 @@ export async function saveAttendanceDayNote(
         AND personnel_id = ${params.personnelId}::uuid
         AND work_date = ${params.date}::date
     `
-    return { personnelId: params.personnelId, date: params.date, reason: null, note: null }
+    return { personnelId: params.personnelId, date: params.date, reason: null, note: null, showOnReport: false }
   }
 
   await db.$executeRaw`
     INSERT INTO attendance_day_notes (
-      company_id, personnel_id, work_date, reason, note, updated_by_id, updated_at
+      company_id, personnel_id, work_date, reason, note, show_on_report, updated_by_id, updated_at
     ) VALUES (
       ${params.companyId}::uuid,
       ${params.personnelId}::uuid,
       ${params.date}::date,
       ${params.reason},
       ${note},
+      ${showOnReport},
       ${params.userId}::uuid,
       CURRENT_TIMESTAMP
     )
@@ -853,10 +860,11 @@ export async function saveAttendanceDayNote(
     DO UPDATE SET
       reason = EXCLUDED.reason,
       note = EXCLUDED.note,
+      show_on_report = EXCLUDED.show_on_report,
       updated_by_id = EXCLUDED.updated_by_id,
       updated_at = CURRENT_TIMESTAMP
   `
-  return { personnelId: params.personnelId, date: params.date, reason: params.reason, note: note || null }
+  return { personnelId: params.personnelId, date: params.date, reason: params.reason, note: note || null, showOnReport }
 }
 
 /**

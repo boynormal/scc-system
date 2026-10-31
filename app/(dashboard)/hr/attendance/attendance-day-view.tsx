@@ -45,6 +45,7 @@ type DayRow = {
   otAfter: OtView | null
   note: string | null
   noteReason: StoredNoteReason | null
+  showOnReport: boolean
   homeBranchId: string
   homeBranchCode: string
   countedBranchId: string
@@ -453,6 +454,7 @@ export function AttendanceDayView({
   const [timeIn, setTimeIn] = useState("")
   const [timeOut, setTimeOut] = useState("")
   const [reasonDraft, setReasonDraft] = useState<NoteReason | null>(null)
+  const [showOnReport, setShowOnReport] = useState(true)
   const [savingNote, setSavingNote] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
 
@@ -508,6 +510,7 @@ export function AttendanceDayView({
     setManageStep(step)
     setNoteDraft(row.note ?? "")
     setReasonDraft(NOTE_REASONS.includes(row.noteReason as NoteReason) ? (row.noteReason as NoteReason) : null)
+    setShowOnReport(row.note || row.noteReason ? row.showOnReport : true)
     setTimeIn(timeInputValue(row.firstIn, tz))
     setTimeOut(timeInputValue(row.lastOut, tz))
     setNoteError(null)
@@ -539,23 +542,24 @@ export function AttendanceDayView({
     setSavingNote(true)
     setNoteError(null)
     try {
-      const res = await fetchJson<{ data: { note: string | null; reason: NoteReason | null } }>(
+      const res = await fetchJson<{ data: { note: string | null; reason: NoteReason | null; showOnReport: boolean } }>(
         `/api/hr/attendance/days/note`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ branchId, personnelId: row.personnelId, date, note: text, reason }),
+          body: JSON.stringify({ branchId, personnelId: row.personnelId, date, note: text, reason, showOnReport }),
         }
       )
       setNoteDraft(res.data.note ?? "")
       setReasonDraft(res.data.reason)
+      setShowOnReport(res.data.showOnReport)
       setData((current) =>
         current
           ? {
               ...current,
               rows: current.rows.map((item) =>
                 item.personnelId === row.personnelId
-                  ? { ...item, note: res.data.note, noteReason: res.data.reason }
+                  ? { ...item, note: res.data.note, noteReason: res.data.reason, showOnReport: res.data.showOnReport }
                   : item
               ),
             }
@@ -1102,7 +1106,10 @@ export function AttendanceDayView({
                     name="attendance-note-reason"
                     checked={reasonDraft === reason}
                     disabled={!canUpdate}
-                    onChange={() => setReasonDraft(reason)}
+                    onChange={() => {
+                      setReasonDraft(reason)
+                      setShowOnReport(true)
+                    }}
                     onClick={(event) => {
                       if (reasonDraft !== reason) return
                       event.preventDefault()
@@ -1123,6 +1130,15 @@ export function AttendanceDayView({
               placeholder={t("day.notePlaceholder")}
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={showOnReport}
+                disabled={!canUpdate}
+                onChange={(event) => setShowOnReport(event.target.checked)}
+              />
+              {t("day.showNoteOnReport")}
+            </label>
             {noteError && <p className="text-xs text-red-600">{noteError}</p>}
             {canUpdate && (
               <div className="flex gap-2">

@@ -3,6 +3,7 @@ import { ValidationError } from "@/lib/errors"
 import {
   buildObjectKey,
   contentDispositionAttachment,
+  inspectDocumentUpload,
   inspectUpload,
   sha256Hex,
 } from "@/modules/storage/application/file-bytes"
@@ -34,6 +35,7 @@ describe("inspectUpload", () => {
     expect(() => inspectUpload(Buffer.from("<html>x</html>"), "a.pdf", MAX)).toThrow(/ไม่ได้รับอนุญาต/)
     expect(() => inspectUpload(Buffer.from("<svg xmlns='x'></svg>"), "a.svg", MAX)).toThrow(/ไม่ได้รับอนุญาต/)
     expect(() => inspectUpload(pdf(), "photo.jpg", MAX)).toThrow(/ไม่ได้รับอนุญาต/)
+    expect(() => inspectUpload(Buffer.from([0x50, 0x4b, 0x03, 0x04]), "sheet.xlsx", MAX)).toThrow(/ไม่ได้รับอนุญาต/)
   })
 
   it("keeps only the file name and strips control characters", () => {
@@ -57,6 +59,33 @@ describe("buildObjectKey", () => {
     expect(() =>
       buildObjectKey({ module: "finance", entityType: "expense", recordId: "../etc", fileId })
     ).toThrow(ValidationError)
+  })
+})
+
+describe("inspectDocumentUpload", () => {
+  function zipNamed(name: string) {
+    const nameBuf = Buffer.from(name)
+    const header = Buffer.alloc(30)
+    header.writeUInt32LE(0x04034b50, 0)
+    header.writeUInt16LE(nameBuf.length, 26)
+    header.writeUInt32LE(4, 18)
+    return Buffer.concat([header, nameBuf, Buffer.from("data")])
+  }
+
+  it("accepts pdf, images, and office containers that match the extension", () => {
+    expect(inspectDocumentUpload(pdf(), "manual.pdf", MAX).contentType).toBe("application/pdf")
+    const docx = zipNamed("[Content_Types].xml")
+    expect(inspectDocumentUpload(docx, "policy.docx", 200).contentType).toContain("wordprocessingml")
+    const ole = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0])
+    expect(inspectDocumentUpload(ole, "legacy.xls", MAX).contentType).toBe("application/vnd.ms-excel")
+  })
+
+  it("rejects macro files, html, and a zip renamed as pdf", () => {
+    const macro = Buffer.concat([zipNamed("[Content_Types].xml"), Buffer.from("vbaProject.bin")])
+    expect(() => inspectDocumentUpload(macro, "book.xlsx", 400)).toThrow(ValidationError)
+    expect(() => inspectDocumentUpload(Buffer.from("<html>x</html>"), "a.docx", MAX)).toThrow(ValidationError)
+    expect(() => inspectDocumentUpload(zipNamed("[Content_Types].xml"), "a.pdf", 200)).toThrow(ValidationError)
+    expect(() => inspectDocumentUpload(zipNamed("word/document.xml"), "a.docx", 200)).toThrow(ValidationError)
   })
 })
 

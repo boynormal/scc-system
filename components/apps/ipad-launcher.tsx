@@ -204,7 +204,7 @@ export function IpadLauncher({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(100,116,139,0.12)_100%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(2,6,23,0.35)_100%)]" />
 
-      <div className="relative z-10 mx-auto h-full max-w-6xl overflow-y-auto pb-40 pl-[5.5rem] pr-4 pt-20 sm:pr-8 sm:pt-[5.5rem]">
+      <div className="relative z-10 mx-auto h-full max-w-6xl overflow-y-auto pb-40 pl-[5.5rem] pr-4 pt-20 [scrollbar-width:none] [-ms-overflow-style:none] sm:pr-8 sm:pt-[5.5rem] [&::-webkit-scrollbar]:hidden">
         <LauncherClockWeather branches={weatherBranches} />
 
         <div className="mt-10 grid grid-cols-3 gap-x-4 gap-y-10 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">

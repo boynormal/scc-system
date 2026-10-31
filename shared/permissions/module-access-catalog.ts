@@ -97,6 +97,12 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     navModuleIds: ["assets", "pm_check", "pm_calendar"],
   },
   {
+    moduleId: "document_center",
+    label: "คลังเอกสาร",
+    anyOfResources: ["documents", "document_masters"],
+    navModuleIds: ["document_center"],
+  },
+  {
     moduleId: "fuel",
     label: "จัดการน้ำมัน",
     anyOfResources: ["fuel"],

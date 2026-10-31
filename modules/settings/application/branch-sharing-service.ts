@@ -25,6 +25,7 @@ export const updateBranchSharingSchema = z.object({
   due_dates: flagsSchema.optional(),
   finance: flagsSchema.optional(),
   personnel: flagsSchema.optional(),
+  documents: flagsSchema.optional(),
 })
 
 function canUpdateSettings(roles: UserRole[]) {

@@ -66,6 +66,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Reports, KPI dashboard, analytics",
   },
   {
+    id: "document_center",
+    label: "Document Center",
+    order: 41,
+    icon: "FileText",
+    description: "Company document library, categories, and versions",
+  },
+  {
     id: "due_dates",
     label: "Due Date Management",
     order: 36,

@@ -104,6 +104,14 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
     ],
   },
   {
+    id: "document_center",
+    label: "คลังเอกสาร",
+    rows: [
+      { resource: "documents", label: "คลังเอกสาร (อนุมัติ = ดูประวัติ)", actions: CRUD_APPROVE },
+      { resource: "document_masters", label: "หมวดหมู่และประเภทเอกสาร", actions: CRUD },
+    ],
+  },
+  {
     id: "settings",
     label: "ตั้งค่าและสิทธิ์",
     rows: [

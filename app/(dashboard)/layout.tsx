@@ -11,6 +11,7 @@ import { buildDashboardNav } from "@/shared/navigation/buildDashboardNav"
 import { parseCompanyNavPreferences } from "@/shared/navigation/companyNavPreferences"
 import { translateNavTree } from "@/shared/navigation/translateNav"
 import { cn } from "@/lib/utils"
+import { DashboardScroll } from "@/components/layout/dashboard-scroll"
 import { NavPendingProvider } from "@/components/shell/nav-pending"
 import { ModuleTabSlotProvider } from "@/components/shell/module-tab-slot"
 
@@ -52,10 +53,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className={cn("relative flex h-screen overflow-hidden bg-glass-ambient", isDark && "dark")}>
       <NavPendingProvider>
         <ModuleTabSlotProvider>
-          <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+          <DashboardScroll>
             <Header user={session.user} appearance={appearance} />
             <main className="-mt-14 pb-6 pl-[5.5rem] pr-6 pt-20 text-foreground">{children}</main>
-          </div>
+          </DashboardScroll>
           <div className="absolute inset-y-0 left-0 z-40 h-full">
             <Sidebar
               navItems={navItems}

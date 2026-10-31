@@ -454,6 +454,30 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
   },
   {
     type: "section",
+    key: "sec_document_center",
+    label: "sec_document_center",
+    order: 17,
+    children: [
+      {
+        type: "link",
+        key: "document_center",
+        href: "/document-center",
+        label: "document_center",
+        icon: "FileText",
+        permission: { resource: "documents", action: "read" },
+        anyOfPermissions: [
+          { resource: "documents", action: "read" },
+          { resource: "document_masters", action: "read" },
+        ],
+        moduleId: "document_center",
+        order: 0,
+        keywords: ["document", "เอกสาร", "คลังเอกสาร", "ไฟล์", "คู่มือ", "แบบฟอร์ม"],
+        launcher: { departmentId: "document_center", capabilityId: "library", isPrimary: true },
+      },
+    ],
+  },
+  {
+    type: "section",
     key: "sec_finance",
     label: "sec_finance",
     order: 18,

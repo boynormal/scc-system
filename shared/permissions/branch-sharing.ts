@@ -8,6 +8,7 @@ export const BRANCH_SHARE_MODULES = [
   "due_dates",
   "finance",
   "personnel",
+  "documents",
 ] as const
 
 export type BranchShareModule = (typeof BRANCH_SHARE_MODULES)[number]
@@ -44,6 +45,7 @@ export function defaultBranchSharing(): BranchSharingSettings {
     due_dates: flags({}),
     finance: flags({}),
     personnel: flags({}),
+    documents: flags({}),
   }
 }
 

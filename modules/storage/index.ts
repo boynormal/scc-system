@@ -4,6 +4,7 @@ export {
   buildObjectKey,
   contentDispositionAttachment,
   contentDispositionInline,
+  inspectDocumentUpload,
   inspectUpload,
   safeOriginalName,
   sha256Hex,

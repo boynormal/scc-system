@@ -18,6 +18,7 @@ export type ReportFact = {
   departmentId?: string | null
   jobGroupId?: string | null
   departmentName: string | null
+  jobGroupName?: string | null
   status: ReportDayStatus
   manMinutes: number
   lateMinutes: number
@@ -70,9 +71,14 @@ export type ReportPersonDay = {
   status: ReportDayStatus
   manMinutes: number
   lateMinutes: number
+  /** นาทีที่ลาภายในวัน ไม่รวมนาทีสาย */
+  intraMinutes: number
   otBeforeMinutes: number
   otAfterMinutes: number
   noteReason: string | null
+  note: string | null
+  firstIn: string | null
+  lastOut: string | null
 }
 
 export type ReportDayRow = {
@@ -90,9 +96,13 @@ export type ReportPersonRow = {
   personnelId: string
   displayName: string
   departmentName: string | null
+  jobGroupName: string | null
   presentDays: number
   manMinutes: number
   lateMinutes: number
+  lateCount: number
+  fullLeaveHours: number
+  intraMinutes: number
   otBeforeMinutes: number
   otAfterMinutes: number
   pendingOtCount: number
@@ -162,7 +172,7 @@ function pendingCount(item: ReportOtFact): number {
   return item?.status === "PENDING" ? 1 : 0
 }
 
-export function buildAttendanceReport(dates: string[], facts: ReportFact[]): AttendanceReport {
+export function buildAttendanceReport(dates: string[], facts: ReportFact[], timeZone = "Asia/Bangkok"): AttendanceReport {
   const leave = emptyLeaveCounts()
   const presentPeople = new Set<string>()
   let manMinutes = 0
@@ -228,9 +238,13 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[]): Att
       personnelId: fact.personnelId,
       displayName: fact.displayName,
       departmentName: fact.departmentName,
+      jobGroupName: fact.jobGroupName ?? null,
       presentDays: 0,
       manMinutes: 0,
       lateMinutes: 0,
+      lateCount: 0,
+      fullLeaveHours: 0,
+      intraMinutes: 0,
       otBeforeMinutes: 0,
       otAfterMinutes: 0,
       pendingOtCount: 0,
@@ -242,8 +256,13 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[]): Att
     if (fact.status !== "NO_SCAN") person.presentDays += 1
     if (fact.status === "SINGLE_PUNCH") person.singlePunch += 1
     if (fact.status === "NO_SCAN") person.noScan += 1
+    const lost = factLostMinutes(fact, timeZone)
+    const intraMinutes = reason === "INTRA_DAY" ? Math.max(0, lost - fact.lateMinutes) : 0
     person.manMinutes += fact.manMinutes
     person.lateMinutes += fact.lateMinutes
+    if (fact.lateMinutes > 0) person.lateCount += 1
+    if (reason === "PERSONAL" || reason === "SICK") person.fullLeaveHours += 8
+    person.intraMinutes += intraMinutes
     person.otBeforeMinutes += confirmedMinutes(fact.otBefore)
     person.otAfterMinutes += confirmedMinutes(fact.otAfter)
     person.pendingOtCount += pending
@@ -253,9 +272,13 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[]): Att
       status: fact.status,
       manMinutes: fact.manMinutes,
       lateMinutes: fact.lateMinutes,
+      intraMinutes,
       otBeforeMinutes: confirmedMinutes(fact.otBefore),
       otAfterMinutes: confirmedMinutes(fact.otAfter),
       noteReason: reason,
+      note: fact.note?.trim() || null,
+      firstIn: fact.firstIn ? fact.firstIn.toISOString() : null,
+      lastOut: fact.lastOut ? fact.lastOut.toISOString() : null,
     })
     people.set(fact.personnelId, person)
   }

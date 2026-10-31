@@ -110,3 +110,84 @@ export function contentDispositionAttachment(originalName: string): string {
 export function contentDispositionInline(originalName: string): string {
   return contentDisposition(originalName, "inline")
 }
+
+const ZIP_LOCAL = Buffer.from([0x50, 0x4b, 0x03, 0x04])
+const OLE = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
+const CONTENT_TYPES = Buffer.from("[Content_Types].xml")
+const VBA_PROJECT = Buffer.from("vbaProject.bin")
+
+type DocumentExt = AllowedKind["ext"] | "xlsx" | "docx" | "pptx" | "xls" | "doc" | "ppt"
+
+const DOCUMENT_CONTENT_TYPE: Record<DocumentExt, string> = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  xls: "application/vnd.ms-excel",
+  doc: "application/msword",
+  ppt: "application/vnd.ms-powerpoint",
+}
+
+function startsWithBytes(body: Buffer, signature: Buffer): boolean {
+  return body.length >= signature.length && body.subarray(0, signature.length).equals(signature)
+}
+
+function windowIncludes(body: Buffer, needle: Buffer, maxBytes: number): boolean {
+  return body.subarray(0, Math.min(body.length, maxBytes)).includes(needle)
+}
+
+function documentExtension(name: string): DocumentExt | null {
+  const ext = safeOriginalName(name).split(".").pop()?.toLowerCase() ?? ""
+  if (ext === "jpeg" || ext === "jpg") return "jpg"
+  if (
+    ext === "png" ||
+    ext === "pdf" ||
+    ext === "webp" ||
+    ext === "xlsx" ||
+    ext === "docx" ||
+    ext === "pptx" ||
+    ext === "xls" ||
+    ext === "doc" ||
+    ext === "ppt"
+  ) {
+    return ext
+  }
+  return null
+}
+
+function officeBytesMatch(body: Buffer, ext: DocumentExt): boolean {
+  if (ext === "xlsx" || ext === "docx" || ext === "pptx") {
+    return (
+      startsWithBytes(body, ZIP_LOCAL) &&
+      windowIncludes(body, CONTENT_TYPES, 256 * 1024) &&
+      !windowIncludes(body, VBA_PROJECT, 512 * 1024)
+    )
+  }
+  if (ext === "xls" || ext === "doc" || ext === "ppt") return startsWithBytes(body, OLE)
+  return false
+}
+
+/**
+ * Document Center upload check. Finance keeps using `inspectUpload` (PDF and images only).
+ * Office Open XML must be a zip with `[Content_Types].xml`. Macro files are refused.
+ */
+export function inspectDocumentUpload(body: Buffer, originalName: string, maxBytes: number): {
+  originalName: string
+  contentType: string
+} {
+  if (body.length === 0) throw new ValidationError("ไฟล์ว่าง")
+  if (body.length > maxBytes) throw new ValidationError("ไฟล์ใหญ่เกินขนาดที่กำหนด")
+  if (looksActive(body)) throw new ValidationError("ชนิดไฟล์นี้ไม่ได้รับอนุญาต")
+  const declared = documentExtension(originalName)
+  if (!declared) throw new ValidationError("ชนิดไฟล์นี้ไม่ได้รับอนุญาต")
+  if (declared === "xlsx" || declared === "docx" || declared === "pptx" || declared === "xls" || declared === "doc" || declared === "ppt") {
+    if (!officeBytesMatch(body, declared)) throw new ValidationError("ชนิดไฟล์นี้ไม่ได้รับอนุญาต")
+    return { originalName: safeOriginalName(originalName), contentType: DOCUMENT_CONTENT_TYPE[declared] }
+  }
+  const detected = kindOf(body)
+  if (!detected || detected.ext !== declared) throw new ValidationError("ชนิดไฟล์นี้ไม่ได้รับอนุญาต")
+  return { originalName: safeOriginalName(originalName), contentType: detected.contentType }
+}

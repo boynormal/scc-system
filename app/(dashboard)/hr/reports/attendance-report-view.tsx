@@ -16,7 +16,7 @@ import { LoadingState } from "@/components/ui/loading-state"
 import { Select } from "@/components/ui/select"
 import { monthKeyOf } from "@/modules/hr/application/attendance-day-calendar"
 import { monthBounds } from "@/modules/hr/application/hr-kpi"
-import { formatMinutes } from "../attendance/attendance-format"
+import { formatMinutes, formatTime } from "../attendance/attendance-format"
 import { MonthPicker } from "../exceptions/attendance-exception-view"
 
 type LeaveCounts = { PERSONAL: number; SICK: number; ABSENT: number; INTRA_DAY: number }
@@ -39,18 +39,26 @@ type PersonDay = {
   status: DayStatus
   manMinutes: number
   lateMinutes: number
+  intraMinutes?: number
   otBeforeMinutes: number
   otAfterMinutes: number
   noteReason: string | null
+  note?: string | null
+  firstIn?: string | null
+  lastOut?: string | null
 }
 
 type PersonRow = {
   personnelId: string
   displayName: string
   departmentName: string | null
+  jobGroupName?: string | null
   presentDays: number
   manMinutes: number
   lateMinutes: number
+  lateCount?: number
+  fullLeaveHours?: number
+  intraMinutes?: number
   otBeforeMinutes: number
   otAfterMinutes: number
   pendingOtCount: number
@@ -61,6 +69,7 @@ type PersonRow = {
 }
 
 type ReportData = {
+  branch?: { timezone: string }
   cards: {
     presentPeople: number
     manMinutes: number
@@ -73,6 +82,19 @@ type ReportData = {
 }
 
 const REASONS = ["PERSONAL", "SICK", "ABSENT", "INTRA_DAY"] as const
+
+function formatHours(minutes: number): string {
+  const hours = minutes / 60
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
+}
+
+function remainPercent(row: PersonRow): string {
+  const days = row.days.length
+  const capacity = days * 8 * 60
+  if (capacity <= 0) return "—"
+  const used = (row.fullLeaveHours ?? 0) * 60 + (row.intraMinutes ?? 0) + row.lateMinutes
+  return ((Math.max(0, capacity - used) / capacity) * 100).toFixed(1)
+}
 
 function leaveText(leave: LeaveCounts, label: (reason: (typeof REASONS)[number]) => string): string {
   const parts = REASONS.filter((reason) => leave[reason] > 0).map((reason) => `${label(reason)} ${leave[reason]}`)
@@ -183,13 +205,17 @@ export function AttendanceReportView({
       return
     }
     downloadCsv(`attendance-${from}-${to}-people.csv`, [
-      [t("report.name"), t("report.department"), t("report.presentDays"), t("report.manHour"), t("report.late"), t("report.otBefore"), t("report.otAfter"), ...reasonHeaders],
+      [t("report.name"), t("report.jobGroup"), t("report.presentDays"), t("report.manHour"), t("report.fullLeaveHours"), t("report.intraLeaveHours"), t("report.lateCount"), t("report.lateMinutes"), t("report.remainPct"), t("report.otBefore"), t("report.otAfter"), ...reasonHeaders],
       ...people.map((row) => [
         row.displayName,
-        row.departmentName ?? "",
+        row.jobGroupName ?? "",
         String(row.presentDays),
         formatMinutes(row.manMinutes),
+        String(row.fullLeaveHours ?? 0),
+        formatHours(row.intraMinutes ?? 0),
+        String(row.lateCount ?? 0),
         String(row.lateMinutes),
+        remainPercent(row),
         formatMinutes(row.otBeforeMinutes),
         formatMinutes(row.otAfterMinutes),
         ...REASONS.map((reason) => String(row.leave[reason])),
@@ -330,13 +356,16 @@ export function AttendanceReportView({
                   <AppDataTableHead sticky={false}>
                     <tr>
                       <th>{t("report.name")}</th>
-                      <th>{t("report.department")}</th>
+                      <th>{t("report.jobGroup")}</th>
                       <th className="text-right">{t("report.presentDays")}</th>
                       <th className="text-right">{t("report.manHour")}</th>
-                      <th className="text-right">{t("report.late")}</th>
+                      <th className="text-right">{t("report.fullLeaveHours")}</th>
+                      <th className="text-right">{t("report.intraLeaveHours")}</th>
+                      <th className="text-right">{t("report.lateCount")}</th>
+                      <th className="text-right">{t("report.lateMinutes")}</th>
+                      <th className="text-right">{t("report.remainPct")}</th>
                       <th className="text-right">{t("report.otBefore")}</th>
                       <th className="text-right">{t("report.otAfter")}</th>
-                      <th>{t("report.leave")}</th>
                     </tr>
                   </AppDataTableHead>
                   <AppDataTableBody>
@@ -347,13 +376,16 @@ export function AttendanceReportView({
                             {row.displayName}
                           </button>
                         </td>
-                        <td className="px-4 py-2">{row.departmentName ?? "—"}</td>
+                        <td className="px-4 py-2">{row.jobGroupName ?? "—"}</td>
                         <td className="px-4 py-2 text-right font-mono tabular-nums">{row.presentDays}</td>
                         <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(row.manMinutes)}</td>
+                        <td className={`px-4 py-2 text-right font-mono tabular-nums ${(row.fullLeaveHours ?? 0) > 0 ? "text-red-600" : ""}`}>{row.fullLeaveHours || "—"}</td>
+                        <td className={`px-4 py-2 text-right font-mono tabular-nums ${(row.intraMinutes ?? 0) > 0 ? "text-red-600" : ""}`}>{(row.intraMinutes ?? 0) > 0 ? formatHours(row.intraMinutes ?? 0) : "—"}</td>
+                        <td className={`px-4 py-2 text-right font-mono tabular-nums ${(row.lateCount ?? 0) > 0 ? "text-red-600" : ""}`}>{(row.lateCount ?? 0) > 0 ? row.lateCount : "—"}</td>
                         <td className={`px-4 py-2 text-right font-mono tabular-nums ${row.lateMinutes > 0 ? "text-red-600" : ""}`}>{row.lateMinutes || "—"}</td>
+                        <td className="px-4 py-2 text-right font-mono tabular-nums">{remainPercent(row)}</td>
                         <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(row.otBeforeMinutes)}</td>
                         <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(row.otAfterMinutes)}</td>
-                        <td className="px-4 py-2">{leaveText(row.leave, reasonLabel) || "—"}</td>
                       </tr>
                     ))}
                   </AppDataTableBody>
@@ -372,22 +404,32 @@ export function AttendanceReportView({
               <AppDataTableHead sticky={false}>
                 <tr>
                   <th>{t("day.date")}</th>
+                  <th>{t("day.in")}</th>
+                  <th>{t("day.out")}</th>
                   <th>{t("day.status")}</th>
+                  <th className="text-right">{t("report.lateMinutes")}</th>
+                  <th className="text-right">{t("report.intraLeaveHours")}</th>
                   <th className="text-right">{t("report.manHour")}</th>
                   <th className="text-right">{t("report.otBefore")}</th>
                   <th className="text-right">{t("report.otAfter")}</th>
                   <th>{t("report.leave")}</th>
+                  <th>{t("day.note")}</th>
                 </tr>
               </AppDataTableHead>
               <AppDataTableBody>
                 {person.days.map((day) => (
                   <tr key={day.date}>
                     <td className="px-4 py-2">{day.date}</td>
+                    <td className="px-4 py-2 font-mono tabular-nums">{day.firstIn ? formatTime(day.firstIn, report?.branch?.timezone || "Asia/Bangkok", "th") : "—"}</td>
+                    <td className="px-4 py-2 font-mono tabular-nums">{day.lastOut ? formatTime(day.lastOut, report?.branch?.timezone || "Asia/Bangkok", "th") : "—"}</td>
                     <td className="px-4 py-2">{t(`status.${day.status}`)}</td>
+                    <td className={`px-4 py-2 text-right font-mono tabular-nums ${day.lateMinutes > 0 ? "text-red-600" : ""}`}>{day.lateMinutes || "—"}</td>
+                    <td className={`px-4 py-2 text-right font-mono tabular-nums ${(day.intraMinutes ?? 0) > 0 ? "text-red-600" : ""}`}>{(day.intraMinutes ?? 0) > 0 ? formatHours(day.intraMinutes ?? 0) : "—"}</td>
                     <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.manMinutes)}</td>
                     <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.otBeforeMinutes)}</td>
                     <td className="px-4 py-2 text-right font-mono tabular-nums">{formatMinutes(day.otAfterMinutes)}</td>
                     <td className="px-4 py-2">{day.noteReason ? t(`report.reason.${day.noteReason as (typeof REASONS)[number]}`) : "—"}</td>
+                    <td className="px-4 py-2">{day.note || "—"}</td>
                   </tr>
                 ))}
               </AppDataTableBody>

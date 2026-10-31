@@ -91,6 +91,16 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     iconKey: "Cpu",
   },
   {
+    id: "document_center",
+    labelTh: "คลังเอกสาร",
+    labelEn: "Document Center",
+    description: "จัดเก็บ · ค้นหา · เวอร์ชัน · ดาวน์โหลด",
+    departmentIds: ["document_center"],
+    order: 10,
+    accent: "from-sky-500 to-blue-600 shadow-sky-600/30",
+    iconKey: "FileText",
+  },
+  {
     id: "due_dates",
     labelTh: "ศูนย์ติดตามวันครบกำหนด",
     labelEn: "Due Date Management",

@@ -184,6 +184,9 @@ model Company {
   incomes               Income[]
   incomeTypes           IncomeType[]
   incomeCategories      IncomeCategory[]
+  docCenterCategories   DocCenterCategory[]
+  docCenterTypes        DocCenterType[]
+  docCenterDocuments    DocCenterDocument[]
 
   @@map("companies")
 }
@@ -229,6 +232,7 @@ model Branch {
   fuelTanks            FuelTank[]
   fuelTransactions     FuelTransaction[]
   incomes              Income[]
+  docCenterDocuments   DocCenterDocument[]
 
   @@index([companyId])
   @@index([code])
@@ -248,8 +252,9 @@ model Department {
   company   Company      @relation(fields: [companyId], references: [id])
   parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children  Department[] @relation("DepartmentHierarchy")
-  machines  Machine[]
-  personnel Personnel[]
+  machines           Machine[]
+  personnel          Personnel[]
+  docCenterDocuments DocCenterDocument[]
 
   @@unique([companyId, name])
   @@index([companyId])
@@ -352,7 +357,12 @@ model User {
   fuelTransactionsCreated FuelTransaction[]     @relation("FuelTransactionCreatedBy")
   driverLogin            Driver?                @relation("DriverLogin")
   jobStopPunches         JobStopPunch[]         @relation("JobStopPunchRecorder")
-
+  docCenterDocumentsCreated DocCenterDocument[]    @relation("DocCenterCreatedBy")
+  docCenterDocumentsUpdated DocCenterDocument[]    @relation("DocCenterUpdatedBy")
+  docCenterVersionsUploaded DocCenterVersion[]     @relation("DocCenterVersionUploader")
+  docCenterFavorites        DocCenterFavorite[]    @relation("DocCenterFavoriteUser")
+  docCenterAccessLogs       DocCenterAccessLog[]   @relation("DocCenterAccessUser")
+  docCenterAcknowledgements DocCenterAcknowledgement[] @relation("DocCenterAcknowledgementUser")
   // Phase B decision (2026-07-23): email stays globally @unique permanently โ€” login
   // may use email or username; both are globally unique (no company picker).
   // employeeCode is no longer globally unique โ€” company scope is now the sole
@@ -2162,6 +2172,7 @@ model StoredFile {
   uploader           User                @relation("StoredFileUploader", fields: [uploadedById], references: [id])
   expenseAttachments ExpenseAttachment[]
   incomeAttachments  IncomeAttachment[]
+  docCenterVersions  DocCenterVersion[]
 
   @@unique([bucket, objectKey])
   @@index([companyId, module, entityType, entityId])
@@ -2590,4 +2601,171 @@ model FuelTransaction {
   @@index([branchId, occurredAt])
   @@index([type])
   @@map("fuel_transactions")
+}
+
+enum DocCenterStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DocCenterAccessAction {
+  VIEW
+  DOWNLOAD
+}
+
+model DocCenterCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  parentId    String?  @map("parent_id") @db.Uuid
+  code        String?  @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company   Company             @relation(fields: [companyId], references: [id])
+  parent    DocCenterCategory?  @relation("DocCenterCategoryTree", fields: [parentId], references: [id])
+  children  DocCenterCategory[] @relation("DocCenterCategoryTree")
+  documents DocCenterDocument[]
+
+  @@unique([companyId, parentId, name])
+  @@index([companyId])
+  @@index([parentId])
+  @@map("doc_center_categories")
+}
+
+model DocCenterType {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  code        String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company             @relation(fields: [companyId], references: [id])
+  typeDocs DocCenterDocument[] @relation("DocCenterTypeDocuments")
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("doc_center_types")
+}
+
+model DocCenterDocument {
+  id                       String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId                String          @map("company_id") @db.Uuid
+  documentCode             String          @map("document_code") @db.VarChar(50)
+  documentName             String          @map("document_name") @db.VarChar(255)
+  description              String?
+  categoryId               String          @map("category_id") @db.Uuid
+  typeId                   String          @map("type_id") @db.Uuid
+  branchId                 String?         @map("branch_id") @db.Uuid
+  departmentId             String?         @map("department_id") @db.Uuid
+  status                   DocCenterStatus @default(ACTIVE)
+  tags                     String[]        @default([])
+  currentVersionId         String?         @unique @map("current_version_id") @db.Uuid
+  effectiveDate            DateTime?       @map("effective_date") @db.Date
+  expiryDate               DateTime?       @map("expiry_date") @db.Date
+  requiresAcknowledgement  Boolean         @default(false) @map("requires_acknowledgement")
+  createdById              String          @map("created_by_id") @db.Uuid
+  updatedById              String          @map("updated_by_id") @db.Uuid
+  createdAt                DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt                DateTime?       @map("deleted_at") @db.Timestamptz
+
+  company          Company                    @relation(fields: [companyId], references: [id])
+  category         DocCenterCategory          @relation(fields: [categoryId], references: [id])
+  type             DocCenterType              @relation("DocCenterTypeDocuments", fields: [typeId], references: [id])
+  branch           Branch?                    @relation(fields: [branchId], references: [id])
+  department       Department?                @relation(fields: [departmentId], references: [id])
+  createdBy        User                       @relation("DocCenterCreatedBy", fields: [createdById], references: [id])
+  updatedBy        User                       @relation("DocCenterUpdatedBy", fields: [updatedById], references: [id])
+  currentVersion   DocCenterVersion?          @relation("DocCenterCurrentVersion", fields: [currentVersionId], references: [id])
+  versions         DocCenterVersion[]         @relation("DocCenterVersions")
+  favorites        DocCenterFavorite[]
+  accessLogs       DocCenterAccessLog[]
+  acknowledgements DocCenterAcknowledgement[]
+
+  @@unique([companyId, documentCode])
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([typeId])
+  @@index([branchId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([tags], type: Gin)
+  @@map("doc_center_documents")
+}
+
+model DocCenterVersion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId    String   @map("document_id") @db.Uuid
+  versionNumber Int      @map("version_number")
+  storedFileId  String   @unique @map("stored_file_id") @db.Uuid
+  changeNote    String?  @map("change_note")
+  uploadedById  String   @map("uploaded_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  document         DocCenterDocument          @relation("DocCenterVersions", fields: [documentId], references: [id])
+  storedFile       StoredFile                 @relation(fields: [storedFileId], references: [id])
+  uploadedBy       User                       @relation("DocCenterVersionUploader", fields: [uploadedById], references: [id])
+  currentOf        DocCenterDocument?         @relation("DocCenterCurrentVersion")
+  accessLogs       DocCenterAccessLog[]
+  acknowledgements DocCenterAcknowledgement[]
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId])
+  @@map("doc_center_versions")
+}
+
+model DocCenterFavorite {
+  userId     String   @map("user_id") @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User              @relation("DocCenterFavoriteUser", fields: [userId], references: [id])
+  document DocCenterDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, documentId])
+  @@index([documentId])
+  @@map("doc_center_favorites")
+}
+
+model DocCenterAccessLog {
+  id         String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId String                @map("document_id") @db.Uuid
+  versionId  String?               @map("version_id") @db.Uuid
+  userId     String                @map("user_id") @db.Uuid
+  action     DocCenterAccessAction
+  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz
+
+  document DocCenterDocument @relation(fields: [documentId], references: [id])
+  version  DocCenterVersion? @relation(fields: [versionId], references: [id])
+  user     User              @relation("DocCenterAccessUser", fields: [userId], references: [id])
+
+  @@index([documentId, createdAt])
+  @@index([userId, createdAt])
+  @@map("doc_center_access_logs")
+}
+
+model DocCenterAcknowledgement {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  versionId  String   @map("version_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  document DocCenterDocument @relation(fields: [documentId], references: [id])
+  version  DocCenterVersion  @relation(fields: [versionId], references: [id])
+  user     User              @relation("DocCenterAcknowledgementUser", fields: [userId], references: [id])
+
+  @@unique([userId, versionId])
+  @@index([documentId])
+  @@index([versionId])
+  @@map("doc_center_acknowledgements")
 }

@@ -22,6 +22,9 @@ export default auth((req) => {
   const isPublic = isPublicPath(nextUrl.pathname)
 
   if (!session && !isPublic) {
+    if (nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 })
+    }
     const loginUrl = new URL("/login", nextUrl)
     loginUrl.searchParams.set("callbackUrl", `${nextUrl.pathname}${nextUrl.search}`)
     return NextResponse.redirect(loginUrl)
@@ -41,6 +44,9 @@ export default auth((req) => {
       return NextResponse.redirect(new URL(isDriverLogPath(pathOnly) ? pathOnly : home, nextUrl))
     }
     if (!isDriverAllowedPath(nextUrl.pathname)) {
+      if (nextUrl.pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Forbidden", code: "FORBIDDEN" }, { status: 403 })
+      }
       return NextResponse.redirect(new URL(home, nextUrl))
     }
     return NextResponse.next()

@@ -922,7 +922,29 @@
     "needChoice": "เลือกผลให้ครบทุกรายการ",
     "saveFailed": "บันทึกไม่สำเร็จ",
     "publicTitle": "ตรวจ PM",
-    "recordClock": "เวลาบันทึก"
+    "recordClock": "เวลาบันทึก",
+    "manageTemplates": "เทมเพลตรายการตรวจ",
+    "templateName": "ชื่อเทมเพลต",
+    "addTemplate": "เพิ่มเทมเพลต",
+    "editTemplate": "แก้ไข",
+    "saveTemplate": "บันทึกเทมเพลต",
+    "cancel": "ยกเลิก",
+    "delete": "ลบ",
+    "itemDetail": "สิ่งที่ต้องตรวจ",
+    "applyTemplate": "ใช้เทมเพลต",
+    "chooseTemplate": "เลือกเทมเพลต",
+    "replaceItemsConfirm": "แทนที่รายการตรวจในฟอร์มด้วยเทมเพลตนี้?",
+    "noTemplates": "ยังไม่มีเทมเพลต",
+    "templateOn": "เปิดใช้",
+    "templateOff": "ปิดใช้",
+    "templateTurnOn": "เปิดใช้",
+    "templateTurnOff": "ปิดใช้",
+    "templateDeleteConfirm": "ลบเทมเพลตนี้?",
+    "templateItemCount": "{count} รายการ",
+    "useStarter": "ใส่ชุดตรวจรถ",
+    "starterName": "ตรวจรถก่อนออกเดินทาง",
+    "templateHint": "เลือกเทมเพลตเพื่อเติมรายการ แล้วแก้ได้ก่อนบันทึก",
+    "loadFailed": "โหลดไม่สำเร็จ"
   },
   "transport": {
     "overviewTitle": "ภาพรวมขนส่ง",
@@ -1533,6 +1555,7 @@
     "fileName": "ชื่อไฟล์",
     "noCategories": "ยังไม่มีหมวดหมู่",
     "fieldRequired": "จำเป็น",
+    "sessionExpired": "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่",
     "actionFailed": "ทำรายการไม่สำเร็จ"
   }
 }

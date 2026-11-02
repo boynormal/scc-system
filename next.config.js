@@ -21,6 +21,8 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ["localhost:3000"],
     },
+    // Document uploads allow 20MB. Middleware otherwise clones only the first 10MB and the route receives a broken body.
+    middlewareClientMaxBodySize: 26 * 1024 * 1024,
   },
   async redirects() {
     return [

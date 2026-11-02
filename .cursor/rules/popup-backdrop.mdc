@@ -1,0 +1,14 @@
+---
+description: Popup and dialog overlays blur the page behind them so the dialog stays in focus. Use when adding or changing a dialog, modal, or popup.
+globs: "**/*dialog*.tsx,components/glass/**/*.tsx"
+alwaysApply: false
+---
+
+# Popup backdrop
+
+Every popup focuses the dialog by blurring the page behind it. The reference is the line dialog on `/finance/expenses/new?manual=1`.
+
+- Open the popup with `GlassDialog` from `components/glass`. Do not build a separate full-screen overlay.
+- The backdrop is the shared scrim in `GlassDialog`: a dim layer plus `backdrop-blur-md`. Do not remove the blur for a `solid` dialog. `solid` only makes the dialog panel opaque so text and buttons stay readable.
+- Keep the panel above the scrim. Do not put the blur on the panel itself.
+- A second popup that opens on top of the first uses `GlassDialog` too, so it gets the same scrim.

@@ -55,3 +55,9 @@ export {
   type UpsertAssetPmInput,
   type SubmitAssetPmRoundInput,
 } from "./application/asset-pm-service"
+export {
+  listAssetPmTemplates,
+  createAssetPmTemplate,
+  updateAssetPmTemplate,
+  deleteAssetPmTemplate,
+} from "./application/asset-pm-template-service"

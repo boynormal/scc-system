@@ -27,7 +27,7 @@ export function PmPublicForm({
   recordedAt,
 }: {
   token: string
-  items: { id: string; sequence: number; name: string }[]
+  items: { id: string; sequence: number; name: string; detail?: string | null }[]
   recordedAt?: string
 }) {
   const t = useTranslations("pmCheck")
@@ -85,6 +85,7 @@ export function PmPublicForm({
             </span>
             {item.name}
           </h2>
+          {item.detail ? <p className="mt-2 text-sm font-normal text-[#334155]">{item.detail}</p> : null}
           <div className="mt-3 grid grid-cols-2 gap-3">
             {STATUSES.map((status) => {
               const selected = choices[item.id] === status
@@ -163,7 +164,7 @@ export function PmPublicCard({
   statusClass,
 }: {
   token: string
-  items: { id: string; sequence: number; name: string }[]
+  items: { id: string; sequence: number; name: string; detail?: string | null }[]
   title: string
   assetName: string
   assetCode: string

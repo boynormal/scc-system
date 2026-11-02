@@ -9,7 +9,7 @@ import { prisma } from "@/shared/db"
 import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
 import { NotFoundError } from "@/lib/errors"
 import { getAssetPm } from "@/modules/assets"
-import { PmPlanForm } from "@/components/assets/pm-plan-form"
+import { PmPlanEditor } from "@/components/assets/pm-plan-form"
 import { PmQrActions } from "@/components/assets/pm-qr-actions"
 import { GlassCard, GlassCardHeader, GlassCardTitle } from "@/components/glass"
 
@@ -123,7 +123,7 @@ export default async function AssetPmPage({ params }: { params: Promise<{ id: st
               <GlassCardTitle>{t("items")}</GlassCardTitle>
             </GlassCardHeader>
             {canUpdate ? (
-              <PmPlanForm
+              <PmPlanEditor
                 assetId={asset.id}
                 intervalDays={plan.intervalDays}
                 isActive={plan.isActive}
@@ -132,7 +132,10 @@ export default async function AssetPmPage({ params }: { params: Promise<{ id: st
             ) : (
               <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
                 {plan.items.map((item) => (
-                  <li key={item.id}>{item.name}</li>
+                  <li key={item.id}>
+                    <span>{item.name}</span>
+                    {item.detail ? <span className="mt-0.5 block text-sm text-foreground">{item.detail}</span> : null}
+                  </li>
                 ))}
               </ol>
             )}
@@ -145,7 +148,7 @@ export default async function AssetPmPage({ params }: { params: Promise<{ id: st
           <GlassCardHeader>
             <GlassCardTitle>{t("items")}</GlassCardTitle>
           </GlassCardHeader>
-          <PmPlanForm assetId={asset.id} intervalDays={30} isActive items={[]} />
+          <PmPlanEditor assetId={asset.id} intervalDays={30} isActive items={[]} />
         </GlassCard>
       )}
 

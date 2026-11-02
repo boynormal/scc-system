@@ -21,6 +21,7 @@ import { ModuleBackdrop } from "@/components/shell/module-backdrop"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { NavbarModuleTabs } from "@/components/shell/navbar-module-tabs"
 import { PmCheckBoard } from "@/components/assets/pm-check-board"
+import { PmTemplateButton } from "@/components/assets/pm-template-button"
 import { PmCalendarFilters } from "@/components/assets/pm-calendar-filters"
 import { PmMonthGrid } from "@/components/assets/pm-month-grid"
 
@@ -83,9 +84,12 @@ export default async function AssetsListPage(props: {
       <ModuleBackdrop isDark={isDark}>
         <div className="relative z-10 space-y-6">
           {tabs}
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{pm("title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{pm("desc")}</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{pm("title")}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{pm("desc")}</p>
+            </div>
+            {canUpdatePm ? <PmTemplateButton /> : null}
           </div>
           <Suspense fallback={<div className="h-12 w-full animate-pulse rounded-xl bg-[#e2e8f0]" />}>
             <PmCalendarFilters

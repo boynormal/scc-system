@@ -3,6 +3,7 @@ import type { UserRole } from "@/lib/permissions"
 import { canTouchDocument, documentWhere } from "@/modules/document_center/application/access"
 import {
   descendantIds,
+  documentPreviewSrc,
   fileKindOf,
   parentCreatesCycle,
   rollupCategoryCounts,
@@ -35,6 +36,12 @@ describe("document rules", () => {
     const totals = rollupCategoryCounts(rows, new Map([["b", 2]]))
     expect(totals.get("a")).toBe(2)
     expect(totals.get("b")).toBe(2)
+  })
+
+  it("fits an inline PDF to the page", () => {
+    expect(documentPreviewSrc("doc", "ver")).toBe(
+      "/api/document-center/documents/doc/versions/ver/file?disposition=inline#zoom=page-fit"
+    )
   })
 
   it("maps office and pdf content types to a file kind", () => {

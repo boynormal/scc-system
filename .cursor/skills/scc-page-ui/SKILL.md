@@ -13,7 +13,7 @@ Compose `ListFrame` from `components/shell/list-frame.tsx`. It renders `PageHead
 
 - Put `EmptyState` and `ListPagination` in the table slot.
 - Keep filters on one horizontal row. Do not stack a tall filter card.
-- Short create or edit flows open `GlassDialog` with `solid` on the current page. Do not add a full page for a few fields.
+- Short create or edit flows open `GlassDialog` with `solid` on the current page. Do not add a full page for a few fields. The page behind the dialog stays blurred; `solid` only makes the dialog panel opaque.
 - Forms use `Input`, `Select`, and `Button` from `components/ui`.
 - Status uses `Badge`. Do not invent pale text on a pale background.
 

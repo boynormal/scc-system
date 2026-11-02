@@ -40,6 +40,7 @@ export {
   DOC_GRID_PAGE_SIZE,
   canPreviewKind,
   documentFilePath,
+  documentPreviewSrc,
   fileKindOf,
   parentCreatesCycle,
   descendantIds,

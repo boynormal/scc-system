@@ -8,6 +8,7 @@ import { GlassDialog } from "@/components/glass/glass-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
+import { messageFromXhr } from "@/components/document-center/upload-error"
 
 type Option = { id: string; name: string }
 
@@ -68,12 +69,7 @@ export function DocCreateButton({
                 router.refresh()
                 return
               }
-              try {
-                const body = JSON.parse(xhr.responseText) as { error?: string | { message?: string } }
-                setError(typeof body.error === "string" ? body.error : body.error?.message || t("actionFailed"))
-              } catch {
-                setError(t("actionFailed"))
-              }
+              setError(messageFromXhr(xhr, t("actionFailed"), t("sessionExpired")))
             }
             xhr.onerror = () => {
               setPending(false)

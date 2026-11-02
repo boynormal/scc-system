@@ -165,6 +165,11 @@ export function documentFilePath(documentId: string, versionId: string, disposit
   return `/api/document-center/documents/${documentId}/versions/${versionId}/file?disposition=${disposition}`
 }
 
+/** Inline PDF URL that asks the browser viewer to fit one whole page in the frame. */
+export function documentPreviewSrc(documentId: string, versionId: string) {
+  return `${documentFilePath(documentId, versionId, "inline")}#zoom=page-fit`
+}
+
 export type DocListItem = {
   id: string
   documentCode: string

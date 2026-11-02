@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { canPreviewKind, documentFilePath, type DocListItem } from "@/modules/document_center"
+import { canPreviewKind, documentFilePath, documentPreviewSrc, type DocListItem } from "@/modules/document_center"
 import { DataPanel } from "@/components/shell/data-panel"
 import { DocFavoriteButton } from "./doc-favorite-button"
 import { DocFileIcon } from "./doc-file-icon"
@@ -71,7 +71,7 @@ export function DocPreviewPanel({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={previewUrl!} alt={item.documentName} className={`${previewFrame} rounded-lg object-contain`} />
       ) : showPreview ? (
-        <iframe title={item.documentName} src={previewUrl!} className={`${previewFrame} rounded-lg border border-border bg-white`} />
+        <iframe title={item.documentName} src={documentPreviewSrc(item.id, item.versionId!)} className="aspect-[210/297] h-auto w-full rounded-lg border border-border bg-white" />
       ) : (
         <div className={`flex flex-col items-center justify-center gap-3 text-center text-foreground ${previewFrame}`}>
           <DocFileIcon kind={item.fileKind} />

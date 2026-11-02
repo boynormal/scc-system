@@ -24,6 +24,13 @@ export const upsertAssetPmSchema = z.object({
     .array(
       z.object({
         name: z.string().trim().min(1).max(255),
+        detail: z
+          .string()
+          .trim()
+          .max(255)
+          .optional()
+          .nullable()
+          .transform((value) => (value ? value : null)),
       })
     )
     .min(1)
@@ -153,6 +160,7 @@ function serializePlan(row: PlanRow, now?: Date) {
       id: item.id,
       sequence: item.sequence,
       name: item.name,
+      detail: item.detail,
     })),
     rounds: row.rounds.map((round) => ({
       id: round.id,
@@ -221,6 +229,7 @@ export async function upsertAssetPm(
   const items = input.items.map((item, index) => ({
     sequence: index + 1,
     name: item.name,
+    detail: item.detail,
   }))
   const existing = await db.assetPmPlan.findUnique({
     where: { assetId: asset.id },
@@ -395,6 +404,7 @@ export async function getPublicAssetPm(db: PrismaClient, token: string, now?: Da
         id: item.id,
         sequence: item.sequence,
         name: item.name,
+        detail: item.detail,
       })),
     },
   }

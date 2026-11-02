@@ -52,7 +52,7 @@ type AssetRow = {
   deletedAt: Date | null
 }
 
-type PlanItem = { id: string; planId: string; sequence: number; name: string }
+type PlanItem = { id: string; planId: string; sequence: number; name: string; detail?: string | null }
 type PlanRound = {
   id: string
   planId: string
@@ -201,6 +201,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
             planId: PLAN_ID,
             sequence: item.sequence,
             name: item.name,
+            detail: item.detail ?? null,
           })),
           rounds: [],
         })
@@ -216,7 +217,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
           publicToken?: string
           intervalDays?: number
           isActive?: boolean
-          items?: { create: { sequence: number; name: string }[] }
+          items?: { create: { sequence: number; name: string; detail?: string | null }[] }
         }
       }) => {
         const plan = state.plans.find((row) => row.id === where.id)
@@ -230,6 +231,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
             planId: plan.id,
             sequence: item.sequence,
             name: item.name,
+            detail: item.detail ?? null,
           }))
         }
         return plan
@@ -453,6 +455,25 @@ describe("asset PM access", () => {
     })
     expect(replaced.data.plan?.intervalDays).toBe(7)
     expect(replaced.data.plan?.items.map((item) => item.name)).toEqual(["น้ำหม้อน้ำ"])
+    expect(replaced.data.plan?.items[0]?.detail).toBeNull()
+
+    const detailed = await upsertAssetPm(created.db, {
+      companyId: CID,
+      roles: adminRoles,
+      assetId: ASSET_ID,
+      input: {
+        intervalDays: 7,
+        isActive: true,
+        items: [
+          { name: "ยางรถ", detail: "สภาพยาง ลมยาง และความเสียหาย" },
+          { name: "น้ำมันเครื่อง", detail: "   " },
+        ],
+      },
+    })
+    expect(detailed.data.plan?.items).toEqual([
+      expect.objectContaining({ name: "ยางรถ", detail: "สภาพยาง ลมยาง และความเสียหาย" }),
+      expect.objectContaining({ name: "น้ำมันเครื่อง", detail: null }),
+    ])
 
     const before = replaced.data.plan?.publicToken
     const rotated = await rotateAssetPmToken(created.db, {

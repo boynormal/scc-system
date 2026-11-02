@@ -31,5 +31,5 @@ When adding or changing a list, filter bar, page title, or short create/edit flo
 
 - Title, description, table cells, button labels, and form values use `text-foreground` in both light and dark mode.
 - `text-muted-foreground` is only for secondary hints inside a `DataPanel` or an `Input`.
-- Filters stay on one row inside `DataPanel`. A short form opens `GlassDialog` with `solid`.
+- Filters stay on one row inside `DataPanel`. A short form opens `GlassDialog` with `solid`. The page behind every popup is blurred; do not turn that blur off. See `.cursor/rules/popup-backdrop.mdc`.
 - Controls come from `components/ui` (`Button`, `Input`, `Select`, `Badge`). Do not add a module-colored header, blur orbs, or hardcoded hex text.

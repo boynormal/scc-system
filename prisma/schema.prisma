@@ -176,6 +176,7 @@ model Company {
   assets                Asset[]
   assetRegisterTypes    AssetRegisterType[]
   assetPmPlans          AssetPmPlan[]
+  assetPmTemplates      AssetPmTemplate[]
   storedFiles           StoredFile[]
   departments           Department[]
   jobGroups             JobGroup[]
@@ -2429,6 +2430,36 @@ model AssetRegisterType {
   @@unique([companyId, name])
   @@index([companyId])
   @@map("asset_register_types")
+}
+
+// Reusable checklist copied onto an asset PM plan. The plan does not keep a template id.
+model AssetPmTemplate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String   @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company               @relation(fields: [companyId], references: [id])
+  items   AssetPmTemplateItem[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("asset_pm_templates")
+}
+
+model AssetPmTemplateItem {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId String  @map("template_id") @db.Uuid
+  sequence   Int     @db.SmallInt
+  name       String  @db.VarChar(255)
+  detail     String? @db.VarChar(255)
+
+  template AssetPmTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("asset_pm_template_items")
 }
 
 // PM checklist on the asset register. QR opens /pm/[publicToken] without a session.

@@ -924,7 +924,29 @@
     "needChoice": "Choose a result for every item",
     "saveFailed": "Could not save",
     "publicTitle": "PM check",
-    "recordClock": "Recorded at"
+    "recordClock": "Recorded at",
+    "manageTemplates": "Check templates",
+    "templateName": "Template name",
+    "addTemplate": "Add template",
+    "editTemplate": "Edit",
+    "saveTemplate": "Save template",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "itemDetail": "What to check",
+    "applyTemplate": "Use template",
+    "chooseTemplate": "Choose a template",
+    "replaceItemsConfirm": "Replace the checklist in this form with the template?",
+    "noTemplates": "No templates yet",
+    "templateOn": "Active",
+    "templateOff": "Inactive",
+    "templateTurnOn": "Turn on",
+    "templateTurnOff": "Turn off",
+    "templateDeleteConfirm": "Delete this template?",
+    "templateItemCount": "{count} items",
+    "useStarter": "Fill the vehicle check",
+    "starterName": "Vehicle check before departure",
+    "templateHint": "Choose a template to fill the list. You can still edit it before saving.",
+    "loadFailed": "Could not load"
   },
   "transport": {
     "overviewTitle": "Transport overview",
@@ -1535,6 +1557,7 @@
     "fileName": "File name",
     "noCategories": "No categories yet",
     "fieldRequired": "Required",
+    "sessionExpired": "Your session expired. Sign in again.",
     "actionFailed": "The action failed"
   }
 }

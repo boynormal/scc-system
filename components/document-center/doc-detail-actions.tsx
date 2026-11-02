@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
+import { messageFromXhr } from "@/components/document-center/upload-error"
 import { GlassDialog } from "@/components/glass/glass-dialog"
 import { Button } from "@/components/ui/button"
 import { DeleteButton } from "@/components/ui/delete-button"
@@ -79,7 +80,7 @@ export function DocDetailActions({
         router.refresh()
         return
       }
-      setError(t("actionFailed"))
+      setError(messageFromXhr(xhr, t("actionFailed"), t("sessionExpired")))
     }
     xhr.onerror = () => {
       setPending(false)

@@ -15,6 +15,7 @@ import {
   canDocuments,
   canPreviewKind,
   documentFilePath,
+  documentPreviewSrc,
   getDocument,
   listCategories,
   listDocumentAcknowledgements,
@@ -43,7 +44,8 @@ export default async function DocumentDetailPage(props: { params: Promise<{ id: 
   const item = detail.data
   const canApprove = canDocuments(roles, "approve")
   const roster = canApprove ? await listDocumentAcknowledgements(prisma, { ...scope, id }) : null
-  const preview = item.versionId && canPreviewKind(item.fileKind) ? documentFilePath(item.id, item.versionId, "inline") : null
+  const inline = item.versionId && canPreviewKind(item.fileKind) ? documentFilePath(item.id, item.versionId, "inline") : null
+  const preview = item.fileKind === "pdf" && item.versionId ? documentPreviewSrc(item.id, item.versionId) : inline
   const download = item.versionId ? documentFilePath(item.id, item.versionId, "attachment") : null
 
   return (
@@ -61,11 +63,11 @@ export default async function DocumentDetailPage(props: { params: Promise<{ id: 
       />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <DataPanel padding="md">
-          {preview && item.fileKind === "image" ? (
+          {inline && item.fileKind === "image" ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt={item.documentName} className="max-h-[36rem] w-full object-contain" />
+            <img src={inline} alt={item.documentName} className="max-h-[36rem] w-full object-contain" />
           ) : preview ? (
-            <iframe title={item.documentName} src={preview} className="h-[36rem] w-full rounded-lg border border-border bg-white" />
+            <iframe title={item.documentName} src={preview} className="aspect-[210/297] h-auto w-full rounded-lg border border-border bg-white" />
           ) : (
             <div className="flex flex-col items-center gap-3 py-10 text-center text-foreground">
               <DocFileIcon kind={item.fileKind} />

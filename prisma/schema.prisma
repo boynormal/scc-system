@@ -2483,10 +2483,11 @@ model AssetPmPlan {
 }
 
 model AssetPmItem {
-  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  planId   String @map("plan_id") @db.Uuid
-  sequence Int    @db.SmallInt
-  name     String @db.VarChar(255)
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId   String  @map("plan_id") @db.Uuid
+  sequence Int     @db.SmallInt
+  name     String  @db.VarChar(255)
+  detail   String? @db.VarChar(255)
 
   plan    AssetPmPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   results AssetPmResult[]

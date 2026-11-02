@@ -185,7 +185,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
           intervalDays: number
           isActive: boolean
           publicToken: string
-          items: { create: { sequence: number; name: string }[] }
+          items: { create: { sequence: number; name: string; detail?: string | null }[] }
           recordedBy?: string
         }
       }) => {

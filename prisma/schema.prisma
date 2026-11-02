@@ -2739,13 +2739,14 @@ model DocCenterVersion {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   documentId    String   @map("document_id") @db.Uuid
   versionNumber Int      @map("version_number")
-  storedFileId  String   @unique @map("stored_file_id") @db.Uuid
+  storedFileId  String?  @unique @map("stored_file_id") @db.Uuid
+  body          String?  @db.Text
   changeNote    String?  @map("change_note")
   uploadedById  String   @map("uploaded_by_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   document         DocCenterDocument          @relation("DocCenterVersions", fields: [documentId], references: [id])
-  storedFile       StoredFile                 @relation(fields: [storedFileId], references: [id])
+  storedFile       StoredFile?                @relation(fields: [storedFileId], references: [id])
   uploadedBy       User                       @relation("DocCenterVersionUploader", fields: [uploadedById], references: [id])
   currentOf        DocCenterDocument?         @relation("DocCenterCurrentVersion")
   accessLogs       DocCenterAccessLog[]

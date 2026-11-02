@@ -47,8 +47,9 @@ export function DocCreateButton({
             const form = event.currentTarget
             const data = new FormData(form)
             const file = data.get("file")
-            if (!(file instanceof File) || file.size === 0) {
-              setError(t("fieldRequired"))
+            const announcement = String(data.get("announcement") ?? "").trim()
+            if ((!(file instanceof File) || file.size === 0) && !announcement) {
+              setError(t("announcementOrFile"))
               return
             }
             setPending(true)
@@ -84,12 +85,16 @@ export function DocCreateButton({
           <div className="sm:col-span-2">
             <Input name="description" label={t("description")} maxLength={4000} />
           </div>
+          <label className="space-y-1.5 text-sm font-medium text-foreground sm:col-span-2">
+            {t("announcement")}
+            <textarea name="announcement" maxLength={20000} rows={6} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-normal text-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </label>
           <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
             <input name="requiresAcknowledgement" type="checkbox" />
             {t("requireAck")}
           </label>
           <div className="sm:col-span-2">
-            <Input name="file" label={t("file")} type="file" required accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx,.doc,.pptx,.ppt" />
+            <Input name="file" label={t("file")} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx,.doc,.pptx,.ppt" />
           </div>
           {pending ? <p className="text-sm text-foreground sm:col-span-2">{t("uploadProgress")} {progress}%</p> : null}
           {error ? <p className="text-sm text-red-600 sm:col-span-2">{error}</p> : null}

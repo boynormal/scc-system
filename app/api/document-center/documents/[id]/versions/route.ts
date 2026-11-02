@@ -1,6 +1,5 @@
 import { prisma } from "@/shared/db"
 import { withAuth } from "@/lib/api-handler"
-import { ValidationError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
 import { requestAuditMeta } from "@/lib/request-audit"
@@ -27,15 +26,17 @@ export const POST = withAuth(async (req, ctx, session) => {
   const { id } = await ctx.params
   const form = await req.formData()
   const file = form.get("file")
-  if (!(file instanceof File)) throw new ValidationError("ไม่พบไฟล์")
+  const upload = file instanceof File && file.size > 0 ? file : null
   const note = form.get("changeNote")
+  const announcement = form.get("announcement")
   const result = await addDocumentVersion(prisma, {
     companyId: session.user.companyId as string,
     roles: session.user.roles as UserRole[],
     userId: session.user.id as string,
     id,
-    originalName: file.name,
-    body: Buffer.from(await file.arrayBuffer()),
+    announcement: typeof announcement === "string" ? announcement : null,
+    originalName: upload?.name ?? null,
+    body: upload ? Buffer.from(await upload.arrayBuffer()) : null,
     changeNote: typeof note === "string" ? note : null,
     audit: requestAuditMeta(req),
   })

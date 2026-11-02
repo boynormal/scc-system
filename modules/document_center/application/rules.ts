@@ -207,6 +207,7 @@ export type DocVersionItem = {
   id: string
   versionNumber: number
   changeNote: string | null
+  body: string | null
   fileName: string | null
   contentType: string | null
   sizeBytes: number | null

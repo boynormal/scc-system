@@ -35,6 +35,14 @@ import {
 
 const MODULE_KEY = "document_center"
 const ENTITY_TYPE = "document"
+const ANNOUNCEMENT_MAX = 20_000
+
+export function announcementText(value: string | null | undefined): string | null {
+  const text = value?.trim() ?? ""
+  if (!text) return null
+  if (text.length > ANNOUNCEMENT_MAX) throw new ValidationError("เนื้อหาประกาศยาวเกินกำหนด")
+  return text
+}
 
 function resolveObjectStorage(storage?: ObjectStorage): ObjectStorage {
   if (storage) return storage
@@ -71,6 +79,35 @@ function cleanupKey(storage: ObjectStorage, objectKey: string, fileId: string) {
   })
 }
 
+async function storeDocumentFile(
+  db: PrismaClient,
+  params: { companyId: string; roles: UserRole[]; storage?: ObjectStorage },
+  body: Buffer,
+  originalName: string,
+  recordId: string,
+  documentBranchId: string | null
+) {
+  const storage = resolveObjectStorage(params.storage)
+  const inspected = inspectDocumentUpload(body, originalName, storage.maxUploadBytes)
+  const fileBranchId = documentBranchId ?? (await storageBranchId(db, params.companyId, params.roles, null))
+  const { fileId, objectKey } = buildObjectKey({
+    module: MODULE_KEY,
+    entityType: ENTITY_TYPE,
+    recordId,
+  })
+  await storage.putObject({ key: objectKey, body, contentType: inspected.contentType })
+  return {
+    storage,
+    fileId,
+    objectKey,
+    fileBranchId,
+    originalName: inspected.originalName,
+    contentType: inspected.contentType,
+    checksum: sha256Hex(body),
+    sizeBytes: body.length,
+  }
+}
+
 export async function createDocument(
   db: PrismaClient,
   params: {
@@ -78,8 +115,9 @@ export async function createDocument(
     roles: UserRole[]
     userId: string
     input: CreateDocumentInput
-    originalName: string
-    body: Buffer
+    announcement?: string | null
+    originalName?: string | null
+    body?: Buffer | null
     storage?: ObjectStorage
     audit?: RequestAuditMeta
   }
@@ -92,17 +130,13 @@ export async function createDocument(
   if (params.input.departmentId) await assertDepartment(db, params.companyId, params.input.departmentId)
   const dates = metadataDates(params.input)
   assertMetadataDates(dates.effective ?? null, dates.expiry ?? null)
-  const storage = resolveObjectStorage(params.storage)
-  const inspected = inspectDocumentUpload(params.body, params.originalName, storage.maxUploadBytes)
+  const text = announcementText(params.announcement)
+  const file = params.body && params.body.length > 0 ? params.body : null
+  if (!text && !file) throw new ValidationError("ต้องมีเนื้อหาประกาศหรือไฟล์")
   const documentId = randomUUID()
-  const fileBranchId = await storageBranchId(db, params.companyId, params.roles, null)
-  const { fileId, objectKey } = buildObjectKey({
-    module: MODULE_KEY,
-    entityType: ENTITY_TYPE,
-    recordId: documentId,
-  })
-  const checksum = sha256Hex(params.body)
-  await storage.putObject({ key: objectKey, body: params.body, contentType: inspected.contentType })
+  const uploaded = file
+    ? await storeDocumentFile(db, params, file, params.originalName ?? "file", documentId, null)
+    : null
   let code = generatedDocumentCode()
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -128,28 +162,31 @@ export async function createDocument(
               updatedById: params.userId,
             },
           })
-          await tx.storedFile.create({
-            data: {
-              id: fileId,
-              companyId: params.companyId,
-              branchId: fileBranchId,
-              bucket: storage.bucket,
-              objectKey,
-              originalName: inspected.originalName,
-              contentType: inspected.contentType,
-              sizeBytes: params.body.length,
-              sha256: checksum,
-              module: MODULE_KEY,
-              entityType: ENTITY_TYPE,
-              entityId: documentId,
-              uploadedById: params.userId,
-            },
-          })
+          if (uploaded) {
+            await tx.storedFile.create({
+              data: {
+                id: uploaded.fileId,
+                companyId: params.companyId,
+                branchId: uploaded.fileBranchId,
+                bucket: uploaded.storage.bucket,
+                objectKey: uploaded.objectKey,
+                originalName: uploaded.originalName,
+                contentType: uploaded.contentType,
+                sizeBytes: uploaded.sizeBytes,
+                sha256: uploaded.checksum,
+                module: MODULE_KEY,
+                entityType: ENTITY_TYPE,
+                entityId: documentId,
+                uploadedById: params.userId,
+              },
+            })
+          }
           const version = await tx.docCenterVersion.create({
             data: {
               documentId,
               versionNumber: 1,
-              storedFileId: fileId,
+              storedFileId: uploaded?.fileId ?? null,
+              body: text,
               changeNote: null,
               uploadedById: params.userId,
             },
@@ -164,7 +201,7 @@ export async function createDocument(
               tableName: "doc_center_documents",
               recordId: documentId,
               action: "create",
-              newValues: { documentCode: code, versionNumber: 1, storedFileId: fileId },
+              newValues: { documentCode: code, versionNumber: 1, storedFileId: uploaded?.fileId ?? null },
               ipAddress: params.audit?.ipAddress,
               userAgent: params.audit?.userAgent,
             },
@@ -177,11 +214,11 @@ export async function createDocument(
       }
     }
   } catch (err) {
-    await cleanupKey(storage, objectKey, fileId)
+    if (uploaded) await cleanupKey(uploaded.storage, uploaded.objectKey, uploaded.fileId)
     if (isUniqueConflict(err)) throw new ValidationError("รหัสเอกสารนี้มีอยู่แล้ว")
     throw err
   }
-  await cleanupKey(storage, objectKey, fileId)
+  if (uploaded) await cleanupKey(uploaded.storage, uploaded.objectKey, uploaded.fileId)
   throw new ValidationError("รหัสเอกสารนี้มีอยู่แล้ว")
 }
 
@@ -192,8 +229,9 @@ export async function addDocumentVersion(
     roles: UserRole[]
     userId: string
     id: string
-    originalName: string
-    body: Buffer
+    announcement?: string | null
+    originalName?: string | null
+    body?: Buffer | null
     changeNote?: string | null
     storage?: ObjectStorage
     audit?: RequestAuditMeta
@@ -201,16 +239,12 @@ export async function addDocumentVersion(
 ) {
   const existing = await requireMutableDocument(db, params, "update")
   if (existing.deletedAt) throw new ValidationError("เอกสารถูกลบแล้ว")
-  const storage = resolveObjectStorage(params.storage)
-  const inspected = inspectDocumentUpload(params.body, params.originalName, storage.maxUploadBytes)
-  const { fileId, objectKey } = buildObjectKey({
-    module: MODULE_KEY,
-    entityType: ENTITY_TYPE,
-    recordId: existing.id,
-  })
-  const checksum = sha256Hex(params.body)
-  const fileBranchId = existing.branchId ?? (await storageBranchId(db, params.companyId, params.roles, null))
-  await storage.putObject({ key: objectKey, body: params.body, contentType: inspected.contentType })
+  const text = announcementText(params.announcement)
+  const file = params.body && params.body.length > 0 ? params.body : null
+  if (!text && !file) throw new ValidationError("ต้องมีเนื้อหาประกาศหรือไฟล์")
+  const uploaded = file
+    ? await storeDocumentFile(db, params, file, params.originalName ?? "file", existing.id, existing.branchId)
+    : null
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -220,28 +254,31 @@ export async function addDocumentVersion(
             _max: { versionNumber: true },
           })
           const versionNumber = (max._max.versionNumber ?? 0) + 1
-          await tx.storedFile.create({
-            data: {
-              id: fileId,
-              companyId: params.companyId,
-              branchId: fileBranchId,
-              bucket: storage.bucket,
-              objectKey,
-              originalName: inspected.originalName,
-              contentType: inspected.contentType,
-              sizeBytes: params.body.length,
-              sha256: checksum,
-              module: MODULE_KEY,
-              entityType: ENTITY_TYPE,
-              entityId: existing.id,
-              uploadedById: params.userId,
-            },
-          })
+          if (uploaded) {
+            await tx.storedFile.create({
+              data: {
+                id: uploaded.fileId,
+                companyId: params.companyId,
+                branchId: uploaded.fileBranchId,
+                bucket: uploaded.storage.bucket,
+                objectKey: uploaded.objectKey,
+                originalName: uploaded.originalName,
+                contentType: uploaded.contentType,
+                sizeBytes: uploaded.sizeBytes,
+                sha256: uploaded.checksum,
+                module: MODULE_KEY,
+                entityType: ENTITY_TYPE,
+                entityId: existing.id,
+                uploadedById: params.userId,
+              },
+            })
+          }
           const version = await tx.docCenterVersion.create({
             data: {
               documentId: existing.id,
               versionNumber,
-              storedFileId: fileId,
+              storedFileId: uploaded?.fileId ?? null,
+              body: text,
               changeNote: params.changeNote?.trim() || null,
               uploadedById: params.userId,
             },
@@ -270,11 +307,11 @@ export async function addDocumentVersion(
       }
     }
   } catch (err) {
-    await cleanupKey(storage, objectKey, fileId)
+    if (uploaded) await cleanupKey(uploaded.storage, uploaded.objectKey, uploaded.fileId)
     if (isUniqueConflict(err)) throw new ValidationError("ไม่สามารถบันทึกเวอร์ชันได้")
     throw err
   }
-  await cleanupKey(storage, objectKey, fileId)
+  if (uploaded) await cleanupKey(uploaded.storage, uploaded.objectKey, uploaded.fileId)
   throw new ValidationError("ไม่สามารถบันทึกเวอร์ชันได้")
 }
 

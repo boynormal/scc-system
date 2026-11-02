@@ -44,9 +44,10 @@ export default async function DocumentDetailPage(props: { params: Promise<{ id: 
   const item = detail.data
   const canApprove = canDocuments(roles, "approve")
   const roster = canApprove ? await listDocumentAcknowledgements(prisma, { ...scope, id }) : null
-  const inline = item.versionId && canPreviewKind(item.fileKind) ? documentFilePath(item.id, item.versionId, "inline") : null
-  const preview = item.fileKind === "pdf" && item.versionId ? documentPreviewSrc(item.id, item.versionId) : inline
-  const download = item.versionId ? documentFilePath(item.id, item.versionId, "attachment") : null
+  const inline = item.fileName && item.versionId && canPreviewKind(item.fileKind) ? documentFilePath(item.id, item.versionId, "inline") : null
+  const preview = item.fileKind === "pdf" && item.fileName && item.versionId ? documentPreviewSrc(item.id, item.versionId) : inline
+  const download = item.fileName && item.versionId ? documentFilePath(item.id, item.versionId, "attachment") : null
+  const announcement = detail.versions.find((version) => version.isCurrent)?.body ?? null
 
   return (
     <div className="space-y-4">
@@ -61,67 +62,87 @@ export default async function DocumentDetailPage(props: { params: Promise<{ id: 
           </div>
         }
       />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <DataPanel padding="md">
+      <DataPanel padding="md">
+        <dl className="grid gap-4 text-sm text-foreground sm:grid-cols-3">
+          <div>
+            <dt className="font-medium">{t("category")}</dt>
+            <dd>{item.categoryName}</dd>
+          </div>
+          <div>
+            <dt className="font-medium">{t("type")}</dt>
+            <dd>{item.typeName}</dd>
+          </div>
+          <div className="sm:col-span-3">
+            <dt className="font-medium">{t("description")}</dt>
+            <dd>{item.description || "-"}</dd>
+          </div>
+        </dl>
+      </DataPanel>
+      <DataPanel padding="md">
+        <div className="space-y-4">
+          {announcement ? <article className="whitespace-pre-wrap text-sm text-foreground">{announcement}</article> : null}
           {inline && item.fileKind === "image" ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={inline} alt={item.documentName} className="max-h-[36rem] w-full object-contain" />
-          ) : preview ? (
+          ) : preview && item.fileKind === "pdf" ? (
             <iframe title={item.documentName} src={preview} className="aspect-[210/297] h-auto w-full rounded-lg border border-border bg-white" />
-          ) : (
+          ) : announcement ? null : (
             <div className="flex flex-col items-center gap-3 py-10 text-center text-foreground">
               <DocFileIcon kind={item.fileKind} />
               <p className="font-medium">{t("previewUnsupported")}</p>
               <p className="text-sm">{t("previewUnsupportedDesc")}</p>
             </div>
           )}
-        </DataPanel>
+        </div>
+      </DataPanel>
+      {item.requiresAcknowledgement || roster?.data.required ? (
         <DataPanel padding="md">
-          <dl className="mb-4 space-y-2 text-sm text-foreground">
-            <div><dt className="font-medium">{t("category")}</dt><dd>{item.categoryName}</dd></div>
-            <div><dt className="font-medium">{t("type")}</dt><dd>{item.typeName}</dd></div>
-            <div><dt className="font-medium">{t("description")}</dt><dd>{item.description || "-"}</dd></div>
-          </dl>
-          {item.requiresAcknowledgement ? (
-            <div className="mb-4 text-sm text-foreground">
-              {item.acknowledgedAt ? (
+          <div className="space-y-4 text-sm text-foreground">
+            {item.requiresAcknowledgement ? (
+              item.acknowledgedAt ? (
                 <p>{t("ackDone", { time: new Date(item.acknowledgedAt).toLocaleString() })}</p>
               ) : (
                 <DocAcknowledgeButton documentId={item.id} label={t("ackButton")} pendingLabel={t("ackSaving")} failedLabel={t("actionFailed")} />
-              )}
-            </div>
-          ) : null}
-          {roster?.data.required ? (
-            <div className="mb-4 space-y-2 text-sm text-foreground">
-              <h2 className="font-semibold">{t("ackDoneTitle")}</h2>
-              {roster.data.acknowledged.length === 0 ? <p>{t("ackNone")}</p> : (
-                <ul>
-                  {roster.data.acknowledged.map((row) => (
-                    <li key={row.userId}>{row.name} · {new Date(row.acknowledgedAt).toLocaleString()}</li>
-                  ))}
-                </ul>
-              )}
-              <h2 className="font-semibold">{t("ackPendingTitle")}</h2>
-              {roster.data.pending.length === 0 ? <p>{t("ackNone")}</p> : (
-                <ul>
-                  {roster.data.pending.map((row) => (
-                    <li key={row.userId}>{row.name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : null}
-          <h2 className="mb-2 text-sm font-semibold text-foreground">{t("versionHistory")}</h2>
-          <DocDetailActions
-            item={item}
-            versions={detail.versions}
-            categories={categories.data}
-            types={types.data}
-            canUpdate={canDocuments(roles, "update")}
-            canDelete={canDocuments(roles, "delete")}
-          />
+              )
+            ) : null}
+            {roster?.data.required ? (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <section className="space-y-2">
+                  <h2 className="font-semibold">{t("ackDoneTitle")} ({roster.data.acknowledged.length})</h2>
+                  {roster.data.acknowledged.length === 0 ? <p>{t("ackNone")}</p> : (
+                    <ul className="grid grid-cols-2 gap-x-4 gap-y-1 xl:grid-cols-3">
+                      {roster.data.acknowledged.map((row) => (
+                        <li key={row.userId}>{row.name} · {new Date(row.acknowledgedAt).toLocaleString()}</li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+                <section className="space-y-2">
+                  <h2 className="font-semibold">{t("ackPendingTitle")} ({roster.data.pending.length})</h2>
+                  {roster.data.pending.length === 0 ? <p>{t("ackNone")}</p> : (
+                    <ul className="grid grid-cols-2 gap-x-4 gap-y-1 xl:grid-cols-3">
+                      {roster.data.pending.map((row) => (
+                        <li key={row.userId}>{row.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </div>
+            ) : null}
+          </div>
         </DataPanel>
-      </div>
+      ) : null}
+      <DataPanel padding="md">
+        <h2 className="mb-2 text-sm font-semibold text-foreground">{t("versionHistory")}</h2>
+        <DocDetailActions
+          item={item}
+          versions={detail.versions}
+          categories={categories.data}
+          types={types.data}
+          canUpdate={canDocuments(roles, "update")}
+          canDelete={canDocuments(roles, "delete")}
+        />
+      </DataPanel>
     </div>
   )
 }

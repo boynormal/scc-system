@@ -1495,6 +1495,8 @@
     "effectiveDate": "วันที่เริ่มใช้",
     "expiryDate": "วันหมดอายุ",
     "file": "ไฟล์",
+    "announcement": "เนื้อหาประกาศ",
+    "announcementOrFile": "ต้องมีเนื้อหาประกาศหรือไฟล์",
     "changeNote": "บันทึกการเปลี่ยนแปลง",
     "save": "บันทึก",
     "cancel": "ยกเลิก",

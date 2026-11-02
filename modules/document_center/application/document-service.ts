@@ -314,6 +314,7 @@ export async function getDocument(
     id: version.id,
     versionNumber: version.versionNumber,
     changeNote: version.changeNote,
+    body: version.body,
     fileName: version.storedFile?.originalName ?? null,
     contentType: version.storedFile?.contentType ?? null,
     sizeBytes: version.storedFile?.sizeBytes ?? null,

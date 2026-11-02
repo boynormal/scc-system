@@ -1497,6 +1497,8 @@
     "effectiveDate": "Effective date",
     "expiryDate": "Expiry date",
     "file": "File",
+    "announcement": "Announcement",
+    "announcementOrFile": "Add announcement text or a file",
     "changeNote": "Change note",
     "save": "Save",
     "cancel": "Cancel",

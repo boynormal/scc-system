@@ -40,7 +40,7 @@ export function DocGrid({
             </div>
             <div className="mt-2 flex gap-3 text-xs">
               <Link href={`/document-center/${item.id}`} className="underline">{labels.openDetail}</Link>
-              {item.versionId ? (
+              {item.fileName && item.versionId ? (
                 <a href={documentFilePath(item.id, item.versionId, "attachment")} className="underline">{labels.download}</a>
               ) : null}
             </div>

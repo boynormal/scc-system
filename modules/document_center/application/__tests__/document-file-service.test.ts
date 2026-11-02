@@ -72,9 +72,59 @@ describe("document files", () => {
     expect(storage.deleteObject).toHaveBeenCalledOnce()
   })
 
+  it("saves announcement text without storing a file", async () => {
+    const storage = memoryStorage()
+    const versionCreate = vi.fn().mockResolvedValue({ id: "99999999-9999-9999-9999-999999999999" })
+    const db = {
+      ...companyDb(),
+      docCenterCategory: { findFirst: vi.fn().mockResolvedValue({ id: CATEGORY }) },
+      docCenterType: { findFirst: vi.fn().mockResolvedValue({ id: TYPE }) },
+      $transaction: vi.fn(async (fn: (tx: object) => Promise<unknown>) =>
+        fn({
+          docCenterDocument: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
+          storedFile: { create: vi.fn() },
+          docCenterVersion: { create: versionCreate },
+          auditLog: { create: vi.fn().mockResolvedValue({}) },
+        })
+      ),
+    }
+    await createDocument(asDb(db), {
+      companyId: COMPANY,
+      roles: roles(),
+      userId: USER,
+      input: { documentName: "ประกาศ", categoryId: CATEGORY, typeId: TYPE },
+      announcement: "  หยุดวันพรุ่งนี้  ",
+      storage,
+    })
+    expect(storage.putObject).not.toHaveBeenCalled()
+    expect(versionCreate.mock.calls[0][0].data).toMatchObject({
+      storedFileId: null,
+      body: "หยุดวันพรุ่งนี้",
+      versionNumber: 1,
+    })
+  })
+
+  it("rejects a document that has neither text nor a file", async () => {
+    const db = {
+      ...companyDb(),
+      docCenterCategory: { findFirst: vi.fn().mockResolvedValue({ id: CATEGORY }) },
+      docCenterType: { findFirst: vi.fn().mockResolvedValue({ id: TYPE }) },
+    }
+    await expect(
+      createDocument(asDb(db), {
+        companyId: COMPANY,
+        roles: roles(),
+        userId: USER,
+        input: { documentName: "ว่าง", categoryId: CATEGORY, typeId: TYPE },
+        announcement: "   ",
+      })
+    ).rejects.toBeInstanceOf(ValidationError)
+  })
+
   it("assigns a generated code and ignores a code sent by the client", async () => {
     const storage = memoryStorage()
     const create = vi.fn().mockResolvedValue({})
+    const versionCreate = vi.fn().mockResolvedValue({ id: "99999999-9999-9999-9999-999999999999" })
     const db = {
       ...companyDb(),
       docCenterCategory: { findFirst: vi.fn().mockResolvedValue({ id: CATEGORY }) },
@@ -84,7 +134,7 @@ describe("document files", () => {
         fn({
           docCenterDocument: { create, update: vi.fn().mockResolvedValue({}) },
           storedFile: { create: vi.fn().mockResolvedValue({}) },
-          docCenterVersion: { create: vi.fn().mockResolvedValue({ id: "99999999-9999-9999-9999-999999999999" }) },
+          docCenterVersion: { create: versionCreate },
           auditLog: { create: vi.fn().mockResolvedValue({}) },
         })
       ),
@@ -107,7 +157,53 @@ describe("document files", () => {
     const saved = create.mock.calls[0][0].data.documentCode as string
     expect(saved).toMatch(/^DC-\d{6}-[A-Z0-9]{4}$/)
     expect(saved).not.toBe("HR-WI-001")
+    expect(versionCreate.mock.calls[0][0].data.storedFileId).toEqual(expect.any(String))
+    expect(storage.putObject).toHaveBeenCalledOnce()
     expect(storage.deleteObject).not.toHaveBeenCalled()
+  })
+
+  it("publishes a text version without uploading a file", async () => {
+    const storage = memoryStorage()
+    const nextVersion = "88888888-8888-8888-8888-888888888888"
+    const versionCreate = vi.fn().mockResolvedValue({ id: nextVersion })
+    const update = vi.fn().mockResolvedValue({})
+    const db = {
+      ...companyDb(),
+      docCenterDocument: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: "66666666-6666-6666-6666-666666666666",
+          branchId: BRANCH,
+          deletedAt: null,
+          currentVersionId: "77777777-7777-7777-7777-777777777777",
+        }),
+      },
+      $transaction: vi.fn(async (fn: (tx: object) => Promise<unknown>) =>
+        fn({
+          docCenterVersion: {
+            aggregate: vi.fn().mockResolvedValue({ _max: { versionNumber: 1 } }),
+            create: versionCreate,
+          },
+          storedFile: { create: vi.fn() },
+          docCenterDocument: { update },
+          auditLog: { create: vi.fn().mockResolvedValue({}) },
+        })
+      ),
+    }
+    const result = await addDocumentVersion(asDb(db), {
+      companyId: COMPANY,
+      roles: roles(),
+      userId: USER,
+      id: "66666666-6666-6666-6666-666666666666",
+      announcement: "เนื้อหาใหม่",
+      storage,
+    })
+    expect(result.data.versionId).toBe(nextVersion)
+    expect(storage.putObject).not.toHaveBeenCalled()
+    expect(versionCreate.mock.calls[0][0].data).toMatchObject({ body: "เนื้อหาใหม่", storedFileId: null, versionNumber: 2 })
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "66666666-6666-6666-6666-666666666666" },
+      data: { currentVersionId: nextVersion, updatedById: USER },
+    })
   })
 
   it("retries once when two version uploads collide", async () => {

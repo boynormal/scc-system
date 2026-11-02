@@ -42,8 +42,8 @@ export function DocPreviewPanel({
       </DataPanel>
     )
   }
-  const previewUrl = item.versionId ? documentFilePath(item.id, item.versionId, "inline") : null
-  const downloadUrl = item.versionId ? documentFilePath(item.id, item.versionId, "attachment") : null
+  const previewUrl = item.fileName && item.versionId ? documentFilePath(item.id, item.versionId, "inline") : null
+  const downloadUrl = item.fileName && item.versionId ? documentFilePath(item.id, item.versionId, "attachment") : null
   const showPreview = previewUrl && canPreviewKind(item.fileKind)
   return (
     <DataPanel padding="sm" className="hidden xl:block">

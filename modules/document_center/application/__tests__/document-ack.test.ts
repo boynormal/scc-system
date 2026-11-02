@@ -72,7 +72,7 @@ describe("document acknowledgement", () => {
     expect(db.docCenterAcknowledgement.create).not.toHaveBeenCalled()
   })
 
-  it("asks again after a new version becomes current", async () => {
+  it("asks again after a text announcement version becomes current", async () => {
     const db = dbFor({ requiresAcknowledgement: true, currentVersionId: NEXT }, null)
     await acknowledgeDocument(asDb(db), {
       companyId: COMPANY,

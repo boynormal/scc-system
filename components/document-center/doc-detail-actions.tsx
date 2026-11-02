@@ -65,6 +65,12 @@ export function DocDetailActions({
     if (pending) return
     const form = event.currentTarget
     const data = new FormData(form)
+    const file = data.get("file")
+    const announcement = String(data.get("announcement") ?? "").trim()
+    if ((!(file instanceof File) || file.size === 0) && !announcement) {
+      setError(t("announcementOrFile"))
+      return
+    }
     setPending(true)
     setError(null)
     setProgress(0)
@@ -114,8 +120,12 @@ export function DocDetailActions({
       {canUpdate && !item.deletedAt ? (
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={uploadVersion}>
           <div className="sm:col-span-2 text-sm font-medium text-foreground">{t("uploadVersion")}</div>
+          <label className="space-y-1.5 text-sm font-medium text-foreground sm:col-span-2">
+            {t("announcement")}
+            <textarea name="announcement" maxLength={20000} rows={6} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-normal text-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </label>
           <Input name="changeNote" label={t("changeNote")} maxLength={1000} />
-          <Input name="file" label={t("file")} type="file" required accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx,.doc,.pptx,.ppt" />
+          <Input name="file" label={t("file")} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx,.doc,.pptx,.ppt" />
           {pending ? <p className="text-sm text-foreground sm:col-span-2">{t("uploadProgress")} {progress}%</p> : null}
           <div className="sm:col-span-2">
             <Button type="submit" loading={pending} disabled={pending}>{t("uploadVersion")}</Button>

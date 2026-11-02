@@ -61,7 +61,7 @@ export const POST = withAuth(async (req, _ctx, session) => {
   if (denied) return denied
   const form = await req.formData()
   const file = form.get("file")
-  if (!(file instanceof File)) throw new ValidationError("ไม่พบไฟล์")
+  const upload = file instanceof File && file.size > 0 ? file : null
   const parsed = createDocumentSchema.safeParse({
     documentCode: field(form, "documentCode") || null,
     documentName: field(form, "documentName"),
@@ -76,8 +76,9 @@ export const POST = withAuth(async (req, _ctx, session) => {
     roles: session.user.roles as UserRole[],
     userId: session.user.id as string,
     input: parsed.data,
-    originalName: file.name,
-    body: Buffer.from(await file.arrayBuffer()),
+    announcement: field(form, "announcement") || null,
+    originalName: upload?.name ?? null,
+    body: upload ? Buffer.from(await upload.arrayBuffer()) : null,
     audit: requestAuditMeta(req),
   })
   return Response.json(result)

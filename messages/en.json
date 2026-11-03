@@ -1054,7 +1054,19 @@
     "dockFull": "Dock is full (max 8). Unpin another module first.",
     "dockEmpty": "Tap the star on a module to pin it here",
     "pin": "Pin to dock",
-    "unpin": "Unpin from dock"
+    "unpin": "Unpin from dock",
+    "metalsLabel": "Metal prices",
+    "clockWeatherLabel": "Clock and weather",
+    "metalsLoading": "Loading metal prices",
+    "metalsError": "Could not load metal prices",
+    "metalsSource": "Open source page",
+    "metalsDisclaimer": "Shown in baht per kilogram using the transfer buying rate on this card. Futures quotes may be delayed.",
+    "metalsPerKg": "THB/kg",
+    "botRateLabel": "Average transfer buying rate",
+    "botRateUnit": "Baht per US dollar",
+    "botRateLoading": "Loading exchange rate",
+    "botRateError": "Could not load the exchange rate",
+    "botRateSource": "Open the Bank of Thailand page"
   },
   "dashboard": {
     "title": "Dashboard",

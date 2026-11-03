@@ -20,12 +20,13 @@ function isAbortError(err: unknown): boolean {
 
 export async function fetchUpstream(
   url: string,
-  options: { revalidate: number; accept?: string }
+  options: { revalidate: number; accept?: string; headers?: Record<string, string> }
 ): Promise<Response> {
   const init: NextFetchInit = {
     headers: {
       "User-Agent": USER_AGENT,
       Accept: options.accept ?? "text/html,application/json;q=0.9,*/*;q=0.8",
+      ...options.headers,
     },
     signal: timeoutSignal(FETCH_TIMEOUT_MS),
     next: { revalidate: options.revalidate },
@@ -46,8 +47,12 @@ export async function fetchUpstreamText(url: string, revalidate: number): Promis
   return res.text()
 }
 
-export async function fetchUpstreamJson<T>(url: string, revalidate: number): Promise<T> {
-  const res = await fetchUpstream(url, { revalidate, accept: "application/json" })
+export async function fetchUpstreamJson<T>(
+  url: string,
+  revalidate: number,
+  headers?: Record<string, string>
+): Promise<T> {
+  const res = await fetchUpstream(url, { revalidate, accept: "application/json", headers })
   if (!res.ok) throw new Error(`แหล่งข้อมูลตอบกลับ ${res.status}`)
   return (await res.json()) as T
 }

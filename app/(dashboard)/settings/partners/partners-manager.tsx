@@ -31,7 +31,15 @@ const emptySupplierForm = {
   isActive: true,
 }
 
-function SuppliersTab() {
+function SuppliersTab({
+  canCreate,
+  canUpdate,
+  canDelete,
+}: {
+  canCreate: boolean
+  canUpdate: boolean
+  canDelete: boolean
+}) {
   const confirmType = useTypeConfirm()
   const [data, setData] = useState<SupplierRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -233,15 +241,17 @@ function SuppliersTab() {
             className="h-10"
           />
         </div>
-        <GlassButton
-          onClick={() => {
-            setEditingId("new")
-            setEditForm({ ...emptySupplierForm })
-          }}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          เพิ่มซัพพลายเออร์
-        </GlassButton>
+        {canCreate ? (
+          <GlassButton
+            onClick={() => {
+              setEditingId("new")
+              setEditForm({ ...emptySupplierForm })
+            }}
+            icon={<Plus className="w-4 h-4" />}
+          >
+            เพิ่มซัพพลายเออร์
+          </GlassButton>
+        ) : null}
       </div>
       <DataPanel padding="none">
         <div className="overflow-x-auto">
@@ -315,20 +325,24 @@ function SuppliersTab() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(item)}
-                          className="p-1.5 text-muted-foreground hover:text-blue-600 transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canUpdate ? (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(item)}
+                            className="p-1.5 text-muted-foreground hover:text-blue-600 transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        ) : null}
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : null}
                       </td>
                     </>
                   )}
@@ -567,7 +581,15 @@ const TABS = [
   { id: "units", label: "หน่วยนับ (Units)" },
 ]
 
-export function PartnersManager() {
+export function PartnersManager({
+  canCreateSupplier,
+  canUpdateSupplier,
+  canDeleteSupplier,
+}: {
+  canCreateSupplier: boolean
+  canUpdateSupplier: boolean
+  canDeleteSupplier: boolean
+}) {
   const [activeTab, setActiveTab] = useState<"suppliers" | "units">("suppliers")
 
   return (
@@ -587,7 +609,13 @@ export function PartnersManager() {
       />
 
       <div>
-        {activeTab === "suppliers" && <SuppliersTab />}
+        {activeTab === "suppliers" && (
+          <SuppliersTab
+            canCreate={canCreateSupplier}
+            canUpdate={canUpdateSupplier}
+            canDelete={canDeleteSupplier}
+          />
+        )}
         {activeTab === "units" && <UnitsTab />}
       </div>
     </div>

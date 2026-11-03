@@ -3,6 +3,7 @@ import { prisma } from "@/shared/db"
 import { auth } from "@/lib/auth"
 import type { UserRole } from "@/lib/permissions"
 import { forbidUnlessPermission } from "@/lib/require-permission"
+import { canWriteSupplier } from "@/lib/hr-settings-nav-access"
 import { deleteSupplier, updateSupplier, updateSupplierSchema } from "@/modules/settings"
 
 export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -10,8 +11,12 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const denied = forbidUnlessPermission(session.user.roles as UserRole[], "settings", "update")
-  if (denied) return denied
+  if (!canWriteSupplier(session.user.roles as UserRole[], "update")) {
+    return NextResponse.json(
+      { error: { message: "Forbidden", code: "FORBIDDEN" } },
+      { status: 403 }
+    )
+  }
 
   const body = await req.json()
   const parsed = updateSupplierSchema.safeParse(body)

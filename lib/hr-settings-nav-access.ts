@@ -1,4 +1,4 @@
-import { getBranchIds, hasPermission, isAdminInAnyBranch, type UserRole } from "@/lib/permissions"
+import { getBranchIds, hasPermission, isAdminInAnyBranch, type Action, type UserRole } from "@/lib/permissions"
 
 export function canReadHrPersonnel(roles: UserRole[]) {
   return (
@@ -51,4 +51,21 @@ export function canReadSettingsHomeScreen(roles: UserRole[]) {
 
 export function canUpdateSettingsBranchSharing(roles: UserRole[]) {
   return getBranchIds(roles).some((bid) => hasPermission(roles, bid, "settings", "update"))
+}
+
+/** Create or update a supplier. settings:update still grants both so older custom roles keep working. */
+export function canWriteSupplier(roles: UserRole[], action: Extract<Action, "create" | "update">) {
+  return (
+    isAdminInAnyBranch(roles) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "suppliers", action)) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "settings", "update"))
+  )
+}
+
+/** Matches DELETE /api/master-data/suppliers/:id — Admin, or an explicit settings delete. */
+export function canDeleteSupplier(roles: UserRole[]) {
+  return (
+    isAdminInAnyBranch(roles) ||
+    getBranchIds(roles).some((bid) => hasPermission(roles, bid, "settings", "delete"))
+  )
 }

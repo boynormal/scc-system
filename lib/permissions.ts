@@ -11,6 +11,7 @@ export type Resource =
   | "roles"
   | "branches"
   | "settings"
+  | "suppliers"
   | "notifications"
   | "hr_personnel"
   | "hr_attendance"
@@ -132,6 +133,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     roles: ["create", "read", "update", "delete"],
     branches: ["create", "read", "update", "delete"],
     settings: ["read", "update"],
+    suppliers: ["create", "read", "update", "delete"],
     notifications: ["read"],
     hr_personnel: ["create", "read", "update", "delete"],
     hr_attendance: ["create", "read", "update", "delete"],
@@ -163,6 +165,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission> = {
     roles: ["read"],
     branches: ["read"],
     settings: ["read"],
+    suppliers: ["create", "read", "update"],
     notifications: ["read"],
     hr_personnel: ["create", "read", "update"],
     hr_attendance: ["create", "read", "update"],

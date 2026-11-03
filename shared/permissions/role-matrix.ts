@@ -119,6 +119,7 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
       { resource: "roles", label: "สิทธิ์ (Roles)", actions: CRUD },
       { resource: "branches", label: "สาขา", actions: CRUD },
       { resource: "settings", label: "การตั้งค่าทั่วไป", actions: READ_UPDATE },
+      { resource: "suppliers", label: "ซัพพลายเออร์", actions: CRUD },
     ],
   },
 ]

@@ -39,6 +39,7 @@ import {
   validateExpenseForm,
 } from "./expense-form-validation"
 import { ExpenseTypePicker, defaultExpenseCategoryKey } from "./expense-type-picker"
+import { OptionSearchPicker } from "./option-search-picker"
 import { formatBaht, solidBlueButtonClass, sourceModuleLabel } from "./finance-theme"
 import { IncomeFileThumbs } from "./income-file-thumbs"
 
@@ -476,18 +477,26 @@ export function ExpenseFormPage({
             onChange={(e) => setPostingDate(e.target.value)}
             disabled={lockFinancials}
           />
-          <Select
+          <OptionSearchPicker
             label="ผู้ขาย / ผู้รับเงิน"
             required={vendorRequired}
             value={vendorId}
-            onChange={(e) => setVendorId(e.target.value)}
-            options={[{ value: "", label: vendorRequired ? "— เลือกผู้ขาย —" : "— ไม่ระบุ —" }, ...vendors.map((v) => ({ value: v.id, label: v.name }))]}
+            onChange={setVendorId}
+            options={vendors}
+            emptyLabel={vendorRequired ? "— เลือกผู้ขาย —" : "— ไม่ระบุ —"}
+            title="เลือกผู้ขาย / ผู้รับเงิน"
+            searchPlaceholder="ค้นหาชื่อ"
+            emptyResult="ไม่พบผู้ขาย"
           />
-          <Select
+          <OptionSearchPicker
             label="พนักงานที่เกี่ยวข้อง"
             value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-            options={[{ value: "", label: "— ไม่ระบุ —" }, ...employees.map((emp) => ({ value: emp.id, label: emp.name }))]}
+            onChange={setEmployeeId}
+            options={employees}
+            emptyLabel="— ไม่ระบุ —"
+            title="เลือกพนักงานที่เกี่ยวข้อง"
+            searchPlaceholder="ค้นหาชื่อ"
+            emptyResult="ไม่พบพนักงาน"
           />
           <Input label="หมายเหตุ" value={notes} onChange={(e) => setNotes(e.target.value)} />
           {lockFinancials && (

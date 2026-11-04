@@ -1,10 +1,12 @@
+import { execFile } from "node:child_process"
+
 import type { MetalQuote } from "@/modules/raw_material_news/application/metals-quote-types"
 import {
   FX678_LME_URL,
   FX678_METALS_REVALIDATE_SECONDS,
   FX678_PRECIOUS_URL,
 } from "@/modules/raw_material_news/application/paper-market-constants"
-import { fetchUpstream, stripHtml } from "@/modules/raw_material_news/infra/fetch-utils"
+import { FETCH_TIMEOUT_MS, stripHtml } from "@/modules/raw_material_news/infra/fetch-utils"
 
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
@@ -82,20 +84,48 @@ export function parseFx678MetalsTable(html: string): MetalQuote[] {
   })
 }
 
+const CURL_MAX_BUFFER = 4 * 1024 * 1024
+
 let cachedQuotes: { expiresAt: number; quotes: MetalQuote[] } | null = null
 let pendingLoad: Promise<MetalQuote[]> | null = null
 
-async function fetchPage(url: string): Promise<string> {
-  const res = await fetchUpstream(url, {
-    revalidate: FX678_METALS_REVALIDATE_SECONDS,
-    accept: "text/html,application/xhtml+xml",
-    headers: {
-      "User-Agent": BROWSER_USER_AGENT,
-      "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-    },
+function curlBin(): string {
+  return process.platform === "win32" ? "curl.exe" : "curl"
+}
+
+/** Node fetch gives up after 10s. curl reaches FX678 within the 30s limit. */
+function fetchPage(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      curlBin(),
+      [
+        "-fsSL",
+        "--max-time",
+        "30",
+        "-A",
+        BROWSER_USER_AGENT,
+        "-H",
+        "Accept: text/html,application/xhtml+xml",
+        "-H",
+        "Accept-Language: zh-CN,zh;q=0.9,en;q=0.8",
+        url,
+      ],
+      {
+        encoding: "utf8",
+        maxBuffer: CURL_MAX_BUFFER,
+        timeout: FETCH_TIMEOUT_MS,
+        windowsHide: true,
+      },
+      (err, stdout) => {
+        if (err || !stdout) {
+          console.error("[raw-material-news:metals] curl", err)
+          reject(new Error("แหล่งข้อมูลตอบกลับไม่สำเร็จ"))
+          return
+        }
+        resolve(stdout)
+      }
+    )
   })
-  if (!res.ok) throw new Error(`แหล่งข้อมูลตอบกลับ ${res.status}`)
-  return res.text()
 }
 
 async function loadQuotes(): Promise<MetalQuote[]> {

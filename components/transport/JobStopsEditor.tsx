@@ -6,6 +6,7 @@ import {
   CustomerPicker,
   type TmsCustomerOption,
 } from "@/components/transport/CustomerPicker"
+import { appendJobStop } from "@/components/transport/job-stop-order"
 
 export type JobStopForm = {
   id?: string
@@ -107,13 +108,7 @@ type Props = {
 export function JobStopsEditor({ stops, onChange, disabled, className }: Props) {
   const addStop = () => {
     if (disabled) return
-    if (stops.length === 0) {
-      onChange([emptyJobStop()])
-      return
-    }
-    const last = stops[stops.length - 1]
-    const before = stops.slice(0, -1)
-    onChange(resequence([...before, emptyJobStop(), last]))
+    onChange(appendJobStop(stops, emptyJobStop()))
   }
 
   const removeStop = (idx: number) => {
@@ -154,7 +149,7 @@ export function JobStopsEditor({ stops, onChange, disabled, className }: Props) 
         <div>
           <h2 className="text-sm font-semibold text-foreground">จุดแวะ (Stops)</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            ลูกค้าหัวใบงานจะเติมจุดหมายสุดท้ายให้อัตโนมัติ — จุดที่เพิ่มเป็นจุดแวะระหว่างทาง
+            ลูกค้าหัวใบงานจะเติมจุดหมายสุดท้ายให้อัตโนมัติ — จุดที่เพิ่มเป็นจุดหมายถัดไป จุดก่อนหน้าเป็นจุดที่ผ่านมาแล้ว
           </p>
         </div>
         <button

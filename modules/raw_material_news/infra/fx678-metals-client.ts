@@ -6,7 +6,7 @@ import {
   FX678_METALS_REVALIDATE_SECONDS,
   FX678_PRECIOUS_URL,
 } from "@/modules/raw_material_news/application/paper-market-constants"
-import { FETCH_TIMEOUT_MS, stripHtml } from "@/modules/raw_material_news/infra/fetch-utils"
+import { stripHtml } from "@/modules/raw_material_news/infra/fetch-utils"
 
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
@@ -85,23 +85,45 @@ export function parseFx678MetalsTable(html: string): MetalQuote[] {
 }
 
 const CURL_MAX_BUFFER = 4 * 1024 * 1024
+const CURL_CONNECT_TIMEOUT_SECONDS = 8
+const CURL_MAX_TIME_SECONDS = 12
+const CURL_EXEC_TIMEOUT_MS = 15_000
+const FAILURE_BACKOFF_MS = 45_000
 
-let cachedQuotes: { expiresAt: number; quotes: MetalQuote[] } | null = null
+export type MetalsFetchDecision = "fresh" | "backoff" | "fetch"
+
+/** Fresh cache skips the network. A recent failure waits out the backoff before trying again. */
+export function metalsFetchDecision(input: {
+  now: number
+  freshUntil: number
+  retryAfter: number
+}): MetalsFetchDecision {
+  if (input.freshUntil > input.now) return "fresh"
+  if (input.retryAfter > input.now) return "backoff"
+  return "fetch"
+}
+
+let cachedQuotes: MetalQuote[] | null = null
+let freshUntil = 0
+let retryAfter = 0
+let lastFailure: Error | null = null
 let pendingLoad: Promise<MetalQuote[]> | null = null
 
 function curlBin(): string {
   return process.platform === "win32" ? "curl.exe" : "curl"
 }
 
-/** Node fetch gives up after 10s. curl reaches FX678 within the 30s limit. */
+/** A dead route stops at 8s. A live page still fits inside 12s. */
 function fetchPage(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       curlBin(),
       [
         "-fsSL",
+        "--connect-timeout",
+        String(CURL_CONNECT_TIMEOUT_SECONDS),
         "--max-time",
-        "30",
+        String(CURL_MAX_TIME_SECONDS),
         "-A",
         BROWSER_USER_AGENT,
         "-H",
@@ -113,12 +135,11 @@ function fetchPage(url: string): Promise<string> {
       {
         encoding: "utf8",
         maxBuffer: CURL_MAX_BUFFER,
-        timeout: FETCH_TIMEOUT_MS,
+        timeout: CURL_EXEC_TIMEOUT_MS,
         windowsHide: true,
       },
       (err, stdout) => {
         if (err || !stdout) {
-          console.error("[raw-material-news:metals] curl", err)
           reject(new Error("แหล่งข้อมูลตอบกลับไม่สำเร็จ"))
           return
         }
@@ -128,30 +149,51 @@ function fetchPage(url: string): Promise<string> {
   })
 }
 
+function rememberFailure(message: string, pages: string[]): Error {
+  const pageNote = pages.length > 0 ? ` (${pages.join(", ")})` : ""
+  console.error(`[raw-material-news:metals] ${message}${pageNote}`)
+  lastFailure = new Error(message)
+  retryAfter = Date.now() + FAILURE_BACKOFF_MS
+  return lastFailure
+}
+
 async function loadQuotes(): Promise<MetalQuote[]> {
   const [lme, precious] = await Promise.allSettled([fetchPage(FX678_LME_URL), fetchPage(FX678_PRECIOUS_URL)])
   const htmlParts: string[] = []
+  const failedPages: string[] = []
 
   if (lme.status === "fulfilled") htmlParts.push(lme.value)
-  else console.error("[raw-material-news:metals] lme", lme.reason)
+  else failedPages.push("lme")
 
   if (precious.status === "fulfilled") htmlParts.push(precious.value)
-  else console.error("[raw-material-news:metals] precious", precious.reason)
+  else failedPages.push("precious")
 
   const quotes = parseFx678MetalsTable(htmlParts.join("\n"))
-  if (quotes.length === 0) throw new Error("ไม่พบตารางราคาโลหะ")
-
-  cachedQuotes = {
-    expiresAt: Date.now() + FX678_METALS_REVALIDATE_SECONDS * 1000,
-    quotes,
+  if (quotes.length === 0) {
+    const message = htmlParts.length === 0 ? "แหล่งข้อมูลตอบกลับไม่สำเร็จ" : "ไม่พบตารางราคาโลหะ"
+    const failure = rememberFailure(message, failedPages)
+    if (cachedQuotes) return cachedQuotes
+    throw failure
   }
+
+  if (failedPages.length > 0) {
+    console.error(`[raw-material-news:metals] ใช้แถวที่อ่านได้ (${failedPages.join(", ")} ไม่สำเร็จ)`)
+  }
+
+  cachedQuotes = quotes
+  freshUntil = Date.now() + FX678_METALS_REVALIDATE_SECONDS * 1000
+  retryAfter = 0
+  lastFailure = null
   return quotes
 }
 
-/** One shared copy per process for 60 seconds. A failed refresh does not replace the last good copy. */
+/** Fresh quotes last 60 seconds. A failed attempt waits 45 seconds and keeps the last good copy. */
 export function fetchFx678Metals(): Promise<MetalQuote[]> {
-  if (cachedQuotes && cachedQuotes.expiresAt > Date.now()) {
-    return Promise.resolve(cachedQuotes.quotes)
+  const decision = metalsFetchDecision({ now: Date.now(), freshUntil, retryAfter })
+  if (decision === "fresh" && cachedQuotes) return Promise.resolve(cachedQuotes)
+  if (decision === "backoff") {
+    if (cachedQuotes) return Promise.resolve(cachedQuotes)
+    return Promise.reject(lastFailure ?? new Error("แหล่งข้อมูลตอบกลับไม่สำเร็จ"))
   }
   if (!pendingLoad) {
     pendingLoad = loadQuotes().finally(() => {

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { beijingClockToThailand, parseFx678MetalsTable } from "@/modules/raw_material_news/infra/fx678-metals-client"
+import {
+  beijingClockToThailand,
+  metalsFetchDecision,
+  parseFx678MetalsTable,
+} from "@/modules/raw_material_news/infra/fx678-metals-client"
 
 const html = `
 <table id="LME">
@@ -47,6 +51,22 @@ const html = `
   </tr>
 </table>
 `
+
+describe("metalsFetchDecision", () => {
+  const now = 1_000_000
+
+  it("skips a fetch while the cache is still fresh", () => {
+    expect(metalsFetchDecision({ now, freshUntil: now + 1, retryAfter: 0 })).toBe("fresh")
+  })
+
+  it("skips a fetch during the failure backoff", () => {
+    expect(metalsFetchDecision({ now, freshUntil: now - 1, retryAfter: now + 1 })).toBe("backoff")
+  })
+
+  it("fetches when the cache is stale and the backoff has elapsed", () => {
+    expect(metalsFetchDecision({ now, freshUntil: now, retryAfter: now })).toBe("fetch")
+  })
+})
 
 describe("beijingClockToThailand", () => {
   it("subtracts one hour and drops seconds", () => {

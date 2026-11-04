@@ -23,7 +23,6 @@ export async function getMetalsQuoteSnapshot(): Promise<MetalsQuoteSnapshot> {
   const usdThb = usdResult.status === "fulfilled" ? usdResult.value : unavailableRate()
 
   if (quotesResult.status === "rejected") {
-    console.error("[raw-material-news:metals]", quotesResult.reason)
     return {
       fetchedAt,
       sourceUrl: FX678_LME_URL,

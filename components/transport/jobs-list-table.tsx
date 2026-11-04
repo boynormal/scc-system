@@ -1,7 +1,9 @@
 import Link from "next/link"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
+import { Badge } from "@/components/ui/badge"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { JobRowActions } from "@/components/transport/job-row-actions"
+import { jobCheckReview, type JobCheckReview } from "@/modules/transport/application/job-punch-rules"
 import type { listJobs } from "@/modules/transport"
 
 const PRIORITY_LABEL: Record<string, string> = { low: "ต่ำ", normal: "ปกติ", high: "สูง", urgent: "ด่วน" }
@@ -14,6 +16,23 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 type JobListItem = Awaited<ReturnType<typeof listJobs>>["items"][number]
 
+function JobCheckReviewLink({
+  jobId,
+  stops,
+  punches,
+}: {
+  jobId: string
+  stops: JobListItem["stops"]
+  punches: JobListItem["punches"]
+}) {
+  const review = jobCheckReview(stops, punches)
+  return (
+    <Link href={`/transport/jobs/${jobId}/log`}>
+      <Badge variant={REVIEW_VARIANT[review]}>{REVIEW_LABEL[review]}</Badge>
+    </Link>
+  )
+}
+
 type Props = {
   items: JobListItem[]
 }
@@ -21,6 +40,18 @@ type Props = {
 function formatScheduledDate(value: Date | string | null | undefined) {
   if (!value) return "—"
   return new Date(value).toLocaleDateString("th-TH", { dateStyle: "medium" })
+}
+
+const REVIEW_LABEL: Record<JobCheckReview, string> = {
+  incomplete: "เช็คอินไม่ครบ",
+  missing_location: "ไม่ครบสถานที่",
+  complete: "เช็คอินครบ",
+}
+
+const REVIEW_VARIANT: Record<JobCheckReview, "info" | "warning" | "success"> = {
+  incomplete: "info",
+  missing_location: "warning",
+  complete: "success",
 }
 
 export function JobsListTable({ items }: Props) {
@@ -37,6 +68,7 @@ export function JobsListTable({ items }: Props) {
             <th className="px-4 py-3 text-left">สาขา</th>
             <th className="px-4 py-3 text-left">Stop</th>
             <th className="px-4 py-3 text-left">ความสำคัญ</th>
+            <th className="px-4 py-3 text-left">การตรวจสอบ</th>
             <th className="px-4 py-3 text-left">สถานะ</th>
             <th className="px-4 py-3 text-right">จัดการ</th>
           </tr>
@@ -44,7 +76,7 @@ export function JobsListTable({ items }: Props) {
         <AppDataTableBody>
           {items.length === 0 ? (
             <tr>
-              <td colSpan={10} className="px-4 py-10 text-center text-foreground">
+              <td colSpan={11} className="px-4 py-10 text-center text-foreground">
                 ไม่พบใบงาน
               </td>
             </tr>
@@ -85,6 +117,9 @@ export function JobsListTable({ items }: Props) {
                 <td className="px-4 py-3 text-foreground">{job._count.stops}</td>
                 <td className={`px-4 py-3 text-xs ${PRIORITY_COLOR[job.priority] ?? ""}`}>
                   {PRIORITY_LABEL[job.priority] ?? job.priority}
+                </td>
+                <td className="px-4 py-3">
+                  <JobCheckReviewLink jobId={job.id} stops={job.stops} punches={job.punches} />
                 </td>
                 <td className="px-4 py-3">
                   <JobStatusBadge status={job.status} />

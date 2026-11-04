@@ -116,6 +116,34 @@ function legacyNextPunch(stops: PunchStop[], punches: PunchRef[]): PunchStep | n
   return null
 }
 
+export type JobCheckReview = "incomplete" | "missing_location" | "complete"
+
+export type PunchLocation = PunchRef & {
+  latitude: unknown
+  longitude: unknown
+  gpsLatitude: unknown
+  gpsLongitude: unknown
+}
+
+function hasCoordinatePair(latitude: unknown, longitude: unknown) {
+  return latitude != null && longitude != null
+}
+
+/** Same rule as the log map button: a typed point or a GPS point. */
+export function punchHasLocation(punch: Pick<PunchLocation, "latitude" | "longitude" | "gpsLatitude" | "gpsLongitude">) {
+  return (
+    hasCoordinatePair(punch.latitude, punch.longitude) ||
+    hasCoordinatePair(punch.gpsLatitude, punch.gpsLongitude)
+  )
+}
+
+/** Check-in first. A finished sequence with a punch that has no map point is missing a location. */
+export function jobCheckReview(stops: PunchStop[], punches: PunchLocation[]): JobCheckReview {
+  if (nextPunch(stops, punches)) return "incomplete"
+  if (punches.some((punch) => !punchHasLocation(punch))) return "missing_location"
+  return "complete"
+}
+
 export function canSkipStop(stops: PunchStop[], stopId: string, punches: PunchRef[]) {
   const active = orderedActiveStops(stops)
   const index = active.findIndex((stop) => stop.id === stopId)

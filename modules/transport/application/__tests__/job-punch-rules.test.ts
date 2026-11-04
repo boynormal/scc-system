@@ -8,10 +8,12 @@ import {
   kindsForStop,
   LEG_MAX_DWELL_MINUTES,
   LEG_MIN_AVERAGE_SPEED_KMH,
+  jobCheckReview,
   nextPunch,
   punchRecordedTooSoon,
   PUNCH_MIN_GAP_MS,
   usesTripBookends,
+  type PunchLocation,
   type PunchStop,
 } from "@/modules/transport/application/job-punch-rules"
 
@@ -212,5 +214,49 @@ describe("job punch sequence", () => {
       { stopId: "drop", kind: "arrive", recordedAt: new Date("2026-09-23T10:00:00.000Z"), odometerKm: null },
     ])
     expect(leg.flag).toBeNull()
+  })
+})
+
+function located(punch: Omit<PunchLocation, "latitude" | "longitude" | "gpsLatitude" | "gpsLongitude">): PunchLocation {
+  return { ...punch, latitude: 13.7, longitude: 100.5, gpsLatitude: null, gpsLongitude: null }
+}
+
+describe("jobCheckReview", () => {
+  it("is incomplete before the trip has started", () => {
+    expect(jobCheckReview(oneStop, [])).toBe("incomplete")
+  })
+
+  it("is complete when start, arrive, depart, and finish each have a location", () => {
+    const punches = [
+      located({ stopId: null, kind: "start" }),
+      located({ stopId: "drop", kind: "arrive" }),
+      { ...located({ stopId: "drop", kind: "depart" }), latitude: null, longitude: null, gpsLatitude: 13.8, gpsLongitude: 100.6 },
+      located({ stopId: null, kind: "finish" }),
+    ]
+    expect(jobCheckReview(oneStop, punches)).toBe("complete")
+  })
+
+  it("is missing a location when the sequence is done but one punch has neither coordinate pair", () => {
+    const punches = [
+      located({ stopId: null, kind: "start" }),
+      located({ stopId: "drop", kind: "arrive" }),
+      located({ stopId: "drop", kind: "depart" }),
+      { ...located({ stopId: null, kind: "finish" }), latitude: null, longitude: null, gpsLatitude: null, gpsLongitude: null },
+    ]
+    expect(jobCheckReview(oneStop, punches)).toBe("missing_location")
+  })
+
+  it("does not treat a skipped stop as a missing check-in", () => {
+    const withSkip: PunchStop[] = [
+      { id: "drop", sequence: 1, status: "pending" },
+      { id: "later", sequence: 2, status: "skipped" },
+    ]
+    const punches = [
+      located({ stopId: null, kind: "start" }),
+      located({ stopId: "drop", kind: "arrive" }),
+      located({ stopId: "drop", kind: "depart" }),
+      located({ stopId: null, kind: "finish" }),
+    ]
+    expect(jobCheckReview(withSkip, punches)).toBe("complete")
   })
 })

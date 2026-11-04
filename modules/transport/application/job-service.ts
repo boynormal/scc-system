@@ -234,6 +234,17 @@ const jobListInclude = {
       driver: { select: { id: true, firstName: true, lastName: true } },
     },
   },
+  stops: { select: { id: true, sequence: true, status: true } },
+  punches: {
+    select: {
+      stopId: true,
+      kind: true,
+      latitude: true,
+      longitude: true,
+      gpsLatitude: true,
+      gpsLongitude: true,
+    },
+  },
   _count: { select: { stops: true } },
 } as const
 

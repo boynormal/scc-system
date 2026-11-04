@@ -9,16 +9,18 @@ import { GlassForm, GlassFormActions, GlassInput } from "@/components/glass"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { PmTemplateButton } from "@/components/assets/pm-template-button"
 
-type PlanRow = { name: string; detail: string }
+type PlanRow = { name: string; detail: string; templateItemId: string | null }
 type TemplateOption = {
   id: string
   name: string
   isActive: boolean
-  items: { name: string; detail: string | null }[]
+  items: { id: string; name: string; detail: string | null }[]
 }
 
 function toRows(items: { name: string; detail?: string | null }[]): PlanRow[] {
-  return items.length > 0 ? items.map((item) => ({ name: item.name, detail: item.detail ?? "" })) : [{ name: "", detail: "" }]
+  return items.length > 0
+    ? items.map((item) => ({ name: item.name, detail: item.detail ?? "", templateItemId: null }))
+    : [{ name: "", detail: "", templateItemId: null }]
 }
 
 export function PmPlanForm({
@@ -68,7 +70,7 @@ export function PmPlanForm({
     if (!template) return
     const dirty = rows.some((row) => row.name.trim() || row.detail.trim())
     if (dirty && !window.confirm(t("replaceItemsConfirm"))) return
-    setRows(template.items.map((item) => ({ name: item.name, detail: item.detail ?? "" })))
+    setRows(template.items.map((item) => ({ name: item.name, detail: item.detail ?? "", templateItemId: item.id })))
   }
 
   async function onSubmit(event: React.FormEvent) {
@@ -82,7 +84,11 @@ export function PmPlanForm({
         body: JSON.stringify({
           intervalDays: Number(days),
           isActive: active,
-          items: rows.map((row) => ({ name: row.name, detail: row.detail })),
+          items: rows.map((row) => ({
+            name: row.name,
+            detail: row.detail,
+            ...(row.templateItemId ? { templateItemId: row.templateItemId } : {}),
+          })),
         }),
       })
       router.refresh()
@@ -160,7 +166,7 @@ export function PmPlanForm({
         {rows.length < 50 && (
           <Button
             type="button"
-            onClick={() => setRows([...rows, { name: "", detail: "" }])}
+            onClick={() => setRows([...rows, { name: "", detail: "", templateItemId: null }])}
             className="bg-slate-800 text-white hover:bg-slate-900"
           >
             {t("addItem")}

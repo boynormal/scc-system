@@ -1,15 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
+import { Volume2 } from "lucide-react"
 import { GlassDialog } from "@/components/glass"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 
-type TemplateItem = { id: string; sequence: number; name: string; detail: string | null }
+type TemplateItem = { id: string; sequence: number; name: string; detail: string | null; hasAudio: boolean }
 type TemplateRow = { id: string; name: string; isActive: boolean; items: TemplateItem[] }
-type ItemDraft = { key: string; name: string; detail: string }
+type ItemAudio =
+  | { kind: "keep"; sourceItemId: string }
+  | { kind: "new"; base64: string; contentType: string; previewUrl: string }
+type ItemDraft = { key: string; name: string; detail: string; audio: ItemAudio | null }
+
+const AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg"]
+const MAX_AUDIO_BYTES = 256 * 1024
 
 const VEHICLE_STARTER: { name: string; detail: string }[] = [
   { name: "ยางรถยนต์", detail: "สภาพยาง ลมยาง และความเสียหาย" },
@@ -26,7 +33,27 @@ const VEHICLE_STARTER: { name: string; detail: string }[] = [
 ]
 
 function blankItem(): ItemDraft {
-  return { key: crypto.randomUUID(), name: "", detail: "" }
+  return { key: crypto.randomUUID(), name: "", detail: "", audio: null }
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = ""
+  bytes.forEach((value) => {
+    binary += String.fromCharCode(value)
+  })
+  return btoa(binary)
+}
+
+function contentTypeOf(file: File) {
+  const type = file.type.split(";")[0]?.trim().toLowerCase() ?? ""
+  if (AUDIO_TYPES.includes(type)) return type
+  const ext = file.name.split(".").pop()?.toLowerCase()
+  if (ext === "mp3") return "audio/mpeg"
+  if (ext === "m4a" || ext === "mp4") return "audio/mp4"
+  if (ext === "wav") return "audio/wav"
+  if (ext === "ogg") return "audio/ogg"
+  if (ext === "webm") return "audio/webm"
+  return ""
 }
 
 export function PmTemplateButton({ onChanged }: { onChanged?: () => void }) {
@@ -38,6 +65,8 @@ export function PmTemplateButton({ onChanged }: { onChanged?: () => void }) {
   const [items, setItems] = useState<ItemDraft[]>([blankItem()])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const [recordingKey, setRecordingKey] = useState<string | null>(null)
 
   async function load() {
     const json = await fetchJson<{ data: TemplateRow[] }>("/api/assets/pm-templates")
@@ -59,18 +88,19 @@ export function PmTemplateButton({ onChanged }: { onChanged?: () => void }) {
       return
     }
     setName(template.name)
-    setItems(
-      template.items.map((item) => ({
-        key: item.id,
-        name: item.name,
-        detail: item.detail ?? "",
-      }))
-    )
+      setItems(
+        template.items.map((item) => ({
+          key: item.id,
+          name: item.name,
+          detail: item.detail ?? "",
+          audio: item.hasAudio ? { kind: "keep" as const, sourceItemId: item.id } : null,
+        }))
+      )
   }
 
   function fillStarter() {
     setName((current) => current.trim() || t("starterName"))
-    setItems(VEHICLE_STARTER.map((item) => ({ key: crypto.randomUUID(), ...item })))
+    setItems(VEHICLE_STARTER.map((item) => ({ key: crypto.randomUUID(), ...item, audio: null })))
   }
 
   async function onSave(event: React.FormEvent) {
@@ -79,7 +109,15 @@ export function PmTemplateButton({ onChanged }: { onChanged?: () => void }) {
     setError(null)
     const payload = {
       name,
-      items: items.map((item) => ({ name: item.name, detail: item.detail })),
+      items: items.map((item) => ({
+        name: item.name,
+        detail: item.detail,
+        ...(item.audio?.kind === "new"
+          ? { audioBase64: item.audio.base64, audioContentType: item.audio.contentType }
+          : item.audio?.kind === "keep"
+            ? { sourceItemId: item.audio.sourceItemId }
+            : {}),
+      })),
     }
     try {
       if (editing === "new") {
@@ -129,6 +167,103 @@ export function PmTemplateButton({ onChanged }: { onChanged?: () => void }) {
       onChanged?.()
     } catch (err) {
       setError(err instanceof ClientFetchError ? err.message : t("saveFailed"))
+    }
+  }
+
+  function setAudio(key: string, audio: ItemAudio | null) {
+    setItems((current) =>
+      current.map((row) => {
+        if (row.key !== key) return row
+        if (row.audio?.kind === "new") URL.revokeObjectURL(row.audio.previewUrl)
+        return { ...row, audio }
+      })
+    )
+  }
+
+  async function attachFile(key: string, file: File) {
+    const contentType = contentTypeOf(file)
+    if (!contentType || file.size > MAX_AUDIO_BYTES) {
+      setError(file.size > MAX_AUDIO_BYTES ? t("audioTooBig") : t("audioType"))
+      return
+    }
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    setAudio(key, {
+      kind: "new",
+      base64: bytesToBase64(bytes),
+      contentType,
+      previewUrl: URL.createObjectURL(file),
+    })
+  }
+
+  async function startRecording(key: string) {
+    if (recordingKey) return
+    setError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const preferred = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : ""
+      if (!preferred) {
+        stream.getTracks().forEach((track) => track.stop())
+        setError(t("micDenied"))
+        return
+      }
+      const recorder = new MediaRecorder(stream)
+      const chunks: Blob[] = []
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data)
+      }
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop())
+        const blob = new Blob(chunks, { type: recorder.mimeType || preferred })
+        void blob.arrayBuffer().then((buffer) => {
+          if (buffer.byteLength > MAX_AUDIO_BYTES) {
+            setError(t("audioTooBig"))
+            return
+          }
+          const contentType = (recorder.mimeType || preferred).split(";")[0] || preferred
+          setAudio(key, {
+            kind: "new",
+            base64: bytesToBase64(new Uint8Array(buffer)),
+            contentType,
+            previewUrl: URL.createObjectURL(blob),
+          })
+        })
+        setRecordingKey((current) => (current === key ? null : current))
+      }
+      recorderRef.current = recorder
+      setRecordingKey(key)
+      recorder.start()
+      window.setTimeout(() => {
+        if (recorder.state !== "inactive") recorder.stop()
+      }, 20_000)
+    } catch {
+      setError(t("micDenied"))
+    }
+  }
+
+  function stopRecording() {
+    if (recorderRef.current && recorderRef.current.state !== "inactive") recorderRef.current.stop()
+  }
+
+  async function playDraft(item: ItemDraft) {
+    setError(null)
+    try {
+      if (item.audio?.kind === "new") {
+        const audio = new Audio(item.audio.previewUrl)
+        await audio.play()
+        return
+      }
+      if (item.audio?.kind === "keep" && editing && editing !== "new") {
+        const response = await fetch(`/api/assets/pm-templates/${editing.id}/items/${item.audio.sourceItemId}/audio`)
+        if (!response.ok) throw new Error(t("saveFailed"))
+        const audio = new Audio(URL.createObjectURL(await response.blob()))
+        await audio.play()
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("saveFailed"))
     }
   }
 
@@ -196,6 +331,39 @@ export function PmTemplateButton({ onChanged }: { onChanged?: () => void }) {
                       {t("removeItem")}
                     </Button>
                   )}
+                  <div className="flex flex-wrap gap-2 sm:col-span-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => (recordingKey === item.key ? stopRecording() : void startRecording(item.key))}
+                    >
+                      {recordingKey === item.key ? t("stopRecording") : t("recordAudio")}
+                    </Button>
+                    <label className="inline-flex cursor-pointer items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground">
+                      {t("uploadAudio")}
+                      <input
+                        type="file"
+                        accept="audio/webm,audio/mp4,audio/mpeg,audio/wav,audio/ogg,.webm,.mp3,.m4a,.wav,.ogg"
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0]
+                          event.target.value = ""
+                          if (file) void attachFile(item.key, file)
+                        }}
+                      />
+                    </label>
+                    {item.audio && (
+                      <>
+                        <Button type="button" size="sm" variant="outline" onClick={() => void playDraft(item)} icon={<Volume2 className="h-4 w-4" />}>
+                          {t("playAudio")}
+                        </Button>
+                        <Button type="button" size="sm" variant="danger" onClick={() => setAudio(item.key, null)}>
+                          {t("removeAudio")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

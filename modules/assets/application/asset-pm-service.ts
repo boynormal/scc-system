@@ -31,6 +31,12 @@ export const upsertAssetPmSchema = z.object({
           .optional()
           .nullable()
           .transform((value) => (value ? value : null)),
+        templateItemId: z
+          .string()
+          .uuid()
+          .optional()
+          .nullable()
+          .transform((value) => value ?? null),
       })
     )
     .min(1)
@@ -161,6 +167,7 @@ function serializePlan(row: PlanRow, now?: Date) {
       sequence: item.sequence,
       name: item.name,
       detail: item.detail,
+      hasAudio: item.audioContentType != null,
     })),
     rounds: row.rounds.map((round) => ({
       id: round.id,
@@ -215,6 +222,12 @@ export async function getAssetPm(
   }
 }
 
+function toPlanBytes(bytes: Uint8Array) {
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  return copy
+}
+
 export async function upsertAssetPm(
   db: PrismaClient,
   params: {
@@ -226,11 +239,26 @@ export async function upsertAssetPm(
 ) {
   const asset = await requireAsset(db, params, "update")
   const input = parseInput(upsertAssetPmSchema, params.input)
-  const items = input.items.map((item, index) => ({
-    sequence: index + 1,
-    name: item.name,
-    detail: item.detail,
-  }))
+  const templateItemIds = [
+    ...new Set(input.items.flatMap((item) => (item.templateItemId ? [item.templateItemId] : []))),
+  ]
+  const sources = templateItemIds.length
+    ? await db.assetPmTemplateItem.findMany({
+        where: { id: { in: templateItemIds }, template: { companyId: params.companyId } },
+        select: { id: true, audioBytes: true, audioContentType: true },
+      })
+    : []
+  const audioByItem = new Map(sources.map((row) => [row.id, row]))
+  const items = input.items.map((item, index) => {
+    const source = item.templateItemId ? audioByItem.get(item.templateItemId) : undefined
+    return {
+      sequence: index + 1,
+      name: item.name,
+      detail: item.detail,
+      audioBytes: source?.audioBytes && source.audioContentType ? toPlanBytes(source.audioBytes) : null,
+      audioContentType: source?.audioBytes && source.audioContentType ? source.audioContentType : null,
+    }
+  })
   const existing = await db.assetPmPlan.findUnique({
     where: { assetId: asset.id },
     select: { id: true },
@@ -405,9 +433,22 @@ export async function getPublicAssetPm(db: PrismaClient, token: string, now?: Da
         sequence: item.sequence,
         name: item.name,
         detail: item.detail,
+        hasAudio: item.audioContentType != null,
       })),
     },
   }
+}
+
+export async function getPublicAssetPmAudio(db: PrismaClient, token: string, itemId: string) {
+  if (!isPmPublicToken(token)) throw new NotFoundError(NOT_FOUND)
+  const plan = await db.assetPmPlan.findUnique({
+    where: { publicToken: token },
+    include: publicInclude,
+  })
+  if (!plan || !plan.isActive || plan.asset.deletedAt) throw new NotFoundError(NOT_FOUND)
+  const item = plan.items.find((row) => row.id === itemId)
+  if (!item?.audioBytes || !item.audioContentType) throw new NotFoundError(NOT_FOUND)
+  return { bytes: new Uint8Array(item.audioBytes), contentType: item.audioContentType }
 }
 
 const RECORD_CLOCK_SKEW_MS = 2 * 60 * 1000

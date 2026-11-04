@@ -11,6 +11,7 @@ import {
   deactivateAssetPm,
   getAssetPm,
   getPublicAssetPm,
+  getPublicAssetPmAudio,
   isPmPublicToken,
   listAssetPmBoard,
   summarizePmDayRounds,
@@ -52,7 +53,15 @@ type AssetRow = {
   deletedAt: Date | null
 }
 
-type PlanItem = { id: string; planId: string; sequence: number; name: string; detail?: string | null }
+type PlanItem = {
+  id: string
+  planId: string
+  sequence: number
+  name: string
+  detail?: string | null
+  audioBytes?: Buffer | null
+  audioContentType?: string | null
+}
 type PlanRound = {
   id: string
   planId: string
@@ -110,7 +119,11 @@ function matchesAsset(asset: AssetRow, where: Record<string, unknown> | undefine
   return true
 }
 
-function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
+function fakeDb(state: {
+  assets: AssetRow[]
+  plans: PlanRow[]
+  templateItems?: { id: string; companyId: string; audioBytes: Buffer; audioContentType: string }[]
+}) {
   const db = {
     asset: {
       findFirst: async ({ where }: { where: Record<string, unknown> }) => {
@@ -185,7 +198,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
           intervalDays: number
           isActive: boolean
           publicToken: string
-          items: { create: { sequence: number; name: string; detail?: string | null }[] }
+          items: { create: { sequence: number; name: string; detail?: string | null; audioBytes?: Buffer | null; audioContentType?: string | null }[] }
           recordedBy?: string
         }
       }) => {
@@ -202,6 +215,8 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
             sequence: item.sequence,
             name: item.name,
             detail: item.detail ?? null,
+            audioBytes: item.audioBytes ?? null,
+            audioContentType: item.audioContentType ?? null,
           })),
           rounds: [],
         })
@@ -217,7 +232,7 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
           publicToken?: string
           intervalDays?: number
           isActive?: boolean
-          items?: { create: { sequence: number; name: string; detail?: string | null }[] }
+          items?: { create: { sequence: number; name: string; detail?: string | null; audioBytes?: Buffer | null; audioContentType?: string | null }[] }
         }
       }) => {
         const plan = state.plans.find((row) => row.id === where.id)
@@ -232,10 +247,22 @@ function fakeDb(state: { assets: AssetRow[]; plans: PlanRow[] }) {
             sequence: item.sequence,
             name: item.name,
             detail: item.detail ?? null,
+            audioBytes: item.audioBytes ?? null,
+            audioContentType: item.audioContentType ?? null,
           }))
         }
         return plan
       },
+    },
+    assetPmTemplateItem: {
+      findMany: async ({
+        where,
+      }: {
+        where: { id: { in: string[] }; template: { companyId: string } }
+      }) =>
+        (state.templateItems ?? []).filter(
+          (row) => where.id.in.includes(row.id) && row.companyId === where.template.companyId
+        ),
     },
     assetPmItem: {
       deleteMany: async ({ where }: { where: { planId: string } }) => {
@@ -483,6 +510,44 @@ describe("asset PM access", () => {
     })
     expect(rotated.data.plan?.publicToken).not.toBe(before)
     expect(isPmPublicToken(rotated.data.plan?.publicToken ?? "")).toBe(true)
+  })
+
+  it("copies audio from the same company and ignores a clip from another company", async () => {
+    const clip = Buffer.from("same-company")
+    const ownItem = "12121212-1212-4121-8121-121212121212"
+    const otherItem = "13131313-1313-4131-8131-131313131313"
+    const { db, state } = fakeDb({
+      assets: [assetRow()],
+      plans: [],
+      templateItems: [
+        { id: ownItem, companyId: CID, audioBytes: clip, audioContentType: "audio/webm" },
+        { id: otherItem, companyId: CID_B, audioBytes: Buffer.from("other"), audioContentType: "audio/mpeg" },
+      ],
+    })
+    const saved = await upsertAssetPm(db, {
+      companyId: CID,
+      roles: adminRoles,
+      assetId: ASSET_ID,
+      input: {
+        intervalDays: 7,
+        isActive: true,
+        items: [
+          { name: "ยางรถ", detail: "ลมยาง", templateItemId: ownItem },
+          { name: "ไฟหน้า", templateItemId: otherItem },
+        ],
+      },
+    })
+    expect(saved.data.plan?.items.map((item) => item.hasAudio)).toEqual([true, false])
+    expect(JSON.stringify(saved.data)).not.toContain(clip.toString("base64"))
+    const token = saved.data.plan?.publicToken ?? ""
+    const withAudio = saved.data.plan?.items[0]?.id ?? ""
+    const withoutAudio = saved.data.plan?.items[1]?.id ?? ""
+    const played = await getPublicAssetPmAudio(db, token, withAudio)
+    expect(played.contentType).toBe("audio/webm")
+    expect(Buffer.compare(played.bytes, clip)).toBe(0)
+    expect(state.plans[0]?.items[0]?.audioContentType).toBe("audio/webm")
+    await expect(getPublicAssetPmAudio(db, "not-a-token", withAudio)).rejects.toBeInstanceOf(NotFoundError)
+    await expect(getPublicAssetPmAudio(db, token, withoutAudio)).rejects.toBeInstanceOf(NotFoundError)
   })
 })
 

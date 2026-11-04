@@ -946,7 +946,15 @@
     "useStarter": "Fill the vehicle check",
     "starterName": "Vehicle check before departure",
     "templateHint": "Choose a template to fill the list. You can still edit it before saving.",
-    "loadFailed": "Could not load"
+    "loadFailed": "Could not load",
+    "recordAudio": "Record",
+    "stopRecording": "Stop",
+    "uploadAudio": "Choose audio",
+    "playAudio": "Play",
+    "removeAudio": "Remove audio",
+    "audioTooBig": "Audio is larger than 256 KB",
+    "audioType": "Use a webm, mp4, mp3, wav, or ogg file",
+    "micDenied": "The microphone is not available"
   },
   "transport": {
     "overviewTitle": "Transport overview",

@@ -20,7 +20,15 @@ const viewerRoles: UserRole[] = [
   { branchId: BRANCH_A, branchName: "HQ", roleName: "Viewer", permissions: null },
 ]
 
-type Item = { id: string; templateId: string; sequence: number; name: string; detail: string | null }
+type Item = {
+  id: string
+  templateId: string
+  sequence: number
+  name: string
+  detail: string | null
+  audioBytes?: Buffer | null
+  audioContentType?: string | null
+}
 type Template = { id: string; companyId: string; name: string; isActive: boolean; items: Item[] }
 
 function fakeDb(templates: Template[] = []) {
@@ -88,6 +96,10 @@ function fakeDb(templates: Template[] = []) {
       },
     },
     assetPmTemplateItem: {
+      findMany: async ({ where }: { where: { templateId: string; id: { in: string[] } } }) =>
+        templates.flatMap((template) =>
+          template.id === where.templateId ? template.items.filter((item) => where.id.in.includes(item.id)) : []
+        ),
       deleteMany: async ({ where }: { where: { templateId: string } }) => {
         const row = templates.find((template) => template.id === where.templateId)
         const count = row?.items.length ?? 0
@@ -156,5 +168,36 @@ describe("asset PM templates", () => {
     expect(active.data).toEqual([])
     const all = await listAssetPmTemplates(db, { companyId: CID, roles: viewerRoles })
     expect(all.data.map((row) => row.isActive)).toEqual([false])
+  })
+
+  it("stores audio without returning the bytes and keeps it when the item is edited", async () => {
+    const db = fakeDb()
+    const clip = Buffer.from("thai-clip")
+    const created = await createAssetPmTemplate(db, {
+      companyId: CID,
+      roles: adminRoles,
+      input: {
+        name: "เสียง",
+        items: [
+          {
+            name: "ยางรถยนต์",
+            detail: "สภาพยาง",
+            audioBase64: clip.toString("base64"),
+            audioContentType: "audio/webm",
+          },
+        ],
+      },
+    })
+    expect(created.data.items[0]?.hasAudio).toBe(true)
+    expect(JSON.stringify(created.data)).not.toContain(clip.toString("base64"))
+    const sourceId = created.data.items[0]?.id
+    const updated = await updateAssetPmTemplate(db, {
+      companyId: CID,
+      roles: adminRoles,
+      id: created.data.id,
+      input: { items: [{ name: "ยางรถยนต์", detail: "สภาพยาง", sourceItemId: sourceId }] },
+    })
+    expect(updated.data.items[0]?.hasAudio).toBe(true)
+    expect(updated.data.items[0]?.id).not.toBe(sourceId)
   })
 })

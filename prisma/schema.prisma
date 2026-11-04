@@ -2450,11 +2450,13 @@ model AssetPmTemplate {
 }
 
 model AssetPmTemplateItem {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  templateId String  @map("template_id") @db.Uuid
-  sequence   Int     @db.SmallInt
-  name       String  @db.VarChar(255)
-  detail     String? @db.VarChar(255)
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId       String  @map("template_id") @db.Uuid
+  sequence         Int     @db.SmallInt
+  name             String  @db.VarChar(255)
+  detail           String? @db.VarChar(255)
+  audioBytes       Bytes?  @map("audio_bytes")
+  audioContentType String? @map("audio_content_type") @db.VarChar(127)
 
   template AssetPmTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -2483,11 +2485,13 @@ model AssetPmPlan {
 }
 
 model AssetPmItem {
-  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  planId   String  @map("plan_id") @db.Uuid
-  sequence Int     @db.SmallInt
-  name     String  @db.VarChar(255)
-  detail   String? @db.VarChar(255)
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId           String  @map("plan_id") @db.Uuid
+  sequence         Int     @db.SmallInt
+  name             String  @db.VarChar(255)
+  detail           String? @db.VarChar(255)
+  audioBytes       Bytes?  @map("audio_bytes")
+  audioContentType String? @map("audio_content_type") @db.VarChar(127)
 
   plan    AssetPmPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   results AssetPmResult[]

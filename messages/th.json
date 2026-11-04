@@ -944,7 +944,15 @@
     "useStarter": "ใส่ชุดตรวจรถ",
     "starterName": "ตรวจรถก่อนออกเดินทาง",
     "templateHint": "เลือกเทมเพลตเพื่อเติมรายการ แล้วแก้ได้ก่อนบันทึก",
-    "loadFailed": "โหลดไม่สำเร็จ"
+    "loadFailed": "โหลดไม่สำเร็จ",
+    "recordAudio": "อัดเสียง",
+    "stopRecording": "หยุดอัด",
+    "uploadAudio": "เลือกไฟล์เสียง",
+    "playAudio": "ฟัง",
+    "removeAudio": "เอาเสียงออก",
+    "audioTooBig": "ไฟล์เสียงใหญ่เกิน 256 KB",
+    "audioType": "ใช้ไฟล์เสียง webm, mp4, mp3, wav หรือ ogg",
+    "micDenied": "ใช้ไมโครโฟนไม่ได้"
   },
   "transport": {
     "overviewTitle": "ภาพรวมขนส่ง",

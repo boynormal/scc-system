@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
+import { Check, Volume2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import { cn } from "@/lib/utils"
@@ -27,7 +28,7 @@ export function PmPublicForm({
   recordedAt,
 }: {
   token: string
-  items: { id: string; sequence: number; name: string; detail?: string | null }[]
+  items: { id: string; sequence: number; name: string; detail?: string | null; hasAudio?: boolean }[]
   recordedAt?: string
 }) {
   const t = useTranslations("pmCheck")
@@ -36,6 +37,14 @@ export function PmPublicForm({
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
+  const player = useRef<HTMLAudioElement | null>(null)
+
+  function play(itemId: string) {
+    player.current?.pause()
+    const audio = new Audio(`/api/pm/${token}/items/${itemId}/audio`)
+    player.current = audio
+    void audio.play()
+  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -79,12 +88,24 @@ export function PmPublicForm({
     <form onSubmit={onSubmit} className="space-y-3">
       {items.map((item) => (
         <section key={item.id} className="rounded-xl border border-[#cbd5e1] bg-[#f8fafc] p-4">
-          <h2 className="flex items-center gap-3 text-base font-semibold text-[#0f172a]">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1e293b] text-xs font-bold text-white">
-              {item.sequence}
-            </span>
-            {item.name}
-          </h2>
+          <div className="flex items-start gap-3">
+            <h2 className="flex min-w-0 flex-1 items-center gap-3 text-base font-semibold text-[#0f172a]">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1e293b] text-xs font-bold text-white">
+                {item.sequence}
+              </span>
+              {item.name}
+            </h2>
+            {item.hasAudio ? (
+              <button
+                type="button"
+                aria-label={t("playAudio")}
+                onClick={() => play(item.id)}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#1e293b] bg-[#1e293b] text-white"
+              >
+                <Volume2 className="h-6 w-6" />
+              </button>
+            ) : null}
+          </div>
           {item.detail ? <p className="mt-2 text-sm font-normal text-[#334155]">{item.detail}</p> : null}
           <div className="mt-3 grid grid-cols-2 gap-3">
             {STATUSES.map((status) => {
@@ -105,6 +126,7 @@ export function PmPublicForm({
                     checked={selected}
                     onChange={() => setChoices((current) => ({ ...current, [item.id]: status }))}
                   />
+                  {status === "pass" ? <Check className="mr-1 h-5 w-5" /> : <X className="mr-1 h-5 w-5" />}
                   {t(status)}
                 </label>
               )
@@ -164,7 +186,7 @@ export function PmPublicCard({
   statusClass,
 }: {
   token: string
-  items: { id: string; sequence: number; name: string; detail?: string | null }[]
+  items: { id: string; sequence: number; name: string; detail?: string | null; hasAudio?: boolean }[]
   title: string
   assetName: string
   assetCode: string

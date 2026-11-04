@@ -48,6 +48,7 @@ export {
   listAssetPmMonth,
   deactivateAssetPm,
   getPublicAssetPm,
+  getPublicAssetPmAudio,
   submitPublicAssetPmRound,
   upsertAssetPmSchema,
   submitAssetPmRoundSchema,
@@ -60,4 +61,5 @@ export {
   createAssetPmTemplate,
   updateAssetPmTemplate,
   deleteAssetPmTemplate,
+  getAssetPmTemplateItemAudio,
 } from "./application/asset-pm-template-service"

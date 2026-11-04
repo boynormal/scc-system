@@ -6,21 +6,20 @@ import { ForbiddenError } from "@/lib/errors"
 import type { UserRole } from "@/lib/permissions"
 import { listDriverMonitor } from "@/modules/transport"
 import { canTransportJobs } from "@/modules/transport/application/transport-job-access"
-import { getBangkokLastNDaysRange } from "@/modules/transport/application/transport-date-utils"
 import { ListFrame } from "@/components/shell/list-frame"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
+import { currentFinanceMonth, financeMonthRange } from "@/components/finance/finance-month"
+import { DriverReportMonth } from "@/components/transport/driver-report-month"
 import { DriverReportTable } from "@/components/transport/driver-report-table"
 
+const MONTH = /^\d{4}-\d{2}$/
 const YMD = /^\d{4}-\d{2}-\d{2}$/
 
-function resolveRange(from?: string, to?: string) {
-  const fallback = getBangkokLastNDaysRange(30)
-  const start = from && YMD.test(from) ? from : fallback.from
-  const end = to && YMD.test(to) ? to : fallback.to
-  if (start > end) return fallback
-  return { from: start, to: end }
+function resolveMonth(month?: string, from?: string) {
+  if (month && MONTH.test(month)) return month
+  if (from && YMD.test(from)) return from.slice(0, 7)
+  return currentFinanceMonth()
 }
 
 export async function generateMetadata() {
@@ -39,7 +38,8 @@ export default async function TransportDriverReportPage({
   if (!canTransportJobs(roles, "read")) redirect("/")
 
   const sp = await searchParams
-  const range = resolveRange(sp.from, sp.to)
+  const month = resolveMonth(sp.month, sp.from)
+  const range = financeMonthRange(month)
   const branchId = sp.branchId?.trim() || null
   const t = await getTranslations("transport")
   let report: Awaited<ReturnType<typeof listDriverMonitor>>
@@ -48,12 +48,12 @@ export default async function TransportDriverReportPage({
       companyId: session.user.companyId as string,
       roles,
       branchId,
-      from: range.from,
-      to: range.to,
+      from: range.dateFrom,
+      to: range.dateTo,
     })
   } catch (error) {
     if (error instanceof ForbiddenError) {
-      redirect(`/transport/reports?from=${range.from}&to=${range.to}`)
+      redirect(`/transport/reports?month=${month}`)
     }
     throw error
   }
@@ -64,6 +64,7 @@ export default async function TransportDriverReportPage({
         title={t("reportsTitle")}
         description={t("reportsDesc")}
         plainPanel
+        filterOverflow
         filters={
           <form method="get" className="flex flex-wrap items-end gap-2">
             <Select
@@ -74,15 +75,14 @@ export default async function TransportDriverReportPage({
               options={report.branches.map((branch) => ({ value: branch.id, label: branch.name }))}
               className="min-w-40"
             />
-            <Input name="from" type="date" label={t("reportsFrom")} defaultValue={range.from} />
-            <Input name="to" type="date" label={t("reportsTo")} defaultValue={range.to} />
+            <DriverReportMonth key={month} month={month} label={t("reportsRange")} />
             <Button type="submit" size="sm">
               {t("reportsShow")}
             </Button>
           </form>
         }
       >
-        <DriverReportTable key={`${range.from}-${range.to}-${branchId ?? ""}`} rows={report.rows} />
+        <DriverReportTable key={`${month}-${branchId ?? ""}`} rows={report.rows} />
       </ListFrame>
     </div>
   )

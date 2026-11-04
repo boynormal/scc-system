@@ -7,7 +7,7 @@ function normalizeName(name: string): string {
   return name.trim().toLowerCase()
 }
 
-/** Quote unit on the Investing.com metals table. Copper under 100 is the pound contract. */
+/** Quote unit. Copper under 100 is the pound contract; LME copper is a metric ton. */
 export function metalMassUnit(name: string, lastUsd: number): MetalMassUnit | null {
   const normalized = normalizeName(name)
   if (

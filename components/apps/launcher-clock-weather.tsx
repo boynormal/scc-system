@@ -25,7 +25,8 @@ import type { BotUsdRateSnapshot, MetalQuote, MetalsQuoteSnapshot } from "@/modu
 import { metalBahtPerKg, metalMassUnit } from "@/modules/raw_material_news/application/metal-baht-per-kg"
 import {
   BOT_EXCHANGE_RATE_PAGE_URL,
-  INVESTING_METALS_URL,
+  FX678_LME_URL,
+  FX678_PRECIOUS_URL,
 } from "@/modules/raw_material_news/application/paper-market-constants"
 import type { WeatherPayload } from "@/shared/weather"
 
@@ -215,6 +216,22 @@ function MetalQuoteChip({ quote, usdThb }: { quote: MetalQuote; usdThb: number |
   )
 }
 
+function MetalsSourceLinks({ className }: { className?: string }) {
+  const t = useTranslations("apps")
+  const linkClass = "font-semibold text-cyan-700 underline-offset-2 hover:underline dark:text-cyan-300"
+  return (
+    <span className={className}>
+      <a href={FX678_LME_URL} target="_blank" rel="noopener noreferrer" className={linkClass}>
+        {t("metalsSourceLme")}
+      </a>
+      <span aria-hidden="true"> · </span>
+      <a href={FX678_PRECIOUS_URL} target="_blank" rel="noopener noreferrer" className={linkClass}>
+        {t("metalsSourcePrecious")}
+      </a>
+    </span>
+  )
+}
+
 function MetalsPanel({
   status,
   snapshot,
@@ -223,7 +240,6 @@ function MetalsPanel({
   snapshot: MetalsQuoteSnapshot | null
 }) {
   const t = useTranslations("apps")
-  const sourceUrl = snapshot?.sourceUrl || INVESTING_METALS_URL
   const quotes = snapshot?.quotes ?? []
   const showMetalsLoading = status === "loading" && quotes.length === 0
   const showMetalsError = !showMetalsLoading && quotes.length === 0
@@ -240,14 +256,7 @@ function MetalsPanel({
         ) : showMetalsError ? (
           <div className="flex h-full min-h-[5.5rem] flex-col justify-center rounded-2xl border border-dashed border-white/50 bg-white/30 px-4 py-3 dark:border-white/15 dark:bg-slate-950/20">
             <p className="text-sm font-semibold text-foreground dark:text-white/80">{t("metalsError")}</p>
-            <a
-              href={sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex w-fit text-xs font-semibold text-cyan-700 underline-offset-2 hover:underline dark:text-cyan-300"
-            >
-              {t("metalsSource")}
-            </a>
+            <MetalsSourceLinks className="mt-2 inline-flex w-fit flex-wrap items-center text-xs" />
           </div>
         ) : (
           <>
@@ -261,15 +270,7 @@ function MetalsPanel({
               ))}
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground dark:text-white/45">
-              {t("metalsDisclaimer")}{" "}
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-cyan-700 hover:underline dark:text-cyan-300"
-              >
-                {t("metalsSource")}
-              </a>
+              {t("metalsDisclaimer")} <MetalsSourceLinks />
             </p>
           </>
         )}

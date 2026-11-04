@@ -652,6 +652,18 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
       },
       {
         type: "link",
+        key: "transport_reports",
+        href: "/transport/reports",
+        label: "transport_reports",
+        icon: "BarChart3",
+        permission: { resource: "transport_jobs", action: "read" },
+        moduleId: "transport_reports",
+        order: 8,
+        keywords: ["driver report", "รายงานคนขับ", "มอนิเตอร์คนขับ", "เช็คอิน", "check-in"],
+        launcher: { departmentId: "transport" },
+      },
+      {
+        type: "link",
         key: "transport_calendar",
         href: "/transport/calendar",
         label: "transport_calendar",

@@ -64,6 +64,7 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     navModuleIds: [
       "transport_dashboard",
       "transport_jobs",
+      "transport_reports",
       "transport_calendar",
       "transport_map",
       "transport_monitor",

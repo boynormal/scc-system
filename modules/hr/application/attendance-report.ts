@@ -216,8 +216,10 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[], time
       day.present += 1
       presentPeople.add(fact.personnelId)
       presentDays += 1
-      if (fact.lateMinutes > 0) lateDays += 1
-      else onTimeDays += 1
+      if (!(reason === "INTRA_DAY" && fact.lateMinutes > 0)) {
+        if (fact.lateMinutes > 0) lateDays += 1
+        else onTimeDays += 1
+      }
     }
     if (absent) absentDays += 1
     if (reason === "PERSONAL" || reason === "SICK" || reason === "INTRA_DAY") leaveDays += 1
@@ -257,10 +259,12 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[], time
     if (fact.status === "SINGLE_PUNCH") person.singlePunch += 1
     if (fact.status === "NO_SCAN") person.noScan += 1
     const lost = factLostMinutes(fact, timeZone)
-    const intraMinutes = reason === "INTRA_DAY" ? Math.max(0, lost - fact.lateMinutes) : 0
+    const intraDay = reason === "INTRA_DAY"
+    const intraMinutes = intraDay ? lost : 0
+    const countedLate = intraDay ? 0 : fact.lateMinutes
     person.manMinutes += fact.manMinutes
-    person.lateMinutes += fact.lateMinutes
-    if (fact.lateMinutes > 0) person.lateCount += 1
+    person.lateMinutes += countedLate
+    if (countedLate > 0) person.lateCount += 1
     if (reason === "PERSONAL" || reason === "SICK") person.fullLeaveHours += 8
     person.intraMinutes += intraMinutes
     person.otBeforeMinutes += confirmedMinutes(fact.otBefore)
@@ -271,7 +275,7 @@ export function buildAttendanceReport(dates: string[], facts: ReportFact[], time
       date: fact.date,
       status: fact.status,
       manMinutes: fact.manMinutes,
-      lateMinutes: fact.lateMinutes,
+      lateMinutes: countedLate,
       intraMinutes,
       otBeforeMinutes: confirmedMinutes(fact.otBefore),
       otAfterMinutes: confirmedMinutes(fact.otAfter),
@@ -318,14 +322,15 @@ export function buildExceptionGroups(facts: ReportFact[], timeZone = "Asia/Bangk
   for (const fact of facts) {
     if (!isExceptionFact(fact)) continue
     const list = groups.get(fact.date) ?? []
+    const reason = leaveReason(fact.noteReason)
     list.push({
       personnelId: fact.personnelId,
       displayName: fact.displayName,
       departmentId: fact.departmentId ?? null,
       status: fact.status,
-      late: fact.lateMinutes > 0,
+      late: reason !== "INTRA_DAY" && fact.lateMinutes > 0,
       minutes: factLostMinutes(fact, timeZone),
-      noteReason: leaveReason(fact.noteReason),
+      noteReason: reason,
       note: fact.note?.trim() || null,
       firstIn: fact.firstIn ? fact.firstIn.toISOString() : null,
       lastOut: fact.lastOut ? fact.lastOut.toISOString() : null,
@@ -371,10 +376,11 @@ export function buildStaffingCells(facts: ReportFact[], timeZone = "Asia/Bangkok
     if (reason === "PERSONAL" || reason === "SICK") cell.fullLeave += 1
     if (reason === "INTRA_DAY") {
       cell.intraLeave += 1
-      cell.intraLostMinutes += Math.max(0, lost - fact.lateMinutes)
+      cell.intraLostMinutes += lost
+    } else if (fact.lateMinutes > 0) {
+      cell.late += 1
+      cell.lateMinutes += fact.lateMinutes
     }
-    if (fact.lateMinutes > 0) cell.late += 1
-    cell.lateMinutes += fact.lateMinutes
     cell.manMinutes += fact.manMinutes
     cell.lostMinutes += lost
     cells.set(key, cell)

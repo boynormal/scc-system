@@ -185,6 +185,36 @@ describe("buildExceptionGroups", () => {
     expect(other).toMatchObject({ total: 1, fullLeave: 0, late: 1, lostMinutes: 12, manMinutes: 468 })
   })
 
+  it("counts a morning intra-day leave as intra-day time instead of lateness", () => {
+    const firstIn = at("02:26")
+    const lastOut = at("10:07")
+    const hours = summarizeManHour(firstIn, lastOut, TZ)
+    const row = fact({
+      personnelId: "p1",
+      displayName: "น้ำนนท์",
+      status: "COMPLETE",
+      noteReason: "INTRA_DAY",
+      note: "ลาช่วงเช้าไปหาหมอ",
+      firstIn,
+      lastOut,
+      lateMinutes: hours.lateMinutes,
+      manMinutes: hours.manMinutes,
+    })
+
+    expect(hours.lateMinutes).toBe(86)
+    const cells = buildStaffingCells([row])
+    expect(cells[0]).toMatchObject({ intraLeave: 1, intraLostMinutes: 86, late: 0, lateMinutes: 0, lostMinutes: 86 })
+
+    const groups = buildExceptionGroups([row])
+    expect(groups[0]?.rows[0]).toMatchObject({ late: false, minutes: 86, noteReason: "INTRA_DAY" })
+    expect(groups[0]?.minutes).toBe(86)
+
+    const report = buildAttendanceReport(["2026-10-18"], [row])
+    expect(report.cards.lateDays).toBe(0)
+    expect(report.people[0]).toMatchObject({ lateMinutes: 0, lateCount: 0, intraMinutes: 86 })
+    expect(report.people[0]?.days[0]).toMatchObject({ lateMinutes: 0, intraMinutes: 86 })
+  })
+
   it("keeps a note-only row at 0 minutes", () => {
     const groups = buildExceptionGroups([
       fact({ personnelId: "p1", status: "COMPLETE", lateMinutes: 0, note: "ปวดหลัง" }),

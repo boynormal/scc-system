@@ -932,21 +932,23 @@ export type ExpenseDto = ReturnType<typeof serializeExpense>
 async function attachSourceDocumentNos(
   db: PrismaClient,
   companyId: string,
-  dto: ExpenseDto
-): Promise<ExpenseDto> {
+  dtos: ExpenseDto[]
+): Promise<ExpenseDto[]> {
   const repairIds: string[] = []
   const tireIds: string[] = []
   const jobIds: string[] = []
-  for (const line of dto.lines) {
-    if (!line.sourceDocumentId) continue
-    if (line.sourceType === "TRANSPORT_REPAIR") repairIds.push(line.sourceDocumentId)
-    else if (line.sourceType === "TRANSPORT_TIRE") tireIds.push(line.sourceDocumentId)
-    else if (line.sourceType === "TRANSPORT_JOB") jobIds.push(line.sourceDocumentId)
+  for (const dto of dtos) {
+    for (const line of dto.lines) {
+      if (!line.sourceDocumentId) continue
+      if (line.sourceType === "TRANSPORT_REPAIR") repairIds.push(line.sourceDocumentId)
+      else if (line.sourceType === "TRANSPORT_TIRE") tireIds.push(line.sourceDocumentId)
+      else if (line.sourceType === "TRANSPORT_JOB") jobIds.push(line.sourceDocumentId)
+    }
   }
-  if (repairIds.length === 0 && tireIds.length === 0 && jobIds.length === 0) return dto
+  if (repairIds.length === 0 && tireIds.length === 0 && jobIds.length === 0) return dtos
   const sources = await getTransportCostSourcesByIds(db, { companyId, repairIds, tireIds, jobIds })
   const nos = new Map(sources.map((s) => [`${s.sourceType}::${s.sourceId}`, s.documentNo]))
-  return {
+  return dtos.map((dto) => ({
     ...dto,
     lines: dto.lines.map((line) => ({
       ...line,
@@ -955,11 +957,12 @@ async function attachSourceDocumentNos(
           ? nos.get(`${line.sourceType}::${line.sourceDocumentId}`) ?? null
           : null,
     })),
-  }
+  }))
 }
 
 async function toExpenseDto(db: PrismaClient, companyId: string, row: ExpenseRow): Promise<ExpenseDto> {
-  return attachSourceDocumentNos(db, companyId, serializeExpense(row))
+  const [dto] = await attachSourceDocumentNos(db, companyId, [serializeExpense(row)])
+  return dto
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
@@ -1007,6 +1010,29 @@ export async function listExpenses(
   }
   if (params.search?.trim()) {
     const q = params.search.trim()
+    const numberMatch = { contains: q, mode: "insensitive" as const }
+    const [jobs, repairs, tires] = await Promise.all([
+      db.transportJob.findMany({
+        where: { companyId: params.companyId, jobNumber: numberMatch },
+        select: { id: true },
+        take: 300,
+      }),
+      db.transportRepairLog.findMany({
+        where: { companyId: params.companyId, repairNumber: numberMatch },
+        select: { id: true },
+        take: 300,
+      }),
+      db.transportTireLog.findMany({
+        where: { companyId: params.companyId, tireNumber: numberMatch },
+        select: { id: true },
+        take: 300,
+      }),
+    ])
+    const linked = (
+      sourceType: "TRANSPORT_JOB" | "TRANSPORT_REPAIR" | "TRANSPORT_TIRE",
+      ids: string[]
+    ): Prisma.ExpenseWhereInput | null =>
+      ids.length ? { lines: { some: { sourceType, sourceDocumentId: { in: ids } } } } : null
     where.OR = [
       { expenseNo: { contains: q, mode: "insensitive" } },
       { notes: { contains: q, mode: "insensitive" } },
@@ -1020,7 +1046,10 @@ export async function listExpenses(
           },
         },
       },
-    ]
+      linked("TRANSPORT_JOB", jobs.map((row) => row.id)),
+      linked("TRANSPORT_REPAIR", repairs.map((row) => row.id)),
+      linked("TRANSPORT_TIRE", tires.map((row) => row.id)),
+    ].filter((clause): clause is Prisma.ExpenseWhereInput => clause != null)
   }
   if (and.length) where.AND = and
 
@@ -1030,7 +1059,7 @@ export async function listExpenses(
     orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
     take: 300,
   })
-  return { data: rows.map(serializeExpense) }
+  return { data: await attachSourceDocumentNos(db, params.companyId, rows.map(serializeExpense)) }
 }
 
 export async function getExpense(

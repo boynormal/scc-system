@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, Receipt, Search } from "lucide-react"
@@ -28,6 +28,18 @@ import {
 } from "./finance-theme"
 import { surfaceFieldClass, surfacePanelClass } from "@/components/shell/surface"
 import { ExpenseStatusBadge } from "./finance-page-header"
+
+function relatedDocumentNos(item: ExpenseDto): string[] {
+  const seen = new Set<string>()
+  const nos: string[] = []
+  for (const line of item.lines) {
+    const no = line.sourceDocumentNo?.trim()
+    if (!no || seen.has(no)) continue
+    seen.add(no)
+    nos.push(no)
+  }
+  return nos
+}
 
 export function ExpenseList({
   perms,
@@ -113,6 +125,8 @@ export function ExpenseList({
     void load()
   }, [load])
 
+  const netTotal = useMemo(() => items.reduce((sum, item) => sum + item.netAmount, 0), [items])
+
   useEffect(() => {
     const refetch = () => void load()
     const onPageShow = (event: PageTransitionEvent) => {
@@ -165,7 +179,7 @@ export function ExpenseList({
               className={cn("block w-full rounded-lg border py-2 pl-9 pr-3 text-sm", surfaceFieldClass)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="เลขที่ / รายละเอียด / วัตถุต้นทุน"
+              placeholder="เลขที่ / รหัสเอกสารที่เกี่ยวข้อง / รายละเอียด"
             />
           </span>
         </label>
@@ -230,24 +244,43 @@ export function ExpenseList({
         <AppDataTable>
           <AppDataTableHead>
             <tr>
-              <th className="w-[14%] whitespace-nowrap">เลขที่</th>
+              <th className="w-[12%] whitespace-nowrap">เลขที่</th>
+              <th className="w-[14%]">รหัสเอกสารที่เกี่ยวข้อง</th>
               <th className="w-[10%] whitespace-nowrap">วันที่</th>
-              <th className="w-[16%]">ประเภท</th>
-              <th className="w-[12%] whitespace-nowrap">ต้นทาง</th>
-              <th className="w-[16%]">หน่วยงาน</th>
+              <th className="w-[14%]">ประเภท</th>
+              <th className="w-[10%] whitespace-nowrap">ต้นทาง</th>
+              <th className="w-[14%]">หน่วยงาน</th>
               <th className="w-[14%] whitespace-nowrap text-right">ยอดสุทธิ</th>
               <th className="w-[10%] whitespace-nowrap">สถานะ</th>
             </tr>
           </AppDataTableHead>
           <AppDataTableBody>
-            {items.map((item) => (
+            {items.map((item) => {
+              const related = relatedDocumentNos(item)
+              return (
               <tr
                 key={item.id}
                 className="cursor-pointer"
                 onClick={() => router.push(`/finance/expenses/${item.id}`)}
               >
-                <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">
-                  {item.expenseNo}
+                <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <Link
+                    href={`/finance/expenses/${item.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold tabular-nums text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {item.expenseNo}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 tabular-nums text-foreground">
+                  {related.length === 0
+                    ? "—"
+                    : related.map((no) => (
+                        <span key={no} className="block truncate" title={no}>
+                          {no}
+                        </span>
+                      ))}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums text-muted-foreground">
                   {formatDate(item.expenseDate)}
@@ -279,8 +312,16 @@ export function ExpenseList({
                   />
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </AppDataTableBody>
+          <tfoot>
+            <tr className="[&>td]:border-t [&>td]:border-border [&>td]:bg-muted [&>td]:px-4 [&>td]:py-3 [&>td]:font-semibold [&>td]:text-foreground">
+              <td colSpan={6}>รวม</td>
+              <td className="whitespace-nowrap text-right tabular-nums">{formatBaht(netTotal)}</td>
+              <td />
+            </tr>
+          </tfoot>
         </AppDataTable>
         </AppDataTablePanel>
       )}

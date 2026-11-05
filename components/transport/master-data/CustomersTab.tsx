@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
-import { Edit2, Trash2, Save, X, Loader2 } from "lucide-react"
+import { Edit2, Trash2, Save, X, Loader2, QrCode } from "lucide-react"
+import { useTranslations } from "next-intl"
+import { CustomerPickupQrDialog } from "@/components/transport/master-data/CustomerPickupQrDialog"
 import { GlassButton, GlassInput } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
 import { includesSearch, isAutoCustomerCode } from "@/components/transport/master-data/transport-code-utils"
@@ -29,6 +31,7 @@ type Customer = {
   phone: string | null
   details: string | null
   isActive: boolean
+  publicToken: string | null
 }
 
 type FormState = {
@@ -185,6 +188,8 @@ type Props = {
 
 export function CustomersTab({ search = "", addRequest = 0 }: Props) {
   const confirmType = useTypeConfirm()
+  const pickupT = useTranslations("pickup")
+  const [qrCustomerId, setQrCustomerId] = useState<string | null>(null)
   const [data, setData] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -383,6 +388,15 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
                         <>
                           <button
                             type="button"
+                            onClick={() => setQrCustomerId(item.id)}
+                            className="p-1.5 text-foreground hover:text-cyan-600"
+                            title={pickupT("qrButton")}
+                            aria-label={pickupT("qrButton")}
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => startEdit(item)}
                             className="p-1.5 text-foreground hover:text-cyan-600"
                           >
@@ -426,6 +440,15 @@ export function CustomersTab({ search = "", addRequest = 0 }: Props) {
             </AppDataTableBody>
           </AppDataTable>
       </AppDataTablePanel>
+      <CustomerPickupQrDialog
+        customer={data.find((item) => item.id === qrCustomerId) ?? null}
+        onOpenChange={(open) => {
+          if (!open) setQrCustomerId(null)
+        }}
+        onTokenChange={(customerId, publicToken) =>
+          setData((rows) => rows.map((row) => (row.id === customerId ? { ...row, publicToken } : row)))
+        }
+      />
     </div>
   )
 }

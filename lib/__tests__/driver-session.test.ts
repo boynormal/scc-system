@@ -18,6 +18,8 @@ describe("driver session gate", () => {
     expect(isDriverAllowedPath("/api/auth/session")).toBe(true)
     expect(isDriverAllowedPath("/pm/abcdefghijklmnopqrstuvwxyz0123456789AB")).toBe(true)
     expect(isDriverAllowedPath("/api/pm/abcdefghijklmnopqrstuvwxyz0123456789AB")).toBe(true)
+    expect(isDriverAllowedPath("/receive/abcdefghijklmnopqrstuvwxyz0123456789AB")).toBe(true)
+    expect(isDriverAllowedPath("/api/receive/abcdefghijklmnopqrstuvwxyz0123456789AB")).toBe(true)
     expect(isDriverAllowedPath("/pm-check")).toBe(false)
     expect(isDriverAllowedPath("/transport/jobs")).toBe(false)
     expect(isDriverAllowedPath("/")).toBe(false)

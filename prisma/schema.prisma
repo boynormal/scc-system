@@ -158,6 +158,7 @@ model Company {
   attendanceTimeConfirmations AttendanceTimeConfirmation[]
   attendanceHolidays     AttendanceHoliday[]
   tmsCustomers          TmsCustomer[]
+  tmsPickupRequests     TmsPickupRequest[]
   transportJobTypes     TransportJobType[]
   transportCargoTypes   TransportCargoType[]
   transportVehicleTypes TransportVehicleType[]
@@ -870,9 +871,10 @@ model Unit {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company      Company       @relation(fields: [companyId], references: [id])
+  company      Company                @relation(fields: [companyId], references: [id])
   expenseLines ExpenseLine[]
   incomeLines  IncomeLine[]
+  pickupLines  TmsPickupRequestLine[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1454,14 +1456,64 @@ model TmsCustomer {
   longitude   Decimal? @db.Decimal(10, 7)
   details     String?
   isActive    Boolean  @default(true) @map("is_active")
+  // QR opens /receive/[publicToken] without a session; reissuing replaces the old link.
+  publicToken String?  @unique @map("public_token") @db.VarChar(64)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company Company        @relation(fields: [companyId], references: [id])
-  jobs    TransportJob[]
+  company        Company            @relation(fields: [companyId], references: [id])
+  jobs           TransportJob[]
+  pickupRequests TmsPickupRequest[]
 
   @@index([companyId])
   @@map("tms_customers")
+}
+
+enum TmsPickupRequestStatus {
+  SUBMITTED
+  CANCELLED
+}
+
+// Scheduling state comes from the linked stop; deleting the stop puts the request back in the queue.
+model TmsPickupRequest {
+  id          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String                 @map("company_id") @db.Uuid
+  customerId  String                 @map("customer_id") @db.Uuid
+  requestNo   Int                    @map("request_no")
+  contactName String?                @map("contact_name") @db.VarChar(255)
+  phone       String?                @db.VarChar(30)
+  note        String?
+  status      TmsPickupRequestStatus @default(SUBMITTED)
+  jobStopId   String?                @unique @map("job_stop_id") @db.Uuid
+  createdAt   DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company                @relation(fields: [companyId], references: [id])
+  customer TmsCustomer            @relation(fields: [customerId], references: [id])
+  jobStop  JobStop?               @relation(fields: [jobStopId], references: [id], onDelete: SetNull)
+  lines    TmsPickupRequestLine[]
+
+  @@unique([companyId, requestNo])
+  @@index([companyId, status])
+  @@index([customerId, createdAt])
+  @@map("tms_pickup_requests")
+}
+
+model TmsPickupRequestLine {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId   String  @map("request_id") @db.Uuid
+  cargoTypeId String  @map("cargo_type_id") @db.Uuid
+  quantity    Decimal @db.Decimal(12, 2)
+  unitId      String  @map("unit_id") @db.Uuid
+  note        String?
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  request   TmsPickupRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  cargoType TransportCargoType @relation(fields: [cargoTypeId], references: [id])
+  unit      Unit               @relation(fields: [unitId], references: [id])
+
+  @@index([requestId])
+  @@map("tms_pickup_request_lines")
 }
 
 model TransportJobType {
@@ -1491,7 +1543,8 @@ model TransportCargoType {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company Company @relation(fields: [companyId], references: [id])
+  company     Company                @relation(fields: [companyId], references: [id])
+  pickupLines TmsPickupRequestLine[]
 
   @@unique([companyId, name])
   @@index([companyId])
@@ -1713,9 +1766,10 @@ model JobStop {
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
-  job         TransportJob    @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  attachments JobAttachment[]
-  punches     JobStopPunch[]
+  job           TransportJob      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  attachments   JobAttachment[]
+  punches       JobStopPunch[]
+  pickupRequest TmsPickupRequest?
 
   @@index([jobId])
   @@map("job_stops")

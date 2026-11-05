@@ -11,6 +11,8 @@ function isPublicPath(pathname: string) {
   // /pm-check stays behind login. Only the QR form and its API are public.
   if (pathname === "/pm" || pathname.startsWith("/pm/")) return true
   if (pathname.startsWith("/api/pm/")) return true
+  // Customer pickup QR: page and its API only.
+  if (pathname.startsWith("/receive/") || pathname.startsWith("/api/receive/")) return true
   return false
 }
 

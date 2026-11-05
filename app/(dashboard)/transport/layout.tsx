@@ -30,7 +30,6 @@ export default async function TransportLayout({ children }: { children: React.Re
   const tabs = [
     canRead(roles, "transport_jobs") && { href: "/transport", label: "ภาพรวม", exact: true },
     canRead(roles, "transport_jobs") && { href: "/transport/jobs", label: "ใบงานขนส่ง", exact: false },
-    canRead(roles, "transport_jobs") && { href: "/transport/reports", label: "รายงานคนขับ", exact: false },
     canRead(roles, "transport_vehicles") && { href: "/transport/repairs", label: "ใบแจ้งซ่อม", exact: false },
     canRead(roles, "transport_vehicles") && { href: "/transport/tires", label: "จัดการยาง", exact: false },
     (canRead(roles, "transport_jobs") ||
@@ -43,6 +42,12 @@ export default async function TransportLayout({ children }: { children: React.Re
     canRead(roles, "transport_vehicles") && { href: "/transport/map", label: "แผนที่", exact: false },
     canRead(roles, "transport_vehicles") && { href: "/transport/monitor", label: "มอนิเตอร์", exact: false },
     canRead(roles, "transport_jobs") && { href: "/transport/calendar", label: "ปฏิทิน", exact: false },
+    canRead(roles, "transport_jobs") && {
+      href: "/transport/pickup-requests",
+      label: "คำขอรับสินค้า",
+      exact: false,
+    },
+    canRead(roles, "transport_jobs") && { href: "/transport/reports", label: "รายงานคนขับ", exact: false },
   ].filter(Boolean) as { href: string; label: string; exact: boolean }[]
 
   const cookieStore = await cookies()

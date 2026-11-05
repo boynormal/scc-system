@@ -13,6 +13,8 @@ import {
 import { writeJobAudit } from "./job-audit"
 import { canTransportJobs, transportJobAllowed, transportJobListBranchIds } from "./transport-job-access"
 import { nextTransportDocumentNo } from "./transport-document-no"
+import { canAttachToJob, pickupRequestToStopDraft } from "./pickup-request-rules"
+import { loadLinkablePickupRequest } from "./pickup-request-service"
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -40,6 +42,7 @@ export const createJobSchema = z
           estimatedArrival: z.string().datetime({ offset: true }).optional(),
           weightKg: z.number().positive().optional(),
           notes: z.string().optional(),
+          pickupRequestId: z.string().uuid().optional(),
         })
       )
       .min(1, "At least one stop is required"),
@@ -191,6 +194,7 @@ function buildJobListWhere(params: JobListFilters) {
             { jobNumber: contains },
             { customerName: contains },
             { customer: { name: contains } },
+            { stops: { some: { customerName: contains } } },
             { jobType: contains },
             { cargoType: contains },
             { assignment: { vehicle: { plateNumber: contains } } },
@@ -234,7 +238,15 @@ const jobListInclude = {
       driver: { select: { id: true, firstName: true, lastName: true } },
     },
   },
-  stops: { select: { id: true, sequence: true, status: true } },
+  stops: {
+    select: {
+      id: true,
+      sequence: true,
+      status: true,
+      customerName: true,
+      pickupRequest: { select: { customer: { select: { name: true } } } },
+    },
+  },
   punches: {
     select: {
       stopId: true,
@@ -380,6 +392,18 @@ export async function createJob(
 
   const { stops, vehicleId, driverId, ...jobData } = params.input
 
+  const pickupRequestIds = stops.flatMap((stop) => (stop.pickupRequestId ? [stop.pickupRequestId] : []))
+  if (new Set(pickupRequestIds).size !== pickupRequestIds.length) {
+    throw new ValidationError("คำขอรับสินค้าซ้ำกันในใบงานเดียว")
+  }
+  for (const requestId of pickupRequestIds) {
+    await loadLinkablePickupRequest(db, params.companyId, requestId)
+  }
+  const stopCreates = stops.map(({ pickupRequestId, ...stop }) => ({
+    ...stop,
+    ...(pickupRequestId ? { pickupRequest: { connect: { id: pickupRequestId } } } : {}),
+  }))
+
   let job: { id: string; scheduledDate: Date | null } | null = null
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -391,7 +415,7 @@ export async function createJob(
           jobNumber,
           companyId: params.companyId,
           createdBy: params.userId,
-          stops: { create: stops },
+          stops: { create: stopCreates },
         },
         select: { id: true, scheduledDate: true },
       })
@@ -653,6 +677,71 @@ export async function syncJobStops(
     newValues: { summary: "แก้ไขจุดแวะ" },
   })
   return stops
+}
+
+/** Appends a pickup request as the last stop. Allowed until the driver reaches the last active stop. */
+export async function attachPickupRequestToJob(
+  db: PrismaClient,
+  params: {
+    companyId: string
+    userId: string
+    roles: UserRole[]
+    requestId: string
+    jobId: string
+  }
+) {
+  const job = await db.transportJob.findFirst({
+    where: { id: params.jobId, companyId: params.companyId },
+    select: {
+      id: true,
+      branchId: true,
+      status: true,
+      stops: { select: { id: true, sequence: true, status: true } },
+      punches: { select: { stopId: true, kind: true } },
+    },
+  })
+  if (!job) throw new NotFoundError("Job not found")
+  await assertOnJob(db, params, "update", job.branchId)
+  if (!canAttachToJob(job).ok) {
+    throw new ValidationError("ใบงานนี้เพิ่มจุดแวะไม่ได้แล้ว เพราะคนขับถึงจุดสุดท้ายหรือจบงานแล้ว")
+  }
+
+  const request = await loadLinkablePickupRequest(db, params.companyId, params.requestId)
+  const draft = pickupRequestToStopDraft(request)
+
+  const stop = await db.$transaction(async (tx) => {
+    const max = await tx.jobStop.aggregate({
+      where: { jobId: job.id },
+      _max: { sequence: true },
+    })
+    const created = await tx.jobStop.create({
+      data: {
+        jobId: job.id,
+        sequence: (max._max.sequence ?? 0) + 1,
+        customerName: draft.customerName,
+        address: draft.address,
+        contactName: draft.contactName || null,
+        contactPhone: draft.contactPhone || null,
+        notes: draft.notes,
+      },
+      select: { id: true, sequence: true },
+    })
+    const linked = await tx.tmsPickupRequest.updateMany({
+      where: { id: request.id, jobStopId: request.jobStopId },
+      data: { jobStopId: created.id },
+    })
+    if (linked.count !== 1) throw new ValidationError(`คำขอ #${request.requestNo} ถูกจัดเข้าใบงานแล้ว`)
+    return created
+  })
+
+  await writeJobAudit(db, {
+    userId: params.userId,
+    jobId: job.id,
+    action: "update",
+    event: "JOB_STOPS",
+    newValues: { summary: `เพิ่มจุดแวะจากคำขอรับสินค้า #${request.requestNo}` },
+  })
+  return { jobId: job.id, stopId: stop.id, sequence: stop.sequence }
 }
 
 export async function listAttachments(

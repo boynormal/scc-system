@@ -1,10 +1,14 @@
-"use client"
+import { NewJobPageForm } from "@/components/transport/new-job-page-form"
 
-import { useRouter } from "next/navigation"
-import { CreateJobForm } from "@/components/transport/CreateJobForm"
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export default function NewTransportJobPage() {
-  const router = useRouter()
+export default async function NewTransportJobPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>
+}) {
+  const { pickupRequest } = await searchParams
+  const pickupRequestId = pickupRequest && UUID.test(pickupRequest) ? pickupRequest : undefined
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
@@ -13,10 +17,7 @@ export default function NewTransportJobPage() {
         <p className="text-sm text-muted-foreground">กรอกข้อมูลงานขนส่งและจุดแวะ</p>
       </div>
 
-      <CreateJobForm
-        onCancel={() => router.push("/transport/jobs")}
-        onSuccess={() => router.push("/transport/jobs")}
-      />
+      <NewJobPageForm pickupRequestId={pickupRequestId} />
     </div>
   )
 }

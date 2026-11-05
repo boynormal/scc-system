@@ -18,6 +18,7 @@ export type JobStopForm = {
   contactPhone: string
   weightKg: string
   notes: string
+  pickupRequestId?: string
 }
 
 export type DestinationPrefillSnap = {

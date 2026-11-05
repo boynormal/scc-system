@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { JobStatusBadge } from "@/components/transport/job-status-badge"
 import { JobRowActions } from "@/components/transport/job-row-actions"
 import { jobCheckReview, type JobCheckReview } from "@/modules/transport/application/job-punch-rules"
+import { otherStopCustomerCount } from "@/modules/transport/application/pickup-request-rules"
 import type { listJobs } from "@/modules/transport"
 
 const PRIORITY_LABEL: Record<string, string> = { low: "ต่ำ", normal: "ปกติ", high: "สูง", urgent: "ด่วน" }
@@ -35,6 +36,16 @@ function JobCheckReviewLink({
 
 type Props = {
   items: JobListItem[]
+}
+
+function jobCustomerLabel(job: JobListItem) {
+  const pickupCustomers = job.stops.flatMap((stop) =>
+    stop.pickupRequest ? [{ customerName: stop.pickupRequest.customer.name }] : []
+  )
+  const header = job.customerName ?? job.customer?.name ?? pickupCustomers[0]?.customerName
+  if (!header) return "—"
+  const others = otherStopCustomerCount(header, pickupCustomers)
+  return others > 0 ? `${header} +${others} ราย` : header
 }
 
 function formatScheduledDate(value: Date | string | null | undefined) {
@@ -105,7 +116,7 @@ export function JobsListTable({ items }: Props) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="font-medium text-foreground">
-                    {job.customerName ?? job.customer?.name ?? "—"}
+                    {jobCustomerLabel(job)}
                   </div>
                   <div className="text-xs text-foreground">{job.jobType}</div>
                 </td>

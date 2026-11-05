@@ -6,6 +6,7 @@ import {
   type TmsCustomerOption,
 } from "@/components/transport/CustomerPicker"
 import { JobAssignmentPickers } from "@/components/transport/JobAssignmentPickers"
+import { ClientFetchError, fetchJson } from "@/lib/client-fetch"
 import {
   JobStopsEditor,
   applyHeaderCustomerToStops,
@@ -22,9 +23,18 @@ type Props = {
   onSuccess: (jobId: string) => void
   /** Compact sections for modal layout */
   compact?: boolean
+  /** Prefill the header customer, cargo type, and the customer stop from this pickup request. */
+  pickupRequestId?: string
 }
 
-export function CreateJobForm({ onCancel, onSuccess, compact = false }: Props) {
+type PickupRequestPrefill = {
+  requestNo: number
+  customer: { id: string; name: string; address: string | null; contactName: string | null; phone: string | null }
+  lines: { cargoTypeName: string }[]
+  stopDraft: { customerName: string; address: string; contactName: string; contactPhone: string; notes: string }
+}
+
+export function CreateJobForm({ onCancel, onSuccess, compact = false, pickupRequestId }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [branches, setBranches] = useState<Branch[]>([])
@@ -64,6 +74,48 @@ export function CreateJobForm({ onCancel, onSuccess, compact = false }: Props) {
   const [vehicleId, setVehicleId] = useState("")
   const [driverId, setDriverId] = useState("")
   const destinationPrefillRef = useRef<DestinationPrefillSnap | null>(null)
+  const [pickupRequestNo, setPickupRequestNo] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!pickupRequestId) return
+    let cancelled = false
+    fetchJson<{ data: PickupRequestPrefill }>(`/api/transport/pickup-requests/${pickupRequestId}`)
+      .then(({ data }) => {
+        if (cancelled) return
+        setPickupRequestNo(data.requestNo)
+        setForm((f) => ({
+          ...f,
+          customerId: data.customer.id,
+          customerName: data.customer.name,
+          cargoType: data.lines[0]?.cargoTypeName ?? f.cargoType,
+        }))
+        destinationPrefillRef.current = {
+          customerId: data.customer.id,
+          customerName: data.stopDraft.customerName,
+          address: data.stopDraft.address,
+          contactName: data.stopDraft.contactName,
+          contactPhone: data.stopDraft.contactPhone,
+        }
+        setStops([
+          {
+            ...emptyJobStop(),
+            customerId: data.customer.id,
+            customerName: data.stopDraft.customerName,
+            address: data.stopDraft.address,
+            contactName: data.stopDraft.contactName,
+            contactPhone: data.stopDraft.contactPhone,
+            notes: data.stopDraft.notes,
+            pickupRequestId,
+          },
+        ])
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof ClientFetchError ? err.message : "โหลดคำขอรับสินค้าไม่สำเร็จ")
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [pickupRequestId])
 
   const handleHeaderCustomer = (customerId: string, customer: TmsCustomerOption | null) => {
     setForm((f) => ({
@@ -116,6 +168,7 @@ export function CreateJobForm({ onCancel, onSuccess, compact = false }: Props) {
             contactPhone: s.contactPhone || undefined,
             weightKg: s.weightKg ? Number(s.weightKg) : undefined,
             notes: s.notes.trim() || undefined,
+            pickupRequestId: s.pickupRequestId || undefined,
           })),
         }),
       })
@@ -142,6 +195,11 @@ export function CreateJobForm({ onCancel, onSuccess, compact = false }: Props) {
     <div className="space-y-4">
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {pickupRequestNo !== null && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          สร้างจากคำขอรับสินค้า #{pickupRequestNo}
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">

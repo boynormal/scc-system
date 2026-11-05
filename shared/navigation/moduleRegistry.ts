@@ -652,6 +652,18 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
       },
       {
         type: "link",
+        key: "transport_pickup_requests",
+        href: "/transport/pickup-requests",
+        label: "transport_pickup_requests",
+        icon: "Package",
+        permission: { resource: "transport_jobs", action: "read" },
+        moduleId: "transport_pickup_requests",
+        order: 8,
+        keywords: ["pickup request", "คำขอรับสินค้า", "แจ้งรับสินค้า", "QR", "คิว"],
+        launcher: { departmentId: "transport" },
+      },
+      {
+        type: "link",
         key: "transport_reports",
         href: "/transport/reports",
         label: "transport_reports",

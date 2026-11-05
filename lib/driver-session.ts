@@ -32,6 +32,8 @@ export function isDriverAllowedPath(pathname: string) {
     pathname === "/pm" ||
     pathname.startsWith("/pm/") ||
     pathname.startsWith("/api/pm/") ||
+    pathname.startsWith("/receive/") ||
+    pathname.startsWith("/api/receive/") ||
     isDriverLogPath(pathname) ||
     PUNCH_API.test(pathname)
   )

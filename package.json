@@ -79,5 +79,10 @@
     "tsx": "^4.21.0",
     "typescript": "~5.7.3",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.32"
+    }
   }
 }

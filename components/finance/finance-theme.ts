@@ -35,6 +35,7 @@ export const SOURCE_MODULE_LABELS: Record<string, string> = {
   MAINTENANCE: "ซ่อมบำรุง",
   INVENTORY: "คลังสินค้า",
   HR: "บุคคล",
+  PROCUREMENT: "จัดซื้อ",
   OTHER: "อื่นๆ",
 }
 
@@ -48,6 +49,7 @@ export const SOURCE_TYPE_LABELS: Record<string, string> = {
   TRANSPORT_REPAIR: "ค่าซ่อม (ขนส่ง)",
   TRANSPORT_TIRE: "ค่ายาง (ขนส่ง)",
   TRANSPORT_JOB: "ใบงานขนส่ง",
+  PURCHASE_ORDER: "ใบสั่งซื้อ",
 }
 
 export function sourceTypeLabel(sourceType: string | null | undefined): string | null {

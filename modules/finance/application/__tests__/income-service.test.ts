@@ -3,6 +3,8 @@ import type { PrismaClient } from "@prisma/client"
 import type { UserRole } from "@/lib/permissions"
 import {
   approveIncome,
+  incomeReceivedWindow,
+  incomeStatusFilter,
   computeIncomeLineAmounts,
   createIncomeSchema,
   deleteIncome,
@@ -197,6 +199,24 @@ describe("getIncome", () => {
     await expect(getIncome(asDb(createDb(row())), { companyId: COMPANY, roles: expenseOnly, id: INCOME })).rejects.toMatchObject({
       name: "ForbiddenError",
     })
+  })
+})
+
+describe("incomeReceivedWindow", () => {
+  it("covers the 15 Bangkok days before today through today", () => {
+    expect(incomeReceivedWindow(new Date("2026-11-25T08:00:00+07:00"))).toEqual({
+      from: "2026-11-10",
+      to: "2026-11-25",
+    })
+  })
+})
+
+describe("incomeStatusFilter", () => {
+  it("keeps a single status and a comma list, and drops unknown tokens", () => {
+    expect(incomeStatusFilter("APPROVED")).toEqual(["APPROVED"])
+    expect(incomeStatusFilter("DRAFT,PENDING,REJECTED")).toEqual(["DRAFT", "PENDING", "REJECTED"])
+    expect(incomeStatusFilter("DRAFT,nope")).toEqual(["DRAFT"])
+    expect(incomeStatusFilter(null)).toEqual([])
   })
 })
 

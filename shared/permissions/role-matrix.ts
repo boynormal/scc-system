@@ -95,6 +95,11 @@ export const ROLE_MATRIX_GROUPS: RoleMatrixGroup[] = [
     rows: [{ resource: "fuel", label: "น้ำมัน (อนุมัติ = ปรับยอด / ยกเลิกรายการ)", actions: CRUD_APPROVE }],
   },
   {
+    id: "procurement",
+    label: "จัดซื้อ",
+    rows: [{ resource: "purchase_orders", label: "ใบสั่งซื้อ", actions: CRUD }],
+  },
+  {
     id: "finance",
     label: "การเงินและบัญชี",
     rows: [

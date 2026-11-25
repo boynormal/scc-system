@@ -33,6 +33,7 @@ export const NAV_ICON_KEYS = [
   "Receipt",
   "Network",
   "Fuel",
+  "ShoppingCart",
 ] as const
 
 export type NavIconKey = (typeof NAV_ICON_KEYS)[number]
@@ -253,6 +254,26 @@ export const MODULE_NAV_REGISTRY: ModuleNavNode[] = [
         order: 6,
         keywords: ["ชนิดน้ำมัน", "fuel type", "ข้อมูลพื้นฐาน"],
         launcher: { departmentId: "fuel", capabilityId: "master_data" },
+      },
+    ],
+  },
+  {
+    type: "section",
+    key: "sec_procurement",
+    label: "sec_procurement",
+    order: 4,
+    children: [
+      {
+        type: "link",
+        key: "procurement_orders",
+        href: "/procurement",
+        label: "procurement_orders",
+        icon: "ShoppingCart",
+        permission: { resource: "purchase_orders", action: "read" },
+        moduleId: "procurement_orders",
+        order: 0,
+        keywords: ["จัดซื้อ", "สั่งซื้อ", "ใบสั่งซื้อ", "purchase", "PO", "procurement", "ซื้อของ"],
+        launcher: { departmentId: "procurement", capabilityId: "orders", isPrimary: true },
       },
     ],
   },

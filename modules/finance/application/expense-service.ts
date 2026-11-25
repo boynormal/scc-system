@@ -17,6 +17,7 @@ import {
   assertSourceLinesNotLinked,
   markReviewsExpenseCreated,
   reopenReviewsOnExpenseCancel,
+  resolveProcurementSources,
   resolveTransportSources,
   type SourceIdentity,
 } from "./expense-source-service"
@@ -33,7 +34,7 @@ export type ExpenseStatusValue = (typeof EXPENSE_STATUSES)[number]
 
 // Modules that can be a source of expense lines. Manual bills carry no module
 // (sourceKind = MANUAL, sourceModule = null); do not add MANUAL/OTHER here.
-export const EXPENSE_SOURCE_MODULES = ["TRANSPORT", "MAINTENANCE", "INVENTORY", "HR"] as const
+export const EXPENSE_SOURCE_MODULES = ["TRANSPORT", "MAINTENANCE", "INVENTORY", "HR", "PROCUREMENT"] as const
 
 export const EXPENSE_SOURCE_KINDS = ["MANUAL", "MODULE", "IMPORT"] as const
 
@@ -632,6 +633,18 @@ async function resolveBill(
     ? await resolveTransportSources(db, { companyId: params.companyId, identities: transportIdentities })
     : new Map()
 
+  const procurementIds = lineInputs
+    .filter(
+      (l) =>
+        (l.sourceKind === "IMPORT" || l.sourceKind === "MODULE") &&
+        l.sourceModule === "PROCUREMENT" &&
+        !!l.sourceDocumentId
+    )
+    .map((l) => l.sourceDocumentId as string)
+  const resolvedOrders = procurementIds.length
+    ? await resolveProcurementSources(db, { companyId: params.companyId, ids: procurementIds })
+    : new Map()
+
   const lines: ResolvedLine[] = []
   const identities: SourceIdentity[] = []
   const seen = new Set<string>()
@@ -650,6 +663,17 @@ async function resolveBill(
       const key = `${input.sourceType}::${input.sourceDocumentId}`
       if (!resolvedSources.get(key)) {
         throw new ValidationError("ไม่พบเอกสารต้นทาง หรือถูกแก้ไข/ผูกไปแล้ว")
+      }
+    }
+    if (linked && input.sourceModule === "PROCUREMENT") {
+      const order = resolvedOrders.get(input.sourceDocumentId as string)
+      if (
+        !order ||
+        input.sourceType !== "PURCHASE_ORDER" ||
+        !input.sourceLineId ||
+        !order.lineIds.has(input.sourceLineId)
+      ) {
+        throw new ValidationError("ไม่พบใบสั่งซื้อต้นทาง หรือใบสั่งซื้อยังไม่รับของ")
       }
     }
 

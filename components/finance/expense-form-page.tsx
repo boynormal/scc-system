@@ -71,6 +71,7 @@ export type PrefillPayload = {
   branchId?: string
   expenseDate?: string
   paymentMethod?: "cash" | "credit" | null
+  vendorId?: string | null
   lines: LineDraft[]
 }
 
@@ -197,6 +198,7 @@ export function ExpenseFormPage({
                   if (payload.branchId) setBranchId(payload.branchId)
                   if (payload.expenseDate) setExpenseDate(payload.expenseDate)
                   if (payload.paymentMethod) setPaymentMethod(payload.paymentMethod)
+                  if (payload.vendorId) setVendorId(payload.vendorId)
                   seeded = true
                 }
               }

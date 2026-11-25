@@ -34,6 +34,7 @@ import {
   type ExpenseStatus,
 } from "./finance-theme"
 import { IncomeFileThumbs } from "./income-file-thumbs"
+import { PurchaseOrderSourcePhotos } from "./purchase-order-source-photos"
 
 const PANEL =
   "rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_24px_rgb(15_23_42/0.06)] dark:border-white/10 dark:bg-slate-900/50 dark:shadow-[0_12px_32px_rgb(0_0_0/0.35)]"
@@ -585,6 +586,11 @@ export function ExpenseDetailView({ expense, perms }: { expense: ExpenseDto; per
                   })}
                 />
               )}
+              <PurchaseOrderSourcePhotos
+                ids={expense.lines
+                  .filter((l) => l.sourceType === "PURCHASE_ORDER" && l.sourceLinkActive && l.sourceDocumentId)
+                  .map((l) => l.sourceDocumentId as string)}
+              />
             </div>
             <div className="w-full shrink-0 space-y-1.5 text-sm sm:max-w-xs">
               <div className="flex justify-between text-muted-foreground">

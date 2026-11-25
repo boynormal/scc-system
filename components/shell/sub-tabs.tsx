@@ -26,6 +26,7 @@ export function SubTabs({
   onChange,
   className,
   size = "md",
+  fill = false,
   "aria-label": ariaLabel = "แท็บรอง",
 }: {
   items: SubTabItem[]
@@ -33,6 +34,8 @@ export function SubTabs({
   onChange?: (key: string) => void
   className?: string
   size?: "sm" | "md"
+  /** Stretch the bar to the full row and give every tab an equal share. */
+  fill?: boolean
   "aria-label"?: string
 }) {
   const nav = useNavPending()
@@ -42,7 +45,8 @@ export function SubTabs({
     <div
       ref={rootRef}
       className={cn(
-        "relative inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border border-white/80 bg-white/40 p-1 shadow-[0_10px_28px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)] backdrop-blur-2xl dark:border-white/20 dark:bg-white/10",
+        "relative max-w-full items-center gap-1 rounded-full border border-white/80 bg-white/40 p-1 shadow-[0_10px_28px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)] backdrop-blur-2xl dark:border-white/20 dark:bg-white/10",
+        fill ? "flex w-full" : "inline-flex flex-wrap",
         className
       )}
       aria-label={ariaLabel}
@@ -53,7 +57,8 @@ export function SubTabs({
       {items.map((item) => {
         const active = item.key === shownKey
         const itemClass = cn(
-          "relative z-10 inline-flex items-center gap-1 whitespace-nowrap rounded-full font-medium transition-colors duration-300",
+          "relative z-10 inline-flex items-center justify-center gap-1 rounded-full font-medium transition-colors duration-300",
+          fill ? "min-w-0 flex-1 whitespace-normal px-2 text-center leading-tight" : "whitespace-nowrap",
           size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-1.5 text-sm",
           active
             ? "text-white dark:text-white"

@@ -3,20 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Check, CircleOff, ExternalLink, Link2, Truck } from "lucide-react"
+import { Check, CircleOff, ExternalLink, LayoutList, Link2, ShoppingCart, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn, formatDate } from "@/lib/utils"
-import {
-  GlassCard,
-  GlassDialog,
-  GlassInput,
-} from "@/components/glass"
+import { GlassDialog, GlassInput } from "@/components/glass"
 import { AppDataTable, AppDataTableBody, AppDataTableHead, AppDataTablePanel } from "@/components/shell/app-data-table"
+import { FolderTabs, folderTabsPanelClass } from "@/components/shell/folder-tabs"
 import { SubTabs } from "@/components/shell/sub-tabs"
 import { NEW_EXPENSE_SOURCES_KEY, type PrefillPayload } from "./expense-form-page"
-import { rowKey, sourceToLine } from "./expense-source-line"
+import { rowKey, sourceToLines } from "./expense-source-line"
 import type { ExpenseSourceRow, FinancePerms, Option } from "./expense-types"
-import { FIN_GLASS_PANEL, SOURCE_TYPE_LABELS, formatBaht, solidBlueButtonClass } from "./finance-theme"
+import { SOURCE_TYPE_LABELS, formatBaht, solidBlueButtonClass } from "./finance-theme"
 
 function apiErrorMessage(json: unknown, fallback: string) {
   if (!json || typeof json !== "object") return fallback
@@ -39,11 +36,40 @@ const NO_EXPENSE_BTN =
   "relative z-10 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-white/20 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
 const TABLE_ACTION_BTN = "h-8 shrink-0 whitespace-nowrap px-2.5"
 
+const MODULE_FILTERS = [
+  { key: "", label: "ทั้งหมด", icon: <LayoutList /> },
+  { key: "TRANSPORT", label: "ขนส่ง", icon: <Truck /> },
+  { key: "PROCUREMENT", label: "จัดซื้อ", icon: <ShoppingCart /> },
+] as const
+
+function SourceThumbs({ row, max, onOpen }: { row: ExpenseSourceRow; max: number; onOpen: () => void }) {
+  const images = (row.attachments ?? []).filter((a) => a.contentType.startsWith("image/"))
+  if (images.length === 0) return null
+  const shown = images.slice(0, max)
+  const extra = images.length - shown.length
+  return (
+    <button type="button" onClick={onOpen} className="flex shrink-0 items-center gap-1" aria-label="ดูรูปใบสั่งซื้อ">
+      {shown.map((a) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={a.id}
+          src={a.url}
+          alt={a.fileName}
+          loading="lazy"
+          className="h-10 w-10 rounded-md border border-border object-cover"
+        />
+      ))}
+      {extra > 0 && <span className="text-xs font-medium text-foreground">+{extra}</span>}
+    </button>
+  )
+}
+
 export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
   const router = useRouter()
   const [rows, setRows] = useState<ExpenseSourceRow[]>([])
   const [branches, setBranches] = useState<Option[]>([])
   const [branchId, setBranchId] = useState("")
+  const [moduleKey, setModuleKey] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -87,17 +113,24 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
     void load()
   }, [load])
 
-  const visibleRows = useMemo(
-    () => (branchId ? rows.filter((r) => r.branchId === branchId) : rows),
-    [rows, branchId]
+  const moduleRows = useMemo(
+    () => (moduleKey ? rows.filter((r) => r.sourceModule === moduleKey) : rows),
+    [rows, moduleKey]
   )
-  const branchCounts = useMemo(() => {
+  const visibleRows = useMemo(
+    () => (branchId ? moduleRows.filter((r) => r.branchId === branchId) : moduleRows),
+    [moduleRows, branchId]
+  )
+  const moduleCounts = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const r of rows) {
-      counts.set(r.branchId, (counts.get(r.branchId) ?? 0) + 1)
-    }
+    for (const r of rows) counts.set(r.sourceModule, (counts.get(r.sourceModule) ?? 0) + 1)
     return counts
   }, [rows])
+  const branchCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const r of moduleRows) counts.set(r.branchId, (counts.get(r.branchId) ?? 0) + 1)
+    return counts
+  }, [moduleRows])
 
   const selectedRows = useMemo(
     () => visibleRows.filter((r) => selected.has(rowKey(r))),
@@ -120,6 +153,11 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
     setSelected(new Set())
   }
 
+  function selectModule(key: string) {
+    setModuleKey(key)
+    setSelected(new Set())
+  }
+
   function toggle(row: ExpenseSourceRow) {
     const key = rowKey(row)
     setSelected((prev) => {
@@ -133,11 +171,13 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
   function createBillFrom(sourceRows: ExpenseSourceRow[]) {
     if (sourceRows.length === 0) return
     const branchId = sourceRows[0].branchId
+    const supplierIds = new Set(sourceRows.map((r) => r.supplierId).filter(Boolean))
     const payload: PrefillPayload = {
       branchId,
       expenseDate: sourceRows[0].date.slice(0, 10),
       paymentMethod: sourceRows[0].paymentMethod,
-      lines: sourceRows.map(sourceToLine),
+      vendorId: supplierIds.size === 1 ? [...supplierIds][0] : null,
+      lines: sourceRows.flatMap(sourceToLines),
     }
     try {
       sessionStorage.setItem(NEW_EXPENSE_SOURCES_KEY, JSON.stringify(payload))
@@ -197,7 +237,7 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
             activeKey={branchId || "all"}
             onChange={(id) => selectBranch(id === "all" ? "" : id)}
             items={[
-              { key: "all", label: "ทั้งหมด", count: rows.length },
+              { key: "all", label: "ทั้งหมด", count: moduleRows.length },
               ...branches.map((b) => ({
                 key: b.id,
                 label: b.name,
@@ -224,8 +264,20 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
         </p>
       )}
 
+      <div>
+      <FolderTabs
+        aria-label="มาจากโมดูล"
+        activeKey={moduleKey || "all"}
+        onChange={(key) => selectModule(key === "all" ? "" : key)}
+        items={MODULE_FILTERS.map((item) => ({
+          key: item.key || "all",
+          label: item.label,
+          icon: item.icon,
+          count: loading ? null : item.key ? (moduleCounts.get(item.key) ?? 0) : rows.length,
+        }))}
+      />
       {!loading && visibleRows.length === 0 && !error ? (
-        <GlassCard className={cn("flex flex-col items-center justify-center py-12 text-center", FIN_GLASS_PANEL)}>
+        <AppDataTablePanel className={cn("flex flex-col items-center justify-center py-12 text-center", folderTabsPanelClass)}>
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-700 backdrop-blur-sm dark:bg-emerald-400/15 dark:text-emerald-200">
             <Truck className="h-7 w-7" />
           </span>
@@ -233,12 +285,17 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             คิวว่างได้เพราะยังไม่มีต้นทางที่พร้อมตรวจ ถูกบันทึกบิลแล้ว ปิดว่าไม่มีค่าใช้จ่าย หรือไม่มีสิทธิ์เห็นข้อมูล
           </p>
-        </GlassCard>
+        </AppDataTablePanel>
       ) : (
-        groups.map(([groupKey, group]) => (
-          <div key={groupKey} className="space-y-2">
-            <h2 className="px-1 text-sm font-semibold text-foreground">{group.label}</h2>
-            <AppDataTablePanel>
+        groups.map(([groupKey, group], index) => (
+          <div key={groupKey} className={index > 0 ? "mt-6 space-y-2" : undefined}>
+            {groups.length > 1 && index > 0 ? (
+              <h2 className="px-1 text-sm font-semibold text-foreground">{group.label}</h2>
+            ) : null}
+            <AppDataTablePanel className={index === 0 ? folderTabsPanelClass : undefined}>
+            {groups.length > 1 && index === 0 ? (
+              <p className="border-b border-border px-4 py-2 text-sm font-semibold text-foreground">{group.label}</p>
+            ) : null}
             <AppDataTable>
               <AppDataTableHead>
                 <tr>
@@ -247,7 +304,7 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                   <th className="whitespace-nowrap">สาขา</th>
                   <th className="whitespace-nowrap">ประเภท</th>
                   <th className="whitespace-nowrap">วันที่</th>
-                  <th className="whitespace-nowrap">รถ</th>
+                  <th className="whitespace-nowrap">{groupKey === "PROCUREMENT" ? "ผู้ขาย" : "รถ"}</th>
                   <th>รายละเอียด</th>
                   <th className="whitespace-nowrap text-right">ยอดอ้างอิง</th>
                   <th className="whitespace-nowrap text-right">การกระทำ</th>
@@ -289,11 +346,22 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                       <td className="px-4 py-3 whitespace-nowrap tabular-nums text-muted-foreground">
                         {formatDate(row.date)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">{row.vehicleLabel}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {row.sourceModule === "PROCUREMENT" ? (row.supplierName ?? "—") : row.vehicleLabel}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        <span className="line-clamp-1" title={row.description ?? undefined}>
-                          {row.description ?? "—"}
-                        </span>
+                        {row.attachments?.length ? (
+                          <div className="flex items-center gap-2">
+                            <SourceThumbs row={row} max={3} onOpen={() => setDetailRow(row)} />
+                            <span className="line-clamp-1" title={row.description ?? undefined}>
+                              {row.description ?? "—"}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="line-clamp-1" title={row.description ?? undefined}>
+                            {row.description ?? "—"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right tabular-nums text-foreground">
                         {formatReferenceAmount(row.amount)}
@@ -337,6 +405,7 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
           </div>
         ))
       )}
+      </div>
 
       <GlassDialog
         open={detailRow != null}
@@ -366,10 +435,17 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                 <dt className="text-muted-foreground">วันที่</dt>
                 <dd className="tabular-nums text-foreground">{formatDate(detailRow.date)}</dd>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">รถ</dt>
-                <dd className="text-foreground">{detailRow.vehicleLabel}</dd>
-              </div>
+              {detailRow.sourceModule === "PROCUREMENT" ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">ผู้ขาย</dt>
+                  <dd className="text-foreground">{detailRow.supplierName ?? "—"}</dd>
+                </div>
+              ) : (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">รถ</dt>
+                  <dd className="text-foreground">{detailRow.vehicleLabel}</dd>
+                </div>
+              )}
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">รายละเอียด</dt>
                 <dd className="text-right text-foreground">{detailRow.description ?? "—"}</dd>
@@ -379,6 +455,58 @@ export function ExpenseSourcesView({ perms }: { perms: FinancePerms }) {
                 <dd className="tabular-nums text-foreground">{formatReferenceAmount(detailRow.amount)}</dd>
               </div>
             </dl>
+            {detailRow.sourceModule === "PROCUREMENT" && (detailRow.lines?.length ?? 0) > 0 && (
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">รายการในใบสั่งซื้อ</p>
+                <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+                  {detailRow.lines?.map((l) => (
+                    <li key={l.id} className="flex justify-between gap-3 px-3 py-2">
+                      <span className="text-foreground">
+                        {l.description}
+                        <span className="block text-xs text-muted-foreground">
+                          {l.quantity} {l.unitCode ?? ""} × {formatBaht(l.unitPrice)}
+                        </span>
+                      </span>
+                      <span className="whitespace-nowrap tabular-nums text-foreground">{formatBaht(l.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(detailRow.attachments?.length ?? 0) > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {detailRow.attachments?.map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                    title={a.fileName}
+                  >
+                    {a.contentType.startsWith("image/") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.url} alt={a.fileName} loading="lazy" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex h-full items-center justify-center p-2 text-center text-xs text-foreground">
+                        {a.fileName}
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            )}
+            {detailRow.sourceType === "PURCHASE_ORDER" && (
+              <Link
+                href={`/procurement/${detailRow.sourceDocumentId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                เปิดใบสั่งซื้อ
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            )}
             {detailRow.sourceType === "TRANSPORT_JOB" && (
               <Link
                 href={`/transport/jobs/${detailRow.sourceDocumentId}`}

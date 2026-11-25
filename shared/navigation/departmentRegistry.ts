@@ -31,6 +31,13 @@ export const DEPARTMENT_REGISTRY: DepartmentDef[] = [
     description: "Branch fuel tanks, refills, dispensing, stock and consumption",
   },
   {
+    id: "procurement",
+    label: "Procurement",
+    order: 13,
+    icon: "ShoppingCart",
+    description: "Purchase orders, order photos, status tracking, hand-off to Finance",
+  },
+  {
     id: "work_management",
     label: "Work Management",
     order: 20,

@@ -80,7 +80,7 @@ const EMPTY: ReportData = {
 }
 
 const REPORT_STATUSES: ExpenseStatus[] = ["DRAFT", "PENDING", "APPROVED", "PAID"]
-const MODULE_FILTERS = ["MANUAL", "TRANSPORT", "MAINTENANCE", "INVENTORY", "HR"] as const
+const MODULE_FILTERS = ["MANUAL", "TRANSPORT", "MAINTENANCE", "INVENTORY", "HR", "PROCUREMENT"] as const
 const TABLE_PREVIEW = 8
 
 function bangkokYmd(date = new Date()): string {

@@ -21,6 +21,7 @@ function createMockDb() {
     transportRepairLog: { findMany: vi.fn().mockResolvedValue([]) },
     transportTireLog: { findMany: vi.fn().mockResolvedValue([]) },
     transportJob: { findMany: vi.fn().mockResolvedValue([]) },
+    purchaseOrder: { findMany: vi.fn().mockResolvedValue([]) },
     branch: { findMany: vi.fn().mockResolvedValue([{ id: BRANCH, name: "HQ" }]) },
     expenseLine: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn().mockResolvedValue(null) },
     expense: { findFirst: vi.fn() },
@@ -181,6 +182,34 @@ describe("listUnlinkedExpenseSources — finance-ready queue", () => {
     ])
     const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
     expect(result.data).toEqual([])
+  })
+
+  it("lists received purchase orders and drops billed or closed ones", async () => {
+    const db = createMockDb()
+    const po = (id: string) => ({
+      id,
+      branchId: BRANCH,
+      poNo: `PO-${id}`,
+      supplierId: "s1",
+      supplier: { id: "s1", name: "ร้าน" },
+      estimatedTotal: 100,
+      receivedAt: new Date("2026-11-20T00:00:00.000Z"),
+      updatedAt: new Date("2026-11-20T00:00:00.000Z"),
+      lines: [{ id: `${id}-l1`, description: "ของ", quantity: 1, unitId: null, unitCode: null, unitPrice: 100, amount: 100, costObjectType: null, costObjectLabel: null }],
+      attachments: [],
+    })
+    db.purchaseOrder.findMany.mockImplementation(async (args: { select?: unknown; where: { id?: { in: string[] } } }) =>
+      args.select ? [{ id: "po-billed" }, { id: "po-closed" }, { id: "po-ok" }] : (args.where.id?.in ?? []).map(po)
+    )
+    db.expenseLine.findMany.mockImplementation(async (args: { where: { sourceModule?: string } }) =>
+      args.where.sourceModule === "PROCUREMENT" ? [{ sourceDocumentId: "po-billed" }] : []
+    )
+    db.financeSourceReview.findMany.mockImplementation(async (args: { where: { sourceModule?: string } }) =>
+      args.where.sourceModule === "PROCUREMENT" ? [{ sourceDocumentId: "po-closed", status: "NO_EXPENSE" }] : []
+    )
+    const result = await listUnlinkedExpenseSources(asDb(db), { companyId: COMPANY, roles: adminRoles })
+    expect(result.data.map((r) => r.sourceDocumentId)).toEqual(["po-ok"])
+    expect(result.data[0]).toMatchObject({ sourceModule: "PROCUREMENT", sourceType: "PURCHASE_ORDER", groupKey: "PROCUREMENT" })
   })
 
   it("does not cap the queue query with take", async () => {

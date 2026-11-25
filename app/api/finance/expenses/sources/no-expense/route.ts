@@ -7,7 +7,7 @@ import { forbidUnlessPermission } from "@/lib/require-permission"
 import { markSourceNoExpense } from "@/modules/finance"
 
 const bodySchema = z.object({
-  sourceType: z.enum(["TRANSPORT_REPAIR", "TRANSPORT_TIRE", "TRANSPORT_JOB"]),
+  sourceType: z.enum(["TRANSPORT_REPAIR", "TRANSPORT_TIRE", "TRANSPORT_JOB", "PURCHASE_ORDER"]),
   sourceDocumentId: z.string().min(1).max(64),
   sourceLineId: z.string().max(64).nullable().optional(),
   reason: z.string().max(500).nullable().optional(),

@@ -14,6 +14,8 @@ export const GET = withAuth(async (req, _ctx, session) => {
     branchId: searchParams.get("branchId"),
     dateFrom: searchParams.get("dateFrom"),
     dateTo: searchParams.get("dateTo"),
+    receivedFrom: searchParams.get("receivedFrom"),
+    receivedTo: searchParams.get("receivedTo"),
   })
   return Response.json(result)
 })

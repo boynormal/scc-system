@@ -51,6 +51,16 @@ export const PRODUCT_LINE_REGISTRY: ProductLineDef[] = [
     iconKey: "Fuel",
   },
   {
+    id: "procurement",
+    labelTh: "จัดซื้อ",
+    labelEn: "Procurement",
+    description: "ใบสั่งซื้อ · แนบรูป · ติดตามสถานะ · ส่งต่อการเงิน",
+    departmentIds: ["procurement"],
+    order: 1.8,
+    accent: "from-orange-500 to-rose-600 shadow-orange-600/30",
+    iconKey: "ShoppingCart",
+  },
+  {
     id: "people_time",
     labelTh: "บุคลากรและเวลา",
     labelEn: "People & Time",

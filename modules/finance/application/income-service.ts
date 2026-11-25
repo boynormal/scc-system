@@ -16,6 +16,30 @@ import { generateIncomeNo } from "./generate-income-no"
 export const INCOME_STATUSES = ["DRAFT", "PENDING", "APPROVED", "RECEIVED", "REJECTED", "CANCELLED"] as const
 export type IncomeStatusValue = (typeof INCOME_STATUSES)[number]
 
+const RECEIVED_LOOKBACK_DAYS = 15
+
+function bangkokYmd(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(date)
+}
+
+/** Inclusive income-date window: the last 15 Bangkok days through today. */
+export function incomeReceivedWindow(now = new Date()) {
+  const to = bangkokYmd(now)
+  const anchor = new Date(`${to}T12:00:00+07:00`)
+  const from = bangkokYmd(new Date(anchor.getTime() - RECEIVED_LOOKBACK_DAYS * 24 * 60 * 60 * 1000))
+  return { from, to }
+}
+
+/** One status, or a comma list such as DRAFT,PENDING,REJECTED. Unknown tokens are dropped. */
+export function incomeStatusFilter(status?: string | null): IncomeStatusValue[] {
+  if (!status) return []
+  const allowed = new Set<string>(INCOME_STATUSES)
+  return status
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part): part is IncomeStatusValue => allowed.has(part))
+}
+
 const PRICING_MODES = ["QTY_PRICE", "AMOUNT"] as const
 const PAYMENT_METHODS = ["cash", "credit"] as const
 export const INCOME_TAX_MODES = ["NONE", "VAT_EXCLUSIVE", "VAT_INCLUSIVE"] as const
@@ -531,9 +555,9 @@ export async function listIncomes(
     const costCenterId = optionalUuid(costCenterRaw)
     if (costCenterId) and.push({ lines: { some: { costCenterId } } })
   }
-  if (params.status && (INCOME_STATUSES as readonly string[]).includes(params.status)) {
-    where.status = params.status as IncomeStatusValue
-  }
+  const statuses = incomeStatusFilter(params.status)
+  if (statuses.length === 1) where.status = statuses[0]
+  else if (statuses.length > 1) where.status = { in: statuses }
   if (params.dateFrom?.trim() || params.dateTo?.trim()) {
     const range: Prisma.DateTimeFilter = {}
     if (params.dateFrom?.trim()) range.gte = parseDateOnly(params.dateFrom.trim())
@@ -581,6 +605,9 @@ export async function getIncomeSummary(
     branchId?: string | null
     dateFrom?: string | null
     dateTo?: string | null
+    /** Limits only RECEIVED counts. Draft and approved stay complete. */
+    receivedFrom?: string | null
+    receivedTo?: string | null
   }
 ) {
   if (!canIncomes(params.roles, "read")) throw new ForbiddenError()
@@ -596,14 +623,21 @@ export async function getIncomeSummary(
     if (params.dateTo?.trim()) range.lte = parseDateOnly(params.dateTo.trim())
     where.incomeDate = range
   }
+  const receivedFrom = params.receivedFrom?.trim() || ""
+  const receivedTo = params.receivedTo?.trim() || ""
   const rows = await db.income.findMany({
     where,
-    select: { status: true, netAmount: true },
+    select: { status: true, netAmount: true, incomeDate: true },
     take: 5000,
   })
   const counts = Object.fromEntries(INCOME_STATUSES.map((s) => [s, 0])) as Record<IncomeStatusValue, number>
   const totals = Object.fromEntries(INCOME_STATUSES.map((s) => [s, 0])) as Record<IncomeStatusValue, number>
   for (const r of rows) {
+    if (r.status === "RECEIVED" && (receivedFrom || receivedTo)) {
+      const ymd = isoDate(r.incomeDate)
+      if (receivedFrom && ymd < receivedFrom) continue
+      if (receivedTo && ymd > receivedTo) continue
+    }
     counts[r.status] += 1
     totals[r.status] = round2(totals[r.status] + Number(r.netAmount))
   }

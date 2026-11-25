@@ -1,9 +1,10 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Check, ChevronRight, Coins, Delete, Wallet } from "lucide-react"
+import { Check, ChevronRight, Coins, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NumberPad, typeDigit } from "@/components/ui/number-pad"
 import { Select } from "@/components/ui/select"
 import { GlassDialog, GlassInput } from "@/components/glass"
 import { cn } from "@/lib/utils"
@@ -60,21 +61,6 @@ function round2(value: number): number {
 }
 
 type MoneyField = "quantity" | "unitPrice" | "amount" | "discountAmount"
-
-const PAD_KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "back"] as const
-
-function typeDigit(current: string, key: string, maxDecimals: number, replace: boolean): string | null {
-  if (key === "back") return replace ? "" : current.slice(0, -1)
-  let base = replace ? "" : current
-  if (key === ".") {
-    if (base.includes(".")) return null
-    return `${base === "" ? "0" : base}.`
-  }
-  if (base === "0") base = ""
-  const dot = base.indexOf(".")
-  if (dot >= 0 && base.length - dot - 1 >= maxDecimals) return null
-  return base + key
-}
 
 function sanitizeDecimal(raw: string, maxDecimals: number, maxValue?: number): string {
   const cleaned = raw.replace(/[^\d.]/g, "")
@@ -576,37 +562,19 @@ export function ExpenseLineDialog({
 
         <div className="min-w-0 space-y-2">
           {!lockFinancials && (
-            <>
-              <div className="rounded-xl bg-muted px-4 py-3">
-                <p className="text-sm font-medium text-foreground">กดตัวเลข</p>
-                <div className="mt-1 flex items-end justify-between gap-2">
-                  <span className="min-w-0 truncate text-3xl font-semibold tabular-nums text-foreground">
-                    {draft[activeField] || "0"}
-                  </span>
-                  <span className="pb-1 text-sm text-foreground">
-                    {activeField === "quantity"
-                      ? ""
-                      : activeField === "discountAmount" && draft.discountKind === "PERCENT"
-                        ? "%"
-                        : "บาท"}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {PAD_KEYS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    aria-label={key === "back" ? "ลบตัวเลข" : key}
-                    disabled={fieldLocked()}
-                    onClick={() => pressKey(key)}
-                    className="inline-flex min-h-14 items-center justify-center rounded-xl border border-border bg-background text-xl font-semibold text-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {key === "back" ? <Delete className="h-5 w-5" /> : key}
-                  </button>
-                ))}
-              </div>
-            </>
+            <NumberPad
+              label="กดตัวเลข"
+              value={draft[activeField]}
+              suffix={
+                activeField === "quantity"
+                  ? ""
+                  : activeField === "discountAmount" && draft.discountKind === "PERCENT"
+                    ? "%"
+                    : "บาท"
+              }
+              disabled={fieldLocked()}
+              onKey={pressKey}
+            />
           )}
           <div className="space-y-1.5">
             <span className="block whitespace-nowrap text-base font-medium text-foreground">รายละเอียด</span>

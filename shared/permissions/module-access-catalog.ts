@@ -119,6 +119,12 @@ export const MODULE_ACCESS_CATALOG: ModuleAccessCatalogEntry[] = [
     ],
   },
   {
+    moduleId: "procurement",
+    label: "จัดซื้อ",
+    anyOfResources: ["purchase_orders"],
+    navModuleIds: ["procurement_orders"],
+  },
+  {
     moduleId: "finance",
     label: "การเงินและบัญชี",
     anyOfResources: ["expenses", "incomes", "expense_masters"],

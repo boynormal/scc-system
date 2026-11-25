@@ -189,6 +189,7 @@ model Company {
   docCenterCategories   DocCenterCategory[]
   docCenterTypes        DocCenterType[]
   docCenterDocuments    DocCenterDocument[]
+  purchaseOrders        PurchaseOrder[]
 
   @@map("companies")
 }
@@ -235,6 +236,7 @@ model Branch {
   fuelTransactions     FuelTransaction[]
   incomes              Income[]
   docCenterDocuments   DocCenterDocument[]
+  purchaseOrders       PurchaseOrder[]
 
   @@index([companyId])
   @@index([code])
@@ -357,6 +359,9 @@ model User {
   financeSourceReviews   FinanceSourceReview[]  @relation("FinanceSourceReviewReviewedBy")
   assetsCreated          Asset[]                @relation("AssetCreatedBy")
   fuelTransactionsCreated FuelTransaction[]     @relation("FuelTransactionCreatedBy")
+  purchaseOrdersRequested PurchaseOrder[]       @relation("PurchaseOrderRequester")
+  purchaseOrdersCreated   PurchaseOrder[]       @relation("PurchaseOrderCreatedBy")
+  purchaseAttachments     PurchaseOrderAttachment[] @relation("PurchaseAttachmentUploader")
   driverLogin            Driver?                @relation("DriverLogin")
   jobStopPunches         JobStopPunch[]         @relation("JobStopPunchRecorder")
   docCenterDocumentsCreated DocCenterDocument[]    @relation("DocCenterCreatedBy")
@@ -853,6 +858,7 @@ model Supplier {
   spareParts SparePart[]
   expenses   Expense[]
   fuelTransactions FuelTransaction[]
+  purchaseOrders   PurchaseOrder[]
 
   // Phase B: code no longer globally unique โ€” this composite is now the sole
   // enforced constraint (allocateUniqueSupplierCode in master-data-service.ts
@@ -875,6 +881,7 @@ model Unit {
   expenseLines ExpenseLine[]
   incomeLines  IncomeLine[]
   pickupLines  TmsPickupRequestLine[]
+  purchaseLines PurchaseOrderLine[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1921,6 +1928,7 @@ enum ExpenseSourceModule {
   MAINTENANCE
   INVENTORY
   HR
+  PROCUREMENT
 }
 
 enum ExpenseSourceKind {
@@ -2229,6 +2237,7 @@ model StoredFile {
   expenseAttachments ExpenseAttachment[]
   incomeAttachments  IncomeAttachment[]
   docCenterVersions  DocCenterVersion[]
+  purchaseAttachments PurchaseOrderAttachment[]
 
   @@unique([bucket, objectKey])
   @@index([companyId, module, entityType, entityId])
@@ -2860,4 +2869,97 @@ model DocCenterAcknowledgement {
   @@index([documentId])
   @@index([versionId])
   @@map("doc_center_acknowledgements")
+}
+
+// ─── GROUP 14: PROCUREMENT — PURCHASE ORDERS ────────────────────────────────
+// Operational purchase tracking only. The amount is an estimate; Finance records
+// the real spend as an Expense when the order is RECEIVED (source PURCHASE_ORDER).
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum PurchaseAttachmentKind {
+  QUOTATION
+  PRODUCT_PHOTO
+  ORDER_PROOF
+  DELIVERY_NOTE
+  OTHER
+}
+
+model PurchaseOrder {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String              @map("company_id") @db.Uuid
+  branchId       String              @map("branch_id") @db.Uuid
+  poNo           String              @map("po_no") @db.VarChar(30)
+  supplierId     String?             @map("supplier_id") @db.Uuid
+  orderDate      DateTime            @map("order_date") @db.Date
+  neededDate     DateTime?           @map("needed_date") @db.Date
+  orderedAt      DateTime?           @map("ordered_at") @db.Timestamptz
+  receivedAt     DateTime?           @map("received_at") @db.Timestamptz
+  cancelledAt    DateTime?           @map("cancelled_at") @db.Timestamptz
+  cancelReason   String?             @map("cancel_reason") @db.VarChar(500)
+  requesterId    String              @map("requester_id") @db.Uuid
+  status         PurchaseOrderStatus @default(DRAFT)
+  notes          String?
+  estimatedTotal Decimal             @default(0) @map("estimated_total") @db.Decimal(14, 2)
+  createdById    String              @map("created_by_id") @db.Uuid
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?           @map("deleted_at") @db.Timestamptz
+
+  company     Company                   @relation(fields: [companyId], references: [id])
+  branch      Branch                    @relation(fields: [branchId], references: [id])
+  supplier    Supplier?                 @relation(fields: [supplierId], references: [id])
+  requester   User                      @relation("PurchaseOrderRequester", fields: [requesterId], references: [id])
+  creator     User                      @relation("PurchaseOrderCreatedBy", fields: [createdById], references: [id])
+  lines       PurchaseOrderLine[]
+  attachments PurchaseOrderAttachment[]
+
+  @@unique([companyId, poNo])
+  @@index([companyId, status])
+  @@index([branchId])
+  @@index([supplierId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseOrderId String   @map("purchase_order_id") @db.Uuid
+  lineNo          Int      @map("line_no")
+  description     String   @db.VarChar(500)
+  quantity        Decimal  @default(1) @db.Decimal(14, 3)
+  unitId          String?  @map("unit_id") @db.Uuid
+  unitCode        String?  @map("unit_code") @db.VarChar(30)
+  unitPrice       Decimal  @default(0) @map("unit_price") @db.Decimal(14, 2)
+  amount          Decimal  @default(0) @db.Decimal(14, 2)
+  // GENERAL | VEHICLE | MACHINE | ASSET. Label only, like Finance cost objects.
+  costObjectType  String?  @map("cost_object_type") @db.VarChar(20)
+  costObjectLabel String?  @map("cost_object_label") @db.VarChar(255)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  unit          Unit?         @relation(fields: [unitId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_lines")
+}
+
+model PurchaseOrderAttachment {
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseOrderId String                 @map("purchase_order_id") @db.Uuid
+  kind            PurchaseAttachmentKind @default(OTHER)
+  storedFileId    String                 @unique @map("stored_file_id") @db.Uuid
+  uploadedBy      String                 @map("uploaded_by") @db.Uuid
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  storedFile    StoredFile    @relation(fields: [storedFileId], references: [id])
+  uploader      User          @relation("PurchaseAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_attachments")
 }

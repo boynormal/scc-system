@@ -33,3 +33,39 @@ export function sourceToLine(row: ExpenseSourceRow): LineDraft {
     sourceAmountLocked: locked,
   }
 }
+
+/** A purchase order becomes one bill line per PO line; finance still picks the expense type on each. */
+function purchaseOrderToLines(row: ExpenseSourceRow): LineDraft[] {
+  return (row.lines ?? []).map((l) => {
+    const qtyPrice = Boolean(l.unitId)
+    return {
+      key: `${rowKey(row)}-${l.id}`,
+      expenseTypeId: "",
+      description: l.description,
+      pricingMode: qtyPrice ? "QTY_PRICE" : "AMOUNT",
+      quantity: qtyPrice ? String(l.quantity) : "1",
+      unitId: l.unitId ?? "",
+      unitCode: l.unitCode ?? "",
+      unitPrice: qtyPrice ? String(l.unitPrice) : String(l.amount),
+      amount: String(l.amount),
+      taxAmount: "",
+      taxMode: "NONE",
+      discountAmount: "",
+      discountKind: "BAHT",
+      costCenterId: "",
+      costObjectType: "",
+      costObjectId: "",
+      costObjectLabel: "",
+      sourceKind: row.sourceKind,
+      sourceModule: row.sourceModule,
+      sourceType: row.sourceType,
+      sourceDocumentId: row.sourceDocumentId,
+      sourceLineId: l.id,
+      sourceAmountLocked: l.amount > 0,
+    }
+  })
+}
+
+export function sourceToLines(row: ExpenseSourceRow): LineDraft[] {
+  return row.sourceModule === "PROCUREMENT" ? purchaseOrderToLines(row) : [sourceToLine(row)]
+}

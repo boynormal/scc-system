@@ -198,11 +198,31 @@ export type CostCenterRow = {
   isActive: boolean
 }
 
+export type ProcurementSourceLine = {
+  id: string
+  description: string
+  quantity: number
+  unitId: string | null
+  unitCode: string | null
+  unitPrice: number
+  amount: number
+  costObjectType: string | null
+  costObjectLabel: string | null
+}
+
+export type ProcurementSourceAttachment = {
+  id: string
+  kind: string
+  fileName: string
+  contentType: string
+  url: string
+}
+
 export type ExpenseSourceRow = {
-  sourceType: "TRANSPORT_REPAIR" | "TRANSPORT_TIRE" | "TRANSPORT_JOB"
+  sourceType: "TRANSPORT_REPAIR" | "TRANSPORT_TIRE" | "TRANSPORT_JOB" | "PURCHASE_ORDER"
   sourceId: string
   sourceKind: "IMPORT"
-  sourceModule: "TRANSPORT"
+  sourceModule: "TRANSPORT" | "PROCUREMENT"
   sourceDocumentId: string
   sourceLineId: string | null
   branchId: string
@@ -216,10 +236,15 @@ export type ExpenseSourceRow = {
   paymentMethod: "cash" | "credit" | null
   documentNo: string | null
   description: string | null
-  suggestedCostObjectType: "VEHICLE" | "JOB"
+  suggestedCostObjectType: "VEHICLE" | "JOB" | null
   groupKey: string
   groupLabel: string
   reviewStatus?: "PENDING"
+  /** Procurement only: a chosen PO supplier prefills the bill vendor. Blank means Finance picks it. */
+  supplierId?: string | null
+  supplierName?: string | null
+  lines?: ProcurementSourceLine[]
+  attachments?: ProcurementSourceAttachment[]
 }
 
 export type FinancePerms = {
